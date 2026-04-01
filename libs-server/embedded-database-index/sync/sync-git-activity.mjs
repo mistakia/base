@@ -1,7 +1,7 @@
 /**
  * Git Activity Sync
  *
- * Handles incremental synchronization of git activity data to DuckDB.
+ * Handles incremental synchronization of git activity data to SQLite.
  * Tracks per-repository HEAD SHA to detect changes and only process new commits.
  */
 
@@ -15,8 +15,8 @@ import {
   get_index_metadata,
   set_index_metadata,
   INDEX_METADATA_KEYS
-} from '../duckdb/duckdb-metadata-operations.mjs'
-import { upsert_git_activity_daily_batch } from '../duckdb/duckdb-activity-queries.mjs'
+} from '../sqlite/sqlite-metadata-operations.mjs'
+import { upsert_git_activity_daily_batch } from '../sqlite/sqlite-activity-queries.mjs'
 
 const log = debug('embedded-index:sync:git-activity')
 
@@ -303,7 +303,7 @@ export async function sync_git_activity_incremental() {
     repos_synced++
   }
 
-  // Update DuckDB with combined activity using batch insert
+  // Update SQLite with combined activity using batch insert
   const entries = Array.from(combined_activity, ([date, metrics]) => ({
     date,
     commits: metrics.commits,
@@ -376,7 +376,7 @@ export async function backfill_git_activity_from_scratch({ days = 365 } = {}) {
     }
   }
 
-  // Store all activity in DuckDB using batch insert
+  // Store all activity in SQLite using batch insert
   const entries = Array.from(combined_activity, ([date, metrics]) => ({
     date,
     commits: metrics.commits,

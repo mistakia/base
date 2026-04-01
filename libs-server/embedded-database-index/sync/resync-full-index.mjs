@@ -11,15 +11,15 @@ import debug from 'debug'
 import config from '#config'
 import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
 import {
-  execute_duckdb_query,
-  checkpoint_duckdb
-} from '../duckdb/duckdb-database-client.mjs'
+  execute_sqlite_query,
+  checkpoint_sqlite
+} from '../sqlite/sqlite-database-client.mjs'
 import {
   set_index_metadata,
   set_repo_sync_state,
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION
-} from '../duckdb/duckdb-metadata-operations.mjs'
+} from '../sqlite/sqlite-metadata-operations.mjs'
 import {
   discover_repositories,
   get_repository_head_sha
@@ -35,10 +35,10 @@ import {
 
 const log = debug('embedded-index:sync:resync')
 
-/** Collect all entity base_uris from DuckDB */
+/** Collect all entity base_uris from the index database */
 async function collect_database_entity_base_uris() {
   log('Collecting database entity base_uris')
-  const results = await execute_duckdb_query({
+  const results = await execute_sqlite_query({
     query: 'SELECT base_uri FROM entities'
   })
   const database_uris = new Set(results.map((row) => row.base_uri))
@@ -46,10 +46,10 @@ async function collect_database_entity_base_uris() {
   return database_uris
 }
 
-/** Collect all thread IDs from DuckDB */
+/** Collect all thread IDs from the index database */
 async function collect_database_thread_ids() {
   log('Collecting database thread IDs')
-  const results = await execute_duckdb_query({
+  const results = await execute_sqlite_query({
     query: 'SELECT thread_id FROM threads'
   })
   const thread_ids = new Set(results.map((row) => row.thread_id))
@@ -235,7 +235,7 @@ export async function resync_full_index({ index_manager }) {
         value: CURRENT_SCHEMA_VERSION
       })
       // Force checkpoint to persist schema version
-      await checkpoint_duckdb()
+      await checkpoint_sqlite()
       metadata_updated = true
     } catch (metadata_error) {
       log('Error updating sync metadata: %s', metadata_error.message)
@@ -266,7 +266,7 @@ export async function resync_full_index({ index_manager }) {
     // Individual entity/thread sync failures (bad YAML, missing fields,
     // constraint violations) are data-level issues that should not block
     // the overall resync from succeeding. Only infrastructure-level failures
-    // (DuckDB unavailable, filesystem errors) should cause resync failure.
+    // (database unavailable, filesystem errors) should cause resync failure.
     // A resync that synced zero items but also had failures likely indicates
     // a systemic problem, so treat that as a failure.
     return {

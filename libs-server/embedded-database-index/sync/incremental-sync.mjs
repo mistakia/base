@@ -14,14 +14,14 @@ import debug from 'debug'
 
 import config from '#config'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { checkpoint_duckdb } from '../duckdb/duckdb-database-client.mjs'
+import { checkpoint_sqlite } from '../sqlite/sqlite-database-client.mjs'
 import {
   set_index_metadata,
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION,
   get_repo_sync_state,
   set_repo_sync_state
-} from '../duckdb/duckdb-metadata-operations.mjs'
+} from '../sqlite/sqlite-metadata-operations.mjs'
 import {
   ENTITY_DIRECTORIES,
   filter_entity_files,
@@ -125,7 +125,7 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
  * Perform incremental sync for changed entity files.
  *
  * Concurrency: the sync lock in embedded-index-manager prevents concurrent syncs.
- * DuckDB's internal MVCC provides read isolation for queries during sync --
+ * SQLite WAL mode provides read isolation for queries during sync --
  * readers see a consistent snapshot and are not blocked by in-progress writes.
  *
  * @returns {Promise<{synced: number, deleted: number, skipped: number, failed: number, skipped_details: Array}>}
@@ -279,7 +279,7 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
         value: CURRENT_SCHEMA_VERSION
       })
       // Force checkpoint to persist schema version
-      await checkpoint_duckdb()
+      await checkpoint_sqlite()
       return {
         success: true,
         method: 'no_changes',
@@ -382,7 +382,7 @@ export async function sync_index_on_startup({ repo_path, index_manager }) {
       }
     }
 
-    await checkpoint_duckdb()
+    await checkpoint_sqlite()
 
     log(
       'Incremental sync complete: entities(%d synced, %d deleted, %d skipped); threads(%d synced, %d deleted, %d skipped); %d failed',

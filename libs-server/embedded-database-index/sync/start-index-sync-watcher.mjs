@@ -75,7 +75,7 @@ export const thread_index_sync_hooks = {
  * Thread sync forwarding hooks for the API process.
  * Instead of syncing directly, these write to the IPC queue file
  * so the index sync service can process them.
- * Used when the API runs with read-only DuckDB access.
+ * Used when the API runs with read-only database access.
  */
 export const thread_sync_forwarding_hooks = {
   on_thread_sync: async ({ thread_id }) => {
