@@ -163,6 +163,7 @@ await expect(asyncFn()).to.be.rejectedWith('message')
 
 Common utilities in `tests/utils/`:
 
+- `test-request.mjs` - Fetch-based HTTP test helper for API integration tests (`request(server).get('/api/foo').set('Authorization', 'Bearer x').query({ q: 'bar' })`)
 - `create-temp-test-repo.mjs` - Create temporary git repositories for testing
 - `create-test-user.mjs` - Generate test user with public key
 - Additional helpers for specific test scenarios
@@ -188,7 +189,7 @@ Tests automatically set:
 Debug output can be enabled with:
 
 ```bash
-DEBUG='module:*' yarn test:unit
+DEBUG='module:*' bun run test:unit
 ```
 
 ## Testing Philosophy
