@@ -13,7 +13,7 @@ import { realpathSync } from 'fs'
  * @param {string} import_meta_url - Pass import.meta.url from the calling module
  * @returns {boolean}
  */
-export const isMain = (import_meta_url) => {
+const is_main = (import_meta_url) => {
   // Compiled binary: all modules share the same URL — only the
   // explicit entry-point guard in base.mjs should trigger execution.
   if (import_meta_url.includes('/$bunfs/')) {
@@ -28,3 +28,7 @@ export const isMain = (import_meta_url) => {
     return false
   }
 }
+
+// Named export for CLI scripts, default export for libs-server modules
+export { is_main as isMain }
+export default is_main

@@ -14,12 +14,9 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup,
-// version/help queries). Check only the first positional argument for
-// subcommands to avoid false-positives from option values like `--status init`.
+// Check only the first positional argument for subcommands to avoid
+// false-positives from option values like `--status init`.
 const is_init_command = process.argv[2] === 'init'
-const is_info_flag =
-  process.argv.includes('--version') || process.argv.includes('--help') || process.argv.includes('-h')
 
 /**
  * Deep merge two objects. Source values override target values.
@@ -180,14 +177,17 @@ if (process.env.NODE_ENV === 'test') {
   config.user_base_directory = join(tmpdir(), `base_data_${randomUUID()}`)
 } else if (process.env.USER_BASE_DIRECTORY) {
   config.user_base_directory = process.env.USER_BASE_DIRECTORY
-} else if (is_init_command || is_info_flag) {
-  // init/version/help can run without USER_BASE_DIRECTORY
+} else if (is_init_command) {
+  // init creates the user-base directory, so it can run without one
   config.user_base_directory = ''
-  log('Running without USER_BASE_DIRECTORY (init/version/help)')
+  log('Running without USER_BASE_DIRECTORY (init command)')
 } else {
-  throw new Error(
-    'USER_BASE_DIRECTORY environment variable is not set. Run "base init" first to create a user-base directory.'
-  )
+  // Degraded mode: allow any command to start (--help, --version, update,
+  // install, uninstall, etc.) without USER_BASE_DIRECTORY. Commands that
+  // require user data will check config.degraded and show an actionable error.
+  config.degraded = true
+  config.user_base_directory = ''
+  log('Running in degraded mode (USER_BASE_DIRECTORY not set)')
 }
 
 // Derive notification script path from user_base_directory

@@ -88,12 +88,31 @@ const load_extensions = async (parser) => {
   }
 }
 
+// Commands that work without a configured user-base directory.
+// All other commands require USER_BASE_DIRECTORY to be set.
+const DEGRADED_MODE_COMMANDS = new Set([
+  'init', 'update', 'install', 'uninstall', 'outdated', 'setup'
+])
+
 const main = async () => {
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
     .scriptName('base')
     .usage('Unified Base CLI.\n\nUsage: $0 <command> [options]')
-    .middleware((argv) => {
+    .middleware(async (argv) => {
       handle_cli_directory_registration(argv)
+
+      // In degraded mode (no USER_BASE_DIRECTORY), only allow commands
+      // that don't require user data. Other commands get an actionable error.
+      const config = (await import('#config')).default
+      if (config.degraded && argv._ && argv._[0]) {
+        const command = String(argv._[0])
+        if (!DEGRADED_MODE_COMMANDS.has(command)) {
+          console.error(
+            `Error: USER_BASE_DIRECTORY is not set. Run "base init" to create a user-base directory.`
+          )
+          process.exit(1)
+        }
+      }
     })
     .command(entity_command)
     .command(relation_command)

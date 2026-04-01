@@ -170,9 +170,9 @@ The config system uses a two-tier loading strategy: base defaults + user-base ov
 
 1. **Base defaults** (`config/config.json`): Always loaded first. Contains only non-secret default values with empty strings for credentials. This is the installable system config -- anyone can clone the repo and provide their own user-base config.
 
-2. **User-base overlay** (`{USER_BASE_DIRECTORY}/config/config.json`): Loaded via `@tsmx/secure-config` (supports `ENCRYPTED|...` values) and deep-merged over defaults. Contains secrets, machine_registry, deployment-specific values.
+2. **User-base overlay** (`{USER_BASE_DIRECTORY}/config/config.json`): Loaded with inline AES-256-CBC decryption (supports `ENCRYPTED|...` values) and deep-merged over defaults. Contains secrets, machine_registry, deployment-specific values.
 
-3. **Test mode** (`NODE_ENV=test`): Uses `config/config-test.json` directly via `secure_config`, bypassing the merge.
+3. **Test mode** (`NODE_ENV=test`): Uses `config/config-test.json` directly, bypassing the merge.
 
 ### Required Environment Variables
 
@@ -514,6 +514,18 @@ base entity list -s "feature" -t task --json
 # Direct alternatives (when unified CLI is not available)
 bun cli/entity-list.mjs -t task --status "In Progress"
 ```
+
+## Compiled Binary Caveats
+
+The `base` CLI is distributed as a compiled Bun binary via `scripts/build.mjs`. Compiled mode changes several runtime assumptions:
+
+- **`import.meta.url`**: Resolves to `/$bunfs/root/<binary-name>` for ALL bundled modules, not their source paths. Any code using `import.meta.url` to derive filesystem paths (e.g., `fileURLToPath(import.meta.url)`) will get a path inside Bun's virtual filesystem, not the real disk.
+- **`NODE_ENV`**: Baked at compile time (always `"production"` in deployed binaries). Code that selects behavior based on `NODE_ENV` at runtime will always see production. This is why `@tsmx/secure-config` was replaced -- it used `NODE_ENV` to pick config filenames (`config-production.json`).
+- **`isMain()` returns false for all modules**: All bundled modules share the same `import.meta.url`, so the standard `process.argv[1] === fileURLToPath(import.meta.url)` check would return true for every module. The `isMain()` implementation detects compiled mode via the `/$bunfs/` prefix and returns false. The CLI entry point (`cli/base.mjs`) uses an explicit `is_compiled` guard instead.
+- **Module-level throws crash the entire binary**: In source mode, a module that throws at load time only affects its own import chain. In compiled mode, all modules are bundled -- a throw in any module's top-level code crashes the whole binary. Guard module-level code with `existsSync` checks or move initialization into functions.
+- **Inline AES-256-CBC decryption**: `@tsmx/secure-config` was replaced with inline decryption in `config/index.mjs` using `crypto.createDecipheriv`. The `ENCRYPTED|iv|ciphertext` format is unchanged.
+- **`existsSync` guards required**: Any filesystem access using code-relative paths (config loading, template files) must use `existsSync` checks since the code directory doesn't exist on disk.
+- **Dynamic imports work normally**: User-base content, extensions, and runtime-loaded modules are not bundled -- they load from disk at runtime as expected.
 
 ## Git Workflow Rules
 
