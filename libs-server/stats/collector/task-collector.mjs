@@ -16,9 +16,9 @@ export async function collect_task_metrics({ snapshot_date }) {
   // Task counts by status
   const status_rows = await execute_sqlite_query({
     query: `
-      SELECT json_extract_string(frontmatter, '$.status') as status, COUNT(*) as cnt
+      SELECT json_extract(frontmatter, '$.status') as status, COUNT(*) as cnt
       FROM entities
-      WHERE type = 'task' AND json_extract_string(frontmatter, '$.status') IS NOT NULL
+      WHERE type = 'task' AND json_extract(frontmatter, '$.status') IS NOT NULL
       GROUP BY status
     `
   })
@@ -51,8 +51,8 @@ export async function collect_task_metrics({ snapshot_date }) {
     query: `
       SELECT COUNT(*) as cnt FROM entities
       WHERE type = 'task'
-        AND json_extract_string(frontmatter, '$.finished_at') IS NOT NULL
-        AND CAST(json_extract_string(frontmatter, '$.finished_at') AS TIMESTAMP) >= CURRENT_DATE - INTERVAL '30 days'
+        AND json_extract(frontmatter, '$.finished_at') IS NOT NULL
+        AND date(json_extract(frontmatter, '$.finished_at')) >= date('now', '-30 days')
     `
   })
   metrics.push({
@@ -69,7 +69,7 @@ export async function collect_task_metrics({ snapshot_date }) {
     query: `
       SELECT COUNT(*) as cnt FROM entities
       WHERE type = 'task'
-        AND CAST(created_at AS TIMESTAMP) >= CURRENT_DATE - INTERVAL '30 days'
+        AND date(created_at) >= date('now', '-30 days')
     `
   })
   metrics.push({
@@ -85,15 +85,13 @@ export async function collect_task_metrics({ snapshot_date }) {
   const avg_rows = await execute_sqlite_query({
     query: `
       SELECT AVG(
-        EPOCH(
-          CAST(json_extract_string(frontmatter, '$.finished_at') AS TIMESTAMP) -
-          CAST(json_extract_string(frontmatter, '$.started_at') AS TIMESTAMP)
-        ) / 86400.0
+        julianday(json_extract(frontmatter, '$.finished_at')) -
+        julianday(json_extract(frontmatter, '$.started_at'))
       ) as avg_days
       FROM entities
       WHERE type = 'task'
-        AND json_extract_string(frontmatter, '$.finished_at') IS NOT NULL
-        AND json_extract_string(frontmatter, '$.started_at') IS NOT NULL
+        AND json_extract(frontmatter, '$.finished_at') IS NOT NULL
+        AND json_extract(frontmatter, '$.started_at') IS NOT NULL
     `
   })
   const avg_days = avg_rows[0]?.avg_days

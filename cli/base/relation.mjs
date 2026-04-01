@@ -218,7 +218,7 @@ async function fetch_relations_from_sqlite({
     )
   ).default
   const { find_related_entities, find_entities_relating_to } = await import(
-    '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+    '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
   )
 
   await embedded_index_manager.initialize()

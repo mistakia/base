@@ -1466,7 +1466,7 @@ async function handle_tree(argv) {
 
     const fetch_relations_sqlite = async (uri) => {
       const { find_related_entities, find_entities_relating_to } = await import(
-        '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+        '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
       )
       await embedded_index_manager.initialize({ read_only: true })
       const forward = await find_related_entities({

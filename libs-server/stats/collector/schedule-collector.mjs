@@ -18,7 +18,7 @@ export async function collect_schedule_metrics({ snapshot_date }) {
   const schedule_rows = await execute_sqlite_query({
     query: `
       SELECT
-        json_extract_string(frontmatter, '$.enabled') as enabled,
+        json_extract(frontmatter, '$.enabled') as enabled,
         COUNT(*) as cnt
       FROM entities
       WHERE type = 'scheduled-command'

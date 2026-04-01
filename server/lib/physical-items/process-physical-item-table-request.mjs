@@ -192,7 +192,7 @@ function get_physical_item_value_for_sorting(item, column_id) {
 }
 
 /**
- * Process physical item table request using DuckDB index
+ * Process physical item table request using SQLite index
  */
 async function process_physical_item_table_request_indexed({
   table_state,
@@ -262,7 +262,7 @@ async function process_physical_item_table_request_indexed({
       offset,
       processing_time_ms,
       table_state: table_state || {},
-      source: 'duckdb_index'
+      source: 'sqlite_index'
     }
   }
 }
@@ -351,7 +351,7 @@ export async function process_physical_item_table_request({
         })
       } catch (index_error) {
         log(
-          'DuckDB index query failed, falling back to filesystem: %s',
+          'SQLite index query failed, falling back to filesystem: %s',
           index_error.message
         )
       }
