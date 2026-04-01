@@ -38,7 +38,7 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 # Clone and install
 git clone https://github.com/mistakia/base.git && cd base
 corepack enable
-yarn install
+bun install
 
 # Set user-base directory (add to your shell profile)
 export USER_BASE_DIRECTORY=~/my-knowledge-base

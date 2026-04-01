@@ -966,7 +966,7 @@ const result = evaluate_redaction_rules({ rules, key_path, value })
 Enable debug logging with:
 
 ```bash
-DEBUG=permission:*,redaction:* yarn start:api
+DEBUG=permission:*,redaction:* bun start:api
 ```
 
 Available debug namespaces:
@@ -1339,7 +1339,7 @@ base permission check admin user:task/test.md
 base permission check _public user:workflow/test.md
 
 # Run permission tests
-yarn test:file tests/integration/migrate-users-to-entities.test.mjs
+bun test:file tests/integration/migrate-users-to-entities.test.mjs
 ```
 
 ### 11.6 Rollback

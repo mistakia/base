@@ -101,7 +101,7 @@ Scheduled commands define CLI commands to execute at specified times. They integ
 ---
 title: Run Tests Nightly
 type: scheduled-command
-command: yarn test:all
+command: bun test:all
 schedule_type: expr
 schedule: '0 2 * * *'
 timezone: America/Los_Angeles

@@ -4,7 +4,7 @@ Persistent Docker container providing Claude Code CLI, OpenCode CLI, and develop
 
 ## Prerequisites
 
-- **Primary machine (macOS)**: Docker Desktop for macOS, Node.js 20+, PM2 (`npm install -g pm2`)
+- **Primary machine (macOS)**: Docker Desktop for macOS, Node.js 20+, PM2 (`bun install -g pm2`)
 - **Secondary machine (Linux)**: Docker Engine (user in `docker` group), Node.js 20+, PM2
 - `CONFIG_ENCRYPTION_KEY` environment variable set in shell profile (required for base CLI)
 

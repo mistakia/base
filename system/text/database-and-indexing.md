@@ -2,7 +2,7 @@
 title: Database and Indexing
 type: text
 description: >-
-  Reference for the embedded DuckDB index architecture, entity storage strategy, multiple storage
+  Reference for the embedded SQLite index architecture, entity storage strategy, multiple storage
   backends (DuckDB, PostgreSQL, TSV, Markdown), rebuild/sync operations, and relation storage
 created_at: '2026-03-02T06:35:05.693Z'
 entity_id: b4419d33-696c-42bb-b93a-1a6b7c8d21a0
@@ -18,11 +18,11 @@ user_public_key: '00000000000000000000000000000000000000000000000000000000000000
 
 # Database and Indexing
 
-The system uses a dual-database architecture: an embedded DuckDB index for fast entity and thread querying, and a configurable multi-backend storage system for user-defined structured data collections.
+The system uses a dual-database architecture: an embedded SQLite index for fast entity and thread querying, and a configurable multi-backend storage system for user-defined structured data collections.
 
 ## Embedded Database Index
 
-A singleton DuckDB embedded database indexes all entities and threads for fast querying and search. The index is a derived cache that can be rebuilt from filesystem sources at any time.
+A singleton SQLite embedded database indexes all entities and threads for fast querying and search. The index is a derived cache that can be rebuilt from filesystem sources at any time.
 
 ### Schema Tables
 

@@ -178,7 +178,7 @@ For the web UI, real-time file watching, job queuing, and scheduled commands, st
 
 ```bash
 # Install PM2 globally
-npm install -g pm2
+bun install -g pm2
 
 # Start all services
 pm2 start pm2.config.js
@@ -197,7 +197,7 @@ After starting services:
 
 ```bash
 # Build the frontend
-yarn build
+bun build
 
 # Visit http://localhost:8080 in your browser
 ```

@@ -52,7 +52,7 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
   2. Verify clean state: `git status` and `git branch --show-current`
   3. Create worktree: `git worktree add -b {branch-name} ../{repo-name}-worktrees/{branch-name}`
   4. Navigate to worktree: `cd ../{repo-name}-worktrees/{branch-name}`
-  5. Install dependencies: `yarn install`
+  5. Install dependencies: `bun install`
   6. Document the worktree path for all subsequent operations
 
 ### Execution Process
@@ -82,9 +82,9 @@ visibility_analyzed_at: '2026-02-16T04:27:50.809Z'
 ### Testing and Quality Assurance
 
 - Tests SHOULD be run periodically during implementation to verify correctness
-- Code quality checks MUST be run before staging: `yarn lint` and `yarn typecheck`
+- Code quality checks MUST be run before staging: `bun lint` and `bun typecheck`
 - Full test suite MUST be run before considering implementation complete
-- Appropriate test commands: `yarn test:unit`, `yarn test:integration`, `yarn test:file {specific-test}`
+- Appropriate test commands: `bun test:unit`, `bun test:integration`, `bun test:file {specific-test}`
 
 ### Change Management
 

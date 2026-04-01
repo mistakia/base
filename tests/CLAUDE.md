@@ -12,27 +12,27 @@ This directory contains the test suite for the Base system.
 
 ```bash
 # Run all tests
-yarn test:all
+bun test:all
 
 # Run specific test suites
-yarn test:unit          # Unit tests only
-yarn test:integration   # Integration tests only
-yarn test:api          # API endpoint tests
-yarn test:git          # Git operations tests
-yarn test:sync         # Synchronization tests
-yarn test:threads      # Thread system tests
-yarn test:markdown     # Markdown processing tests
-yarn test:embedded-db  # Embedded database tests
-yarn test:mcp          # MCP server tests
+bun test:unit          # Unit tests only
+bun test:integration   # Integration tests only
+bun test:api          # API endpoint tests
+bun test:git          # Git operations tests
+bun test:sync         # Synchronization tests
+bun test:threads      # Thread system tests
+bun test:markdown     # Markdown processing tests
+bun test:embedded-db  # Embedded database tests
+bun test:mcp          # MCP server tests
 
 # Run a single test file
-yarn test:file ./tests/unit/path/to/test.mjs
+bun test:file ./tests/unit/path/to/test.mjs
 
 # Run tests matching a pattern
-yarn test -- --grep "test name"
+bun test -- --grep "test name"
 
 # Run with minimal output (more token efficient)
-yarn test:all --reporter min
+bun test:all --reporter min
 ```
 
 ## Directory Structure
@@ -44,7 +44,7 @@ tests/
     active-sessions/      # Session management
     base-uri/             # URI resolution and registry
     components/           # React component unit tests
-    embedded-database-index/  # DuckDB index tests
+    embedded-database-index/  # SQLite index tests
     entity/               # Entity CRUD operations
       filesystem/         # Filesystem storage
       git/                # Git storage

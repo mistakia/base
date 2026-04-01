@@ -210,7 +210,7 @@ This is useful for finding all threads that accessed or modified a particular en
 
 ## Relation Storage Implementation
 
-Relations are stored in DuckDB and can be queried via the API. The data model supports:
+Relations are stored in SQLite and can be queried via the API. The data model supports:
 
 - Entity records with type, base_uri, and metadata
 - Relation records linking source and target entities with relation type and optional context

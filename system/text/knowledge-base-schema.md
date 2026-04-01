@@ -92,7 +92,7 @@ Structured facts with semantic categorization in frontmatter:
 ```yaml
 observations:
   - '[category] A brief description of the observation (optional context)'
-  - '[tech] Uses DuckDB for SQL indexing and queries'
+  - '[tech] Uses SQLite for SQL indexing and queries'
   - '[decision] Selected markdown for storage (Based on team discussion)'
 ```
 

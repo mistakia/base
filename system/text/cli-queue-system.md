@@ -136,7 +136,7 @@ All commands are under `base queue`:
 
 # Queue a command
 
-base queue add "yarn test" --tags test,ci --priority 5 --timeout 600000
+base queue add "bun test" --tags test,ci --priority 5 --timeout 600000
 
 # Check job status
 

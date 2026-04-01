@@ -14,48 +14,48 @@ This is a Human-in-the-Loop System - an LLM-powered knowledge base management an
 
 ```bash
 # Run full development environment (frontend + API)
-yarn dev
+bun dev
 
 # Run only frontend dev server (port 8090)
-yarn start
+bun start
 
 # Run only API server
-yarn start:api
+bun start:api
 ```
 
 ### Testing
 
 ```bash
 # Run all tests (unit + integration)
-yarn test:all
+bun test:all
 
 # Run tests with minimal output (more token efficient)
-yarn test:all --reporter min
+bun test:all --reporter min
 
 # Run specific test suites
-yarn test:unit          # Unit tests only
-yarn test:integration   # Integration tests only
-yarn test:api          # API tests
-yarn test:threads      # Thread system tests
-yarn test:git          # Git operations tests
-yarn test:markdown     # Markdown processing tests
-yarn test:sync         # Synchronization tests
+bun test:unit          # Unit tests only
+bun test:integration   # Integration tests only
+bun test:api          # API tests
+bun test:threads      # Thread system tests
+bun test:git          # Git operations tests
+bun test:markdown     # Markdown processing tests
+bun test:sync         # Synchronization tests
 
 # Run a single test file
-yarn test:file ./tests/unit/path/to/test.mjs
+bun test:file ./tests/unit/path/to/test.mjs
 
 # Run a single test
-yarn test -- --grep "test name"
+bun test -- --grep "test name"
 ```
 
 ### Code Quality
 
 ```bash
 # Run ESLint
-yarn lint
+bun lint
 
 # Run Prettier formatter
-yarn prettier
+bun prettier
 ```
 
 ### File-First Architecture
@@ -312,7 +312,7 @@ base thread analyze <thread-id> --dry-run
 base search "feature request" --limit 10
 
 # Command queue
-base queue add "yarn test" --tags test,ci --priority 5
+base queue add "bun test" --tags test,ci --priority 5
 base queue status <job-id>
 base queue stats
 
@@ -376,7 +376,7 @@ Tags allow limiting how many commands of a certain type run simultaneously
 
 ```bash
 # Queue a command for background execution
-bun cli/queue-command.mjs "yarn test" --tags test,ci --priority 5
+bun cli/queue-command.mjs "bun test" --tags test,ci --priority 5
 
 # Queue with specific working directory
 bun cli/queue-command.mjs "bun script.mjs" --tags claude-session --cwd ~/project
@@ -401,7 +401,7 @@ base schedule list
 base schedule list --jobs              # Enrich with job execution status
 
 # Create a new scheduled command
-base schedule add "yarn test:all" --type expr --schedule "0 2 * * *" --title "Nightly tests"
+base schedule add "bun test:all" --type expr --schedule "0 2 * * *" --title "Nightly tests"
 
 # Schedule types:
 #   expr  - Cron expression (e.g., "0 2 * * *")

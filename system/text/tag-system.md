@@ -41,7 +41,7 @@ tags:
   - user:tag/javascript.md
 ```
 
-Tags are indexed in the DuckDB embedded index via junction tables (`entity_tags` and `thread_tags`) for fast tag-based queries.
+Tags are indexed in the SQLite embedded index via junction tables (`entity_tags` and `thread_tags`) for fast tag-based queries.
 
 ## CLI Interface
 
@@ -64,7 +64,7 @@ base tag stats --include-zero-count # Include unused tags
 base tag stats --json
 ```
 
-Statistics are queried from the DuckDB index and sorted by entity count (descending), then title.
+Statistics are queried from the SQLite index and sorted by entity count (descending), then title.
 
 ### Batch Add Tags
 
@@ -104,10 +104,10 @@ The CLI supports shorthand tag input that resolves to full base_uri format:
 
 ### Entity Queries
 
-Filter entities by tag in DuckDB:
+Filter entities by tag in SQLite:
 
 ```javascript
-query_entities_from_duckdb({
+query_entities_from_sqlite({
   filters: [{ column_id: 'tags', operator: 'IN', value: [tag_base_uri] }]
 })
 ```
@@ -117,7 +117,7 @@ query_entities_from_duckdb({
 Filter threads by tag:
 
 ```javascript
-query_threads_from_duckdb({ tags: [tag_base_uri] })
+query_threads_from_sqlite({ tags: [tag_base_uri] })
 ```
 
 ### Tag Detail API

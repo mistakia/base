@@ -105,7 +105,7 @@ server/services/
 ### CLI Access
 
 ```bash
-base queue add "yarn test" --tags test,ci --priority 5
+base queue add "bun test" --tags test,ci --priority 5
 base queue status <job-id>
 base queue stats
 ```

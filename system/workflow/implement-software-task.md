@@ -79,8 +79,8 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - **Install dependencies** (choose based on native module complexity):
      - **Fast path** (for projects with native dependencies like duckdb, sqlite3):
        - Copy node_modules from main repo: `cp -r ../../{repo-name}/node_modules .`
-       - Run `yarn install` to verify and link (typically < 1 second)
-     - **Standard path**: `yarn install`
+       - Run `bun install` to verify and link (typically < 1 second)
+     - **Standard path**: `bun install`
        - With `enableGlobalCache: true` and `nmMode: hardlinks-global`, JS packages are fetched instantly via hardlinks
        - Native modules still rebuild per-worktree (build artifacts are project-local, not globally cached)
    - Document working directory path
@@ -114,8 +114,8 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 ## Phase 3: Quality Assurance (Final Phase Only)
 
 7. **Complete Testing and Review** (only when ALL tasks are finished)
-   - Run full test suite: `yarn test:unit --reporter min` and `yarn test:integration --reporter min`
-   - Run code quality checks: `yarn lint` and `yarn typecheck` if available
+   - Run full test suite: `bun test:unit --reporter min` and `bun test:integration --reporter min`
+   - Run code quality checks: `bun lint` and `bun typecheck` if available
    - Review all changes: `git diff --name-only` and `git status`
    - Update implementation plan status to "Completed" (the `finished_at` timestamp is automatically set)
    - Remove transient pipeline observations from the task entity: strip any observations starting with `[plan-completed]`, `[triage-queued]`, or `[draft-triaged]` from the observations array

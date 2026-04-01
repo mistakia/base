@@ -131,7 +131,7 @@ base schedule list --jobs              # Enrich with job execution data (last_ru
 base schedule list --verbose --json
 
 # Create a schedule
-base schedule add "yarn test:all" --type expr --schedule "0 2 * * *" \
+base schedule add "bun test:all" --type expr --schedule "0 2 * * *" \
   --title "Nightly Tests" --timezone America/New_York \
   --folder base --tags user:tag/ci.md --priority 5 --timeout 600000
 
@@ -164,7 +164,7 @@ For queue architecture details, see [[sys:system/text/cli-queue-system.md]].
 ### Daily Job with Timezone
 
 ```yaml
-command: yarn deploy:prod
+command: bun deploy:prod
 schedule_type: expr
 schedule: '0 14 * * 1-5'
 timezone: America/Los_Angeles
