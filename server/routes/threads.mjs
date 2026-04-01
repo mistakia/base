@@ -182,6 +182,7 @@ async function apply_batch_permissions_to_threads(
  */
 async function handle_thread_list_request_indexed({
   thread_state,
+  user_public_key,
   search,
   file_ref,
   dir_ref,
@@ -197,6 +198,13 @@ async function handle_thread_list_request_indexed({
       column_id: 'thread_state',
       operator: '=',
       value: thread_state
+    })
+  }
+  if (user_public_key) {
+    filters.push({
+      column_id: 'user_public_key',
+      operator: '=',
+      value: user_public_key
     })
   }
 
@@ -345,6 +353,7 @@ router.get('/', async (req, res) => {
         log('Using SQLite index for thread query')
         const result = await handle_thread_list_request_indexed({
           thread_state,
+          user_public_key,
           search,
           file_ref,
           dir_ref,

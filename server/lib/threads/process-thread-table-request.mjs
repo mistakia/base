@@ -16,7 +16,7 @@ import {
   query_threads_from_sqlite,
   count_threads_in_sqlite
 } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
-import { get_sqlite_database } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 import { to_number } from '#libs-server/utils/to-number.mjs'
@@ -236,7 +236,6 @@ async function process_thread_table_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  const sqlite_database = await get_sqlite_database()
   const all_filters = convert_table_state_to_sqlite_filters(table_state)
   const sort = convert_table_state_to_sqlite_sort(table_state)
   const limit = table_state?.limit || 1000
@@ -258,7 +257,6 @@ async function process_thread_table_request_indexed({
 
   // Query threads from SQLite
   const threads = await query_threads_from_sqlite({
-    connection: sqlite_database,
     filters,
     sort,
     limit,
@@ -268,7 +266,6 @@ async function process_thread_table_request_indexed({
 
   // Get total count for pagination
   const total_count = await count_threads_in_sqlite({
-    connection: sqlite_database,
     filters,
     tags: tags.length > 0 ? tags : undefined
   })

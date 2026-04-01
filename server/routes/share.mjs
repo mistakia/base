@@ -59,7 +59,7 @@ router.get('/:token', async (req, res) => {
 
     // Try thread lookup (threads use thread_id, not entity_id)
     const thread_results = await query_threads_from_sqlite({
-      filters: [{ column_id: 'thread_id', operator: 'eq', value: entity_id }],
+      filters: [{ column_id: 'thread_id', operator: '=', value: entity_id }],
       limit: 1
     })
     if (thread_results.length > 0) {

@@ -297,7 +297,10 @@ async function warm_tasks_cache() {
 
     const all_tasks = await try_sqlite_or_fallback({
       label: 'tasks cache',
-      sqlite_fn: () => query_tasks_from_entities({ archived: false }),
+      sqlite_fn: () =>
+        query_tasks_from_entities({
+          filters: [{ column_id: 'archived', operator: '=', value: false }]
+        }),
       fallback_fn: () => list_tasks_from_filesystem({ archived: false })
     })
 
