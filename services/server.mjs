@@ -324,7 +324,7 @@ try {
       }
     }
 
-    // Start cache warmer after embedded index (can now use DuckDB for reads)
+    // Start cache warmer after embedded index (can now use SQLite for reads)
     try {
       await start_cache_warmer()
       logger('Cache warmer service started')
@@ -334,7 +334,7 @@ try {
     }
 
     // Attach thread sync hooks to the already-running thread watcher.
-    // Thread changes are synced directly to DuckDB.
+    // Thread changes are synced directly to SQLite.
     if (embedded_index_ready) {
       try {
         set_thread_watcher_hooks(thread_index_sync_hooks)

@@ -1,12 +1,12 @@
 /**
  * Index Sync Service
  *
- * Standalone PM2 service that owns all DuckDB write operations and entity sync.
+ * Standalone PM2 service that owns all SQLite write operations and entity sync.
  * Isolates heavy I/O (file watching, database writes, rebuild operations) from
  * the API event loop.
  *
  * Responsibilities:
- * - DuckDB write connection (sole writer)
+ * - SQLite write connection (sole writer)
  * - Entity directory chokidar watcher
  * - Sync/resync/rebuild operations
  * - Sync trigger handler for CLI and API requests
@@ -58,7 +58,7 @@ async function read_thread_metadata_from_disk(thread_id) {
 
 /**
  * Start the index sync service.
- * Initializes DuckDB in write mode, starts entity file watcher,
+ * Initializes SQLite in write mode, starts entity file watcher,
  * and begins listening for sync trigger requests.
  */
 export const start_index_sync_service = async () => {
@@ -150,7 +150,7 @@ export const start_index_sync_service = async () => {
 
 /**
  * Stop the index sync service.
- * Shuts down watchers and closes DuckDB connection.
+ * Shuts down watchers and closes SQLite connection.
  */
 export const stop_index_sync_service = async () => {
   if (!is_running) {
