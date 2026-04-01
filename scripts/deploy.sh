@@ -13,7 +13,7 @@
 #   ./scripts/deploy.sh --content-only     # Only sync installable content
 #
 # The hosting directory on the server:
-#   /mnt/md0/base-hosting/
+#   /home/user/base-hosting/
 #   ├── install.sh
 #   ├── releases/latest/
 #   │   ├── version.json
@@ -59,6 +59,24 @@ info() { echo -e "\033[1m$*\033[0m"; }
 success() { echo -e "\033[32m$*\033[0m"; }
 error() { echo -e "\033[31merror:\033[0m $*" >&2; }
 
+# Verify SSH connectivity before any remote operations
+preflight_checks() {
+  info "Running preflight checks..."
+
+  if ! ssh -o ConnectTimeout=5 "$SSH_HOST" true 2>/dev/null; then
+    error "Cannot connect to $SSH_HOST via SSH"
+    exit 1
+  fi
+
+  # Check remote disk space (warn if < 1 GB free)
+  local avail_kb
+  avail_kb=$(ssh "$SSH_HOST" "df -k $(dirname $REMOTE_BASE) | tail -1 | awk '{print \$4}'")
+  if [ "$avail_kb" -lt 1048576 ] 2>/dev/null; then
+    error "Low disk space on $SSH_HOST: $(( avail_kb / 1024 )) MB free (need at least 1 GB)"
+    exit 1
+  fi
+}
+
 # Ensure remote directory structure exists
 setup_remote() {
   info "Setting up remote directory structure..."
@@ -85,12 +103,35 @@ build_binaries() {
   fi
 }
 
+# Generate SHA-256 checksums for binaries
+generate_checksums() {
+  info "Generating checksums..."
+  local checksum_file="$DIST_DIR/checksums.sha256"
+  : > "$checksum_file"
+
+  for binary in "$DIST_DIR"/base-*; do
+    [ -f "$binary" ] || continue
+    if command -v shasum >/dev/null 2>&1; then
+      shasum -a 256 "$binary" | awk "{print \$1 \"  \" \"$(basename "$binary")\"}" >> "$checksum_file"
+    elif command -v sha256sum >/dev/null 2>&1; then
+      sha256sum "$binary" | awk "{print \$1 \"  \" \"$(basename "$binary")\"}" >> "$checksum_file"
+    fi
+  done
+
+  if [ -s "$checksum_file" ]; then
+    success "Checksums written to $checksum_file"
+  fi
+}
+
 # Deploy binaries and install script
 deploy_releases() {
   info "Deploying release binaries..."
 
-  # Upload only binaries and version.json (not system/ or content/ subdirs)
-  rsync -avz --progress --include='base-*' --include='version.json' --exclude='*' \
+  generate_checksums
+
+  # Upload binaries, version.json, and checksums (not system/ or content/ subdirs)
+  rsync -avz --progress --chmod=F755 \
+    --include='base-*' --include='version.json' --include='checksums.sha256' --exclude='*' \
     "$DIST_DIR/" "$SSH_HOST:$REMOTE_BASE/releases/latest/"
 
   # Upload install script to root
@@ -149,22 +190,42 @@ deploy_installable_content() {
     fi
   fi
 
-  # Deploy workflows (individual .md files)
+  # Deploy workflows marked as public_read (individual .md files)
   if [ -d "$USER_BASE/workflow" ]; then
-    rsync -avz --include='*.md' --exclude='*' \
-      "$USER_BASE/workflow/" "$SSH_HOST:$REMOTE_BASE/workflow/"
+    local workflow_tmp="$content_dist/workflow"
+    mkdir -p "$workflow_tmp"
+    for f in "$USER_BASE/workflow"/*.md; do
+      [ -f "$f" ] || continue
+      if grep -q "^public_read: true" "$f" 2>/dev/null; then
+        cp "$f" "$workflow_tmp/"
+      fi
+    done
+    if [ -n "$(ls -A "$workflow_tmp" 2>/dev/null)" ]; then
+      rsync -avz "$workflow_tmp/" "$SSH_HOST:$REMOTE_BASE/workflow/"
+    fi
   fi
 
-  # Deploy guidelines (individual .md files)
+  # Deploy guidelines marked as public_read (individual .md files)
   if [ -d "$USER_BASE/guideline" ]; then
-    rsync -avz --include='*.md' --exclude='*' \
-      "$USER_BASE/guideline/" "$SSH_HOST:$REMOTE_BASE/guideline/"
+    local guideline_tmp="$content_dist/guideline"
+    mkdir -p "$guideline_tmp"
+    for f in "$USER_BASE/guideline"/*.md; do
+      [ -f "$f" ] || continue
+      if grep -q "^public_read: true" "$f" 2>/dev/null; then
+        cp "$f" "$guideline_tmp/"
+      fi
+    done
+    if [ -n "$(ls -A "$guideline_tmp" 2>/dev/null)" ]; then
+      rsync -avz "$guideline_tmp/" "$SSH_HOST:$REMOTE_BASE/guideline/"
+    fi
   fi
 
   success "Installable content deployed"
 }
 
 # Main
+preflight_checks
+
 if [ "$SYSTEM_ONLY" = true ]; then
   setup_remote
   deploy_system_content
