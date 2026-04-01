@@ -21,7 +21,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # The mounted venv (Python 3.12) has pure-Python packages that work cross-version,
 # but greenlet has C extensions tied to the build Python. Install it natively here
 # so the container Python (3.11) can load it alongside the mounted venv's PYTHONPATH.
-RUN python3 -m pip install --break-system-packages greenlet
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip \
+    && python3 -m pip install --break-system-packages greenlet \
+    && apt-get purge -y python3-pip && apt-get autoremove -y \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install Chromium headless dependencies for CloakBrowser
 RUN apt-get update && apt-get install -y --no-install-recommends \
