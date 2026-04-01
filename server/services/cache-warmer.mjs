@@ -34,20 +34,20 @@ import {
 const log = debug('server:cache-warmer')
 
 /**
- * Try DuckDB query with fallback
+ * Try SQLite query with fallback
  * @param {Object} params Parameters
- * @param {Function} params.duckdb_fn Async function that queries DuckDB
+ * @param {Function} params.sqlite_fn Async function that queries SQLite
  * @param {Function} params.fallback_fn Async function for fallback
  * @param {string} params.label Label for logging
  * @returns {Promise<any>} Query result
  */
-async function try_duckdb_or_fallback({ duckdb_fn, fallback_fn, label }) {
-  if (embedded_index_manager.is_duckdb_ready()) {
+async function try_sqlite_or_fallback({ sqlite_fn, fallback_fn, label }) {
+  if (embedded_index_manager.is_sqlite_ready()) {
     try {
-      log('Using DuckDB for %s', label)
-      return await duckdb_fn()
+      log('Using SQLite for %s', label)
+      return await sqlite_fn()
     } catch (error) {
-      log('DuckDB query failed for %s, falling back: %s', label, error.message)
+      log('SQLite query failed for %s, falling back: %s', label, error.message)
     }
   }
   log('Using fallback for %s', label)
@@ -118,9 +118,9 @@ async function warm_activity_cache() {
     const days = 365
     log('Warming activity heatmap cache for %d days', days)
 
-    // When DuckDB is not ready, fall back to full computation
-    if (!embedded_index_manager.is_duckdb_ready()) {
-      log('DuckDB not ready, using full computation fallback')
+    // When SQLite is not ready, fall back to full computation
+    if (!embedded_index_manager.is_sqlite_ready()) {
+      log('SQLite not ready, using full computation fallback')
       cache.activity_heatmap = {
         data: await get_activity_heatmap_data({ days }),
         timestamp: Date.now(),
@@ -271,17 +271,17 @@ async function warm_activity_cache() {
 
 /**
  * Warm the tasks cache for public requests
- * Uses DuckDB when available for faster queries, falls back to filesystem.
+ * Uses SQLite when available for faster queries, falls back to filesystem.
  */
 /**
- * Convert flat DuckDB task row to nested entity format expected by route handlers.
+ * Convert flat SQLite task row to nested entity format expected by route handlers.
  * Filesystem results already have entity_properties/file_info structure.
  */
-function normalize_duckdb_task(task) {
+function normalize_sqlite_task(task) {
   // Already in nested format (from filesystem)
   if (task.entity_properties) return task
 
-  // Convert flat DuckDB row to nested structure
+  // Convert flat SQLite row to nested structure
   return {
     entity_properties: { ...task },
     file_info: {
@@ -295,14 +295,14 @@ async function warm_tasks_cache() {
   try {
     log('Warming tasks cache')
 
-    const all_tasks = await try_duckdb_or_fallback({
+    const all_tasks = await try_sqlite_or_fallback({
       label: 'tasks cache',
-      duckdb_fn: () => query_tasks_from_entities({ archived: false }),
+      sqlite_fn: () => query_tasks_from_entities({ archived: false }),
       fallback_fn: () => list_tasks_from_filesystem({ archived: false })
     })
 
-    // Normalize to nested entity format (DuckDB returns flat rows)
-    const normalized = all_tasks.map(normalize_duckdb_task)
+    // Normalize to nested entity format (SQLite returns flat rows)
+    const normalized = all_tasks.map(normalize_sqlite_task)
 
     cache.tasks = {
       data: normalized,
@@ -345,7 +345,7 @@ async function warm_task_stats_cache() {
  */
 export async function rebuild_activity_heatmap() {
   log('Rebuilding activity heatmap from scratch')
-  if (embedded_index_manager.is_duckdb_ready()) {
+  if (embedded_index_manager.is_sqlite_ready()) {
     await truncate_heatmap_daily()
   }
   cache.activity_heatmap.timestamp = 0

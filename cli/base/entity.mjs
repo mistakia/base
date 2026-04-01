@@ -1464,7 +1464,7 @@ async function handle_tree(argv) {
       return
     }
 
-    const fetch_relations_duckdb = async (uri) => {
+    const fetch_relations_sqlite = async (uri) => {
       const { find_related_entities, find_entities_relating_to } = await import(
         '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
       )
@@ -1496,10 +1496,10 @@ async function handle_tree(argv) {
             if (!response.ok) throw new Error(`API returned ${response.status}`)
             return response.json()
           },
-          () => fetch_relations_duckdb(uri)
+          () => fetch_relations_sqlite(uri)
         )
       } catch {
-        return await fetch_relations_duckdb(uri)
+        return await fetch_relations_sqlite(uri)
       }
     }
 

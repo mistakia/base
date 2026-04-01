@@ -2,7 +2,7 @@
  * Semantic Search Engine
  *
  * Query-time semantic search using pre-computed entity embeddings.
- * Embeds the query via Ollama and performs cosine similarity search in DuckDB.
+ * Embeds the query via Ollama and performs cosine similarity search in SQLite.
  */
 
 import debug from 'debug'

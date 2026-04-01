@@ -20,7 +20,7 @@ describe('EmbeddedIndexManager Thread Sync Deduplication', function () {
     // Mark as initialized but with no database backends ready
     // This allows sync_thread to run but _execute_thread_sync returns early
     manager.initialized = true
-    manager.duckdb_ready = false
+    manager.sqlite_ready = false
   })
 
   describe('constructor', () => {
@@ -39,7 +39,7 @@ describe('EmbeddedIndexManager Thread Sync Deduplication', function () {
       const result = await manager.sync_thread({ thread_id, metadata })
 
       expect(result).to.have.property('success', true)
-      expect(result).to.have.property('duckdb_synced', false)
+      expect(result).to.have.property('sqlite_synced', false)
     })
 
     it('should clear pending map after sync completes', async () => {
@@ -147,7 +147,7 @@ describe('EmbeddedIndexManager Thread Sync Deduplication', function () {
       // Mock _execute_thread_sync to simulate failure
       manager._execute_thread_sync = async function () {
         await new Promise((resolve) => setTimeout(resolve, 50))
-        return { success: false, duckdb_synced: false }
+        return { success: false, sqlite_synced: false }
       }
 
       const thread_id = 'test-thread-5'

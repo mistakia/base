@@ -204,7 +204,7 @@ async function fetch_relations_from_api({
   return response.json()
 }
 
-async function fetch_relations_from_duckdb({
+async function fetch_relations_from_sqlite({
   base_uri,
   direction,
   relation_type,
@@ -270,7 +270,7 @@ async function handle_relations(argv, direction) {
 
     const result = await with_api_fallback(
       () => fetch_relations_from_api(params),
-      () => fetch_relations_from_duckdb(params)
+      () => fetch_relations_from_sqlite(params)
     )
 
     // Apply source-type filtering to reverse relations (only reverse has sources)

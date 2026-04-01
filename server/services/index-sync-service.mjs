@@ -69,14 +69,14 @@ export const start_index_sync_service = async () => {
 
   log('Starting index sync service')
 
-  // Initialize embedded index manager (DuckDB in write mode)
+  // Initialize embedded index manager (SQLite in write mode)
   try {
     await embedded_index_manager.initialize()
     const status = embedded_index_manager.get_index_status()
-    log('Embedded index initialized (duckdb: %s)', status.duckdb_ready)
+    log('Embedded index initialized (sqlite: %s)', status.sqlite_ready)
 
-    if (!status.duckdb_ready) {
-      log('DuckDB not ready, sync service cannot operate')
+    if (!status.sqlite_ready) {
+      log('SQLite not ready, sync service cannot operate')
       return
     }
   } catch (error) {

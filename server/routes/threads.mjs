@@ -12,7 +12,7 @@ import { process_thread_with_permissions } from '#server/lib/threads/process-thr
 import { get_active_session_for_thread } from '#server/services/active-sessions/active-session-store.mjs'
 import {
   process_thread_table_request,
-  normalize_duckdb_thread
+  normalize_sqlite_thread
 } from '#server/lib/threads/process-thread-table-request.mjs'
 import {
   check_thread_permission_middleware,
@@ -178,7 +178,7 @@ async function apply_batch_permissions_to_threads(
 }
 
 /**
- * Handle thread list request using DuckDB index
+ * Handle thread list request using SQLite index
  */
 async function handle_thread_list_request_indexed({
   thread_state,
@@ -209,8 +209,8 @@ async function handle_thread_list_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  // Query from DuckDB with search, reference, and tag filters
-  const duckdb_threads = await query_threads_from_sqlite({
+  // Query from SQLite with search, reference, and tag filters
+  const sqlite_threads = await query_threads_from_sqlite({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
     limit,
@@ -222,8 +222,8 @@ async function handle_thread_list_request_indexed({
   })
 
   // Normalize to API format
-  const normalized_threads = duckdb_threads.map((thread) =>
-    normalize_duckdb_thread(thread, models_data)
+  const normalized_threads = sqlite_threads.map((thread) =>
+    normalize_sqlite_thread(thread, models_data)
   )
 
   // Apply batch permission checking and redaction
@@ -234,7 +234,7 @@ async function handle_thread_list_request_indexed({
 }
 
 /**
- * Handle thread list request filtered by relation target using DuckDB
+ * Handle thread list request filtered by relation target using SQLite
  */
 async function handle_thread_list_by_relation({
   relates_to,
@@ -319,9 +319,9 @@ router.get('/', async (req, res) => {
     }
 
     // Handle relation-based queries (find threads relating to a target entity)
-    if (relates_to && embedded_index_manager.is_duckdb_ready()) {
+    if (relates_to && embedded_index_manager.is_sqlite_ready()) {
       try {
-        log('Using DuckDB for thread relation query: relates_to=%s', relates_to)
+        log('Using SQLite for thread relation query: relates_to=%s', relates_to)
         const result = await handle_thread_list_by_relation({
           relates_to,
           relation_type,
@@ -331,7 +331,7 @@ router.get('/', async (req, res) => {
         })
         return res.json(result)
       } catch (error) {
-        log('DuckDB relation query failed: %s', error.message)
+        log('SQLite relation query failed: %s', error.message)
         return res.status(500).json({
           error: 'Failed to query thread relations',
           message: error.message
@@ -339,10 +339,10 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Use DuckDB for all requests (includes latest_timeline_event from indexed data)
-    if (embedded_index_manager.is_duckdb_ready()) {
+    // Use SQLite for all requests (includes latest_timeline_event from indexed data)
+    if (embedded_index_manager.is_sqlite_ready()) {
       try {
-        log('Using DuckDB index for thread query')
+        log('Using SQLite index for thread query')
         const result = await handle_thread_list_request_indexed({
           thread_state,
           search,
@@ -356,13 +356,13 @@ router.get('/', async (req, res) => {
         return res.json(result)
       } catch (error) {
         log(
-          'DuckDB query failed, falling back to filesystem: %s',
+          'SQLite query failed, falling back to filesystem: %s',
           error.message
         )
       }
     }
 
-    // Fallback: DuckDB not available - fetch from filesystem
+    // Fallback: SQLite not available - fetch from filesystem
     log('Fetching threads from filesystem')
 
     // Get all threads from filesystem

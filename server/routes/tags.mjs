@@ -10,7 +10,7 @@ import {
   count_threads_in_sqlite,
   query_tags_used_by
 } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
-import { normalize_duckdb_thread } from '#server/lib/threads/process-thread-table-request.mjs'
+import { normalize_sqlite_thread } from '#server/lib/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
@@ -37,7 +37,7 @@ async function query_threads_by_tag({
 }) {
   try {
     const sort_column = sort === 'created_at' ? 'created_at' : 'updated_at'
-    const duckdb_threads = await query_threads_from_sqlite({
+    const sqlite_threads = await query_threads_from_sqlite({
       tags: [tag_base_uri],
       sort: [{ column_id: sort_column, desc: true }],
       limit
@@ -51,11 +51,11 @@ async function query_threads_by_tag({
       // Cost calculation will work without models data
     }
 
-    return duckdb_threads.map((thread) =>
-      normalize_duckdb_thread(thread, models_data)
+    return sqlite_threads.map((thread) =>
+      normalize_sqlite_thread(thread, models_data)
     )
   } catch {
-    // DuckDB not initialized or tables don't exist yet
+    // SQLite not initialized or tables don't exist yet
     return []
   }
 }
@@ -130,7 +130,7 @@ router.get('/', async (req, res) => {
 
       const parsed_limit = parseInt(limit, 10) || 50
 
-      // Get all entities associated with this tag using DuckDB index
+      // Get all entities associated with this tag using SQLite index
       // For redacted tags, return empty entities list
       let tagged_entities = []
       let task_count = 0
@@ -147,8 +147,8 @@ router.get('/', async (req, res) => {
             limit: parsed_limit
           })
         } catch (err) {
-          // DuckDB may not be available, return empty array
-          log('Failed to query entities from DuckDB: %s', err.message)
+          // SQLite may not be available, return empty array
+          log('Failed to query entities from SQLite: %s', err.message)
           tagged_entities = []
         }
 

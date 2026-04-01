@@ -576,18 +576,18 @@ class EmbeddedIndexManager {
 
   /**
    * Sync an entity to the embedded database
-   * @returns {{ success: boolean, duckdb_synced: boolean }}
+   * @returns {{ success: boolean, sqlite_synced: boolean }}
    */
   async sync_entity({ base_uri, entity_data }) {
-    const result = { success: true, duckdb_synced: false }
+    const result = { success: true, sqlite_synced: false }
 
     if (this._is_write_blocked('sync_entity')) {
-      return { success: false, duckdb_synced: false }
+      return { success: false, sqlite_synced: false }
     }
 
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity sync')
-      return { success: false, duckdb_synced: false }
+      return { success: false, sqlite_synced: false }
     }
 
     const unified_entity_data = extract_unified_entity_data({
@@ -615,7 +615,7 @@ class EmbeddedIndexManager {
           source_base_uri: base_uri,
           relations
         })
-        result.duckdb_synced = true
+        result.sqlite_synced = true
       } catch (error) {
         log('Error syncing entity to SQLite: %s', error.message)
         result.success = false
@@ -649,11 +649,11 @@ class EmbeddedIndexManager {
    * Deduplicates concurrent requests for the same thread_id - if a sync is
    * already in progress for a thread, subsequent requests will wait for the
    * existing sync to complete and receive the same result.
-   * @returns {{ success: boolean, duckdb_synced: boolean }}
+   * @returns {{ success: boolean, sqlite_synced: boolean }}
    */
   async sync_thread({ thread_id, metadata }) {
     if (this._is_write_blocked('sync_thread')) {
-      return { success: false, duckdb_synced: false }
+      return { success: false, sqlite_synced: false }
     }
 
     // Check if there's already a pending sync for this thread
@@ -716,11 +716,11 @@ class EmbeddedIndexManager {
    * @private
    */
   async _execute_thread_sync({ thread_id, metadata }) {
-    const result = { success: true, duckdb_synced: false }
+    const result = { success: true, sqlite_synced: false }
 
     if (!this.initialized) {
       log('Index manager not initialized, skipping thread sync')
-      return { success: false, duckdb_synced: false }
+      return { success: false, sqlite_synced: false }
     }
 
     // Sync to SQLite
@@ -778,7 +778,7 @@ class EmbeddedIndexManager {
             ...latest_event_data
           }
         })
-        result.duckdb_synced = true
+        result.sqlite_synced = true
       } catch (error) {
         log('Error syncing thread to SQLite: %s', error.message)
         result.success = false
@@ -786,7 +786,7 @@ class EmbeddedIndexManager {
 
       // Sync thread relations if present (outside main try-catch to not affect thread sync result)
       if (
-        result.duckdb_synced &&
+        result.sqlite_synced &&
         Array.isArray(metadata?.relations) &&
         metadata.relations.length > 0
       ) {
@@ -811,7 +811,7 @@ class EmbeddedIndexManager {
 
       // Sync thread tags if present (outside main try-catch to not affect thread sync result)
       if (
-        result.duckdb_synced &&
+        result.sqlite_synced &&
         Array.isArray(metadata?.tags) &&
         metadata.tags.length > 0
       ) {

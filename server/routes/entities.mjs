@@ -133,7 +133,7 @@ router.get('/', async (req, res) => {
     const without_tags_filter = without_tags === 'true'
 
     // Check if DuckDB is available
-    if (!embedded_index_manager.is_duckdb_ready()) {
+    if (!embedded_index_manager.is_sqlite_ready()) {
       return res.status(503).send({ error: 'Database not available' })
     }
 
@@ -246,7 +246,7 @@ router.get('/threads', async (req, res) => {
     }
 
     // Check if DuckDB is available
-    if (!embedded_index_manager.is_duckdb_ready()) {
+    if (!embedded_index_manager.is_sqlite_ready()) {
       return res.status(503).send({ error: 'Database not available' })
     }
 

@@ -210,8 +210,8 @@ async function handle_single_task_request(req, res, base_uri, user_public_key) {
   }
 }
 
-// Convert DuckDB task result to API response format (nested entity_properties)
-function convert_duckdb_task_to_response_format(task) {
+// Convert SQLite task result to API response format (nested entity_properties)
+function convert_sqlite_task_to_response_format(task) {
   return {
     entity_properties: {
       entity_id: task.entity_id,
@@ -236,13 +236,13 @@ function convert_duckdb_task_to_response_format(task) {
     },
     file_info: {
       base_uri: task.base_uri,
-      absolute_path: null // Not available from DuckDB
+      absolute_path: null // Not available from SQLite
     }
   }
 }
 
-// Build DuckDB filters from query params
-function build_duckdb_filters_from_query(params) {
+// Build SQLite filters from query params
+function build_sqlite_filters_from_query(params) {
   const { status, priority, archived, include_completed } = params
   const filters = []
 
@@ -304,7 +304,7 @@ function build_duckdb_filters_from_query(params) {
   return filters
 }
 
-// Handle task list request using DuckDB index
+// Handle task list request using SQLite index
 async function handle_task_list_request_indexed(
   filter_params,
   archived,
@@ -312,7 +312,7 @@ async function handle_task_list_request_indexed(
   limit,
   offset
 ) {
-  const filters = build_duckdb_filters_from_query({
+  const filters = build_sqlite_filters_from_query({
     ...filter_params,
     archived
   })
@@ -325,7 +325,7 @@ async function handle_task_list_request_indexed(
   })
 
   // Convert to API response format
-  const formatted_tasks = tasks.map(convert_duckdb_task_to_response_format)
+  const formatted_tasks = tasks.map(convert_sqlite_task_to_response_format)
 
   // Batch permission check for all tasks
   const resource_paths = formatted_tasks.map(
@@ -460,9 +460,9 @@ async function handle_task_list_request(
     }
   }
 
-  // For authenticated requests, try DuckDB first for better performance
-  if (user_public_key && embedded_index_manager.is_duckdb_ready()) {
-    // Note: tag_entity_ids, organization_ids, person_ids not yet supported in DuckDB path
+  // For authenticated requests, try SQLite first for better performance
+  if (user_public_key && embedded_index_manager.is_sqlite_ready()) {
+    // Note: tag_entity_ids, organization_ids, person_ids not yet supported in SQLite path
     const has_unsupported_filters =
       tag_entity_ids || organization_ids || person_ids
 

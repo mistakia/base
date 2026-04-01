@@ -6,7 +6,7 @@
  * Manual sync tool with server detection and multiple sync modes.
  *
  * Usage:
- *   node cli/sync-embedded-index.mjs [options]
+ *   bun cli/sync-embedded-index.mjs [options]
  *
  * Options:
  *   --incremental   Git-based change detection only (default)
@@ -84,7 +84,7 @@ function print_help() {
 Sync Embedded Index CLI
 
 Usage:
-  node cli/sync-embedded-index.mjs [options]
+  bun cli/sync-embedded-index.mjs [options]
 
 Options:
   --incremental   Git-based change detection only (default)
@@ -95,10 +95,10 @@ Options:
   --help, -h      Show this help
 
 Examples:
-  node cli/sync-embedded-index.mjs                 # Incremental sync (default)
-  node cli/sync-embedded-index.mjs --resync        # Full resync with orphan cleanup
-  node cli/sync-embedded-index.mjs --reset         # Drop and rebuild everything
-  node cli/sync-embedded-index.mjs --status        # Show sync status
+  bun cli/sync-embedded-index.mjs                 # Incremental sync (default)
+  bun cli/sync-embedded-index.mjs --resync        # Full resync with orphan cleanup
+  bun cli/sync-embedded-index.mjs --reset         # Drop and rebuild everything
+  bun cli/sync-embedded-index.mjs --status        # Show sync status
 `)
 }
 
@@ -237,8 +237,8 @@ async function show_status({ verbose }) {
     // Initialize just enough to read metadata
     await embedded_index_manager.initialize()
 
-    if (!embedded_index_manager.is_duckdb_ready()) {
-      console.log('DuckDB Status: Not available')
+    if (!embedded_index_manager.is_sqlite_ready()) {
+      console.log('SQLite Status: Not available')
       await embedded_index_manager.shutdown()
       return
     }

@@ -182,7 +182,7 @@ function format_thread_result(metadata, user_base_dir) {
 }
 
 /**
- * Search threads using DuckDB (fast path, <5ms)
+ * Search threads using SQLite (fast path, <5ms)
  *
  * Queries the indexed threads table using ILIKE for text matching across
  * searchable fields. Returns formatted results sorted by updated_at desc.
@@ -192,15 +192,15 @@ function format_thread_result(metadata, user_base_dir) {
  * @param {number} params.max_results - Maximum results
  * @param {boolean} params.include_archived - Include archived threads
  * @param {string} params.user_base_dir - User base directory
- * @returns {Promise<Array<Object>|null>} Results or null if DuckDB unavailable
+ * @returns {Promise<Array<Object>|null>} Results or null if SQLite unavailable
  */
-async function search_threads_duckdb({
+async function search_threads_sqlite({
   query,
   max_results,
   include_archived,
   user_base_dir
 }) {
-  if (!embedded_index_manager.is_duckdb_ready()) {
+  if (!embedded_index_manager.is_sqlite_ready()) {
     return null
   }
 
@@ -209,7 +209,7 @@ async function search_threads_duckdb({
 
     // Search indexed fields with ILIKE
     // Note: workflow_base_uri and git_branch from SEARCHABLE_FIELDS are not
-    // in the DuckDB schema; the ripgrep fallback covers those fields.
+    // in the SQLite schema; the ripgrep fallback covers those fields.
     let sql = `
       SELECT thread_id, title, short_description, thread_state,
              created_at, updated_at, working_directory, message_count
@@ -250,7 +250,7 @@ async function search_threads_duckdb({
       absolute_path: path.join(user_base_dir, 'thread', row.thread_id)
     }))
   } catch (error) {
-    log(`DuckDB thread search failed: ${error.message}`)
+    log(`SQLite thread search failed: ${error.message}`)
     return null
   }
 }
@@ -258,7 +258,7 @@ async function search_threads_duckdb({
 /**
  * Search threads by metadata
  *
- * Uses DuckDB as the primary search path (<5ms) with ripgrep fallback.
+ * Uses SQLite as the primary search path (<5ms) with ripgrep fallback.
  * Searches specific fields: title, short_description, thread_id,
  * workflow_base_uri, working_directory, git_branch
  *
@@ -284,23 +284,23 @@ export async function search_threads({
     throw new Error('USER_BASE_DIRECTORY not configured')
   }
 
-  // Try DuckDB first (fast path)
-  const duckdb_results = await search_threads_duckdb({
+  // Try SQLite first (fast path)
+  const sqlite_results = await search_threads_sqlite({
     query: query.trim(),
     max_results,
     include_archived,
     user_base_dir
   })
 
-  if (duckdb_results !== null) {
+  if (sqlite_results !== null) {
     log(
-      `DuckDB thread search found ${duckdb_results.length} results for: ${query}`
+      `SQLite thread search found ${sqlite_results.length} results for: ${query}`
     )
-    return duckdb_results
+    return sqlite_results
   }
 
   // Fallback to ripgrep search
-  log('DuckDB unavailable, falling back to ripgrep thread search')
+  log('SQLite unavailable, falling back to ripgrep thread search')
   const search_config = await load_search_config()
 
   // Use ripgrep to find matching metadata files

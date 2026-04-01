@@ -24,18 +24,18 @@ import { to_number } from '#libs-server/utils/to-number.mjs'
 const log = debug('threads:table')
 
 /**
- * Normalize DuckDB thread row to match filesystem output structure
+ * Normalize SQLite thread row to match filesystem output structure
  * Adds computed fields that the filesystem path computes via extract_thread_metadata
  *
- * @param {Object} thread - DuckDB thread row
+ * @param {Object} thread - SQLite thread row
  * @param {Object} models_data - Cached models pricing data
  * @returns {Object} Normalized thread object
  */
-export function normalize_duckdb_thread(thread, models_data) {
+export function normalize_sqlite_thread(thread, models_data) {
   // Calculate cost using thread data and models pricing
   const cost_data = calculate_thread_cost(thread, models_data)
 
-  // Parse latest timeline event from DuckDB columns
+  // Parse latest timeline event from SQLite columns
   const latest_timeline_event = parse_latest_timeline_event_data({
     latest_event_data: thread.latest_event_data,
     thread_id: thread.thread_id
@@ -71,13 +71,13 @@ export function normalize_duckdb_thread(thread, models_data) {
     working_directory: thread.working_directory,
     working_directory_path: thread.working_directory_path,
 
-    // Message and interaction counts (convert BigInt from DuckDB)
+    // Message and interaction counts (convert BigInt from SQLite)
     message_count: to_number(thread.message_count),
     user_message_count: to_number(thread.user_message_count),
     assistant_message_count: to_number(thread.assistant_message_count),
     tool_call_count: to_number(thread.tool_call_count),
 
-    // Token information (convert BigInt from DuckDB)
+    // Token information (convert BigInt from SQLite)
     total_tokens: to_number(thread.total_tokens),
     total_input_tokens: to_number(thread.total_input_tokens),
     total_output_tokens: to_number(thread.total_output_tokens),
@@ -90,7 +90,7 @@ export function normalize_duckdb_thread(thread, models_data) {
     output_cost: cost_data.output_cost,
     currency: cost_data.currency,
 
-    // Latest timeline event (from DuckDB index)
+    // Latest timeline event (from SQLite index)
     latest_timeline_event,
 
     // External session identifier
@@ -171,9 +171,9 @@ function normalize_table_response(result, table_state) {
 }
 
 /**
- * Convert react-table filters to DuckDB format
+ * Convert react-table filters to SQLite format
  */
-function convert_table_state_to_duckdb_filters(table_state) {
+function convert_table_state_to_sqlite_filters(table_state) {
   const filters = []
 
   if (table_state?.where) {
@@ -192,10 +192,10 @@ function convert_table_state_to_duckdb_filters(table_state) {
 }
 
 /**
- * Convert react-table sort to DuckDB format
+ * Convert react-table sort to SQLite format
  * Handles both 'sort' and 'sorting' keys (react-table uses 'sorting')
  */
-function convert_table_state_to_duckdb_sort(table_state) {
+function convert_table_state_to_sqlite_sort(table_state) {
   const sort = []
 
   // Check for both 'sort' and 'sorting' (react-table format uses 'sorting')
@@ -219,7 +219,7 @@ function convert_table_state_to_duckdb_sort(table_state) {
 }
 
 /**
- * Process thread table request using DuckDB index
+ * Process thread table request using SQLite index
  */
 async function process_thread_table_request_indexed({
   table_state,
@@ -237,8 +237,8 @@ async function process_thread_table_request_indexed({
   }
 
   const sqlite_database = await get_sqlite_database()
-  const all_filters = convert_table_state_to_duckdb_filters(table_state)
-  const sort = convert_table_state_to_duckdb_sort(table_state)
+  const all_filters = convert_table_state_to_sqlite_filters(table_state)
+  const sort = convert_table_state_to_sqlite_sort(table_state)
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
@@ -256,7 +256,7 @@ async function process_thread_table_request_indexed({
     return acc
   }, [])
 
-  // Query threads from DuckDB
+  // Query threads from SQLite
   const threads = await query_threads_from_sqlite({
     connection: sqlite_database,
     filters,
@@ -273,9 +273,9 @@ async function process_thread_table_request_indexed({
     tags: tags.length > 0 ? tags : undefined
   })
 
-  // Normalize DuckDB results to match filesystem output structure
+  // Normalize SQLite results to match filesystem output structure
   const normalized_threads = threads.map((thread) =>
-    normalize_duckdb_thread(thread, models_data)
+    normalize_sqlite_thread(thread, models_data)
   )
 
   // Apply permissions and redaction
@@ -310,7 +310,7 @@ async function process_thread_table_request_indexed({
       offset,
       processing_time_ms,
       table_state: table_state || {},
-      source: 'duckdb_index'
+      source: 'sqlite_index'
     }
   }
 }
@@ -367,8 +367,8 @@ export async function process_thread_table_request({
 
   try {
     // Try to use indexed query if available
-    if (embedded_index_manager.is_duckdb_ready()) {
-      log('Using DuckDB index for thread query')
+    if (embedded_index_manager.is_sqlite_ready()) {
+      log('Using SQLite index for thread query')
       try {
         return await process_thread_table_request_indexed({
           table_state,
@@ -376,7 +376,7 @@ export async function process_thread_table_request({
         })
       } catch (index_error) {
         log(
-          'DuckDB index query failed, falling back to filesystem: %s',
+          'SQLite index query failed, falling back to filesystem: %s',
           index_error.message
         )
       }

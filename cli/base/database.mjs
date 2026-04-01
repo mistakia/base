@@ -121,7 +121,7 @@ async function ensure_index() {
     try {
       await embedded_index_manager.initialize({ read_only: true })
     } catch {
-      // DuckDB may be locked by base-api; database commands fall back to filesystem
+      // SQLite may be locked by base-api; database commands fall back to filesystem
     }
   }
 }
@@ -145,7 +145,7 @@ async function handle_list(argv) {
     } else {
       console.log(`Found ${databases.length} database(s):\n`)
       for (const db of databases) {
-        const backend = db.backend || 'duckdb'
+        const backend = db.backend || 'sqlite'
         console.log(`  ${db.title || db.table_name}`)
         console.log(`    Table: ${db.table_name}`)
         console.log(`    Backend: ${backend}`)
@@ -188,7 +188,7 @@ async function handle_info(argv) {
 
       const storage_config = database_entity.storage_config || {}
       console.log('Storage Config:')
-      console.log(`  Backend: ${storage_config.backend || 'duckdb'}`)
+      console.log(`  Backend: ${storage_config.backend || 'sqlite'}`)
       if (storage_config.path) console.log(`  Path: ${storage_config.path}`)
       if (storage_config.directory)
         console.log(`  Directory: ${storage_config.directory}`)

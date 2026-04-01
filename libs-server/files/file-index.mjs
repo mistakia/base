@@ -28,7 +28,7 @@ async function get_files_adapter() {
 
   log('Initializing files database adapter')
 
-  // Use base_uri to read directly from filesystem (no DuckDB lookup required)
+  // Use base_uri to read directly from filesystem (no SQLite lookup required)
   files_database_entity = await get_database_entity({
     base_uri: FILES_DATABASE_BASE_URI
   })

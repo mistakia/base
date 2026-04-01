@@ -283,20 +283,20 @@ router.get('/', async (req, res) => {
       })
     }
 
-    // In full mode, query entities from DuckDB directly instead of path-based scoring
-    let duckdb_entity_results = null
+    // In full mode, query entities from SQLite directly instead of path-based scoring
+    let sqlite_entity_results = null
     let unified_types = [...types]
 
     if (mode === 'full' && types.includes('entities')) {
-      const duckdb_ready = embedded_index_manager.is_duckdb_ready()
+      const sqlite_ready = embedded_index_manager.is_sqlite_ready()
 
-      if (duckdb_ready) {
-        // Build DuckDB filters for entity_types and tags
-        const duckdb_filters = []
+      if (sqlite_ready) {
+        // Build SQLite filters for entity_types and tags
+        const sqlite_filters = []
         if (entity_types && entity_types.length > 0) {
           const non_thread_types = entity_types.filter((t) => t !== 'thread')
           if (non_thread_types.length > 0) {
-            duckdb_filters.push({
+            sqlite_filters.push({
               column_id: 'type',
               operator: 'IN',
               value: non_thread_types
@@ -304,7 +304,7 @@ router.get('/', async (req, res) => {
           }
         }
         if (tags && tags.length > 0) {
-          duckdb_filters.push({
+          sqlite_filters.push({
             column_id: 'tags',
             operator: 'IN',
             value: tags
@@ -315,15 +315,15 @@ router.get('/', async (req, res) => {
 
         try {
           const db_results = await query_entities_from_sqlite({
-            filters: duckdb_filters,
+            filters: sqlite_filters,
             search: query,
             limit: per_type_limit
           })
 
-          // Only use DuckDB results if we got matches; otherwise let unified_search handle entities
+          // Only use SQLite results if we got matches; otherwise let unified_search handle entities
           if (db_results.length > 0) {
             // Shape results to match expected entity result format
-            duckdb_entity_results = db_results.map((entity) => {
+            sqlite_entity_results = db_results.map((entity) => {
               const absolute_path = resolve_base_uri(entity.base_uri)
               const file_path = parse_base_uri(entity.base_uri).path
               return {
@@ -337,12 +337,12 @@ router.get('/', async (req, res) => {
               }
             })
 
-            // Remove entities from unified_search types since DuckDB handles them
+            // Remove entities from unified_search types since SQLite handles them
             unified_types = unified_types.filter((t) => t !== 'entities')
           }
         } catch (err) {
           log(
-            'DuckDB entity search failed, falling back to path scoring: %s',
+            'SQLite entity search failed, falling back to path scoring: %s',
             err.message
           )
           // Fall through to unified_search with entities included
@@ -351,7 +351,7 @@ router.get('/', async (req, res) => {
     }
 
     // Perform default search (paths or full mode)
-    // Skip unified_search entirely when DuckDB handled all requested types
+    // Skip unified_search entirely when SQLite handled all requested types
     const search_results =
       mode === 'full' && unified_types.length === 0
         ? {
@@ -371,9 +371,9 @@ router.get('/', async (req, res) => {
             limit
           })
 
-    // Merge DuckDB entity results if available
-    if (duckdb_entity_results) {
-      search_results.entities = duckdb_entity_results
+    // Merge SQLite entity results if available
+    if (sqlite_entity_results) {
+      search_results.entities = sqlite_entity_results
     }
 
     const full_result_types = ['files', 'threads', 'entities', 'directories']

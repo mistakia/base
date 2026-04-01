@@ -21,7 +21,7 @@ const log = debug('tasks:table')
 /**
  * Normalize task for table API response
  * Applies default values and adds filesystem-compat fields (absolute_path, content_preview)
- * to ensure consistent output structure between DuckDB and filesystem query paths
+ * to ensure consistent output structure between SQLite and filesystem query paths
  */
 function normalize_task_for_table_response(task, defaults) {
   return {
@@ -53,7 +53,7 @@ function normalize_task_for_table_response(task, defaults) {
     relations: task.relations || [],
     tags: task.tags || [],
 
-    // File info - absolute_path not available from DuckDB index (only base_uri is stored)
+    // File info - absolute_path not available from SQLite index (only base_uri is stored)
     absolute_path: null,
     content_preview: ''
   }
@@ -257,9 +257,9 @@ function get_task_value_for_sorting(item, column_id) {
 }
 
 /**
- * Convert react-table filters to DuckDB format
+ * Convert react-table filters to SQLite format
  */
-function convert_table_state_to_duckdb_filters(table_state) {
+function convert_table_state_to_sqlite_filters(table_state) {
   const filters = []
 
   if (table_state?.where) {
@@ -278,10 +278,10 @@ function convert_table_state_to_duckdb_filters(table_state) {
 }
 
 /**
- * Convert react-table sort to DuckDB format
+ * Convert react-table sort to SQLite format
  * Handles both 'sort' and 'sorting' keys (react-table uses 'sorting')
  */
-function convert_table_state_to_duckdb_sort(table_state) {
+function convert_table_state_to_sqlite_sort(table_state) {
   const sort = []
 
   // Check for both 'sort' and 'sorting' (react-table format uses 'sorting')
@@ -305,7 +305,7 @@ function convert_table_state_to_duckdb_sort(table_state) {
 }
 
 /**
- * Process task table request using DuckDB index (via entities table)
+ * Process task table request using SQLite index (via entities table)
  */
 async function process_task_table_request_indexed({
   table_state,
@@ -313,8 +313,8 @@ async function process_task_table_request_indexed({
 }) {
   const start_time = Date.now()
 
-  const filters = convert_table_state_to_duckdb_filters(table_state)
-  const sort = convert_table_state_to_duckdb_sort(table_state)
+  const filters = convert_table_state_to_sqlite_filters(table_state)
+  const sort = convert_table_state_to_sqlite_sort(table_state)
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
@@ -387,7 +387,7 @@ async function process_task_table_request_indexed({
       offset,
       processing_time_ms,
       table_state: table_state || {},
-      source: 'duckdb_index'
+      source: 'sqlite_index'
     }
   }
 }
@@ -451,8 +451,8 @@ export async function process_task_table_request({
 
   try {
     // Try to use indexed query if available
-    if (embedded_index_manager.is_duckdb_ready()) {
-      log('Using DuckDB index for task query')
+    if (embedded_index_manager.is_sqlite_ready()) {
+      log('Using SQLite index for task query')
       try {
         return await process_task_table_request_indexed({
           table_state,
@@ -460,7 +460,7 @@ export async function process_task_table_request({
         })
       } catch (index_error) {
         log(
-          'DuckDB index query failed, falling back to filesystem: %s',
+          'SQLite index query failed, falling back to filesystem: %s',
           index_error.message
         )
       }

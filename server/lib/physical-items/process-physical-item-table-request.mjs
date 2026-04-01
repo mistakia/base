@@ -342,8 +342,8 @@ export async function process_physical_item_table_request({
   })
 
   try {
-    if (embedded_index_manager.is_duckdb_ready()) {
-      log('Using DuckDB index for physical item query')
+    if (embedded_index_manager.is_sqlite_ready()) {
+      log('Using SQLite index for physical item query')
       try {
         return await process_physical_item_table_request_indexed({
           table_state,
