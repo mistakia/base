@@ -1,0 +1,88 @@
+$user_message_bg = hsl(32, 21.30%, 94.00%)
+
+.skill-invocation
+  background-color: $user_message_bg
+  border-radius: $radius_sm
+  padding: $space_base
+  margin-bottom: $space_xs
+  position: relative
+  width: 100%
+  font-family: $font_family_mono
+  font-size: $font_size_base
+  line-height: 1.5
+  color: $color_text
+
+.skill-invocation__header
+  position: absolute
+  top: 8px
+  right: 8px
+  z-index: 1
+  display: flex
+  align-items: center
+  gap: 4px
+
+.skill-invocation__chip
+  text-transform: uppercase
+  background: darken($user_message_bg, 6%)
+  border-color: darken($user_message_bg, 6%)
+
+  &:hover
+    background: darken($user_message_bg, 6%)
+    border-color: darken($user_message_bg, 6%)
+
+.skill-invocation__content
+  padding-top: $space_lg
+
+.skill-invocation__user-text
+  margin-bottom: $space_sm
+  white-space: normal
+  word-break: normal
+
+.skill-invocation__skills
+  display: flex
+  flex-direction: column
+  gap: $space_xs
+
+.skill-invocation__skill-header
+  display: flex
+  align-items: center
+  gap: $space_xs
+
+.skill-invocation__skill-chip
+  display: inline-flex
+  align-items: center
+  padding: 3px $space_sm
+  font-family: $font_family_mono
+  font-size: $font_size_sm
+  font-weight: $font_weight_medium
+  color: $color_primary
+  background: rgba($color_primary, 0.08)
+  border: 1px solid rgba($color_primary, 0.2)
+  border-radius: $radius_base
+  line-height: 1
+  white-space: nowrap
+  cursor: pointer
+  transition: all $transition_fast
+
+  &:hover
+    background: rgba($color_primary, 0.14)
+    border-color: $color_primary
+
+.skill-invocation__skill-path
+  font-size: $font_size_xs
+  color: $color_text_secondary
+  white-space: nowrap
+  overflow: hidden
+  text-overflow: ellipsis
+  max-width: 300px
+
+.skill-invocation__expansion
+  margin-top: $space_xs
+  margin-left: $space_base
+  padding: $space_sm
+  border-left: 2px solid $color_border_light
+  font-size: $font_size_sm
+  color: $color_text_secondary
+  white-space: normal
+  word-break: break-word
+  overflow: hidden
