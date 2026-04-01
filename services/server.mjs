@@ -319,7 +319,7 @@ try {
     // Start sync trigger watcher for CLI sync requests (file-based IPC)
     if (embedded_index_ready) {
       try {
-        start_sync_trigger_watcher({
+        await start_sync_trigger_watcher({
           on_sync_request: async (request) => {
             logger(
               `Processing sync trigger request: ${request.request_id} (type: ${request.type})`

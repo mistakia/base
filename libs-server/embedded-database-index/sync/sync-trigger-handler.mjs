@@ -97,7 +97,7 @@ export async function write_sync_result({
  * @param {string} params.trigger_directory - Directory to watch (optional, defaults to embedded-database-index)
  * @param {Function} params.on_sync_request - Callback when sync is requested
  */
-export function start_sync_trigger_watcher({
+export async function start_sync_trigger_watcher({
   trigger_directory: dir,
   on_sync_request
 }) {
@@ -109,6 +109,13 @@ export function start_sync_trigger_watcher({
   trigger_directory = dir || get_trigger_directory()
 
   const trigger_path = path.join(trigger_directory, TRIGGER_FILE_NAME)
+
+  // Clean up any stale trigger file before starting the watcher.
+  // A leftover file from a previous server run would cause chokidar to treat
+  // new atomic renames as 'change' events instead of 'add', which would be
+  // missed if we only listened for 'add'.
+  await delete_file_if_exists(trigger_path)
+
   log('Starting sync trigger watcher for %s', trigger_path)
 
   trigger_watcher = chokidar.watch(trigger_path, {
@@ -120,7 +127,7 @@ export function start_sync_trigger_watcher({
     }
   })
 
-  trigger_watcher.on('add', async (file_path) => {
+  const handle_trigger = async (file_path) => {
     log('Sync trigger file detected: %s', file_path)
 
     // Read the trigger request
@@ -163,7 +170,12 @@ export function start_sync_trigger_watcher({
 
     // Delete the trigger file after processing completes
     await delete_file_if_exists(file_path)
-  })
+  }
+
+  // Handle both 'add' (new file) and 'change' (atomic rename overwriting
+  // an existing file) to cover all cases reliably.
+  trigger_watcher.on('add', handle_trigger)
+  trigger_watcher.on('change', handle_trigger)
 
   log('Sync trigger watcher started')
 }
