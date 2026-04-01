@@ -1,11 +1,9 @@
 import debug from 'debug'
-import cronParser from 'cron-parser'
+import { CronExpressionParser } from 'cron-parser'
 
 import { load_all_jobs, save_job } from './report-job.mjs'
 import { get_all } from '#libs-server/extension/capability-registry.mjs'
 import { parse_interval_ms } from './job-utils.mjs'
-
-const { CronExpressionParser } = cronParser
 const log = debug('jobs:missed')
 
 const MIN_GRACE_MS = 5 * 60 * 1000 // 5 minutes

@@ -1,8 +1,6 @@
-import cronParser from 'cron-parser'
+import { CronExpressionParser } from 'cron-parser'
 import ms from 'ms'
 import debug from 'debug'
-
-const { CronExpressionParser } = cronParser
 const log = debug('schedule:parse')
 
 /**
