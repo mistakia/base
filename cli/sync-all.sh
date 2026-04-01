@@ -605,29 +605,28 @@ sync_repo() {
             # Parent repo: merge with submodule conflict auto-resolution
             log "$repo_name: diverged, merging..."
             if ! git -C "$dir" merge "$remote_branch" 2>/dev/null; then
+                # Check MERGE_HEAD first -- if absent, another process completed the merge
+                if [ ! -f "$(git -C "$dir" rev-parse --git-dir)/MERGE_HEAD" ]; then
+                    log "$repo_name: merge completed by concurrent process"
+                    log_telemetry "$repo_name" "sync" "diverged:merge_completed_externally"
+                    return 0
+                fi
                 # Check for unmerged files
                 local unmerged
                 unmerged=$(git -C "$dir" ls-files -u 2>/dev/null)
                 if [ -z "$unmerged" ]; then
                     # No unmerged files -- merge resolved cleanly but needs committing
                     # (e.g., dirty submodule pointers caused non-zero exit from git merge)
-                    if [ -f "$(git -C "$dir" rev-parse --git-dir)/MERGE_HEAD" ]; then
-                        log "$repo_name: merge resolved cleanly, committing..."
-                        if GIT_EDITOR=true git -C "$dir" commit --no-edit 2>/dev/null; then
-                            log "$repo_name: merge committed"
-                            log_telemetry "$repo_name" "sync" "diverged:merge_commit_recovery"
-                        else
-                            git -C "$dir" merge --abort 2>/dev/null || true
-                            log_error "$repo_name: merge commit failed after clean resolution"
-                            discord_notify_failure "$repo_name" "merge commit failed"
-                            log_telemetry "$repo_name" "merge_failed" "commit_recovery_failed"
-                            return 1
-                        fi
+                    log "$repo_name: merge resolved cleanly, committing..."
+                    if GIT_EDITOR=true git -C "$dir" commit --no-edit 2>/dev/null; then
+                        log "$repo_name: merge committed"
+                        log_telemetry "$repo_name" "sync" "diverged:merge_commit_recovery"
+                        return 0
                     else
                         git -C "$dir" merge --abort 2>/dev/null || true
-                        log_error "$repo_name: merge failed (unknown error, no MERGE_HEAD)"
-                        discord_notify_failure "$repo_name" "merge failed"
-                        log_telemetry "$repo_name" "merge_failed" "no_unmerged"
+                        log_error "$repo_name: merge commit failed after clean resolution"
+                        discord_notify_failure "$repo_name" "merge commit failed"
+                        log_telemetry "$repo_name" "merge_failed" "commit_recovery_failed"
                         return 1
                     fi
                 fi

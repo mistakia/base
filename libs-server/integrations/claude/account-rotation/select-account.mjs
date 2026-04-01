@@ -121,10 +121,16 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
     // Claude Code stores its config at ~/.claude.json by default; setting
     // CLAUDE_CONFIG_DIR=~/.claude/ makes it look for ~/.claude/.claude.json
     // instead, which is a different file that lacks auth data.
+    //
+    // For container mode, the resolved_dir is a container path (e.g.
+    // /home/node/.claude/) which won't match the host os.homedir(). Use
+    // path.basename to detect any path whose leaf directory is '.claude'
+    // regardless of the parent (host vs container home).
     const default_dir = path.join(os.homedir(), '.claude')
+    const normalized = resolved_dir?.replace(/\/+$/, '')
     const is_default =
-      resolved_dir === default_dir ||
-      resolved_dir === default_dir + '/' ||
+      normalized === default_dir ||
+      path.basename(normalized || '') === '.claude' ||
       raw_dir === '~/.claude/' ||
       raw_dir === '~/.claude'
     const config_dir = is_default ? null : resolved_dir

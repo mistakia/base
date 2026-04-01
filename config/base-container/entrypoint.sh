@@ -46,6 +46,16 @@ if [ "$CONTAINER_MODE" = "user" ]; then
         run_as_node mkdir -p "$account_dir/projects" "$account_dir/cache" "$account_dir/todos" "$account_dir/plans"
     done
 
+    # Restore ~/.claude.json from backup if missing.
+    # Claude CLI removes this file at session end and backs it up to
+    # ~/.claude/backups/. Without it, every session start emits a warning.
+    if [ ! -f "/home/node/.claude.json" ]; then
+        latest_backup=$(run_as_node ls -t /home/node/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1)
+        if [ -n "$latest_backup" ]; then
+            run_as_node cp "$latest_backup" /home/node/.claude.json
+        fi
+    fi
+
     # Verify credentials exist
     if [ ! -f "/home/node/.claude/.credentials.json" ]; then
         echo "ERROR: .credentials.json not found in claude-home -- user container cannot authenticate" >&2
