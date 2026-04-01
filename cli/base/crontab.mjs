@@ -5,7 +5,7 @@
  * build-crontab.sh (pure bash/awk). This shim preserves the
  * `base crontab build <file>` CLI interface for backwards
  * compatibility with project deployment scripts (e.g. league's
- * yarn load:crontab:main, nano-community's yarn load:crontab).
+ * load:crontab:main, nano-community's load:crontab).
  */
 
 import { execFileSync } from 'child_process'

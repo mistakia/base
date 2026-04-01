@@ -107,6 +107,8 @@ const DEFAULT_DENY_BASH_PATTERNS = [
   'Bash(dd *)',
   'Bash(shred *)',
   'Bash(npm install *)',
+  'Bash(bun install *)',
+  'Bash(bun add *)',
   'Bash(pip install *)',
   'Bash(apt *)',
   'Bash(brew *)'
