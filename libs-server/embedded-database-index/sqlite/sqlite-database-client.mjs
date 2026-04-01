@@ -40,8 +40,9 @@ export async function initialize_sqlite_client({
 
   const { Database } = await import('bun:sqlite')
 
-  const flags = read_only ? { readonly: true } : {}
-  sqlite_database = new Database(database_path, flags)
+  sqlite_database = read_only
+    ? new Database(database_path, { readonly: true })
+    : new Database(database_path)
 
   if (!read_only) {
     sqlite_database.exec('PRAGMA journal_mode=WAL')
