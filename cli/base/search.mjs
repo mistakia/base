@@ -6,14 +6,8 @@
 
 import { list_entities } from '../entity-list.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  SERVER_URL,
-  format_entity,
-  output_results,
-  with_api_fallback,
-  flush_and_exit
-} from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { format_entity, output_results, flush_and_exit } from './lib/format.mjs'
+import { query, api_get } from './lib/data-access.mjs'
 
 export const command = 'search <query>'
 export const describe = 'Full-text search across entities'
@@ -44,7 +38,7 @@ export const builder = (yargs) =>
 export const handler = async (argv) => {
   let exit_code = 0
   try {
-    const results = await with_api_fallback(
+    const results = await query(
       async () => {
         const params = new URLSearchParams({
           q: argv.query,
@@ -56,13 +50,7 @@ export const handler = async (argv) => {
             params.append('type', t)
           }
         }
-
-        const response = await authenticated_fetch(
-          `${SERVER_URL}/api/search?${params}`
-        )
-        if (!response.ok) throw new Error(`API returned ${response.status}`)
-
-        const data = await response.json()
+        const data = await api_get('/api/search', params)
         return data.entities || data.results || data
       },
       async () =>

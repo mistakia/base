@@ -10,13 +10,8 @@ import {
   parse_time_period_date,
   is_valid_time_period
 } from '#libs-server/utils/parse-time-period.mjs'
-import {
-  format_entity,
-  flush_and_exit,
-  SERVER_URL,
-  with_api_fallback
-} from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { format_entity, flush_and_exit } from './lib/format.mjs'
+import { query, api_mutate } from './lib/data-access.mjs'
 
 export const command = 'activity <command>'
 export const describe = 'Activity metrics (entities)'
@@ -91,16 +86,9 @@ async function handle_rebuild_heatmap() {
   let exit_code = 0
   try {
     console.log('Rebuilding activity heatmap...')
-    await with_api_fallback(
+    await query(
       async () => {
-        const response = await authenticated_fetch(
-          `${SERVER_URL}/api/activity/rebuild-heatmap`,
-          { method: 'POST' }
-        )
-        if (!response.ok) {
-          const body = await response.json().catch(() => ({}))
-          throw new Error(body.message || `HTTP ${response.status}`)
-        }
+        await api_mutate('/api/activity/rebuild-heatmap', 'POST', {})
       },
       async () => {
         console.log('API unavailable, using direct DuckDB access')

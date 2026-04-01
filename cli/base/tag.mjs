@@ -9,8 +9,8 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { resolve_tag_shorthand } from '#libs-server/tag/filesystem/resolve-tag-shorthand.mjs'
 import { tag_exists_in_filesystem } from '#libs-server/tag/filesystem/tag-exists-in-filesystem.mjs'
 import { process_tag_batch } from '#libs-server/tag/filesystem/process-tag-batch.mjs'
-import { SERVER_URL, with_api_fallback, flush_and_exit } from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { flush_and_exit } from './lib/format.mjs'
+import { query, api_get } from './lib/data-access.mjs'
 
 export const command = 'tag <command>'
 export const describe = 'Tag operations (list, stats, add, remove)'
@@ -91,15 +91,11 @@ function tag_mutation_options(yargs) {
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const tags = await with_api_fallback(
+    const tags = await query(
       async () => {
         const params = new URLSearchParams()
         if (argv.search) params.set('search_term', argv.search)
-        const response = await authenticated_fetch(
-          `${SERVER_URL}/api/tags?${params}`
-        )
-        if (!response.ok) throw new Error(`API returned ${response.status}`)
-        return response.json()
+        return api_get('/api/tags', params)
       },
       async () =>
         list_entities({

@@ -23,10 +23,9 @@ import {
   format_entity,
   format_entity_thread,
   output_results,
-  with_api_fallback,
   flush_and_exit
 } from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { query, api_get, api_mutate } from './lib/data-access.mjs'
 import {
   validate_boolean,
   parse_boolean,
@@ -805,11 +804,7 @@ async function fetch_entities_from_api(argv) {
   if (argv.sort) params.set('sort_by', argv.sort)
   if (!argv.asc) params.set('sort_desc', 'true')
 
-  const response = await authenticated_fetch(
-    `${SERVER_URL}/api/entities?${params}`
-  )
-  if (!response.ok) throw new Error(`API returned ${response.status}`)
-  const data = await response.json()
+  const data = await api_get('/api/entities', params)
   return data.entities || data
 }
 
@@ -837,7 +832,7 @@ async function handle_list(argv) {
         offset: argv.offset
       })
     } else {
-      entities = await with_api_fallback(
+      entities = await query(
         () => fetch_entities_from_api(argv),
         () =>
           list_entities({
@@ -878,17 +873,13 @@ async function handle_list(argv) {
 async function handle_get(argv) {
   let exit_code = 0
   try {
-    const entities = await with_api_fallback(
+    const entities = await query(
       async () => {
         const params = new URLSearchParams({
           base_uri: argv.base_uri,
           content: 'true'
         })
-        const response = await authenticated_fetch(
-          `${SERVER_URL}/api/entities?${params}`
-        )
-        if (!response.ok) throw new Error(`API returned ${response.status}`)
-        const data = await response.json()
+        const data = await api_get('/api/entities', params)
         return data.entities || data
       },
       () =>
@@ -1034,19 +1025,14 @@ async function fetch_entity_threads_from_api(argv) {
   if (argv['relation-type']) params.set('relation_type', argv['relation-type'])
   params.set('limit', String(argv.limit))
   params.set('offset', String(argv.offset))
-
-  const response = await authenticated_fetch(
-    `${SERVER_URL}/api/entities/threads?${params}`
-  )
-  if (!response.ok) throw new Error(`API returned ${response.status}`)
-  const data = await response.json()
+  const data = await api_get('/api/entities/threads', params)
   return data.threads || data
 }
 
 async function handle_threads(argv) {
   let exit_code = 0
   try {
-    const threads = await with_api_fallback(
+    const threads = await query(
       () => fetch_entity_threads_from_api(argv),
       async () => {
         // Initialize embedded index for direct DuckDB access
@@ -1263,22 +1249,13 @@ async function handle_update(argv) {
       return
     }
 
-    const result = await with_api_fallback(
+    const result = await query(
       async () => {
-        const response = await authenticated_fetch(`${SERVER_URL}/api/tasks`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            base_uri,
-            properties,
-            no_sync: argv['no-sync'] || undefined
-          })
+        return api_mutate('/api/tasks', 'PATCH', {
+          base_uri,
+          properties,
+          no_sync: argv['no-sync'] || undefined
         })
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}))
-          throw new Error(data.error || `API returned ${response.status}`)
-        }
-        return response.json()
       },
       async () => {
         const absolute_path = resolve_base_uri_from_registry(base_uri)
@@ -1484,17 +1461,13 @@ async function handle_tree(argv) {
 
     const fetch_relations = async (uri) => {
       try {
-        return await with_api_fallback(
+        return await query(
           async () => {
             const params = new URLSearchParams({
               base_uri: uri,
               direction: 'both'
             })
-            const response = await authenticated_fetch(
-              `${SERVER_URL}/api/entities/relations?${params}`
-            )
-            if (!response.ok) throw new Error(`API returned ${response.status}`)
-            return response.json()
+            return api_get('/api/entities/relations', params)
           },
           () => fetch_relations_sqlite(uri)
         )
@@ -1570,13 +1543,9 @@ async function handle_tree(argv) {
       }
 
       try {
-        return await with_api_fallback(async () => {
+        return await query(async () => {
           const params = new URLSearchParams({ tags: tag_uri })
-          const response = await authenticated_fetch(
-            `${SERVER_URL}/api/entities?${params}`
-          )
-          if (!response.ok) throw new Error(`API returned ${response.status}`)
-          const data = await response.json()
+          const data = await api_get('/api/entities', params)
           return (data.entities || data).map((e) => e.base_uri)
         }, duckdb_fallback)
       } catch {

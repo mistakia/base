@@ -5,14 +5,8 @@
  * Tries HTTP API first, falls back to direct DuckDB database access.
  */
 
-import {
-  SERVER_URL,
-  format_relation,
-  output_results,
-  with_api_fallback,
-  flush_and_exit
-} from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { format_relation, output_results, flush_and_exit } from './lib/format.mjs'
+import { query, api_get } from './lib/data-access.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
@@ -194,14 +188,7 @@ async function fetch_relations_from_api({
   if (entity_type) params.set('entity_type', entity_type)
   if (limit) params.set('limit', String(limit))
   if (offset) params.set('offset', String(offset))
-
-  const response = await authenticated_fetch(
-    `${SERVER_URL}/api/entities/relations?${params}`
-  )
-  if (!response.ok) {
-    throw new Error(`API returned ${response.status}`)
-  }
-  return response.json()
+  return api_get('/api/entities/relations', params)
 }
 
 async function fetch_relations_from_sqlite({
@@ -268,7 +255,7 @@ async function handle_relations(argv, direction) {
 
     const source_type = argv['source-type']
 
-    const result = await with_api_fallback(
+    const result = await query(
       () => fetch_relations_from_api(params),
       () => fetch_relations_from_sqlite(params)
     )

@@ -16,8 +16,8 @@ import {
   resolve_base_uri_from_registry,
   is_valid_base_uri
 } from '#libs-server/base-uri/index.mjs'
-import { SERVER_URL, with_api_fallback, flush_and_exit } from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { flush_and_exit } from './lib/format.mjs'
+import { query, api_get } from './lib/data-access.mjs'
 
 export const command = 'workflow <command>'
 export const describe = 'Workflow operations (list, run)'
@@ -146,7 +146,7 @@ function resolve_workflow(ref) {
 async function handle_list(argv) {
   let exit_code = 0
   try {
-    const entities = await with_api_fallback(
+    const entities = await query(
       async () => {
         const params = new URLSearchParams({
           type: 'workflow',
@@ -154,11 +154,7 @@ async function handle_list(argv) {
           sort_desc: 'true'
         })
         if (argv.search) params.set('search', argv.search)
-        const response = await authenticated_fetch(
-          `${SERVER_URL}/api/entities?${params}`
-        )
-        if (!response.ok) throw new Error(`API returned ${response.status}`)
-        const data = await response.json()
+        const data = await api_get('/api/entities', params)
         return data.entities || data
       },
       async () => {

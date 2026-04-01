@@ -12,15 +12,14 @@ import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { thread_constants } from '#libs-shared'
+import list_threads from '#libs-server/threads/list-threads.mjs'
 import {
-  SERVER_URL,
-  is_api_unavailable,
   flush_and_exit,
   format_thread,
   format_thread_status,
   format_timeline_entry
 } from './lib/format.mjs'
-import { authenticated_fetch } from './lib/auth.mjs'
+import { query, api_get } from './lib/data-access.mjs'
 
 const { THREAD_STATE, ARCHIVE_REASON } = thread_constants
 
@@ -361,23 +360,15 @@ async function handle_list(argv) {
 
     const is_relation_query = Boolean(argv['relates-to'])
 
-    let threads
-    try {
-      const response = await authenticated_fetch(
-        `${SERVER_URL}/api/threads?${params}`
-      )
-      if (!response.ok) {
-        throw new Error(`API returned ${response.status}`)
-      }
-      threads = await response.json()
-    } catch (error) {
-      if (is_api_unavailable(error)) {
-        throw new Error(
-          'Thread listing requires a running server. Start the server and try again.'
-        )
-      }
-      throw error
-    }
+    const threads = await query(
+      async () => api_get('/api/threads', params),
+      async () =>
+        list_threads({
+          thread_state: argv.state || null,
+          limit: argv.limit,
+          offset: argv.offset
+        })
+    )
 
     if (!threads || threads.length === 0) {
       if (argv.json) {
@@ -696,21 +687,14 @@ async function handle_stale(argv) {
       offset: '0'
     })
 
-    let threads
-    try {
-      const response = await authenticated_fetch(
-        `${SERVER_URL}/api/threads?${params}`
-      )
-      if (!response.ok) throw new Error(`API returned ${response.status}`)
-      threads = await response.json()
-    } catch (error) {
-      if (is_api_unavailable(error)) {
-        throw new Error(
-          'Stale thread detection requires a running server. Start the server and try again.'
-        )
-      }
-      throw error
-    }
+    const threads = await query(
+      async () => api_get('/api/threads', params),
+      async () =>
+        list_threads({
+          thread_state: 'active',
+          limit: argv.limit
+        })
+    )
 
     if (!threads || threads.length === 0) {
       if (argv.json) {
