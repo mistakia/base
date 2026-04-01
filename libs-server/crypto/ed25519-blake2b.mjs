@@ -20,7 +20,8 @@ import { blake2b } from 'blakejs'
 // which auto-hashes data before signing.
 import Ed25519Impl from 'nanocurrency-web/dist/lib/ed25519.js'
 
-const ed = new Ed25519Impl.default()
+const Ed25519Class = Ed25519Impl.default || Ed25519Impl
+const ed = new Ed25519Class()
 
 function to_buffer(input) {
   if (Buffer.isBuffer(input)) return input

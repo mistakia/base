@@ -54,6 +54,8 @@ import * as workflow_command from './base/workflow.mjs'
 import * as job_command from './base/job.mjs'
 import * as crontab_command from './base/crontab.mjs'
 import * as stats_command from './base/stats.mjs'
+import * as update_command from './base/update.mjs'
+import * as install_command from './base/install.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const load_extensions = async (parser) => {
@@ -113,6 +115,8 @@ const main = async () => {
     .command(job_command)
     .command(crontab_command)
     .command(stats_command)
+    .command(update_command)
+    .command(install_command)
     .command(init_command)
 
   await load_extensions(parser)
