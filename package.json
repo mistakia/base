@@ -170,5 +170,5 @@
     "webpack-cli": "5.1.4",
     "webpack-dev-server": "5.2.1"
   },
-  "packageManager": "yarn@4.2.2"
+  "packageManager": "bun@1.2.15"
 }

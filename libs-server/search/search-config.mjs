@@ -22,7 +22,8 @@ const DEFAULT_CONFIG = {
       '*.lock',
       '*.log',
       'package-lock.json',
-      'yarn.lock'
+      'yarn.lock',
+      'bun.lock'
     ],
     include_hidden: false,
     follow_symlinks: false

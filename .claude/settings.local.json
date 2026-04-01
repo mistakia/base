@@ -19,6 +19,7 @@
       "Bash(yarn test:*)",
       "Bash(yarn lint:*)",
       "Bash(DEBUG=* yarn test:*)",
+      "Bash(bun run build:*)",
       "Bash(bun test:*)",
       "Bash(bun lint:*)",
       "Bash(DEBUG=* bun test:*)",

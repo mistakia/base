@@ -37,7 +37,7 @@ async function create_dedicated_connection(database_path) {
     duckdb = await import('duckdb')
   } catch {
     throw new Error(
-      'DuckDB is not installed. Install it with: npm install duckdb\n' +
+      'DuckDB is not installed. Install it with: bun add duckdb\n' +
         'DuckDB is an optional dependency for database storage. ' +
         'New installs default to SQLite.'
     )

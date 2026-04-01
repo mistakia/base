@@ -2,6 +2,7 @@
   "search.exclude": {
     "**/.yarn": true,
     "yarn.lock": true,
+    "bun.lock": true,
     "user/import-history/*": true
   }
 }

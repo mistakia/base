@@ -115,7 +115,7 @@ enabled: true
 ---
 title: Deploy Release
 type: scheduled-command
-command: yarn deploy:production
+command: bun deploy:production
 schedule_type: at
 schedule: '2026-03-01T14:00:00.000Z'
 enabled: true

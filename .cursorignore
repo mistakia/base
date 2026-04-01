@@ -1,4 +1,5 @@
 yarn.lock
+bun.lock
 .cursor/mcp.json
 user/import-history/*
 user/thread/*

@@ -7,7 +7,7 @@
  * then repopulates them with all threads and entities from the filesystem.
  *
  * Usage:
- *   yarn rebuild:index
+ *   bun rebuild:index
  *   bun cli/rebuild-embedded-index.mjs
  */
 

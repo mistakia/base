@@ -38,6 +38,7 @@ EXCLUDES=(
   '!*.log'
   '!package-lock.json'
   '!yarn.lock'
+  '!bun.lock'
   '!pnpm-lock.yaml'
 
   # User-base standard exclusions

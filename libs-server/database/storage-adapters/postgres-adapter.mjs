@@ -22,7 +22,7 @@ async function get_pg() {
       pg_module = await import('pg')
     } catch {
       throw new Error(
-        'PostgreSQL adapter requires the "pg" package. Install with: yarn add pg'
+        'PostgreSQL adapter requires the "pg" package. Install with: bun add pg'
       )
     }
   }
