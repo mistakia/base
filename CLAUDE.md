@@ -154,7 +154,7 @@ Threads execute workflows in isolated git worktrees:
 ## Development Notes
 
 - Bun 1.2+ required (runtime, package manager, and CLI shebang)
-- Uses Yarn 4.2.2 for legacy compatibility (Bun is the primary package manager)
+- Bun is the package manager (bun.lock is the lockfile)
 - File-first architecture with no database dependencies
 - All file paths use ES modules (.mjs extension)
 - Test files follow pattern: `*.test.mjs`
