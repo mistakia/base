@@ -18,9 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Bun (required by base CLI -- all shebangs use #!/usr/bin/env bun)
+# Copy binaries to /usr/local/bin instead of symlinking from /root/.bun/
+# because /root/ is mode 700 and inaccessible to the node user via gosu
 RUN curl -fsSL https://bun.sh/install | bash -s -- bun-v1.2.18 \
-    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
-    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
+    && cp /root/.bun/bin/bun /usr/local/bin/bun \
+    && cp /root/.bun/bin/bun /usr/local/bin/bunx
 
 # Install GitHub CLI (binary from GitHub releases, avoids apt repo SSL issues)
 RUN GH_ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') \
