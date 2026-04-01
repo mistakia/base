@@ -77,15 +77,18 @@ export const generate_compose_config = async ({
     environment.BASE_API_HOST = process.env.BASE_API_HOST
   }
 
-  // CloakBrowser environment: set HOME and PYTHONPATH so cloak-browser.py
-  // resolves ~ paths correctly and can import from the mounted venv
+  // CloakBrowser environment: CLOAKBROWSER_HOME tells cloak-browser.py where
+  // to find profiles, daemon state, and venv. PYTHONPATH provides the mounted
+  // venv packages with system greenlet (native C ext) taking precedence.
   if (thread_config.browser?.enabled) {
     const host_home = homedir()
-    environment.HOME = host_home
-    // System greenlet (native C ext for container Python) must precede venv packages
+    const browser_config = thread_config.browser
+    const container_python_version = browser_config.container_python_version || '3.11'
+    const venv_python_version = browser_config.venv_python_version || '3.12'
+    environment.CLOAKBROWSER_HOME = host_home
     environment.PYTHONPATH = [
-      '/usr/local/lib/python3.11/dist-packages',
-      `${host_home}/.local/share/cloakbrowser-venv/lib/python3.12/site-packages`
+      `/usr/local/lib/python${container_python_version}/dist-packages`,
+      `${host_home}/.local/share/cloakbrowser-venv/lib/python${venv_python_version}/site-packages`
     ].join(':')
   }
 
