@@ -1,6 +1,6 @@
 import { expect } from 'chai'
 import crypto from 'crypto'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'

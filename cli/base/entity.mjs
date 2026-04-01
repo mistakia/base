@@ -11,8 +11,8 @@ import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
-import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
+import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 import {
   parse_time_period_date,
   parse_time_period_ms,
@@ -1557,11 +1557,11 @@ async function handle_tree(argv) {
 
     const fetch_project_entities = async (tag_uri) => {
       const duckdb_fallback = async () => {
-        const { execute_duckdb_query } = await import(
-          '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+        const { execute_sqlite_query } = await import(
+          '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
         )
         await embedded_index_manager.initialize({ read_only: true })
-        const result = await execute_duckdb_query({
+        const result = await execute_sqlite_query({
           query:
             'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
           parameters: [tag_uri]

@@ -1,11 +1,11 @@
 import { expect } from 'chai'
 import {
-  build_duckdb_where_clause,
-  build_duckdb_order_clause
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+  build_sqlite_where_clause,
+  build_sqlite_order_clause
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 describe('SQL Injection Protection', () => {
-  describe('build_duckdb_where_clause', () => {
+  describe('build_sqlite_where_clause', () => {
     it('should reject invalid column names in filters', () => {
       const filters = [
         {
@@ -15,7 +15,7 @@ describe('SQL Injection Protection', () => {
         }
       ]
 
-      const { where_sql, parameters } = build_duckdb_where_clause({ filters })
+      const { where_sql, parameters } = build_sqlite_where_clause({ filters })
 
       // Invalid column should be skipped, resulting in empty WHERE clause
       expect(where_sql).to.equal('')
@@ -27,7 +27,7 @@ describe('SQL Injection Protection', () => {
         { column_id: "status' OR '1'='1", operator: '=', value: 'active' }
       ]
 
-      const { where_sql, parameters } = build_duckdb_where_clause({ filters })
+      const { where_sql, parameters } = build_sqlite_where_clause({ filters })
 
       expect(where_sql).to.equal('')
       expect(parameters).to.have.lengthOf(0)
@@ -36,7 +36,7 @@ describe('SQL Injection Protection', () => {
     it('should allow valid column names', () => {
       const filters = [{ column_id: 'status', operator: '=', value: 'active' }]
 
-      const { where_sql, parameters } = build_duckdb_where_clause({ filters })
+      const { where_sql, parameters } = build_sqlite_where_clause({ filters })
 
       expect(where_sql).to.include('status')
       expect(parameters).to.include('active')
@@ -47,7 +47,7 @@ describe('SQL Injection Protection', () => {
         { column_id: 'status ORDER BY 1--', operator: '=', value: 'test' }
       ]
 
-      const { where_sql } = build_duckdb_where_clause({ filters })
+      const { where_sql } = build_sqlite_where_clause({ filters })
 
       expect(where_sql).to.equal('')
     })
@@ -64,17 +64,17 @@ describe('SQL Injection Protection', () => {
 
       for (const column of valid_columns) {
         const filters = [{ column_id: column, operator: '=', value: 'test' }]
-        const { where_sql } = build_duckdb_where_clause({ filters })
+        const { where_sql } = build_sqlite_where_clause({ filters })
         expect(where_sql).to.include(column)
       }
     })
   })
 
-  describe('build_duckdb_order_clause', () => {
+  describe('build_sqlite_order_clause', () => {
     it('should reject invalid column names in sort', () => {
       const sort = [{ column_id: 'title; DROP TABLE entities--', desc: false }]
 
-      const order_sql = build_duckdb_order_clause({ sort })
+      const order_sql = build_sqlite_order_clause({ sort })
 
       // Invalid column should be filtered out, but ORDER BY prefix may still be there
       // The important thing is the injection payload is not present
@@ -85,7 +85,7 @@ describe('SQL Injection Protection', () => {
     it('should reject SQL injection via sort column_id', () => {
       const sort = [{ column_id: "created_at' OR '1'='1", desc: true }]
 
-      const order_sql = build_duckdb_order_clause({ sort })
+      const order_sql = build_sqlite_order_clause({ sort })
 
       // The injected column should be filtered out
       // Only check for the injection payload, not 'OR' which is in 'ORDER'
@@ -99,7 +99,7 @@ describe('SQL Injection Protection', () => {
         { column_id: 'title', desc: false }
       ]
 
-      const order_sql = build_duckdb_order_clause({ sort })
+      const order_sql = build_sqlite_order_clause({ sort })
 
       expect(order_sql).to.include('created_at')
       expect(order_sql).to.include('DESC')
@@ -110,7 +110,7 @@ describe('SQL Injection Protection', () => {
     it('should handle priority with special CASE expression', () => {
       const sort = [{ column_id: 'priority', desc: true }]
 
-      const order_sql = build_duckdb_order_clause({ sort })
+      const order_sql = build_sqlite_order_clause({ sort })
 
       expect(order_sql).to.include('CASE priority')
       expect(order_sql).to.include('DESC')

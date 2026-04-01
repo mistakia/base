@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Archive Thread CLI Tool
@@ -24,7 +24,7 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { update_thread_state } from '#libs-server/threads/update-thread.mjs'
-import { isMain } from '#libs-server'
+import { isMain } from '#libs-server/is-main.mjs'
 import {
   add_directory_cli_options,
   handle_cli_directory_registration

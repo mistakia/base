@@ -1,8 +1,7 @@
 import debug from 'debug'
 import path from 'path'
 import os from 'os'
-import sqlite3 from 'sqlite3'
-import { open } from 'sqlite'
+import { Database } from 'bun:sqlite'
 import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
 
 const log = debug('integrations:cursor:read-database')
@@ -22,26 +21,24 @@ export const find_cursor_composer_data = async ({ db_path }) => {
   const full_path = expand_path(db_path)
   log(`Opening Cursor database at: ${full_path}`)
 
-  const db = await open({
-    filename: full_path,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READONLY
-  })
+  const db = new Database(full_path, { readonly: true })
 
   try {
-    const rows = await db.all(`
-      SELECT key, length(value) as size 
-      FROM cursorDiskKV 
-      WHERE key LIKE 'composerData:%' 
-        AND value IS NOT NULL 
+    const rows = db
+      .prepare(
+        `SELECT key, length(value) as size
+      FROM cursorDiskKV
+      WHERE key LIKE 'composerData:%'
+        AND value IS NOT NULL
         AND length(value) > 100
-      ORDER BY size DESC
-    `)
+      ORDER BY size DESC`
+      )
+      .all()
 
     log(`Found ${rows.length} composer data entries`)
     return rows
   } finally {
-    await db.close()
+    db.close()
   }
 }
 
@@ -60,17 +57,12 @@ export const read_cursor_conversation = async (composer_id, options = {}) => {
 
   log(`Reading conversation ${key} from ${full_path}`)
 
-  const db = await open({
-    filename: full_path,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READONLY
-  })
+  const db = new Database(full_path, { readonly: true })
 
   try {
-    const row = await db.get(
-      'SELECT value FROM cursorDiskKV WHERE key = ?',
-      key
-    )
+    const row = db
+      .prepare('SELECT value FROM cursorDiskKV WHERE key = ?')
+      .get(key)
     if (!row) {
       log(`Conversation ${key} not found`)
       return null
@@ -86,7 +78,7 @@ export const read_cursor_conversation = async (composer_id, options = {}) => {
     log(`Error reading conversation ${key}: ${error.message}`)
     throw error
   } finally {
-    await db.close()
+    db.close()
   }
 }
 
@@ -103,11 +95,7 @@ export const read_all_cursor_conversations = async ({
   const conversations = []
   const full_path = expand_path(db_path)
 
-  const db = await open({
-    filename: full_path,
-    driver: sqlite3.Database,
-    mode: sqlite3.OPEN_READONLY
-  })
+  const db = new Database(full_path, { readonly: true })
 
   try {
     const rows_to_process = limit
@@ -116,10 +104,9 @@ export const read_all_cursor_conversations = async ({
 
     for (const row of rows_to_process) {
       try {
-        const data_row = await db.get(
-          'SELECT value FROM cursorDiskKV WHERE key = ?',
-          row.key
-        )
+        const data_row = db
+          .prepare('SELECT value FROM cursorDiskKV WHERE key = ?')
+          .get(row.key)
         if (!data_row || !data_row.value) {
           log(`No data found for ${row.key}`)
           continue
@@ -152,7 +139,7 @@ export const read_all_cursor_conversations = async ({
     log(`Successfully read ${conversations.length} conversations`)
     return conversations
   } finally {
-    await db.close()
+    db.close()
   }
 }
 

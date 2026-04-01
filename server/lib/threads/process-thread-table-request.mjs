@@ -13,10 +13,10 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import { parse_latest_timeline_event_data } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
-  query_threads_from_duckdb,
-  count_threads_in_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { get_duckdb_connection } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+  query_threads_from_sqlite,
+  count_threads_in_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
+import { get_sqlite_database } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
 import { to_number } from '#libs-server/utils/to-number.mjs'
@@ -236,7 +236,7 @@ async function process_thread_table_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  const duckdb_connection = await get_duckdb_connection()
+  const sqlite_database = await get_sqlite_database()
   const all_filters = convert_table_state_to_duckdb_filters(table_state)
   const sort = convert_table_state_to_duckdb_sort(table_state)
   const limit = table_state?.limit || 1000
@@ -257,8 +257,8 @@ async function process_thread_table_request_indexed({
   }, [])
 
   // Query threads from DuckDB
-  const threads = await query_threads_from_duckdb({
-    connection: duckdb_connection,
+  const threads = await query_threads_from_sqlite({
+    connection: sqlite_database,
     filters,
     sort,
     limit,
@@ -267,8 +267,8 @@ async function process_thread_table_request_indexed({
   })
 
   // Get total count for pagination
-  const total_count = await count_threads_in_duckdb({
-    connection: duckdb_connection,
+  const total_count = await count_threads_in_sqlite({
+    connection: sqlite_database,
     filters,
     tags: tags.length > 0 ? tags : undefined
   })

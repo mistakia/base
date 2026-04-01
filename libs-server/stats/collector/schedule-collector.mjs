@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { load_all_jobs } from '#libs-server/jobs/report-job.mjs'
 
 const log = debug('stats:collector:schedule')
@@ -15,7 +15,7 @@ export async function collect_schedule_metrics({ snapshot_date }) {
   const metrics = []
 
   // Scheduled command counts by enabled status
-  const schedule_rows = await execute_duckdb_query({
+  const schedule_rows = await execute_sqlite_query({
     query: `
       SELECT
         json_extract_string(frontmatter, '$.enabled') as enabled,

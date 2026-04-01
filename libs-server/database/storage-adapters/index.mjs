@@ -38,7 +38,7 @@ const log = debug('database:storage-adapters')
  */
 export async function get_storage_adapter(database_entity) {
   const storage_config = database_entity.storage_config || {}
-  const backend = storage_config.backend || 'duckdb'
+  const backend = storage_config.backend || 'sqlite'
   const host = storage_config.host
   const is_local = is_local_host({ host })
 
@@ -85,6 +85,20 @@ export async function get_storage_adapter(database_entity) {
       // Markdown uses git sync for cross-machine access
       const { create_markdown_adapter } = await import('./markdown-adapter.mjs')
       return create_markdown_adapter(database_entity)
+    }
+    case 'sqlite': {
+      if (!is_local) {
+        const { create_sqlite_remote_adapter } = await import(
+          './sqlite-remote.mjs'
+        )
+        return create_sqlite_remote_adapter({
+          host,
+          database_path: storage_config.database,
+          database_entity
+        })
+      }
+      const { create_sqlite_adapter } = await import('./sqlite-adapter.mjs')
+      return create_sqlite_adapter(database_entity)
     }
     default:
       throw new Error(`Unknown storage backend: ${backend}`)

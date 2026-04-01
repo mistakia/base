@@ -22,7 +22,7 @@ import {
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { get_cached_tasks } from '#server/services/cache-warmer.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_tasks_from_entities } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { query_tasks_from_entities } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
 
 const log = debug('api:tasks')

@@ -5,7 +5,7 @@
  */
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 import {
   parse_time_period_date,
   is_valid_time_period

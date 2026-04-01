@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'
-
 /**
  * Update a GitHub issue using REST API
  * @param {Object} params - Parameters for updating the issue

@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Unified Base CLI
@@ -21,7 +21,7 @@ import path from 'path'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { isMain } from '#libs-server'
+import { isMain } from '#libs-server/is-main.mjs'
 import {
   add_directory_cli_options,
   handle_cli_directory_registration

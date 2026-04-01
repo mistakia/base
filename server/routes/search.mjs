@@ -13,7 +13,7 @@ import {
 } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_entities_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+import { query_entities_from_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { search_file_contents_with_context } from '#libs-server/search/ripgrep-file-search.mjs'
 import { search_semantic } from '#libs-server/search/semantic-search-engine.mjs'
 import {
@@ -314,7 +314,7 @@ router.get('/', async (req, res) => {
         const per_type_limit = Math.max(1, Math.ceil(limit / types.length))
 
         try {
-          const db_results = await query_entities_from_duckdb({
+          const db_results = await query_entities_from_sqlite({
             filters: duckdb_filters,
             search: query,
             limit: per_type_limit

@@ -1,6 +1,6 @@
 import debug from 'debug'
 import express from 'express'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'
 import {
@@ -10,8 +10,8 @@ import {
 } from '#libs-server/share-token/index.mjs'
 import {
   get_entity_by_id,
-  query_threads_from_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+  query_threads_from_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 const log = debug('api:share')
 const router = express.Router({ mergeParams: true })
@@ -58,7 +58,7 @@ router.get('/:token', async (req, res) => {
     }
 
     // Try thread lookup (threads use thread_id, not entity_id)
-    const thread_results = await query_threads_from_duckdb({
+    const thread_results = await query_threads_from_sqlite({
       filters: [{ column_id: 'thread_id', operator: 'eq', value: entity_id }],
       limit: 1
     })

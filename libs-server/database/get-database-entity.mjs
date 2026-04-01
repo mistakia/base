@@ -9,9 +9,9 @@ import path from 'path'
 import { readdir } from 'fs/promises'
 
 import {
-  execute_duckdb_query,
-  is_duckdb_initialized
-} from '../embedded-database-index/duckdb/duckdb-database-client.mjs'
+  execute_sqlite_query,
+  is_sqlite_initialized
+} from '../embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { read_entity_from_filesystem } from '../entity/filesystem/index.mjs'
 import { resolve_base_uri } from '../base-uri/base-uri-utilities.mjs'
 import { get_user_base_directory } from '../base-uri/base-directory-registry.mjs'
@@ -57,9 +57,9 @@ export async function get_database_entity({ name, base_uri }) {
   }
 
   // If name provided, search by table_name in DuckDB index
-  if (is_duckdb_initialized()) {
+  if (is_sqlite_initialized()) {
     try {
-      const results = await execute_duckdb_query({
+      const results = await execute_sqlite_query({
         query: `
           SELECT base_uri, frontmatter
           FROM entities
@@ -150,13 +150,13 @@ async function _find_database_entity_on_filesystem(name) {
 export async function list_database_entities({ limit = 100, offset = 0 } = {}) {
   log('Listing database entities')
 
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized')
     throw new Error('DuckDB not initialized')
   }
 
   try {
-    const results = await execute_duckdb_query({
+    const results = await execute_sqlite_query({
       query: `
         SELECT
           base_uri,

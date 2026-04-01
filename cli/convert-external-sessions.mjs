@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Convert External Sessions Script
@@ -11,7 +11,7 @@ import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
-import { isMain } from '#libs-server'
+import { isMain } from '#libs-server/is-main.mjs'
 import { get_claude_config } from '#libs-server/integrations/claude/claude-config.mjs'
 import { get_cursor_config } from '#libs-server/integrations/cursor/cursor-config.mjs'
 import { build_chatgpt_filter } from '#libs-server/integrations/chatgpt/chatgpt-config.mjs'

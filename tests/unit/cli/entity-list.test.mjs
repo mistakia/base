@@ -5,24 +5,24 @@
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
-import { upsert_entity_to_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
+import { upsert_entity_to_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 import {
-  query_entities_from_duckdb,
+  query_entities_from_sqlite,
   get_entity_by_base_uri,
   get_entity_by_id
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 describe('Entity List CLI', function () {
   this.timeout(10000)
 
   before(async () => {
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
     // Insert test entities
     const test_entities = [
@@ -69,21 +69,21 @@ describe('Entity List CLI', function () {
     ]
 
     for (const entity of test_entities) {
-      await upsert_entity_to_duckdb({ entity_data: entity })
+      await upsert_entity_to_sqlite({ entity_data: entity })
     }
   })
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch {
       // Ignore cleanup errors
     }
   })
 
-  describe('query_entities_from_duckdb', () => {
+  describe('query_entities_from_sqlite', () => {
     it('should list all entities without filters', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [],
         limit: 100
       })
@@ -92,7 +92,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should filter entities by type', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [{ column_id: 'type', operator: 'IN', value: ['task'] }],
         limit: 100
       })
@@ -102,7 +102,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should filter entities by status', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [{ column_id: 'status', operator: '=', value: 'In Progress' }],
         limit: 100
       })
@@ -112,7 +112,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should filter entities by priority', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [{ column_id: 'priority', operator: '=', value: 'High' }],
         limit: 100
       })
@@ -122,7 +122,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should search entities by title', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [{ column_id: 'title', operator: 'LIKE', value: 'Task 1' }],
         limit: 100
       })
@@ -132,7 +132,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should respect limit parameter', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [],
         limit: 1
       })
@@ -141,7 +141,7 @@ describe('Entity List CLI', function () {
     })
 
     it('should sort entities', async () => {
-      const entities = await query_entities_from_duckdb({
+      const entities = await query_entities_from_sqlite({
         filters: [{ column_id: 'type', operator: '=', value: 'task' }],
         sort: [{ column_id: 'title', desc: false }],
         limit: 100

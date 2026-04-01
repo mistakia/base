@@ -8,8 +8,8 @@
 import debug from 'debug'
 
 import { embed_texts } from '#libs-server/content-review/ollama-client.mjs'
-import { search_similar } from '#libs-server/embedded-database-index/duckdb/duckdb-embedding-queries.mjs'
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { search_similar } from '#libs-server/embedded-database-index/sqlite/sqlite-embedding-queries.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('search:semantic')
 
@@ -93,7 +93,7 @@ async function fetch_entity_metadata({ base_uris }) {
   if (base_uris.length === 0) return metadata_map
 
   const placeholders = base_uris.map(() => '?').join(', ')
-  const rows = await execute_duckdb_query({
+  const rows = await execute_sqlite_query({
     query: `SELECT base_uri, title, description, type FROM entities WHERE base_uri IN (${placeholders})`,
     parameters: base_uris
   })

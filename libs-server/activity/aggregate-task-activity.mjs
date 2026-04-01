@@ -1,9 +1,9 @@
 import debug from 'debug'
 
 import {
-  execute_duckdb_query,
-  is_duckdb_initialized
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+  execute_sqlite_query,
+  is_sqlite_initialized
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('activity:task')
 
@@ -21,7 +21,7 @@ const log = debug('activity:task')
  * @returns {Promise<Array<Object>>} Array of daily task activity objects
  */
 export async function aggregate_task_activity({ days = 365 } = {}) {
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized, skipping task activity aggregation')
     return []
   }
@@ -37,7 +37,7 @@ export async function aggregate_task_activity({ days = 365 } = {}) {
 
   try {
     const [creation_rows, completion_rows] = await Promise.all([
-      execute_duckdb_query({
+      execute_sqlite_query({
         query: `
           SELECT CAST(created_at AS DATE) as date, COUNT(*) as count
           FROM entities
@@ -46,7 +46,7 @@ export async function aggregate_task_activity({ days = 365 } = {}) {
         `,
         parameters: [since_str, until_str]
       }),
-      execute_duckdb_query({
+      execute_sqlite_query({
         query: `
           SELECT
             CAST(finished_at_str::TIMESTAMP AS DATE) as date,

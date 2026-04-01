@@ -1,5 +1,5 @@
 /**
- * @fileoverview Integration tests for DuckDB thread relation queries
+ * @fileoverview Integration tests for SQLite thread relation queries
  *
  * Tests the find_threads_relating_to() function that queries threads
  * by their relation targets.
@@ -8,22 +8,22 @@
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_entity_to_duckdb,
-  upsert_thread_to_duckdb,
-  sync_entity_relations_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+  upsert_entity_to_sqlite,
+  upsert_thread_to_sqlite,
+  sync_entity_relations_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 
-describe('DuckDB Thread Relation Queries Integration', () => {
+describe('SQLite Thread Relation Queries Integration', () => {
   before(async () => {
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
     // Create test entities (targets for relations)
     const test_entities = [
@@ -62,7 +62,7 @@ describe('DuckDB Thread Relation Queries Integration', () => {
     ]
 
     for (const entity of test_entities) {
-      await upsert_entity_to_duckdb({ entity_data: entity })
+      await upsert_entity_to_sqlite({ entity_data: entity })
     }
 
     // Create test threads
@@ -98,12 +98,12 @@ describe('DuckDB Thread Relation Queries Integration', () => {
     ]
 
     for (const thread of test_threads) {
-      await upsert_thread_to_duckdb({ thread_data: thread })
+      await upsert_thread_to_sqlite({ thread_data: thread })
     }
 
     // Create thread relations
     // thread-aaa-111 modifies task-1
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-aaa-111',
       relations: [
         {
@@ -115,7 +115,7 @@ describe('DuckDB Thread Relation Queries Integration', () => {
     })
 
     // thread-bbb-222 accesses task-1
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-bbb-222',
       relations: [
         {
@@ -127,7 +127,7 @@ describe('DuckDB Thread Relation Queries Integration', () => {
     })
 
     // thread-ccc-333 modifies task-2
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-ccc-333',
       relations: [
         {
@@ -141,7 +141,7 @@ describe('DuckDB Thread Relation Queries Integration', () => {
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch (error) {
       // Ignore cleanup errors
     }

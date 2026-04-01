@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 import config from '#config'
 
@@ -16,7 +16,7 @@ export async function collect_thread_metrics({ snapshot_date }) {
   const metrics = []
 
   // Thread counts by state
-  const state_rows = await execute_duckdb_query({
+  const state_rows = await execute_sqlite_query({
     query:
       'SELECT thread_state, COUNT(*) as cnt FROM threads GROUP BY thread_state'
   })
@@ -45,7 +45,7 @@ export async function collect_thread_metrics({ snapshot_date }) {
   })
 
   // Total tokens and cost
-  const token_rows = await execute_duckdb_query({
+  const token_rows = await execute_sqlite_query({
     query: `
       SELECT
         COALESCE(SUM(CAST(total_tokens AS BIGINT)), 0) as total_tokens,

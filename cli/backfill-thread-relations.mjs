@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Batch backfill thread relations for all existing threads
@@ -18,10 +18,8 @@
 
 import fs from 'fs/promises'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
+import config from '#config'
 
 if (!process.env.USER_BASE_DIRECTORY) {
   console.error(
@@ -32,7 +30,7 @@ if (!process.env.USER_BASE_DIRECTORY) {
 
 const USER_BASE_DIR = process.env.USER_BASE_DIRECTORY
 const THREAD_DIR = path.join(USER_BASE_DIR, 'thread')
-const BASE_REPO = path.resolve(__dirname, '..')
+const BASE_REPO = config.system_base_directory
 
 // Parse command line arguments
 const args = process.argv.slice(2)
@@ -244,7 +242,7 @@ async function processThread(threadId, options = {}) {
   if (options.force) args.push('--force')
 
   return new Promise((resolve) => {
-    const child = spawn('node', [cliPath, ...args], {
+    const child = spawn(process.argv[0], [cliPath, ...args], {
       cwd: BASE_REPO,
       env: { ...process.env, DEBUG: '' } // Disable debug output for cleaner JSON
     })

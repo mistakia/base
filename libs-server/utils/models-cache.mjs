@@ -1,6 +1,5 @@
 import fs from 'fs/promises'
 import debug from 'debug'
-import fetch from 'node-fetch'
 import { file_exists_in_filesystem } from '#libs-server/filesystem/file-exists-in-filesystem.mjs'
 
 const log = debug('models-cache')

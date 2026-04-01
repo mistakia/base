@@ -6,7 +6,7 @@ import debug from 'debug'
 import config from '#config'
 import { load_search_config } from './search-config.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('search:threads')
 
@@ -230,7 +230,7 @@ async function search_threads_duckdb({
     params.push(max_results)
     sql += ` ORDER BY updated_at DESC NULLS LAST LIMIT $${params.length}`
 
-    const result = await execute_duckdb_query({ query: sql, params })
+    const result = await execute_sqlite_query({ query: sql, params })
 
     if (!result?.rows) {
       return null

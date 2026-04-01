@@ -1,5 +1,3 @@
-import fetch from 'node-fetch'
-
 /**
  * Get issues from a GitHub repository
  * @param {Object} params - Parameters for getting repository issues

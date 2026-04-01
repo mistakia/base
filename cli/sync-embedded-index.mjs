@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Sync Embedded Index CLI
@@ -22,7 +22,7 @@ import path from 'path'
 
 import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { get_all_index_metadata } from '#libs-server/embedded-database-index/duckdb/duckdb-metadata-operations.mjs'
+import { get_all_index_metadata } from '#libs-server/embedded-database-index/sqlite/sqlite-metadata-operations.mjs'
 import {
   write_sync_trigger,
   poll_for_sync_result,

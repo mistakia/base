@@ -1,7 +1,7 @@
 /**
  * Embedded Index Manager
  *
- * Singleton that coordinates DuckDB database for index operations.
+ * Singleton that coordinates SQLite database for index operations.
  * Handles initialization, sync, rebuild, and shutdown.
  */
 
@@ -11,29 +11,29 @@ import debug from 'debug'
 
 import config from '#config'
 import {
-  close_duckdb_connection,
-  initialize_duckdb_client,
-  execute_duckdb_query,
-  execute_duckdb_run,
-  checkpoint_duckdb
-} from './duckdb/duckdb-database-client.mjs'
+  close_sqlite_connection,
+  initialize_sqlite_client,
+  execute_sqlite_query,
+  execute_sqlite_run,
+  checkpoint_sqlite
+} from './sqlite/sqlite-database-client.mjs'
 import {
-  create_duckdb_schema,
-  drop_duckdb_schema
-} from './duckdb/duckdb-schema-definitions.mjs'
+  create_sqlite_schema,
+  drop_sqlite_schema
+} from './sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_thread_to_duckdb,
-  upsert_entity_to_duckdb,
-  delete_thread_from_duckdb,
-  delete_entity_from_duckdb,
-  sync_entity_tags_to_duckdb,
-  sync_entity_relations_to_duckdb,
-  sync_thread_tags_to_duckdb,
+  upsert_thread_to_sqlite,
+  upsert_entity_to_sqlite,
+  delete_thread_from_sqlite,
+  delete_entity_from_sqlite,
+  sync_entity_tags_to_sqlite,
+  sync_entity_relations_to_sqlite,
+  sync_thread_tags_to_sqlite,
   upsert_entities_batch,
   sync_entities_tags_batch,
   sync_entities_relations_batch,
   BATCH_CHUNK_SIZE
-} from './duckdb/duckdb-entity-sync.mjs'
+} from './sqlite/sqlite-entity-sync.mjs'
 import {
   extract_unified_entity_data,
   extract_tags_from_entity,
@@ -52,7 +52,7 @@ import {
   set_repo_sync_state,
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION
-} from './duckdb/duckdb-metadata-operations.mjs'
+} from './sqlite/sqlite-metadata-operations.mjs'
 import { ENTITY_DIRECTORIES } from './sync/index-sync-filters.mjs'
 import {
   discover_repositories,
@@ -71,7 +71,7 @@ class EmbeddedIndexManager {
   constructor() {
     this.initialized = false
     this.read_only = false
-    this.duckdb_ready = false
+    this.sqlite_ready = false
     this.index_config = null
     this.sync_in_progress = false
     this._sync_lock_queue = []
@@ -158,9 +158,10 @@ class EmbeddedIndexManager {
 
     this.index_config = {
       enabled: embedded_config.enabled !== false,
-      duckdb_path:
-        embedded_config.duckdb_path ||
-        `${user_base_directory}/embedded-database-index/duckdb.db`,
+      sqlite_path:
+        embedded_config.sqlite_path ||
+        embedded_config.duckdb_path?.replace(/duckdb\.db$/, 'sqlite.db') ||
+        `${user_base_directory}/embedded-database-index/sqlite.db`,
       file_watcher_enabled: embedded_config.file_watcher_enabled !== false
     }
 
@@ -184,53 +185,53 @@ class EmbeddedIndexManager {
     log('Initializing embedded index manager (read_only: %s)', read_only)
 
     try {
-      await this._initialize_duckdb(index_config)
-      this.duckdb_ready = true
-      log('DuckDB database initialized')
+      await this._initialize_sqlite(index_config)
+      this.sqlite_ready = true
+      log('SQLite database initialized')
     } catch (error) {
-      log('Failed to initialize DuckDB: %s', error.message)
-      this.duckdb_ready = false
+      log('Failed to initialize SQLite: %s', error.message)
+      this.sqlite_ready = false
     }
 
     this.initialized = true
 
     // Perform startup sync with fallback chain (write mode only)
-    if (this.duckdb_ready && !this.read_only) {
+    if (this.sqlite_ready && !this.read_only) {
       await this._perform_startup_sync()
     }
 
     log(
-      'Embedded index manager initialized (duckdb: %s, read_only: %s)',
-      this.duckdb_ready,
+      'Embedded index manager initialized (sqlite: %s, read_only: %s)',
+      this.sqlite_ready,
       this.read_only
     )
   }
 
-  async _initialize_duckdb(index_config) {
-    await initialize_duckdb_client({
-      database_path: index_config.duckdb_path,
+  async _initialize_sqlite(index_config) {
+    await initialize_sqlite_client({
+      database_path: index_config.sqlite_path,
       read_only: this.read_only
     })
 
     // Schema creation requires write access
     if (!this.read_only) {
-      await create_duckdb_schema()
+      await create_sqlite_schema()
     }
   }
 
   /**
-   * Get entity count from DuckDB database.
+   * Get entity count from the embedded database.
    * Used to detect populated database for comparison.
    * @returns {Promise<number>} Entity count or 0 on error
    */
-  async _get_duckdb_entity_count() {
+  async _get_entity_count() {
     try {
-      const result = await execute_duckdb_query({
+      const result = await execute_sqlite_query({
         query: 'SELECT COUNT(*) as count FROM entities'
       })
       return result.length > 0 ? Number(result[0].count) : 0
     } catch (error) {
-      log('Error getting DuckDB entity count: %s', error.message)
+      log('Error getting entity count: %s', error.message)
       return 0
     }
   }
@@ -389,13 +390,13 @@ class EmbeddedIndexManager {
     // Clear timeline cache since all data will be repopulated
     this._timeline_sync_cache.clear()
 
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
-        await drop_duckdb_schema()
-        await create_duckdb_schema()
-        log('DuckDB schema rebuilt')
+        await drop_sqlite_schema()
+        await create_sqlite_schema()
+        log('SQLite schema rebuilt')
       } catch (error) {
-        log('Error rebuilding DuckDB schema: %s', error.message)
+        log('Error rebuilding SQLite schema: %s', error.message)
       }
     }
 
@@ -408,7 +409,7 @@ class EmbeddedIndexManager {
     await this._populate_entities_from_filesystem()
 
     // Backfill git activity data
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
         log('Backfilling git activity data')
         await backfill_git_activity_from_scratch({ days: 365 })
@@ -419,7 +420,7 @@ class EmbeddedIndexManager {
     }
 
     // Set schema version and sync state for all repositories
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
         const user_base_directory = config.user_base_directory
 
@@ -449,7 +450,7 @@ class EmbeddedIndexManager {
 
         // Force checkpoint to persist all changes to disk.
         // This ensures schema version survives ungraceful shutdowns (e.g., PM2 SIGKILL).
-        await checkpoint_duckdb()
+        await checkpoint_sqlite()
       } catch (error) {
         log('Error updating sync metadata after rebuild: %s', error.message)
       }
@@ -459,8 +460,8 @@ class EmbeddedIndexManager {
   }
 
   async _populate_threads_from_filesystem() {
-    if (!this.duckdb_ready) {
-      log('DuckDB not ready, skipping thread population')
+    if (!this.sqlite_ready) {
+      log('SQLite not ready, skipping thread population')
       return
     }
 
@@ -488,8 +489,8 @@ class EmbeddedIndexManager {
   }
 
   async _populate_entities_from_filesystem() {
-    if (!this.duckdb_ready) {
-      log('DuckDB not ready, skipping entity population')
+    if (!this.sqlite_ready) {
+      log('SQLite not ready, skipping entity population')
       return
     }
 
@@ -599,24 +600,24 @@ class EmbeddedIndexManager {
       entity_properties: entity_data
     })
 
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
         // Sync to unified entities table (all entity types)
         if (unified_entity_data) {
-          await upsert_entity_to_duckdb({ entity_data: unified_entity_data })
+          await upsert_entity_to_sqlite({ entity_data: unified_entity_data })
         }
 
-        await sync_entity_tags_to_duckdb({
+        await sync_entity_tags_to_sqlite({
           entity_base_uri: base_uri,
           tag_base_uris
         })
-        await sync_entity_relations_to_duckdb({
+        await sync_entity_relations_to_sqlite({
           source_base_uri: base_uri,
           relations
         })
         result.duckdb_synced = true
       } catch (error) {
-        log('Error syncing entity to DuckDB: %s', error.message)
+        log('Error syncing entity to SQLite: %s', error.message)
         result.success = false
       }
     }
@@ -634,11 +635,11 @@ class EmbeddedIndexManager {
       return
     }
 
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
-        await delete_entity_from_duckdb({ base_uri })
+        await delete_entity_from_sqlite({ base_uri })
       } catch (error) {
-        log('Error removing entity from DuckDB: %s', error.message)
+        log('Error removing entity from SQLite: %s', error.message)
       }
     }
   }
@@ -722,8 +723,8 @@ class EmbeddedIndexManager {
       return { success: false, duckdb_synced: false }
     }
 
-    // Sync to DuckDB
-    if (this.duckdb_ready) {
+    // Sync to SQLite
+    if (this.sqlite_ready) {
       try {
         const thread_index_data = extract_thread_index_data({
           thread_id,
@@ -771,7 +772,7 @@ class EmbeddedIndexManager {
           })
         }
 
-        await upsert_thread_to_duckdb({
+        await upsert_thread_to_sqlite({
           thread_data: {
             ...thread_index_data,
             ...latest_event_data
@@ -779,7 +780,7 @@ class EmbeddedIndexManager {
         })
         result.duckdb_synced = true
       } catch (error) {
-        log('Error syncing thread to DuckDB: %s', error.message)
+        log('Error syncing thread to SQLite: %s', error.message)
         result.success = false
       }
 
@@ -794,7 +795,7 @@ class EmbeddedIndexManager {
             entity_properties: { relations: metadata.relations }
           })
           const thread_base_uri = `user:thread/${thread_id}`
-          await sync_entity_relations_to_duckdb({
+          await sync_entity_relations_to_sqlite({
             source_base_uri: thread_base_uri,
             relations
           })
@@ -815,7 +816,7 @@ class EmbeddedIndexManager {
         metadata.tags.length > 0
       ) {
         try {
-          await sync_thread_tags_to_duckdb({
+          await sync_thread_tags_to_sqlite({
             thread_id,
             tag_base_uris: metadata.tags
           })
@@ -843,18 +844,18 @@ class EmbeddedIndexManager {
       return
     }
 
-    // Remove from DuckDB
-    if (this.duckdb_ready) {
+    // Remove from SQLite
+    if (this.sqlite_ready) {
       try {
-        await delete_thread_from_duckdb({ thread_id })
+        await delete_thread_from_sqlite({ thread_id })
       } catch (error) {
-        log('Error removing thread from DuckDB: %s', error.message)
+        log('Error removing thread from SQLite: %s', error.message)
       }
 
       // Clean up thread relations
       try {
         const thread_base_uri = `user:thread/${thread_id}`
-        await execute_duckdb_run({
+        await execute_sqlite_run({
           query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
           parameters: [thread_base_uri]
         })
@@ -868,34 +869,34 @@ class EmbeddedIndexManager {
   get_index_status() {
     return {
       initialized: this.initialized,
-      duckdb_ready: this.duckdb_ready,
+      duckdb_ready: this.sqlite_ready,
       config: this.index_config
     }
   }
 
   is_ready() {
-    return this.initialized && this.duckdb_ready
+    return this.initialized && this.sqlite_ready
   }
 
   is_duckdb_ready() {
-    return this.initialized && this.duckdb_ready
+    return this.initialized && this.sqlite_ready
   }
 
   async shutdown() {
     log('Shutting down embedded index manager')
 
-    if (this.duckdb_ready) {
+    if (this.sqlite_ready) {
       try {
-        await close_duckdb_connection()
-        log('DuckDB connection closed')
+        await close_sqlite_connection()
+        log('SQLite connection closed')
       } catch (error) {
-        log('Error closing DuckDB connection: %s', error.message)
+        log('Error closing SQLite connection: %s', error.message)
       }
     }
 
     this.initialized = false
     this.read_only = false
-    this.duckdb_ready = false
+    this.sqlite_ready = false
     this._timeline_sync_cache.clear()
     log('Embedded index manager shut down')
   }

@@ -134,12 +134,12 @@ async function handle_list(argv) {
 async function handle_stats(argv) {
   let exit_code = 0
   try {
-    const { query_tag_statistics_from_duckdb } = await import(
-      '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+    const { query_tag_statistics_from_sqlite } = await import(
+      '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
     )
     await embedded_index_manager.initialize()
 
-    let stats = await query_tag_statistics_from_duckdb({
+    let stats = await query_tag_statistics_from_sqlite({
       include_zero_count: argv['include-zero-count']
     })
 

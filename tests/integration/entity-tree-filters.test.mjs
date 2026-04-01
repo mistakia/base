@@ -2,22 +2,22 @@
  * @fileoverview Integration tests for entity tree command filter enhancements
  *
  * Tests the --relation-type, --status, and --project flags for
- * `base entity tree` command using in-memory DuckDB.
+ * `base entity tree` command using in-memory SQLite.
  */
 
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_entity_to_duckdb,
-  sync_entity_relations_to_duckdb,
-  sync_entity_tags_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
-import { find_related_entities } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+  upsert_entity_to_sqlite,
+  sync_entity_relations_to_sqlite,
+  sync_entity_tags_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
+import { find_related_entities } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 
 describe('Entity Tree Filter Integration', function () {
   this.timeout(10000)
@@ -128,16 +128,16 @@ describe('Entity Tree Filter Integration', function () {
   // subtask --has_subtask--> deep-child (deep child is "In Progress")
 
   before(async () => {
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
     for (const entity of test_entities) {
-      await upsert_entity_to_duckdb({ entity_data: entity })
+      await upsert_entity_to_sqlite({ entity_data: entity })
     }
 
     // root -> blocker (blocked_by)
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:task/tree-root.md',
       relations: [
         {
@@ -156,7 +156,7 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     // subtask -> deep-child (has_subtask)
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:task/subtask.md',
       relations: [
         {
@@ -167,7 +167,7 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     // project-only -> blocker (blocked_by)
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:task/project-only.md',
       relations: [
         {
@@ -178,11 +178,11 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     // Tag root and project-only with the same project tag
-    await sync_entity_tags_to_duckdb({
+    await sync_entity_tags_to_sqlite({
       entity_base_uri: 'user:task/tree-root.md',
       tag_base_uris: ['user:tag/test-project.md']
     })
-    await sync_entity_tags_to_duckdb({
+    await sync_entity_tags_to_sqlite({
       entity_base_uri: 'user:task/project-only.md',
       tag_base_uris: ['user:tag/test-project.md']
     })
@@ -190,7 +190,7 @@ describe('Entity Tree Filter Integration', function () {
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch (error) {
       // Ignore cleanup errors
     }
@@ -381,10 +381,10 @@ describe('Entity Tree Filter Integration', function () {
 
   describe('--project mode (entity_tags query)', () => {
     it('should find entities by tag', async () => {
-      const { execute_duckdb_query } = await import(
-        '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+      const { execute_sqlite_query } = await import(
+        '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
       )
-      const result = await execute_duckdb_query({
+      const result = await execute_sqlite_query({
         query:
           'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ? ORDER BY entity_base_uri',
         parameters: ['user:tag/test-project.md']
@@ -397,10 +397,10 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     it('should return empty for non-existent tag', async () => {
-      const { execute_duckdb_query } = await import(
-        '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+      const { execute_sqlite_query } = await import(
+        '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
       )
-      const result = await execute_duckdb_query({
+      const result = await execute_sqlite_query({
         query: 'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
         parameters: ['user:tag/nonexistent.md']
       })

@@ -1,5 +1,5 @@
 import debug from 'debug'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
 import { PermissionContext } from '#server/middleware/permission/permission-context.mjs'
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'

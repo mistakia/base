@@ -1,5 +1,5 @@
 import express from 'express'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import jwt from 'jsonwebtoken'
 
 import config from '#config'

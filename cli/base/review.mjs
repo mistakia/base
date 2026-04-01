@@ -7,10 +7,13 @@
 
 import { spawn } from 'child_process'
 import path from 'path'
-import { fileURLToPath } from 'url'
+import config from '#config'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const REVIEW_SCRIPT = path.join(__dirname, '..', 'review-content.mjs')
+const REVIEW_SCRIPT = path.join(
+  config.system_base_directory,
+  'cli',
+  'review-content.mjs'
+)
 
 export const command = 'review <path>'
 export const describe = 'Review content for sensitive information'
@@ -79,7 +82,7 @@ export const handler = async (argv) => {
   if (argv.progress) args.push('--progress')
   if (argv.json) args.push('--json')
 
-  const child = spawn('node', [REVIEW_SCRIPT, ...args], {
+  const child = spawn(process.argv[0], [REVIEW_SCRIPT, ...args], {
     stdio: 'inherit',
     env: process.env
   })

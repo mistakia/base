@@ -35,8 +35,8 @@ import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { thread_constants } from '#libs-shared'
 import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_threads_from_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+import { query_threads_from_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { handle_errors } from '#libs-server/utils/api-error.mjs'
 
@@ -210,7 +210,7 @@ async function handle_thread_list_request_indexed({
   }
 
   // Query from DuckDB with search, reference, and tag filters
-  const duckdb_threads = await query_threads_from_duckdb({
+  const duckdb_threads = await query_threads_from_sqlite({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
     limit,
