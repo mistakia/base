@@ -1,6 +1,6 @@
 /* global describe it before after */
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 
 import server from '#server'
 import {
@@ -10,8 +10,6 @@ import {
   create_temp_test_repo,
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
-
-chai.use(chaiHttp)
 
 describe('Activity API', function () {
   this.timeout(10000)
@@ -54,11 +52,11 @@ describe('Activity API', function () {
   describe('GET /api/activity/heatmap', () => {
     it('should return activity heatmap data with expected structure', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap'),
+        request(server).get('/api/activity/heatmap'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body).to.have.property('data')
       expect(res.body).to.have.property('max_score')
@@ -79,11 +77,11 @@ describe('Activity API', function () {
 
     it('should return data entries with all required fields', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap'),
+        request(server).get('/api/activity/heatmap'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
 
       // If there's any data, verify structure
       if (res.body.data.length > 0) {
@@ -115,11 +113,11 @@ describe('Activity API', function () {
 
     it('should accept days query parameter', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap').query({ days: 30 }),
+        request(server).get('/api/activity/heatmap').query({ days: 30 }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('data')
       expect(res.body).to.have.property('date_range')
 
@@ -137,11 +135,11 @@ describe('Activity API', function () {
 
     it('should default to 365 days when days parameter is not provided', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap'),
+        request(server).get('/api/activity/heatmap'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('date_range')
 
       const start_date = new Date(res.body.date_range.start)
@@ -157,25 +155,24 @@ describe('Activity API', function () {
 
     it('should handle invalid days parameter gracefully', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/activity/heatmap')
           .query({ days: 'invalid' }),
         test_user
       )
 
       // Should default to 365 when invalid
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('data')
     })
 
     it('should calculate max_score correctly', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap'),
+        request(server).get('/api/activity/heatmap'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
 
       if (res.body.data.length > 0) {
         // max_score should be at least as large as any individual score
@@ -191,11 +188,11 @@ describe('Activity API', function () {
 
     it('should return data sorted by date', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/activity/heatmap'),
+        request(server).get('/api/activity/heatmap'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
 
       if (res.body.data.length > 1) {
         for (let i = 1; i < res.body.data.length; i++) {
@@ -208,9 +205,9 @@ describe('Activity API', function () {
 
     it('should work without authentication', async () => {
       // Activity endpoint should be accessible without auth (public data)
-      const res = await chai.request(server).get('/api/activity/heatmap')
+      const res = await request(server).get('/api/activity/heatmap')
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('data')
     })
   })

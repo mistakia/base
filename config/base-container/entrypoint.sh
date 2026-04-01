@@ -77,6 +77,7 @@ if [ "$CONTAINER_MODE" = "user" ]; then
     echo "User Container ready"
     echo "  Working directory: $(pwd)"
     echo "  Node: $(node --version)"
+    echo "  Bun: $(bun --version 2>/dev/null || echo 'not available')"
     echo "  Claude Code: $(claude --version 2>/dev/null || echo 'not available')"
     echo "  Base CLI: $(base --version 2>/dev/null || echo 'not available')"
     echo "---"
@@ -209,8 +210,8 @@ if [ -d "$BASE_SUBMODULE" ]; then
     fi
     LOCKFILE_HASH=""
     INSTALLED_HASH=""
-    if [ -f "$BASE_SUBMODULE/yarn.lock" ]; then
-        LOCKFILE_HASH=$(md5sum "$BASE_SUBMODULE/yarn.lock" 2>/dev/null | cut -d' ' -f1)
+    if [ -f "$BASE_SUBMODULE/bun.lock" ]; then
+        LOCKFILE_HASH=$(md5sum "$BASE_SUBMODULE/bun.lock" 2>/dev/null | cut -d' ' -f1)
     fi
     if [ -f "$BASE_SUBMODULE/node_modules/.lockfile-hash" ]; then
         INSTALLED_HASH=$(cat "$BASE_SUBMODULE/node_modules/.lockfile-hash")
@@ -218,12 +219,12 @@ if [ -d "$BASE_SUBMODULE" ]; then
 
     if [ ! -d "$BASE_SUBMODULE/node_modules/.bin" ] || [ "$LOCKFILE_HASH" != "$INSTALLED_HASH" ]; then
         echo "Installing base submodule dependencies..."
-        if run_as_node bash -c "cd '$BASE_SUBMODULE' && yarn install --frozen-lockfile"; then
+        if run_as_node bash -c "cd '$BASE_SUBMODULE' && bun install --frozen-lockfile"; then
             echo "Base submodule dependencies installed."
         else
-            echo "WARNING: yarn install exited with errors (optional native modules may have failed to build)." >&2
+            echo "WARNING: bun install exited with errors (optional native modules may have failed to build)." >&2
         fi
-        # Record which yarn.lock was used for this install
+        # Record which bun.lock was used for this install
         if [ -d "$BASE_SUBMODULE/node_modules/.bin" ] && [ -n "$LOCKFILE_HASH" ]; then
             run_as_node bash -c "echo '$LOCKFILE_HASH' > '$BASE_SUBMODULE/node_modules/.lockfile-hash'"
         fi
@@ -282,7 +283,7 @@ This session is running inside a Docker container on the **$MACHINE_NAME** machi
 
 ### Container Context
 - **Host Machine**: $MACHINE_NAME (storage server or macbook)
-- **Container**: base-container (Node.js 20, Debian)
+- **Container**: base-container (Node.js 20, Bun, Debian)
 - **Working Directory**: $USER_BASE_DIRECTORY
 - **User**: node (UID 1000)
 
@@ -318,6 +319,7 @@ echo "---"
 echo "Base Container ready (machine: $MACHINE_NAME)"
 echo "  Working directory: $(pwd)"
 echo "  Node: $(node --version)"
+echo "  Bun: $(bun --version 2>/dev/null || echo 'not available')"
 echo "  Claude Code: $(claude --version 2>/dev/null || echo 'not available')"
 echo "  Base CLI: $(base --version 2>/dev/null || echo 'not available')"
 echo "  Git user: $(run_as_node git config user.name 2>/dev/null || echo 'not set')"

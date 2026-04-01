@@ -23,7 +23,7 @@ visibility_analyzed_at: '2026-02-16T04:32:11.391Z'
 
 The codebase currently uses the following testing structure and tools:
 
-- **Testing Framework**: Mocha with Chai assertions and chai-http for API testing
+- **Testing Framework**: Mocha with Chai assertions and fetch-based test helper (`tests/utils/test-request.mjs`) for API testing
 - **Test Types**:
   - Unit tests (`tests/unit/`): Test individual functions and components in isolation
   - Integration tests (`tests/integration/`): Test API endpoints and interactions between components

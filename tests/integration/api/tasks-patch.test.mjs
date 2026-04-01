@@ -1,8 +1,8 @@
 /* global describe it before beforeEach afterEach */
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import chai, { expect } from 'chai'
 
 import server from '#server'
+import { request } from '#tests/utils/test-request.mjs'
 import {
   create_test_user,
   setup_api_test_registry,
@@ -13,7 +13,6 @@ import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 
 chai.should()
-chai.use(chaiHttp)
 
 describe('API /tasks PATCH', () => {
   let owner_user
@@ -61,8 +60,7 @@ describe('API /tasks PATCH', () => {
 
   describe('successful updates', () => {
     it('should update task status with valid owner', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -70,7 +68,7 @@ describe('API /tasks PATCH', () => {
           properties: { status: TASK_STATUS.IN_PROGRESS }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.should.have.property('base_uri', task_base_uri)
       res.body.should.have.property('updated_properties')
@@ -81,8 +79,7 @@ describe('API /tasks PATCH', () => {
     })
 
     it('should update task priority with valid owner', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -90,7 +87,7 @@ describe('API /tasks PATCH', () => {
           properties: { priority: TASK_PRIORITY.HIGH }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.should.have.property('base_uri', task_base_uri)
       res.body.should.have.property('updated_properties')
@@ -101,8 +98,7 @@ describe('API /tasks PATCH', () => {
     })
 
     it('should update both status and priority', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -113,7 +109,7 @@ describe('API /tasks PATCH', () => {
           }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.updated_properties.should.have.property(
         'status',
@@ -128,8 +124,7 @@ describe('API /tasks PATCH', () => {
 
   describe('permission errors', () => {
     it('should return 403 for non-owner', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${other_user.jwt_token}`)
         .send({
@@ -137,28 +132,26 @@ describe('API /tasks PATCH', () => {
           properties: { status: TASK_STATUS.IN_PROGRESS }
         })
 
-      res.should.have.status(403)
+      expect(res.status).to.equal(403)
       res.body.should.have.property('error', 'Permission denied')
     })
 
     it('should return 401 for unauthenticated request', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .send({
           base_uri: task_base_uri,
           properties: { status: TASK_STATUS.IN_PROGRESS }
         })
 
-      res.should.have.status(401)
+      expect(res.status).to.equal(401)
       res.body.should.have.property('error', 'Authentication required')
     })
   })
 
   describe('expanded field updates', () => {
     it('should update tags with valid array', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -166,7 +159,7 @@ describe('API /tasks PATCH', () => {
           properties: { tags: ['user:tag/foo.md', 'user:tag/bar.md'] }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.updated_properties.should.have.property('tags')
       res.body.updated_properties.tags.should.deep.equal([
@@ -176,8 +169,7 @@ describe('API /tasks PATCH', () => {
     })
 
     it('should update description field', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -185,7 +177,7 @@ describe('API /tasks PATCH', () => {
           properties: { description: 'Updated description' }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.updated_properties.should.have.property(
         'description',
@@ -194,8 +186,7 @@ describe('API /tasks PATCH', () => {
     })
 
     it('should update multiple expanded fields at once', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -207,7 +198,7 @@ describe('API /tasks PATCH', () => {
           }
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
       res.body.updated_properties.should.have.property(
         'status',
@@ -221,8 +212,7 @@ describe('API /tasks PATCH', () => {
     })
 
     it('should return 400 when tags is not an array', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -230,13 +220,12 @@ describe('API /tasks PATCH', () => {
           properties: { tags: 'not-an-array' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error', 'tags must be an array')
     })
 
     it('should return 400 when relations is not an array', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -244,13 +233,12 @@ describe('API /tasks PATCH', () => {
           properties: { relations: 'not-an-array' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error', 'relations must be an array')
     })
 
     it('should return 400 when observations is not an array', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -258,15 +246,14 @@ describe('API /tasks PATCH', () => {
           properties: { observations: 'not-an-array' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error', 'observations must be an array')
     })
   })
 
   describe('validation errors', () => {
     it('should return 400 for invalid status value', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -274,14 +261,13 @@ describe('API /tasks PATCH', () => {
           properties: { status: 'Invalid Status' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error')
       res.body.error.should.include('Invalid status value')
     })
 
     it('should return 400 for invalid priority value', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -289,40 +275,37 @@ describe('API /tasks PATCH', () => {
           properties: { priority: 'Invalid Priority' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error')
       res.body.error.should.include('Invalid priority value')
     })
 
     it('should return 400 for missing base_uri', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
           properties: { status: TASK_STATUS.IN_PROGRESS }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error', 'base_uri is required')
     })
 
     it('should return 400 for missing properties object', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
           base_uri: task_base_uri
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error', 'properties object is required')
     })
 
     it('should return 400 for no valid properties', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -330,14 +313,13 @@ describe('API /tasks PATCH', () => {
           properties: { invalid_field: 'value' }
         })
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error')
       res.body.error.should.include('No valid properties to update')
     })
 
     it('should return 404 for non-existent task', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .patch('/api/tasks')
         .set('Authorization', `Bearer ${owner_user.jwt_token}`)
         .send({
@@ -345,7 +327,7 @@ describe('API /tasks PATCH', () => {
           properties: { status: TASK_STATUS.IN_PROGRESS }
         })
 
-      res.should.have.status(404)
+      expect(res.status).to.equal(404)
       res.body.should.have.property('error')
     })
   })

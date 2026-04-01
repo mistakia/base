@@ -1,7 +1,7 @@
 FROM node:20-slim
 
-# Install system packages and build tools (python3, make, g++ needed by node-gyp
-# for native modules like sqlite3, duckdb, ed25519-blake2b)
+# Install system packages and build tools
+# python3, make, g++ needed by node-gyp for native modules (e.g. sharp)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ripgrep \
     git \
@@ -14,7 +14,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 \
     make \
     g++ \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Bun (required by base CLI -- all shebangs use #!/usr/bin/env bun)
+RUN curl -fsSL https://bun.sh/install | bash \
+    && ln -s /root/.bun/bin/bun /usr/local/bin/bun \
+    && ln -s /root/.bun/bin/bunx /usr/local/bin/bunx
 
 # Install GitHub CLI (binary from GitHub releases, avoids apt repo SSL issues)
 RUN GH_ARCH=$(dpkg --print-architecture | sed 's/amd64/amd64/;s/arm64/arm64/') \

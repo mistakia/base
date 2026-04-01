@@ -1,5 +1,5 @@
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
 import {
   reset_all_tables,
@@ -18,8 +18,6 @@ import {
   close_sqlite_connection
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
-
-chai.use(chaiHttp)
 
 describe('Tags API', () => {
   let test_user
@@ -71,11 +69,11 @@ describe('Tags API', () => {
   describe('GET /api/tags', () => {
     it('should return an empty array when no tags exist', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/tags'),
+        request(server).get('/api/tags'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('array')
       expect(res.body).to.have.length(0)
     })
@@ -90,11 +88,11 @@ describe('Tags API', () => {
       cleanup_tasks.push(cleanup)
 
       const res = await authenticate_request(
-        chai.request(server).get('/api/tags').query({ base_uri }),
+        request(server).get('/api/tags').query({ base_uri }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body.tag).to.be.an('object')
       expect(res.body.tag.entity_properties.title).to.equal('Test Tag')
@@ -151,14 +149,13 @@ describe('Tags API', () => {
       })
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/tags')
           .query({ base_uri: tag_uri, include_threads: 'true' }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.threads).to.be.an('array')
       expect(res.body.threads.length).to.equal(1)
       expect(res.body.threads[0].thread_id).to.equal(thread_id)
@@ -167,14 +164,13 @@ describe('Tags API', () => {
 
     it('should return 404 for non-existent tag', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/tags')
           .query({ base_uri: 'sys:tag/NonExistentTag.md' }),
         test_user
       )
 
-      expect(res).to.have.status(404)
+      expect(res.status).to.equal(404)
       expect(res.body).to.have.property('error')
       expect(res.body.error).to.include(
         'Tag sys:tag/NonExistentTag.md not found'

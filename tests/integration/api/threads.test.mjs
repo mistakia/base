@@ -1,5 +1,5 @@
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 
 import server from '#server'
 import { thread_constants } from '#libs-shared'
@@ -10,8 +10,6 @@ import {
   authenticate_request,
   reset_all_tables
 } from '#tests/utils/index.mjs'
-
-chai.use(chaiHttp)
 
 describe('Threads API', () => {
   let test_user
@@ -62,13 +60,13 @@ describe('Threads API', () => {
 
     it('should list all threads for a user', async () => {
       const response = await authenticate_request(
-        chai.request(server).get('/api/threads'),
+        request(server).get('/api/threads'),
         test_user
       ).query({
         user_public_key: test_user.user_public_key
       })
 
-      expect(response).to.have.status(200)
+      expect(response.status).to.equal(200)
       expect(response.body).to.be.an('array')
       expect(response.body).to.have.lengthOf(2)
 
@@ -87,14 +85,14 @@ describe('Threads API', () => {
 
     it('should filter threads by state', async () => {
       const response = await authenticate_request(
-        chai.request(server).get('/api/threads'),
+        request(server).get('/api/threads'),
         test_user
       ).query({
         user_public_key: test_user.user_public_key,
         thread_state: 'active'
       })
 
-      expect(response).to.have.status(200)
+      expect(response.status).to.equal(200)
       expect(response.body).to.be.an('array')
       expect(response.body).to.have.lengthOf(1)
       expect(response.body[0].thread_state).to.equal('active')
@@ -122,11 +120,11 @@ describe('Threads API', () => {
 
     it('should get a thread by ID', async () => {
       const response = await authenticate_request(
-        chai.request(server).get(`/api/threads/${test_thread.thread_id}`),
+        request(server).get(`/api/threads/${test_thread.thread_id}`),
         test_user
       )
 
-      expect(response).to.have.status(200)
+      expect(response.status).to.equal(200)
       expect(response.body).to.be.an('object')
       expect(response.body.thread_id).to.equal(test_thread.thread_id)
       expect(response.body.user_public_key).to.equal(test_user.user_public_key)
@@ -144,11 +142,11 @@ describe('Threads API', () => {
 
     it('should return 404 for non-existent thread', async () => {
       const response = await authenticate_request(
-        chai.request(server).get('/api/threads/non-existent-thread-id'),
+        request(server).get('/api/threads/non-existent-thread-id'),
         test_user
       )
 
-      expect(response).to.have.status(404)
+      expect(response.status).to.equal(404)
     })
   })
 
@@ -169,14 +167,13 @@ describe('Threads API', () => {
       }
 
       const response = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
 
-      expect(response).to.have.status(200)
+      expect(response.status).to.equal(200)
       expect(response.body).to.be.an('object')
       expect(response.body.thread_state).to.equal('archived')
       expect(response.body.archive_reason).to.equal('completed')
@@ -190,14 +187,13 @@ describe('Threads API', () => {
       }
 
       const response = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
 
-      expect(response).to.have.status(400)
+      expect(response.status).to.equal(400)
       expect(response.body.error).to.include('archive_reason')
     })
 
@@ -208,22 +204,20 @@ describe('Threads API', () => {
       }
 
       const response = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .put(`/api/threads/${test_thread.thread_id}/state`)
           .send(update_data),
         test_user
       )
 
-      expect(response).to.have.status(400)
+      expect(response.status).to.equal(400)
       expect(response.body.error).to.include('Invalid archive reason')
     })
 
     it('should update thread state from archived back to active', async () => {
       // First archive the thread
       await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .put(`/api/threads/${test_thread.thread_id}/state`)
           .send({
             thread_state: thread_constants.THREAD_STATE.ARCHIVED,
@@ -234,8 +228,7 @@ describe('Threads API', () => {
 
       // Then reactivate it
       const response = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .put(`/api/threads/${test_thread.thread_id}/state`)
           .send({
             thread_state: thread_constants.THREAD_STATE.ACTIVE
@@ -243,7 +236,7 @@ describe('Threads API', () => {
         test_user
       )
 
-      expect(response).to.have.status(200)
+      expect(response.status).to.equal(200)
       expect(response.body.thread_state).to.equal('active')
       expect(response.body).to.not.have.property('archive_reason')
       expect(response.body).to.not.have.property('archived_at')

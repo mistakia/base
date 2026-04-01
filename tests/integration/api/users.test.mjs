@@ -1,8 +1,8 @@
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import chai, { expect } from 'chai'
 import jwt from 'jsonwebtoken'
 import crypto, { randomUUID } from 'crypto'
 
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
 import config from '#config'
 import { reset_all_tables } from '#tests/utils/index.mjs'
@@ -10,7 +10,6 @@ import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 
 chai.should()
-chai.use(chaiHttp)
 
 describe('API /users', () => {
   let user_data
@@ -57,12 +56,12 @@ describe('API /users', () => {
       .sign(data_hash, user_private_key, user_public_key)
       .toString('hex')
 
-    const res = await chai.request(server).post('/api/users').send({
+    const res = await request(server).post('/api/users').send({
       data: auth_data,
       signature: auth_signature
     })
 
-    res.should.have.status(200)
+    expect(res.status).to.equal(200)
     res.body.should.be.a('object')
     res.body.should.have.property('token')
     res.body.should.have.property('user_public_key')
@@ -80,12 +79,11 @@ describe('API /users', () => {
   })
 
   it('should get a user by username', async () => {
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .get(`/api/users/${user_data.username}`)
       .set('Authorization', `Bearer ${auth_token}`)
 
-    res.should.have.status(200)
+    expect(res.status).to.equal(200)
     res.body.should.be.a('object')
     res.body.should.have.property('user_public_key')
     res.body.should.have.property('username')
@@ -96,11 +94,10 @@ describe('API /users', () => {
   })
 
   it('should get a user by user_public_key', async () => {
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .get(`/api/users/public_keys/${user_data.user_public_key}`)
 
-    res.should.have.status(200)
+    expect(res.status).to.equal(200)
     res.body.should.be.a('object')
     res.body.should.have.property('username')
     res.body.should.have.property('created_at')
@@ -121,12 +118,12 @@ describe('API /users', () => {
       .sign(data_hash, user_private_key, user_public_key)
       .toString('hex')
 
-    const res = await chai.request(server).post('/api/users/session').send({
+    const res = await request(server).post('/api/users/session').send({
       data: session_data,
       signature: session_signature
     })
 
-    res.should.have.status(200)
+    expect(res.status).to.equal(200)
     res.body.should.be.a('object')
     res.body.should.have.property('token')
     res.body.should.have.property('user_public_key')

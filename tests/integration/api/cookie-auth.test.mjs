@@ -1,13 +1,11 @@
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
 import crypto, { randomUUID } from 'crypto'
 
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
 import { reset_all_tables } from '#tests/utils/index.mjs'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
-
-chai.use(chaiHttp)
 
 /**
  * Helper to create signed auth request data
@@ -75,8 +73,7 @@ describe('Cookie-based JWT Authentication', function () {
       user_public_key,
       user_private_key
     })
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .post('/api/users/session')
       .send({ data, signature })
     auth_token = res.body.token
@@ -88,12 +85,11 @@ describe('Cookie-based JWT Authentication', function () {
       user_private_key
     })
 
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .post('/api/users/session')
       .send({ data, signature })
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     expect(res.body).to.have.property('token')
 
     const cookie = get_cookie(res, 'base_token')
@@ -126,12 +122,11 @@ describe('Cookie-based JWT Authentication', function () {
       user_private_key: new_private_key
     })
 
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .post('/api/users')
       .send({ data, signature })
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
 
     const cookie = get_cookie(res, 'base_token')
     expect(cookie).to.not.be.null
@@ -139,22 +134,20 @@ describe('Cookie-based JWT Authentication', function () {
   })
 
   it('should authenticate via cookie when Authorization header is absent', async () => {
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .get(`/api/users/${username}`)
       .set('Cookie', `base_token=${auth_token}`)
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     expect(res.body).to.have.property('username', username)
   })
 
   it('should reject invalid/tampered cookie (req.user = null)', async () => {
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .get(`/api/users/${username}`)
       .set('Cookie', 'base_token=invalid.tampered.token')
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     // Should return filtered public data (no full profile fields like created_at with email)
     expect(res.body).to.have.property('username')
     expect(res.body).to.have.property('permissions')
@@ -162,29 +155,28 @@ describe('Cookie-based JWT Authentication', function () {
 
   it('should prefer Authorization header over cookie when both present', async () => {
     // Valid header + invalid cookie -- header should win
-    const res = await chai
-      .request(server)
+    const res = await request(server)
       .get(`/api/users/${username}`)
       .set('Authorization', `Bearer ${auth_token}`)
       .set('Cookie', 'base_token=invalid.tampered.token')
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     expect(res.body).to.have.property('username', username)
   })
 
   it('should proceed without user when no cookie and no header present', async () => {
-    const res = await chai.request(server).get(`/api/users/${username}`)
+    const res = await request(server).get(`/api/users/${username}`)
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     // Should return filtered public data only
     expect(res.body).to.have.property('username')
     expect(res.body).to.have.property('permissions')
   })
 
   it('should clear the cookie on DELETE /api/users/session', async () => {
-    const res = await chai.request(server).delete('/api/users/session')
+    const res = await request(server).delete('/api/users/session')
 
-    expect(res).to.have.status(200)
+    expect(res.status).to.equal(200)
     expect(res.body).to.deep.equal({ success: true })
 
     const cookie = get_cookie(res, 'base_token')

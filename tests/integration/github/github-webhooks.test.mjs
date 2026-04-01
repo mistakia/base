@@ -2,8 +2,8 @@
  * Integration tests for GitHub webhook endpoint
  */
 
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 import path from 'path'
 import fs from 'fs/promises'
 import crypto from 'crypto'
@@ -16,8 +16,6 @@ import {
   create_temp_test_repo,
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
-
-chai.use(chaiHttp)
 
 // Helper to generate GitHub webhook signature
 const generate_webhook_signature = (payload) => {
@@ -71,15 +69,14 @@ describe('GitHub Webhooks API', () => {
       it('should respond with pong for ping event', async () => {
         const payload = { zen: 'Test ping' }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'ping')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(200)
+        expect(res.status).to.equal(200)
         expect(res.text).to.equal('pong')
       })
     })
@@ -88,15 +85,14 @@ describe('GitHub Webhooks API', () => {
       it('should return 200 with skip message for unsupported event types', async () => {
         const payload = { ref: 'refs/heads/main' }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'push')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(200)
+        expect(res.status).to.equal(200)
         expect(res.body.ok).to.be.true
         expect(res.body.message).to.include('not processed')
       })
@@ -106,15 +102,14 @@ describe('GitHub Webhooks API', () => {
       it('should return 400 for issues event without issue data', async () => {
         const payload = { action: 'opened', repository: { name: 'test' } }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'issues')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(400)
+        expect(res.status).to.equal(400)
         expect(res.body.error).to.equal('Bad Request')
         expect(res.body.message).to.include('Invalid issues event payload')
       })
@@ -122,15 +117,14 @@ describe('GitHub Webhooks API', () => {
       it('should return 400 for issues event without repository data', async () => {
         const payload = { action: 'opened', issue: { number: 1 } }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'issues')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(400)
+        expect(res.status).to.equal(400)
         expect(res.body.error).to.equal('Bad Request')
       })
     })
@@ -157,30 +151,28 @@ describe('GitHub Webhooks API', () => {
           }
         }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'pull_request')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(200)
+        expect(res.status).to.equal(200)
         expect(res.body.ok).to.be.true
       })
 
       it('should acknowledge PR event even with minimal payload', async () => {
         const payload = { action: 'opened' }
         const signature = generate_webhook_signature(payload)
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .post('/api/github/webhooks')
           .set('x-github-event', 'pull_request')
           .set('x-github-delivery', 'test-delivery-id')
           .set('x-hub-signature-256', signature)
           .send(payload)
 
-        expect(res).to.have.status(200)
+        expect(res.status).to.equal(200)
         expect(res.body.ok).to.be.true
       })
     })

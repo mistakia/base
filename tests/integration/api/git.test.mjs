@@ -1,5 +1,4 @@
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
 import path from 'path'
 import fs from 'fs/promises'
 import { promisify } from 'util'
@@ -7,6 +6,7 @@ import child_process from 'child_process'
 import crypto from 'crypto'
 
 import server from '#server'
+import { request } from '#tests/utils/test-request.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import create_user from '#libs-server/users/create-user.mjs'
 import {
@@ -15,8 +15,6 @@ import {
   authenticate_request,
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
-
-chai.use(chaiHttp)
 
 const exec = promisify(child_process.exec)
 
@@ -80,14 +78,13 @@ describe('Git API', () => {
   describe('GET /api/git/status', () => {
     it('should return status for a clean repository', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body.branch).to.equal('main')
       expect(res.body.staged).to.be.an('array')
@@ -101,14 +98,13 @@ describe('Git API', () => {
       await fs.writeFile(untracked_file, 'untracked content')
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.untracked.some((f) => f.path === 'untracked.txt')).to.be
         .true
 
@@ -122,14 +118,13 @@ describe('Git API', () => {
       await fs.writeFile(readme_path, '# Modified README')
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.unstaged).to.be.an('array')
       expect(res.body.unstaged.some((f) => f.path === 'README.md')).to.be.true
 
@@ -139,24 +134,23 @@ describe('Git API', () => {
 
     it('should return 400 for missing repo_path', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/status'),
+        request(server).get('/api/git/status'),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
 
     it('should return 400 for invalid repo_path', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: '/nonexistent/path' }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
   })
@@ -168,8 +162,7 @@ describe('Git API', () => {
       await fs.writeFile(test_file, 'content to stage')
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .post('/api/git/stage')
           .send({
             repo_path: test_repo.user_path,
@@ -178,13 +171,12 @@ describe('Git API', () => {
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.success).to.be.true
 
       // Verify file is staged
       const status_res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
@@ -201,13 +193,13 @@ describe('Git API', () => {
 
     it('should return 400 for missing files', async () => {
       const res = await authenticate_request(
-        chai.request(server).post('/api/git/stage').send({
+        request(server).post('/api/git/stage').send({
           repo_path: test_repo.user_path
         }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
   })
@@ -220,8 +212,7 @@ describe('Git API', () => {
       await exec('git add to-unstage.txt', { cwd: test_repo.user_path })
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .post('/api/git/unstage')
           .send({
             repo_path: test_repo.user_path,
@@ -230,13 +221,12 @@ describe('Git API', () => {
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.success).to.be.true
 
       // Verify file is no longer staged
       const status_res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
@@ -260,20 +250,19 @@ describe('Git API', () => {
       await exec('git add to-commit.txt', { cwd: test_repo.user_path })
 
       const res = await authenticate_request(
-        chai.request(server).post('/api/git/commit').send({
+        request(server).post('/api/git/commit').send({
           repo_path: test_repo.user_path,
           message: 'Test commit message'
         }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.success).to.be.true
 
       // Verify file is no longer in status
       const status_res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/status')
           .query({ repo_path: test_repo.user_path }),
         test_user
@@ -286,13 +275,13 @@ describe('Git API', () => {
 
     it('should return 400 for missing message', async () => {
       const res = await authenticate_request(
-        chai.request(server).post('/api/git/commit').send({
+        request(server).post('/api/git/commit').send({
           repo_path: test_repo.user_path
         }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
   })
@@ -305,14 +294,14 @@ describe('Git API', () => {
       await fs.writeFile(readme_path, '# Changed README\n\nNew content added')
 
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/diff').query({
+        request(server).get('/api/git/diff').query({
           repo_path: test_repo.user_path,
           file_path: 'README.md'
         }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body.diff_text).to.be.a('string')
       expect(res.body.diff_text).to.include('Changed README')
@@ -323,13 +312,13 @@ describe('Git API', () => {
 
     it('should return empty diff for unmodified file', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/diff').query({
+        request(server).get('/api/git/diff').query({
           repo_path: test_repo.user_path
         }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.diff_text).to.equal('')
     })
   })
@@ -337,11 +326,11 @@ describe('Git API', () => {
   describe('GET /api/git/status/all', () => {
     it('should return status for all known repositories', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/status/all'),
+        request(server).get('/api/git/status/all'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body.repos).to.be.an('array')
     })
@@ -350,14 +339,14 @@ describe('Git API', () => {
   describe('GET /api/git/file-at-ref', () => {
     it('should return file content at HEAD', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/file-at-ref').query({
+        request(server).get('/api/git/file-at-ref').query({
           repo_path: test_repo.user_path,
           file_path: 'README.md'
         }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('object')
       expect(res.body.content).to.be.a('string')
       expect(res.body.file_path).to.equal('README.md')
@@ -374,7 +363,7 @@ describe('Git API', () => {
 
       // Get content at HEAD~1
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/file-at-ref').query({
+        request(server).get('/api/git/file-at-ref').query({
           repo_path: test_repo.user_path,
           file_path: 'README.md',
           ref: 'HEAD~1'
@@ -382,12 +371,12 @@ describe('Git API', () => {
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.content).to.not.equal('# New Version')
 
       // Verify current HEAD has new content
       const head_res = await authenticate_request(
-        chai.request(server).get('/api/git/file-at-ref').query({
+        request(server).get('/api/git/file-at-ref').query({
           repo_path: test_repo.user_path,
           file_path: 'README.md',
           ref: 'HEAD'
@@ -400,26 +389,26 @@ describe('Git API', () => {
 
     it('should return 400 for missing file_path', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/file-at-ref').query({
+        request(server).get('/api/git/file-at-ref').query({
           repo_path: test_repo.user_path
         }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
 
     it('should return empty content for non-existent file (new file)', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/file-at-ref').query({
+        request(server).get('/api/git/file-at-ref').query({
           repo_path: test_repo.user_path,
           file_path: 'non-existent-file.txt'
         }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.content).to.equal('')
       expect(res.body.is_new_file).to.equal(true)
       expect(res.body.is_redacted).to.equal(false)
@@ -428,14 +417,13 @@ describe('Git API', () => {
 
   describe('Authentication', () => {
     it('should return 403 for unauthenticated request without public permissions', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/git/status')
         .query({ repo_path: test_repo.user_path })
 
       // Returns 403 (Forbidden) because no permission rules allow public access
       // This is distinct from 401 (Unauthorized) which means "authentication required"
-      expect(res).to.have.status(403)
+      expect(res.status).to.equal(403)
     })
   })
 })

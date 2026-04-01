@@ -6,8 +6,8 @@
  */
 
 /* global describe it before after */
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 import crypto from 'crypto'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
@@ -25,8 +25,6 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'
 
-const { expect } = chai
-chai.use(chaiHttp)
 
 describe('Share Token Integration', () => {
   let owner
@@ -41,7 +39,7 @@ describe('Share Token Integration', () => {
     await close_sqlite_connection()
     await initialize_sqlite_client({ in_memory: true })
     await create_sqlite_schema()
-    embedded_index_manager.duckdb_ready = true
+    embedded_index_manager.sqlite_ready = true
     embedded_index_manager.initialized = true
 
     await upsert_entity_to_sqlite({
@@ -68,7 +66,7 @@ describe('Share Token Integration', () => {
 
   after(async () => {
     await close_sqlite_connection()
-    embedded_index_manager.duckdb_ready = false
+    embedded_index_manager.sqlite_ready = false
   })
 
   describe('GET /s/:token (share route redirect)', () => {
@@ -79,17 +77,17 @@ describe('Share Token Integration', () => {
         public_key: owner.user_public_key
       })
 
-      const res = await chai.request(server).get(`/s/${token}`).redirects(0)
+      const res = await request(server).get(`/s/${token}`).redirects(0)
 
-      expect(res).to.have.status(302)
+      expect(res.status).to.equal(302)
       expect(res.headers.location).to.include('/task/shared-task.md')
       expect(res.headers.location).to.include(`share_token=${token}`)
     })
 
     it('should return 404 for invalid token structure', async () => {
-      const res = await chai.request(server).get('/s/invalid-token')
+      const res = await request(server).get('/s/invalid-token')
 
-      expect(res).to.have.status(404)
+      expect(res.status).to.equal(404)
       expect(res.body).to.have.property('error')
     })
 
@@ -105,9 +103,9 @@ describe('Share Token Integration', () => {
       buf[buf.length - 1] ^= 0xff
       const tampered = buf.toString('base64url')
 
-      const res = await chai.request(server).get(`/s/${tampered}`)
+      const res = await request(server).get(`/s/${tampered}`)
 
-      expect(res).to.have.status(404)
+      expect(res.status).to.equal(404)
     })
 
     it('should return 404 for token referencing non-existent entity', async () => {
@@ -118,9 +116,9 @@ describe('Share Token Integration', () => {
         public_key: owner.user_public_key
       })
 
-      const res = await chai.request(server).get(`/s/${token}`)
+      const res = await request(server).get(`/s/${token}`)
 
-      expect(res).to.have.status(404)
+      expect(res.status).to.equal(404)
     })
   })
 
@@ -166,8 +164,7 @@ describe('Share Token Integration', () => {
       })
 
       // Attempt a write operation with share_token (no auth)
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/entities/tags')
         .query({ share_token: token })
         .send({ base_uri, tags_to_add: ['user:tag/test.md'] })

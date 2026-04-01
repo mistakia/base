@@ -1,23 +1,21 @@
 /* global describe it */
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
 
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
-
-chai.use(chaiHttp)
 
 describe('Health API', function () {
   this.timeout(10000)
 
   describe('GET /api/health', () => {
     it('should return 200 without authentication', async () => {
-      const res = await chai.request(server).get('/api/health')
+      const res = await request(server).get('/api/health')
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
     })
 
     it('should return expected JSON structure', async () => {
-      const res = await chai.request(server).get('/api/health')
+      const res = await request(server).get('/api/health')
 
       expect(res.body).to.have.property('status', 'ok')
       expect(res.body).to.have.property('uptime_seconds').that.is.a('number')
@@ -33,7 +31,7 @@ describe('Health API', function () {
     })
 
     it('should include watcher status fields', async () => {
-      const res = await chai.request(server).get('/api/health')
+      const res = await request(server).get('/api/health')
       const watchers = res.body.watchers
 
       expect(watchers).to.have.property('thread_watcher')

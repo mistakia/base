@@ -1,5 +1,4 @@
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
 import path from 'path'
 import fs from 'fs/promises'
 import { promisify } from 'util'
@@ -7,6 +6,7 @@ import child_process from 'child_process'
 import crypto from 'crypto'
 
 import server from '#server'
+import { request } from '#tests/utils/test-request.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import create_user from '#libs-server/users/create-user.mjs'
 import {
@@ -15,8 +15,6 @@ import {
   authenticate_request,
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
-
-chai.use(chaiHttp)
 
 const exec = promisify(child_process.exec)
 
@@ -76,14 +74,13 @@ describe('Git Commits API', function () {
   describe('GET /api/git/commits', () => {
     it('should return commit list for root repo (empty path)', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('commits')
       expect(res.body).to.have.property('total_count')
       expect(res.body).to.have.property('page')
@@ -102,25 +99,24 @@ describe('Git Commits API', function () {
 
     it('should default to user base when no repo_path param provided', async () => {
       const res = await authenticate_request(
-        chai.request(server).get('/api/git/commits'),
+        request(server).get('/api/git/commits'),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.commits).to.be.an('array')
       expect(res.body.commits.length).to.be.greaterThan(0)
     })
 
     it('should respect limit parameter', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: test_repo.user_path, limit: 2 }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.commits.length).to.equal(2)
       expect(res.body.per_page).to.equal(2)
       expect(res.body.total_count).to.be.greaterThan(2)
@@ -128,25 +124,23 @@ describe('Git Commits API', function () {
 
     it('should paginate using page parameter', async () => {
       const first_page = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: test_repo.user_path, limit: 3, page: 1 }),
         test_user
       )
 
-      expect(first_page).to.have.status(200)
+      expect(first_page.status).to.equal(200)
       expect(first_page.body.page).to.equal(1)
 
       const second_page = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: test_repo.user_path, limit: 3, page: 2 }),
         test_user
       )
 
-      expect(second_page).to.have.status(200)
+      expect(second_page.status).to.equal(200)
       expect(second_page.body.page).to.equal(2)
       expect(second_page.body.commits).to.be.an('array')
       const first_page_hashes = first_page.body.commits.map((c) => c.hash)
@@ -159,14 +153,13 @@ describe('Git Commits API', function () {
 
     it('should return 400 for path outside base directory', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: '../../../etc' }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
   })
@@ -174,8 +167,7 @@ describe('Git Commits API', function () {
   describe('GET /api/git/commit/:hash', () => {
     it('should return commit detail with files', async () => {
       const list_res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commits')
           .query({ repo_path: test_repo.user_path, limit: 1 }),
         test_user
@@ -183,14 +175,13 @@ describe('Git Commits API', function () {
       const hash = list_res.body.commits[0].hash
 
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get(`/api/git/commit/${hash}`)
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('hash')
       expect(res.body).to.have.property('short_hash')
       expect(res.body).to.have.property('subject')
@@ -203,14 +194,13 @@ describe('Git Commits API', function () {
 
     it('should return 400 for invalid hash', async () => {
       const res = await authenticate_request(
-        chai
-          .request(server)
+        request(server)
           .get('/api/git/commit/not-a-hash')
           .query({ repo_path: test_repo.user_path }),
         test_user
       )
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
       expect(res.body).to.have.property('error')
     })
   })

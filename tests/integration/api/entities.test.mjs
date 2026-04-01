@@ -5,9 +5,9 @@
  */
 
 /* global describe it before after */
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import chai, { expect } from 'chai'
 
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
 import { create_test_user, create_auth_token } from '#tests/utils/index.mjs'
 import { setup_test_directories } from '#tests/utils/setup-test-directories.mjs'
@@ -24,7 +24,6 @@ import {
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 chai.should()
-chai.use(chaiHttp)
 
 describe('API /entities GET', () => {
   let user
@@ -44,7 +43,7 @@ describe('API /entities GET', () => {
     await create_sqlite_schema()
 
     // Mark SQLite as ready in the index manager
-    embedded_index_manager.duckdb_ready = true
+    embedded_index_manager.sqlite_ready = true
     embedded_index_manager.initialized = true
 
     // Insert test entities
@@ -123,17 +122,16 @@ describe('API /entities GET', () => {
       test_directories.cleanup()
     }
     await close_sqlite_connection()
-    embedded_index_manager.duckdb_ready = false
+    embedded_index_manager.sqlite_ready = false
   })
 
   describe('GET / (list entities)', () => {
     it('should return entities with pagination info', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('entities')
       res.body.should.have.property('total')
       res.body.should.have.property('limit')
@@ -143,13 +141,12 @@ describe('API /entities GET', () => {
     })
 
     it('should filter entities by type', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: 'task' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(2)
       res.body.entities.forEach((entity) => {
@@ -158,39 +155,36 @@ describe('API /entities GET', () => {
     })
 
     it('should filter entities by status', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: 'task', status: 'In Progress' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       res.body.entities[0].status.should.equal('In Progress')
     })
 
     it('should filter entities by priority', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: 'task', priority: 'High' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       res.body.entities[0].priority.should.equal('High')
     })
 
     it('should search entities by title', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ search: 'First' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.be.at.least(1)
       // Note: Without filesystem files, permission-based redaction applies
@@ -199,46 +193,42 @@ describe('API /entities GET', () => {
     })
 
     it('should respect pagination limit', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ limit: 1 })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       res.body.limit.should.equal(1)
     })
 
     it('should respect pagination offset', async () => {
-      const first_page = await chai
-        .request(server)
+      const first_page = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ limit: 1, offset: 0 })
 
-      const second_page = await chai
-        .request(server)
+      const second_page = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ limit: 1, offset: 1 })
 
-      first_page.should.have.status(200)
-      second_page.should.have.status(200)
+      expect(first_page.status).to.equal(200)
+      expect(second_page.status).to.equal(200)
       first_page.body.entities[0].base_uri.should.not.equal(
         second_page.body.entities[0].base_uri
       )
     })
 
     it('should filter entities by tags', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ tags: 'user:tag/test-tag.md' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       // base_uri may be redacted if no filesystem file exists for permission check
@@ -246,13 +236,12 @@ describe('API /entities GET', () => {
     })
 
     it('should support multiple types filter', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: ['task', 'guideline'] })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(3)
     })
@@ -260,13 +249,12 @@ describe('API /entities GET', () => {
 
   describe('GET / (single entity lookup)', () => {
     it('should get entity by base_uri', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: 'user:task/task-1.md' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       // Note: base_uri and title may be redacted if no filesystem file exists for permission check
@@ -275,26 +263,24 @@ describe('API /entities GET', () => {
     })
 
     it('should get entity by entity_id', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ entity_id: 'entity-task-1' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(1)
       res.body.entities[0].entity_id.should.equal('entity-task-1')
     })
 
     it('should return empty array for non-existent entity', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: 'user:task/non-existent.md' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       res.body.entities.length.should.equal(0)
       res.body.total.should.equal(0)
@@ -303,13 +289,12 @@ describe('API /entities GET', () => {
 
   describe('Sorting', () => {
     it('should sort by updated_at descending by default', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: 'task' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       // The entity with latest updated_at should be first
       const dates = res.body.entities.map((e) => new Date(e.updated_at))
@@ -319,13 +304,12 @@ describe('API /entities GET', () => {
     })
 
     it('should sort ascending when sort_desc is false', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/entities')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ type: 'task', sort: 'created_at', sort_desc: 'false' })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.entities.should.be.an('array')
       const dates = res.body.entities.map((e) => new Date(e.created_at))
       for (let i = 1; i < dates.length; i++) {

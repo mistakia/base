@@ -1,14 +1,12 @@
 /* global describe it before after */
-import chai, { expect } from 'chai'
-import chaiHttp from 'chai-http'
+import { expect } from 'chai'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 
 import config from '#config'
 import server from '#server'
-
-chai.use(chaiHttp)
+import { request } from '#tests/utils/test-request.mjs'
 
 describe('API /jobs', function () {
   this.timeout(10000)
@@ -43,8 +41,7 @@ describe('API /jobs', function () {
 
   describe('POST /api/jobs/report', () => {
     it('should create a new job file on first report', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/jobs/report')
         .set('Authorization', `Bearer ${TEST_API_KEY}`)
         .send({
@@ -57,7 +54,7 @@ describe('API /jobs', function () {
           name: 'My Test Script'
         })
 
-      expect(res).to.have.status(201)
+      expect(res.status).to.equal(201)
       expect(res.body).to.have.property('job_id', 'test-my-script')
       expect(res.body).to.have.property('source', 'external')
       expect(res.body).to.have.property('name', 'My Test Script')
@@ -73,8 +70,7 @@ describe('API /jobs', function () {
     })
 
     it('should update existing job stats on subsequent reports', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/jobs/report')
         .set('Authorization', `Bearer ${TEST_API_KEY}`)
         .send({
@@ -85,7 +81,7 @@ describe('API /jobs', function () {
           reason: 'Connection timeout'
         })
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body.stats).to.have.property('total_runs', 2)
       expect(res.body.stats).to.have.property('success_count', 1)
       expect(res.body.stats).to.have.property('failure_count', 1)
@@ -98,40 +94,37 @@ describe('API /jobs', function () {
     })
 
     it('should return 401 on missing API key', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/jobs/report')
         .send({ job_id: 'test-no-auth', success: true })
 
-      expect(res).to.have.status(401)
+      expect(res.status).to.equal(401)
     })
 
     it('should return 401 on invalid API key', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/jobs/report')
         .set('Authorization', 'Bearer wrong-key')
         .send({ job_id: 'test-bad-auth', success: true })
 
-      expect(res).to.have.status(401)
+      expect(res.status).to.equal(401)
     })
 
     it('should return 400 on missing required fields', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/jobs/report')
         .set('Authorization', `Bearer ${TEST_API_KEY}`)
         .send({ job_id: 'test-missing-fields' })
 
-      expect(res).to.have.status(400)
+      expect(res.status).to.equal(400)
     })
   })
 
   describe('GET /api/jobs', () => {
     it('should return list of all jobs', async () => {
-      const res = await chai.request(server).get('/api/jobs')
+      const res = await request(server).get('/api/jobs')
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.be.an('array')
       expect(res.body.length).to.be.at.least(1)
 
@@ -143,17 +136,17 @@ describe('API /jobs', function () {
 
   describe('GET /api/jobs/:job_id', () => {
     it('should return a specific job', async () => {
-      const res = await chai.request(server).get('/api/jobs/test-my-script')
+      const res = await request(server).get('/api/jobs/test-my-script')
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('job_id', 'test-my-script')
       expect(res.body).to.have.property('stats')
     })
 
     it('should return 404 for unknown job', async () => {
-      const res = await chai.request(server).get('/api/jobs/nonexistent-job')
+      const res = await request(server).get('/api/jobs/nonexistent-job')
 
-      expect(res).to.have.status(404)
+      expect(res.status).to.equal(404)
     })
   })
 
@@ -182,11 +175,10 @@ describe('API /jobs', function () {
       expect(job.stats).to.have.property('total_runs', 1)
 
       // Verify via API
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/jobs/internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9')
 
-      expect(res).to.have.status(200)
+      expect(res.status).to.equal(200)
       expect(res.body).to.have.property('source', 'internal')
     })
   })

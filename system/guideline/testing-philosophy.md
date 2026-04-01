@@ -61,6 +61,6 @@ export const generate_mounts = async () => { const accounts = config.claude_acco
 Tests run under Bun (`bun node_modules/.bin/mocha`). Known differences from Node.js:
 
 - **nock does not work** -- nock patches Node.js `http`/`https` modules, but Bun uses its own native `fetch`. HTTP mocking tests that use nock will silently fail (interceptors never match). Per the "Do Not Use Mocks" principle, prefer testing against real infrastructure over HTTP mocking.
-- **chai-http/superagent TLS** -- chai-http produces "unknown certificate verification error" under Bun even for plain HTTP servers. API integration tests using chai-http must run under Node.js until a Bun-compatible alternative is adopted.
+- **HTTP test helper** -- API integration tests use `tests/utils/test-request.mjs`, a lightweight fetch-based helper that replaced chai-http (which had TLS incompatibilities with Bun). The helper starts the server on an ephemeral port per request.
 - **`promisify` on Promise-returning functions** -- Modern packages (e.g., `glob`) return Promises natively. `promisify(fn)` on such functions hangs under Bun because the callback is never called. Use the async API directly.
 - **Filesystem mtime granularity** -- Bun's I/O can be fast enough that sequential writes produce identical `mtimeMs` values. Tests relying on mtime changes for conflict detection need explicit `fs.utimes()` to force distinct timestamps.

@@ -1,7 +1,7 @@
 /* global describe it after afterEach */
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import chai, { expect } from 'chai'
 
+import { request } from '#tests/utils/test-request.mjs'
 import server from '#server'
 import {
   remove_active_session,
@@ -9,7 +9,6 @@ import {
 } from '#server/services/active-sessions/active-session-store.mjs'
 
 chai.should()
-chai.use(chaiHttp)
 
 describe('API /active-sessions', function () {
   // Allow longer timeout for Redis operations
@@ -31,9 +30,9 @@ describe('API /active-sessions', function () {
 
   describe('GET /api/active-sessions', () => {
     it('should return an array of active sessions', async () => {
-      const res = await chai.request(server).get('/api/active-sessions')
+      const res = await request(server).get('/api/active-sessions')
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.be.an('array')
     })
   })
@@ -46,12 +45,11 @@ describe('API /active-sessions', function () {
         transcript_path: test_transcript_path
       }
 
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/active-sessions')
         .send(session_data)
 
-      res.should.have.status(201)
+      expect(res.status).to.equal(201)
       res.body.should.be.an('object')
       res.body.should.have.property('session_id', test_session_id)
       res.body.should.have.property('working_directory', test_working_directory)
@@ -66,12 +64,11 @@ describe('API /active-sessions', function () {
         working_directory: test_working_directory
       }
 
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .post('/api/active-sessions')
         .send(session_data)
 
-      res.should.have.status(400)
+      expect(res.status).to.equal(400)
       res.body.should.have.property('error')
     })
   })
@@ -79,28 +76,26 @@ describe('API /active-sessions', function () {
   describe('GET /api/active-sessions/:session_id', () => {
     it('should return a specific active session', async () => {
       // First register a session
-      await chai.request(server).post('/api/active-sessions').send({
+      await request(server).post('/api/active-sessions').send({
         session_id: test_session_id,
         working_directory: test_working_directory,
         transcript_path: test_transcript_path
       })
 
       // Then retrieve it
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get(`/api/active-sessions/${test_session_id}`)
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.be.an('object')
       res.body.should.have.property('session_id', test_session_id)
     })
 
     it('should return 404 for non-existent session', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/active-sessions/non-existent-session-id')
 
-      res.should.have.status(404)
+      expect(res.status).to.equal(404)
       res.body.should.have.property('error')
     })
   })
@@ -108,7 +103,7 @@ describe('API /active-sessions', function () {
   describe('PUT /api/active-sessions/:session_id', () => {
     it('should update an existing active session', async () => {
       // First register a session
-      await chai.request(server).post('/api/active-sessions').send({
+      await request(server).post('/api/active-sessions').send({
         session_id: test_session_id,
         working_directory: test_working_directory,
         transcript_path: test_transcript_path
@@ -120,12 +115,11 @@ describe('API /active-sessions', function () {
         thread_id: 'test-thread-123'
       }
 
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .put(`/api/active-sessions/${test_session_id}`)
         .send(update_data)
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.be.an('object')
       res.body.should.have.property('status', 'idle')
       res.body.should.have.property('thread_id', 'test-thread-123')
@@ -140,12 +134,11 @@ describe('API /active-sessions', function () {
           working_directory: '/tmp/upsert-test'
         }
 
-        const res = await chai
-          .request(server)
+        const res = await request(server)
           .put(`/api/active-sessions/${new_session_id}`)
           .send(update_data)
 
-        res.should.have.status(200)
+        expect(res.status).to.equal(200)
         res.body.should.be.an('object')
         res.body.should.have.property('session_id', new_session_id)
         res.body.should.have.property('status', 'active')
@@ -158,36 +151,33 @@ describe('API /active-sessions', function () {
   describe('DELETE /api/active-sessions/:session_id', () => {
     it('should remove an active session', async () => {
       // First register a session
-      await chai.request(server).post('/api/active-sessions').send({
+      await request(server).post('/api/active-sessions').send({
         session_id: test_session_id,
         working_directory: test_working_directory,
         transcript_path: test_transcript_path
       })
 
       // Then delete it
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .delete(`/api/active-sessions/${test_session_id}`)
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
 
       // Verify it's gone
-      const get_res = await chai
-        .request(server)
+      const get_res = await request(server)
         .get(`/api/active-sessions/${test_session_id}`)
 
-      get_res.should.have.status(404)
+      expect(get_res.status).to.equal(404)
     })
 
     it('should return success even for non-existent session (idempotent)', async () => {
       // DELETE is idempotent - returns success even if session doesn't exist
       // This is important for hook-based systems where cleanup may be called multiple times
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .delete('/api/active-sessions/non-existent-session-id')
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
     })
   })

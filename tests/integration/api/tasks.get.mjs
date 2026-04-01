@@ -1,6 +1,6 @@
 /* global describe it before beforeEach */
-import chai from 'chai'
-import chaiHttp from 'chai-http'
+import chai, { expect } from 'chai'
+import { request } from '#tests/utils/test-request.mjs'
 
 import server from '#server'
 import {
@@ -12,7 +12,6 @@ import create_test_task from '#tests/utils/create-test-task.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 
 chai.should()
-chai.use(chaiHttp)
 
 describe('API /tasks GET', () => {
   let user
@@ -49,12 +48,11 @@ describe('API /tasks GET', () => {
 
   describe('GET / (list tasks)', () => {
     it('should get all tasks for a user', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/tasks')
         .set('Authorization', `Bearer ${user.jwt_token}`)
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('tasks')
       res.body.tasks.should.be.an('array')
       res.body.tasks.length.should.be.at.least(1)
@@ -82,15 +80,14 @@ describe('API /tasks GET', () => {
         status: 'Waiting'
       })
 
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/tasks')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({
           status: 'Waiting'
         })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.have.property('tasks')
       res.body.tasks.should.be.an('array')
       res.body.tasks.length.should.be.at.least(1)
@@ -104,13 +101,12 @@ describe('API /tasks GET', () => {
 
   describe('GET / (get specific task)', () => {
     it('should get a specific task by base_uri', async () => {
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/tasks')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: task_base_uri })
 
-      res.should.have.status(200)
+      expect(res.status).to.equal(200)
       res.body.should.be.an('object')
       res.body.should.have.property('base_uri')
       res.body.base_uri.should.equal(task_base_uri)
@@ -128,13 +124,12 @@ describe('API /tasks GET', () => {
 
     it('should return 404 for non-existent base_uri', async () => {
       const non_existent_base_uri = 'user:task/non-existent-task.md'
-      const res = await chai
-        .request(server)
+      const res = await request(server)
         .get('/api/tasks')
         .set('Authorization', `Bearer ${user.jwt_token}`)
         .query({ base_uri: non_existent_base_uri })
 
-      res.should.have.status(404)
+      expect(res.status).to.equal(404)
       res.body.should.have.property('error')
       res.body.error.should.include(
         `Task '${non_existent_base_uri}' does not exist`

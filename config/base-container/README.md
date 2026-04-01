@@ -143,7 +143,7 @@ The context includes:
 
 ## Troubleshooting
 
-**PM2 services not starting**: Ensure `yarn install` has been run in `repository/active/base/`.
+**PM2 services not starting**: Ensure `bun install` has been run in `repository/active/base/`.
 
 **Git operations fail inside container**: Check `git config user.name` and `git config user.email` are set. The entrypoint configures these from env vars.
 
@@ -151,6 +151,6 @@ The context includes:
 
 **SSH host aliases not working**: The host's SSH config is mounted read-only with root ownership. The entrypoint copies the config to a node-owned directory (`/home/node/.ssh-local`) and symlinks `/home/node/.ssh` to it. If `ssh storage` fails with "Could not resolve hostname", restart the container to trigger the entrypoint SSH setup.
 
-**Hook scripts fail with "command not found"**: Ensure base submodule dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd $USER_BASE_DIRECTORY/repository/active/base && yarn install`.
+**Hook scripts fail with "command not found"**: Ensure base submodule dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd $USER_BASE_DIRECTORY/repository/active/base && bun install`.
 
 **Submodule operations fail (storage server)**: Ensure `git config --global protocol.file.allow always` is set (done by entrypoint).
