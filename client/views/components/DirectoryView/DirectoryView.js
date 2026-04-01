@@ -179,7 +179,8 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   }
 
   const build_item_path = (item) => {
-    return path ? `${path}/${item.name}` : `/${item.name}`
+    const clean_path = path ? path.replace(/\/+$/, '') : ''
+    return clean_path ? `${clean_path}/${item.name}` : `/${item.name}`
   }
 
   const handle_item_click = (event, item) => {

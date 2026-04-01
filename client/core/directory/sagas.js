@@ -80,8 +80,9 @@ export function* load_directory_markdown({ payload }) {
   }
 
   for (const filename of markdown_files) {
-    const markdown_path = payload?.path
-      ? `${payload.path}/${filename}`
+    const clean_path = payload?.path?.replace(/\/+$/, '')
+    const markdown_path = clean_path
+      ? `${clean_path}/${filename}`
       : filename
 
     try {

@@ -58,7 +58,10 @@ export const use_file_system_data = ({
   // Sync with router location if enabled
   useEffect(() => {
     if (use_router_path && location) {
-      const path = location.pathname === '/' ? '' : location.pathname
+      const path =
+        location.pathname === '/'
+          ? ''
+          : location.pathname.replace(/\/+$/, '')
       if (path !== current_path) {
         navigate_to_path(path)
       }

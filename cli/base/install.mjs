@@ -14,6 +14,7 @@
 import fs from 'fs'
 import path from 'path'
 import config from '#config'
+import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
 
 export const command = 'install <url>'
 export const describe = 'Install content from a URL (extension, workflow, guideline, skill, hook)'
@@ -82,10 +83,12 @@ function detect_content_type(url) {
 }
 
 async function fetch_single_file(url) {
-  const response = await fetch(url)
+  const raw_url = ensure_raw_url(url)
+  const response = await fetch(raw_url)
   if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: HTTP ${response.status}`)
+    throw new Error(`Failed to fetch ${raw_url}: HTTP ${response.status}`)
   }
+  validate_raw_response(response, raw_url)
   return await response.text()
 }
 
@@ -98,6 +101,7 @@ async function fetch_manifest(url) {
   try {
     const response = await fetch(manifest_url)
     if (response.ok) {
+      validate_raw_response(response, manifest_url)
       return await response.json()
     }
   } catch {

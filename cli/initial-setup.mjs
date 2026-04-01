@@ -21,6 +21,7 @@ import { fileURLToPath } from 'url'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
+import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const BASE_DIR = process.env.SYSTEM_BASE_DIRECTORY || path.resolve(__dirname, '..')
@@ -504,13 +505,14 @@ export const handler = async (argv) => {
       for (let attempt = 1; attempt <= max_retries; attempt++) {
         try {
           const fetch_opts = { signal: AbortSignal.timeout(30000) }
-          const response = await fetch(
-            'https://base.tint.space/system/manifest.json',
-            fetch_opts
+          const manifest_url = ensure_raw_url(
+            'https://base.tint.space/system/manifest.json'
           )
+          const response = await fetch(manifest_url, fetch_opts)
           if (!response.ok) {
             throw new Error(`manifest fetch failed: ${response.status}`)
           }
+          validate_raw_response(response, manifest_url)
           const manifest = await response.json()
           let all_files_ok = true
 
@@ -522,11 +524,14 @@ export const handler = async (argv) => {
             const results = await Promise.all(
               batch.map(async (file) => {
                 const file_path = typeof file === 'string' ? file : file.path
-                const file_url = `https://base.tint.space/system/${file_path}`
+                const file_url = ensure_raw_url(
+                  `https://base.tint.space/system/${file_path}`
+                )
                 const local_path = path.join(system_dir, file_path)
                 fs.mkdirSync(path.dirname(local_path), { recursive: true })
                 const file_response = await fetch(file_url, fetch_opts)
                 if (file_response.ok) {
+                  validate_raw_response(file_response, file_url)
                   fs.writeFileSync(local_path, await file_response.text())
                   return true
                 }

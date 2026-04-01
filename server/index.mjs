@@ -235,12 +235,17 @@ api.use((err, req, res, next) => {
 if (config.hosting?.enabled && config.hosting?.static_dir) {
   const hosting_dir = config.hosting.static_dir
   if (fs.existsSync(hosting_dir)) {
-    api.use(
+    api.use((req, res, next) => {
+      // Skip .md files so they fall through to the SPA renderer for entity page views
+      // Raw markdown access is still available via /raw/ prefix or ?raw=true
+      if (req.path.endsWith('.md')) {
+        return next()
+      }
       express.static(hosting_dir, {
         maxAge: '1h',
         fallthrough: true
-      })
-    )
+      })(req, res, next)
+    })
     log(`Hosting static files from ${hosting_dir}`)
   }
 }

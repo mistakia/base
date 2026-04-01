@@ -14,6 +14,7 @@ import path from 'path'
 import crypto from 'crypto'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
 
 const exec_file_async = promisify(execFile)
 
@@ -59,12 +60,13 @@ function read_local_version() {
 }
 
 async function fetch_remote_version(version_tag) {
-  const url = release_url(version_tag, 'version.json')
+  const url = ensure_raw_url(release_url(version_tag, 'version.json'))
   try {
     const response = await fetch(url)
     if (!response.ok) {
       return null
     }
+    validate_raw_response(response, url)
     return await response.json()
   } catch {
     return null
@@ -72,7 +74,7 @@ async function fetch_remote_version(version_tag) {
 }
 
 async function download_binary(platform, output_path, version_tag) {
-  const url = release_url(version_tag, `base-${platform}`)
+  const url = ensure_raw_url(release_url(version_tag, `base-${platform}`))
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Download failed: HTTP ${response.status}`)
@@ -94,7 +96,7 @@ function compute_file_hash(file_path) {
 }
 
 async function verify_checksum(file_path, platform, version_tag) {
-  const checksums_url = release_url(version_tag, 'checksums.sha256')
+  const checksums_url = ensure_raw_url(release_url(version_tag, 'checksums.sha256'))
   try {
     const response = await fetch(checksums_url)
     if (!response.ok) {
@@ -137,17 +139,19 @@ async function sync_system_content(install_dir) {
 
   // Download system content manifest
   try {
-    const manifest_response = await fetch(`${system_url}manifest.json`)
+    const manifest_fetch_url = ensure_raw_url(`${system_url}manifest.json`)
+    const manifest_response = await fetch(manifest_fetch_url)
     if (!manifest_response.ok) {
       console.log('System content manifest not available, skipping')
       return false
     }
+    validate_raw_response(manifest_response, manifest_fetch_url)
 
     const manifest = await manifest_response.json()
     let updated = 0
 
     for (const file of manifest.files || []) {
-      const file_url = `${system_url}${file.path}`
+      const file_url = ensure_raw_url(`${system_url}${file.path}`)
       const local_path = path.join(system_dir, file.path)
 
       // Skip if local file matches hash
@@ -164,6 +168,7 @@ async function sync_system_content(install_dir) {
 
       const response = await fetch(file_url)
       if (response.ok) {
+        validate_raw_response(response, file_url)
         const content = await response.text()
         fs.writeFileSync(local_path, content)
         updated++

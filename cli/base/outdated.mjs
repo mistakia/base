@@ -12,6 +12,7 @@
 
 import fs from 'fs'
 import path from 'path'
+import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
 
 export const command = 'outdated'
 export const describe = 'Check for available updates'
@@ -48,11 +49,10 @@ const FETCH_OPTS = { signal: AbortSignal.timeout(15000) }
 
 async function fetch_latest_version() {
   try {
-    const response = await fetch(
-      `${BASE_URL}/releases/latest/version.json`,
-      FETCH_OPTS
-    )
+    const url = ensure_raw_url(`${BASE_URL}/releases/latest/version.json`)
+    const response = await fetch(url, FETCH_OPTS)
     if (response.ok) {
+      validate_raw_response(response, url)
       return await response.json()
     }
   } catch {
@@ -74,8 +74,10 @@ async function check_system_content_freshness(install_dir) {
   }
 
   try {
-    const response = await fetch(`${BASE_URL}/system/manifest.json`, FETCH_OPTS)
+    const url = ensure_raw_url(`${BASE_URL}/system/manifest.json`)
+    const response = await fetch(url, FETCH_OPTS)
     if (response.ok) {
+      validate_raw_response(response, url)
       const manifest = await response.json()
       return {
         local_timestamp,
