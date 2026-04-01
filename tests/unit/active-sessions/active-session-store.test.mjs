@@ -6,6 +6,7 @@ import {
   get_active_session,
   get_all_active_sessions,
   remove_active_session,
+  get_and_remove_active_session,
   get_active_session_for_thread,
   close_session_store
 } from '#server/services/active-sessions/active-session-store.mjs'
@@ -271,6 +272,94 @@ describe('active-session-store', function () {
       } finally {
         await remove_active_session(upsert_session_id)
       }
+    })
+  })
+
+  describe('deletion tombstone', () => {
+    it('should prevent upsert after remove_active_session', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      await remove_active_session(test_session_id)
+
+      // Simulate a late-arriving Stop hook PUT after SessionEnd DELETE
+      const result = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+
+      expect(result).to.be.null
+
+      // Verify session was not re-created in Redis
+      const session = await get_active_session(test_session_id)
+      expect(session).to.be.null
+    })
+
+    it('should prevent upsert after get_and_remove_active_session', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      const removed = await get_and_remove_active_session(test_session_id)
+      expect(removed).to.be.an('object')
+      expect(removed.session_id).to.equal(test_session_id)
+
+      // Simulate a late-arriving PUT after DELETE
+      const result = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+
+      expect(result).to.be.null
+    })
+
+    it('should allow updates after re-registration clears tombstone (resume case)', async () => {
+      // Simulate: session runs -> ends -> resumes with same session_id
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      await remove_active_session(test_session_id)
+
+      // Resume: re-register with same session_id (should clear tombstone)
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      // Subsequent PUT should work (tombstone was cleared by register)
+      const updated = await update_active_session({
+        session_id: test_session_id,
+        status: 'active'
+      })
+
+      expect(updated).to.be.an('object')
+      expect(updated.status).to.equal('active')
+    })
+
+    it('should still allow update of existing session (not affected by tombstone)', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      // Update should work normally when session exists (no tombstone check needed)
+      const updated = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+
+      expect(updated).to.be.an('object')
+      expect(updated.status).to.equal('idle')
     })
   })
 

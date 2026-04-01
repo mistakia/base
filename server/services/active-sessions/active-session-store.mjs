@@ -73,6 +73,29 @@ const build_session_key = (session_id) => {
 }
 
 /**
+ * Build Redis key for a deletion tombstone
+ *
+ * Tombstones prevent the PUT upsert from re-creating a session after
+ * DELETE has removed it. This addresses a race condition where hook
+ * curl calls run in the background: if a Stop (PUT idle) arrives after
+ * a SessionEnd (DELETE), the Lua upsert would otherwise re-create the
+ * session as a ghost that persists until TTL expires.
+ *
+ * @param {string} session_id - Session ID
+ * @returns {string} Redis key
+ */
+const build_tombstone_key = (session_id) => {
+  return `session-deleted:${session_id}`
+}
+
+// Tombstone TTL: must outlast the longest possible in-flight background curl.
+// Hook scripts set --max-time 5 on curl requests; the admin hook has no
+// explicit timeout but local curls complete in <1s. 10s provides margin
+// for slow HTTPS handshakes while keeping the window short enough that
+// fast session resumes (same session_id via -r) are minimally affected.
+const TOMBSTONE_TTL_SECONDS = 10
+
+/**
  * Register a new active session
  *
  * @param {Object} params - Session parameters
@@ -89,6 +112,12 @@ export const register_active_session = async ({
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
+  const tombstone_key = build_tombstone_key(session_id)
+
+  // Clear any tombstone from a previous session end. This handles the
+  // resume case: same session_id re-registers after SessionEnd deleted it.
+  // Without this, subsequent PUT updates would be blocked by the stale tombstone.
+  await redis.del(tombstone_key)
 
   const now = new Date().toISOString()
 
@@ -159,6 +188,7 @@ export const register_active_session = async ({
 // in a single Redis command to prevent concurrent update races.
 const UPDATE_SESSION_SCRIPT = `
 local key = KEYS[1]
+local tombstone_key = KEYS[2]
 local ttl = tonumber(ARGV[1])
 local update_json = ARGV[2]
 local now = ARGV[3]
@@ -170,6 +200,13 @@ local session
 if existing then
   session = cjson.decode(existing)
 else
+  -- Check for deletion tombstone before upserting. If the session was
+  -- recently deleted (SessionEnd), a late-arriving PUT (from Stop or
+  -- PostToolUse background curl) must not re-create it.
+  if redis.call('EXISTS', tombstone_key) == 1 then
+    return nil
+  end
+
   -- Upsert: create new session if missing (handles missed SessionStart).
   -- Nullable fields are omitted (absent keys encode as missing in JSON,
   -- which JavaScript JSON.parse reads as undefined -- callers handle both).
@@ -238,16 +275,25 @@ export const update_active_session = async ({
     updates.context_window_size = context_window_size
 
   const now = new Date().toISOString()
+  const tombstone_key = build_tombstone_key(session_id)
 
   const result = await redis.eval(
     UPDATE_SESSION_SCRIPT,
-    1,
+    2,
     key,
+    tombstone_key,
     STORE_CONFIG.stale_timeout_seconds,
     JSON.stringify(updates),
     now,
     session_id
   )
+
+  if (result === null) {
+    log(
+      `Skipped upsert for deleted session: ${session_id} (tombstone present)`
+    )
+    return null
+  }
 
   const session = JSON.parse(result)
   log(`Updated active session: ${session_id} status=${session.status}`)
@@ -316,9 +362,13 @@ export const get_all_active_sessions = async () => {
 export const remove_active_session = async (session_id) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
+  const tombstone_key = build_tombstone_key(session_id)
 
   const result = await redis.del(key)
   const removed = result > 0
+
+  // Set tombstone to prevent late-arriving PUT upserts from re-creating
+  await redis.setex(tombstone_key, TOMBSTONE_TTL_SECONDS, '1')
 
   if (removed) {
     log(`Removed active session: ${session_id}`)
@@ -341,8 +391,13 @@ export const remove_active_session = async (session_id) => {
 export const get_and_remove_active_session = async (session_id) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
+  const tombstone_key = build_tombstone_key(session_id)
 
   const data = await redis.getdel(key)
+
+  // Set tombstone to prevent late-arriving PUT upserts from re-creating
+  await redis.setex(tombstone_key, TOMBSTONE_TTL_SECONDS, '1')
+
   if (data) {
     const session = JSON.parse(data)
     log(`Got and removed active session: ${session_id}`)

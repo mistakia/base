@@ -374,6 +374,16 @@ router.put('/:session_id', async (req, res) => {
       context_window_size
     })
 
+    // Tombstone guard: session was recently deleted, late PUT must not re-create
+    if (!session) {
+      log_lifecycle(
+        'PUT session_tombstoned session_id=%s status=%s (late arrival after DELETE)',
+        session_id,
+        status
+      )
+      return res.status(200).json({ success: true, session_id, tombstoned: true })
+    }
+
     // If no thread_id yet, try to find one
     if (!session.thread_id) {
       const found_thread_id = await find_thread_for_session({
