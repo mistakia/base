@@ -2,8 +2,7 @@ import { readFileSync, existsSync } from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, join } from 'path'
 import { tmpdir, hostname } from 'os'
-import { randomUUID } from 'crypto'
-import secure_config from '@tsmx/secure-config'
+import { randomUUID, createDecipheriv } from 'crypto'
 import debug from 'debug'
 
 const log = debug('config:loader')
@@ -15,10 +14,12 @@ const config_dir = join(current_dir)
 // Derive system_base_directory from code location (parent of config/)
 const derived_system_base_directory = dirname(config_dir)
 
-// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup).
-// Check only the first positional argument to avoid false-positives from
-// option values like `--status init`.
+// Commands that can run without USER_BASE_DIRECTORY (e.g., initial setup,
+// version/help queries). Check only the first positional argument for
+// subcommands to avoid false-positives from option values like `--status init`.
 const is_init_command = process.argv[2] === 'init'
+const is_info_flag =
+  process.argv.includes('--version') || process.argv.includes('--help') || process.argv.includes('-h')
 
 /**
  * Deep merge two objects. Source values override target values.
@@ -43,30 +44,71 @@ function deep_merge(target, source) {
 }
 
 /**
- * Load a JSON config file, using @tsmx/secure-config for decryption when
- * CONFIG_ENCRYPTION_KEY is set and the file contains ENCRYPTED| values.
- * Falls back to plain JSON.parse when decryption is not needed or not available.
+ * Decrypt a single ENCRYPTED|iv|ciphertext value using AES-256-CBC.
  */
-function load_config_file(directory) {
-  const config_path = join(directory, 'config.json')
+function decrypt_value(encrypted_text, key_buffer) {
+  const parts = encrypted_text.split('|')
+  // Format: ENCRYPTED|iv_hex|ciphertext_hex  (first part is the prefix)
+  const iv = Buffer.from(parts[1], 'hex')
+  const ciphertext = Buffer.from(parts[2], 'hex')
+  const decipher = createDecipheriv('aes-256-cbc', key_buffer, iv)
+  let decrypted = decipher.update(ciphertext)
+  decrypted = Buffer.concat([decrypted, decipher.final()])
+  return decrypted.toString()
+}
+
+/**
+ * Recursively traverse an object and decrypt ENCRYPTED| values in-place.
+ */
+function decrypt_config_values(obj, key_buffer) {
+  for (const key of Object.keys(obj)) {
+    const value = obj[key]
+    if (typeof value === 'string' && value.startsWith('ENCRYPTED|')) {
+      obj[key] = decrypt_value(value, key_buffer)
+    } else if (value && typeof value === 'object' && !Array.isArray(value)) {
+      decrypt_config_values(value, key_buffer)
+    }
+  }
+}
+
+/**
+ * Resolve the encryption key from CONFIG_ENCRYPTION_KEY env var.
+ * Accepts 32-byte raw strings or 64-char hex strings.
+ */
+function get_encryption_key() {
+  const raw_key = process.env.CONFIG_ENCRYPTION_KEY
+  if (!raw_key) return null
+  const hex_regex = /^[0-9A-Fa-f]{64}$/
+  if (raw_key.length === 32) return Buffer.from(raw_key)
+  if (hex_regex.test(raw_key)) return Buffer.from(raw_key, 'hex')
+  log('WARNING: CONFIG_ENCRYPTION_KEY has invalid length (expected 32 bytes or 64 hex chars)')
+  return null
+}
+
+/**
+ * Load a JSON config file with inline decryption of ENCRYPTED| values.
+ * Replaces @tsmx/secure-config to avoid its NODE_ENV-based filename
+ * convention (config-{NODE_ENV}.json) which breaks in compiled binaries
+ * where NODE_ENV is baked to "production".
+ */
+function load_config_file(directory, filename = 'config.json') {
+  const config_path = join(directory, filename)
   const raw = readFileSync(config_path, 'utf8')
+  const parsed = JSON.parse(raw)
 
   const has_encrypted_values = raw.includes('ENCRYPTED|')
-
   if (has_encrypted_values) {
-    if (!process.env.CONFIG_ENCRYPTION_KEY) {
-      // Use console.warn (not debug log) because this almost certainly indicates
-      // a misconfiguration that will cause silent credential failures downstream.
+    const key_buffer = get_encryption_key()
+    if (key_buffer) {
+      decrypt_config_values(parsed, key_buffer)
+    } else {
       console.warn(
         `WARNING: Config in ${directory} contains ENCRYPTED| values but CONFIG_ENCRYPTION_KEY is not set. Encrypted values will remain as plaintext strings.`
       )
-      return JSON.parse(raw)
     }
-    return secure_config({ directory })
   }
 
-  // No encrypted values -- plain JSON parse (no key required)
-  return JSON.parse(raw)
+  return parsed
 }
 
 // 1. Load defaults from base repo (plain JSON, no encryption).
@@ -113,8 +155,8 @@ const user_base_config_dir =
 // 3. Build config: defaults merged with user-base overlay
 let config
 if (process.env.NODE_ENV === 'test') {
-  // Test mode: use local config-test.json via secure_config (unchanged behavior)
-  config = secure_config({ directory: config_dir })
+  // Test mode: use config-test.json from the base config directory
+  config = load_config_file(config_dir, 'config-test.json')
   log('Loaded test config from %s', config_dir)
 } else if (user_base_config_dir) {
   // Production/development: load user-base config and deep merge over defaults
@@ -138,10 +180,10 @@ if (process.env.NODE_ENV === 'test') {
   config.user_base_directory = join(tmpdir(), `base_data_${randomUUID()}`)
 } else if (process.env.USER_BASE_DIRECTORY) {
   config.user_base_directory = process.env.USER_BASE_DIRECTORY
-} else if (is_init_command) {
-  // init command can run without USER_BASE_DIRECTORY -- it creates the directory
+} else if (is_init_command || is_info_flag) {
+  // init/version/help can run without USER_BASE_DIRECTORY
   config.user_base_directory = ''
-  log('Running init command without USER_BASE_DIRECTORY')
+  log('Running without USER_BASE_DIRECTORY (init/version/help)')
 } else {
   throw new Error(
     'USER_BASE_DIRECTORY environment variable is not set. Run "base init" first to create a user-base directory.'

@@ -20,10 +20,6 @@ import { upsert_git_activity_daily_batch } from '../sqlite/sqlite-activity-queri
 
 const log = debug('embedded-index:sync:git-activity')
 
-if (!config.user_base_directory) {
-  throw new Error('config.user_base_directory is not configured')
-}
-
 /**
  * Parse git log --numstat output into activity metrics by date
  * Note: files_changed counts unique files per date (not total modifications)

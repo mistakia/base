@@ -160,11 +160,27 @@ function ensure_gitignore(base_path, summary) {
 
 function ensure_config(base_path, summary) {
   const config_path = path.join(base_path, 'config', 'config.json')
-  if (!fs.existsSync(config_path) && fs.existsSync(TEMPLATE_CONFIG_PATH)) {
-    const template = fs.readFileSync(TEMPLATE_CONFIG_PATH, 'utf8')
-    fs.writeFileSync(config_path, template)
+  if (!fs.existsSync(config_path)) {
+    // Try template from system base directory; fall back to minimal defaults
+    // (template may be inaccessible in compiled binaries)
+    let content
+    if (fs.existsSync(TEMPLATE_CONFIG_PATH)) {
+      content = fs.readFileSync(TEMPLATE_CONFIG_PATH, 'utf8')
+    } else {
+      content = JSON.stringify(
+        {
+          user_id: '',
+          user_public_key: '',
+          system_main_branch: 'main',
+          user_main_branch: 'main'
+        },
+        null,
+        2
+      )
+    }
+    fs.writeFileSync(config_path, content)
     summary.files_created.push('config/config.json')
-  } else if (fs.existsSync(config_path)) {
+  } else {
     summary.files_existed.push('config/config.json')
   }
 }
@@ -633,9 +649,10 @@ export const handler = async (argv) => {
   }
 }
 
-// Allow direct execution
+// Allow direct execution (skip in compiled binaries where all modules
+// share the same import.meta.url and this check would incorrectly match)
 const current_file = fileURLToPath(import.meta.url)
-if (process.argv[1] === current_file) {
+if (!current_file.includes('/$bunfs/') && process.argv[1] === current_file) {
   const argv = yargs(hideBin(process.argv))
     .usage('Usage: $0 [options]')
     .option('user-base-directory', {

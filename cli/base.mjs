@@ -148,6 +148,9 @@ const main = async () => {
   await parser.parse()
 }
 
-if (isMain(import.meta.url)) {
+// In compiled binaries, isMain() returns false for all modules (they share
+// the same import.meta.url). Detect compiled mode via /$bunfs/ prefix.
+const is_compiled = import.meta.url.includes('/$bunfs/')
+if (is_compiled || isMain(import.meta.url)) {
   main()
 }

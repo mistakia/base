@@ -138,7 +138,8 @@ export function is_api_unavailable(error) {
   return (
     error.cause?.code === 'ECONNREFUSED' ||
     error.message.includes('ECONNREFUSED') ||
-    error.message.includes('fetch failed')
+    error.message.includes('fetch failed') ||
+    error.message.includes('Unable to connect')
   )
 }
 
