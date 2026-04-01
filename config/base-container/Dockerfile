@@ -1,4 +1,4 @@
-FROM node:20-slim
+FROM node:22-slim
 
 # Install system packages and build tools
 # python3, make, g++ needed by node-gyp for native modules (e.g. sharp)

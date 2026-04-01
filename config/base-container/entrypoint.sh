@@ -283,7 +283,7 @@ This session is running inside a Docker container on the **$MACHINE_NAME** machi
 
 ### Container Context
 - **Host Machine**: $MACHINE_NAME (storage server or macbook)
-- **Container**: base-container (Node.js 20, Bun, Debian)
+- **Container**: base-container (Node.js 22, Bun, Debian)
 - **Working Directory**: $USER_BASE_DIRECTORY
 - **User**: node (UID 1000)
 
