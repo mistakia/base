@@ -37,6 +37,7 @@
   max-width: 100% // Ensure children don't exceed parent
   overflow: hidden // Clip any overflowing content
   padding-bottom: $space_base
+  order: -1 // Show metadata above content on mobile
 
   // Ensure all direct children respect parent width constraints
   > *
@@ -47,6 +48,7 @@
 
   @media (min-width: 992px) // lg breakpoint
     flex: 1 // Default to 4/12 ratio (1:2 with left)
+    order: 0 // Reset to DOM order on desktop
 
 // Sticky right column variant
 .two-column-right-sticky

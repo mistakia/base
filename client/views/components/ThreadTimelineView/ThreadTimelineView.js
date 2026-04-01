@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useSelector } from 'react-redux'
-import { Box } from '@mui/material'
+import { Box, useMediaQuery } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 
 import { get_threads_state } from '@core/threads/selectors'
@@ -26,6 +26,7 @@ const ThreadTimelineView = () => {
   const is_loading_thread = threads_state.get('is_loading_thread')
   const thread_error = threads_state.get('thread_error')
   const [is_file_browser_visible, set_is_file_browser_visible] = useState(false)
+  const is_mobile = useMediaQuery('(max-width: 991px)')
 
   // Extract thread ID from path like /thread/abc123
   const thread_id = current_path.startsWith('/thread/')
@@ -102,7 +103,12 @@ const ThreadTimelineView = () => {
 
   const right_content = (
     <Box>
-      <ThreadHeader metadata={metadata} thread_id={thread_id} />
+      <ThreadHeader
+        metadata={metadata}
+        thread_id={thread_id}
+        collapsible={is_mobile}
+        default_collapsed={is_mobile}
+      />
       <SharedViewBadge />
       {selected_thread_data && (
         <FileActions>
