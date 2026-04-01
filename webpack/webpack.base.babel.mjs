@@ -3,7 +3,6 @@
  */
 
 import webpack from 'webpack'
-import nib from 'nib'
 import { fileURLToPath } from 'url'
 import path, { dirname } from 'path'
 
@@ -63,9 +62,7 @@ const base = (options) => ({
             loader: 'stylus-loader',
             options: {
               stylusOptions: {
-                use: [nib()],
                 import: [
-                  'nib',
                   path.resolve(__dirname, '../client/styles/variables.styl')
                 ],
                 includeCSS: true
@@ -91,9 +88,7 @@ const base = (options) => ({
             loader: 'stylus-loader',
             options: {
               stylusOptions: {
-                use: [nib()],
                 import: [
-                  'nib',
                   path.resolve(
                     __dirname,
                     '../node_modules/react-table/src/styles/variables.styl'

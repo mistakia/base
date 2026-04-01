@@ -145,7 +145,6 @@
     "merge-options": "^3.0.4",
     "mocha": "^10.8.2",
     "nanocurrency-web": "^1.4.3",
-    "nib": "1.2.0",
     "prettier": "^3.5.3",
     "prettier-plugin-sql": "^0.18.1",
     "prop-types": "^15.8.1",
