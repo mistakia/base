@@ -717,6 +717,25 @@ sync_submodule() {
         return 1
     fi
 
+    # Check for index contamination at the START of base-ios processing (catches
+    # contamination from any source, not just import-history auto-commit).
+    if [ "$submodule_name" = "base-ios" ]; then
+        local foreign_count
+        foreign_count=$(git -C "$full_path" ls-files 2>/dev/null | grep -cE '^(github|notion|reddit|twitter)/' || true)
+        if [ "$foreign_count" -gt 0 ]; then
+            log_error "base-ios index contaminated with $foreign_count foreign entries (detected at sync start)"
+            log_telemetry "base-ios" "index_contamination" "entries:$foreign_count,trigger:pre-sync,cwd:$(pwd),git_dir:${GIT_DIR:-unset},git_worktree:${GIT_WORK_TREE:-unset},ppid:$PPID"
+            discord_notify_failure "base-ios" "index contamination detected at sync start: $foreign_count foreign entries"
+            log "base-ios: repairing index via git read-tree HEAD..."
+            if git -C "$full_path" read-tree HEAD 2>/dev/null; then
+                log "base-ios: index repaired successfully"
+                log_telemetry "base-ios" "index_repaired" "entries_removed:$foreign_count,trigger:pre-sync"
+            else
+                log_error "base-ios: git read-tree HEAD failed"
+            fi
+        fi
+    fi
+
     # Ensure merge drivers are configured for thread-like submodules
     if [ "$submodule_name" = "thread" ] || [ "$submodule_name" = "import-history" ]; then
         ensure_thread_merge_drivers "$full_path"
@@ -736,6 +755,34 @@ sync_submodule() {
         if [ -x "$auto_commit_script" ]; then
             log_verbose "$submodule_name: running auto-commit..."
             "$auto_commit_script" --skip-lock 2>&1 | while read -r line; do log_verbose "  $line"; done || true
+        fi
+    fi
+
+    # Cross-submodule index contamination detector.
+    # After auto-commit runs for import-history, check sibling submodules for
+    # contamination (foreign entries in their index). Detects the condition where
+    # import-history file paths appear in another submodule's git index -- objects
+    # exist in import-history's store but not the target's, causing "invalid object"
+    # errors on commit. Root cause is unidentified (GIT_DIR isolation fix deployed
+    # Mar 2026 but contamination recurred Apr 2026 during active Claude sessions).
+    if [ "$submodule_name" = "import-history" ]; then
+        local base_ios_path="$USER_BASE_DIRECTORY/repository/active/base-ios"
+        if [ -f "$base_ios_path/.git" ] || [ -d "$base_ios_path/.git" ]; then
+            local foreign_count
+            foreign_count=$(git -C "$base_ios_path" ls-files 2>/dev/null | grep -cE '^(github|notion|reddit|twitter)/' || true)
+            if [ "$foreign_count" -gt 0 ]; then
+                log_error "base-ios index contaminated with $foreign_count import-history entries (detected after import-history auto-commit)"
+                log_telemetry "base-ios" "index_contamination" "entries:$foreign_count,trigger:post-import-history-autocommit,cwd:$(pwd),git_dir:${GIT_DIR:-unset},git_worktree:${GIT_WORK_TREE:-unset}"
+                discord_notify_failure "base-ios" "index contamination detected: $foreign_count import-history entries after auto-commit"
+                # Auto-repair: rebuild index from HEAD
+                log "base-ios: repairing index via git read-tree HEAD..."
+                if git -C "$base_ios_path" read-tree HEAD 2>/dev/null; then
+                    log "base-ios: index repaired successfully"
+                    log_telemetry "base-ios" "index_repaired" "entries_removed:$foreign_count"
+                else
+                    log_error "base-ios: git read-tree HEAD failed"
+                fi
+            fi
         fi
     fi
 
