@@ -17,14 +17,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python 3.12 from Debian Trixie (testing) to match CloakBrowser venv
-# The mounted venv has native C extensions compiled for Python 3.12
-RUN echo 'deb http://deb.debian.org/debian trixie main' > /etc/apt/sources.list.d/trixie.list \
-    && printf 'Package: *\nPin: release n=trixie\nPin-Priority: 100\n' > /etc/apt/preferences.d/trixie \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends -t trixie python3.12 \
-    && rm -rf /var/lib/apt/lists/* \
-    && rm /etc/apt/sources.list.d/trixie.list /etc/apt/preferences.d/trixie
+# Install CloakBrowser native dependencies for the container's Python version.
+# The mounted venv (Python 3.12) has pure-Python packages that work cross-version,
+# but greenlet has C extensions tied to the build Python. Install it natively here
+# so the container Python (3.11) can load it alongside the mounted venv's PYTHONPATH.
+RUN python3 -m pip install --break-system-packages greenlet
 
 # Install Chromium headless dependencies for CloakBrowser
 RUN apt-get update && apt-get install -y --no-install-recommends \
