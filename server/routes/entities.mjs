@@ -17,17 +17,6 @@ import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  find_related_entities,
-  find_entities_relating_to,
-  find_threads_relating_to
-} from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
-import {
-  query_entities_from_sqlite,
-  get_entity_by_base_uri,
-  get_entity_by_id,
-  count_entities_in_sqlite
-} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { PermissionContext } from '#server/middleware/permission/permission-context.mjs'
 import {
   redact_base_uri,
@@ -132,19 +121,14 @@ router.get('/', async (req, res) => {
     const include_archived = archived === 'true'
     const without_tags_filter = without_tags === 'true'
 
-    // Check if DuckDB is available
-    if (!embedded_index_manager.is_sqlite_ready()) {
-      return res.status(503).send({ error: 'Database not available' })
-    }
-
     // Single entity lookup mode
     if (base_uri || entity_id) {
       let entity = null
 
       if (base_uri) {
-        entity = await get_entity_by_base_uri({ base_uri })
+        entity = await embedded_index_manager.get_entity_by_uri({ base_uri })
       } else if (entity_id) {
-        entity = await get_entity_by_id({ entity_id })
+        entity = await embedded_index_manager.get_entity_by_id({ entity_id })
       }
 
       if (!entity) {
@@ -192,14 +176,14 @@ router.get('/', async (req, res) => {
     // Query entities and count
     // search is passed as a dedicated parameter to search across title and description
     const [entities, total] = await Promise.all([
-      query_entities_from_sqlite({
+      embedded_index_manager.query_entities({
         filters,
         sort: sort_config,
         limit,
         offset,
         search
       }),
-      count_entities_in_sqlite({ filters, search })
+      embedded_index_manager.count_entities({ filters, search })
     ])
 
     // Apply permission-based filtering and tag/relation redaction
@@ -245,15 +229,10 @@ router.get('/threads', async (req, res) => {
       return res.status(400).send({ error: 'base_uri is required' })
     }
 
-    // Check if DuckDB is available
-    if (!embedded_index_manager.is_sqlite_ready()) {
-      return res.status(503).send({ error: 'Database not available' })
-    }
-
     const limit_num = Math.min(parseInt(limit, 10) || 50, 1000)
     const offset_num = parseInt(offset, 10) || 0
 
-    const threads = await find_threads_relating_to({
+    const threads = await embedded_index_manager.find_threads_relating_to({
       base_uri,
       relation_type: relation_type || null,
       limit: limit_num,
@@ -320,7 +299,7 @@ router.get('/relations', async (req, res) => {
 
     // Fetch forward relations (this entity -> targets)
     if (direction === 'forward' || direction === 'both') {
-      const raw_forward = await find_related_entities({
+      const raw_forward = await embedded_index_manager.find_related_entities({
         base_uri,
         relation_type: relation_type || null,
         entity_type: entity_type || null,
@@ -337,7 +316,7 @@ router.get('/relations', async (req, res) => {
 
     // Fetch reverse relations (sources -> this entity)
     if (direction === 'reverse' || direction === 'both') {
-      const raw_reverse = await find_entities_relating_to({
+      const raw_reverse = await embedded_index_manager.find_entities_relating_to({
         base_uri,
         relation_type: relation_type || null,
         entity_type: entity_type || null,

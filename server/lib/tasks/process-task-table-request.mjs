@@ -10,10 +10,6 @@ import { check_permissions_batch } from '#server/middleware/permission/index.mjs
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  query_tasks_from_entities,
-  count_tasks_from_entities
-} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { apply_tag_redaction_to_tasks } from './tag-visibility.mjs'
 
 const log = debug('tasks:table')
@@ -318,8 +314,8 @@ async function process_task_table_request_indexed({
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
-  // Query tasks from entities table (type='task' filter applied internally)
-  const tasks = await query_tasks_from_entities({
+  // Query tasks via manager (delegates to active backend)
+  const tasks = await embedded_index_manager.query_tasks({
     filters,
     sort,
     limit,
@@ -327,7 +323,7 @@ async function process_task_table_request_indexed({
   })
 
   // Get total count for pagination
-  const total_count = await count_tasks_from_entities({
+  const total_count = await embedded_index_manager.count_tasks({
     filters
   })
 
@@ -450,24 +446,21 @@ export async function process_task_table_request({
   })
 
   try {
-    // Try to use indexed query if available
-    if (embedded_index_manager.is_sqlite_ready()) {
-      log('Using SQLite index for task query')
-      try {
-        return await process_task_table_request_indexed({
-          table_state,
-          requesting_user_public_key
-        })
-      } catch (index_error) {
-        log(
-          'SQLite index query failed, falling back to filesystem: %s',
-          index_error.message
-        )
-      }
+    // Try indexed query first (manager handles backend delegation)
+    try {
+      return await process_task_table_request_indexed({
+        table_state,
+        requesting_user_public_key
+      })
+    } catch (index_error) {
+      log(
+        'Indexed query failed, falling back to filesystem table processing: %s',
+        index_error.message
+      )
     }
 
-    // Fallback to filesystem-based query
-    log('Using filesystem for task query')
+    // Fallback to filesystem-based table processing (full in-memory sort/filter)
+    log('Using filesystem for task table query')
     return await process_task_table_request_filesystem({
       table_state,
       requesting_user_public_key

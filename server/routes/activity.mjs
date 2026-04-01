@@ -15,11 +15,7 @@ import {
   HTTP_MAX_AGE,
   HTTP_STALE_WHILE_REVALIDATE
 } from '#server/constants/http-cache.mjs'
-import {
-  query_entities_by_thread_activity,
-  query_git_activity_daily,
-  query_thread_activity_aggregated
-} from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   parse_time_period_date,
   is_valid_time_period
@@ -63,8 +59,8 @@ router.get('/heatmap', async (req, res) => {
     )
     try {
       const [git_activity, thread_activity, task_activity] = await Promise.all([
-        query_git_activity_daily({ days }),
-        query_thread_activity_aggregated({ days }),
+        embedded_index_manager.query_git_activity_daily({ days }),
+        embedded_index_manager.query_thread_activity_aggregated({ days }),
         aggregate_task_activity({ days })
       ])
 
@@ -132,7 +128,7 @@ router.get('/entities', async (req, res) => {
       `Fetching entities by thread activity since ${since_date.toISOString()} (type: ${entity_type})`
     )
 
-    const entities = await query_entities_by_thread_activity({
+    const entities = await embedded_index_manager.query_entities_by_thread_activity({
       since_date,
       entity_types: entity_type,
       limit,

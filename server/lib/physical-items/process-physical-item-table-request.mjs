@@ -9,10 +9,6 @@ import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
 import { check_permissions_batch } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  query_physical_items_from_entities,
-  count_physical_items_from_entities
-} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 const log = debug('physical-items:table')
 
@@ -208,14 +204,14 @@ async function process_physical_item_table_request_indexed({
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
-  const items = await query_physical_items_from_entities({
+  const items = await embedded_index_manager.query_physical_items({
     filters,
     sort,
     limit,
     offset
   })
 
-  const total_count = await count_physical_items_from_entities({
+  const total_count = await embedded_index_manager.count_physical_items({
     filters
   })
 
@@ -342,7 +338,7 @@ export async function process_physical_item_table_request({
   })
 
   try {
-    if (embedded_index_manager.is_sqlite_ready()) {
+    if (embedded_index_manager.is_ready()) {
       log('Using SQLite index for physical item query')
       try {
         return await process_physical_item_table_request_indexed({

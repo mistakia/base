@@ -21,38 +21,8 @@ import {
 import { list_tasks_from_filesystem } from '#libs-server/task/index.mjs'
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  query_tasks_from_entities,
-  query_git_activity_daily,
-  query_thread_activity_aggregated,
-  query_heatmap_daily_all,
-  upsert_heatmap_daily_batch,
-  get_heatmap_daily_count,
-  truncate_heatmap_daily
-} from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 
 const log = debug('server:cache-warmer')
-
-/**
- * Try SQLite query with fallback
- * @param {Object} params Parameters
- * @param {Function} params.sqlite_fn Async function that queries SQLite
- * @param {Function} params.fallback_fn Async function for fallback
- * @param {string} params.label Label for logging
- * @returns {Promise<any>} Query result
- */
-async function try_sqlite_or_fallback({ sqlite_fn, fallback_fn, label }) {
-  if (embedded_index_manager.is_sqlite_ready()) {
-    try {
-      log('Using SQLite for %s', label)
-      return await sqlite_fn()
-    } catch (error) {
-      log('SQLite query failed for %s, falling back: %s', label, error.message)
-    }
-  }
-  log('Using fallback for %s', label)
-  return fallback_fn()
-}
 
 // Refresh intervals (in milliseconds)
 const ACTIVITY_REFRESH_INTERVAL = 4 * 60 * 60 * 1000 // 4 hours
@@ -94,8 +64,8 @@ export const CACHE_TTL = {
  */
 async function compute_fresh_days(days) {
   const [git_activity, thread_activity, task_activity] = await Promise.all([
-    query_git_activity_daily({ days }),
-    query_thread_activity_aggregated({ days }),
+    embedded_index_manager.query_git_activity_daily({ days }),
+    embedded_index_manager.query_thread_activity_aggregated({ days }),
     aggregate_task_activity({ days })
   ])
   return merge_activity_and_calculate_scores({
@@ -118,9 +88,9 @@ async function warm_activity_cache() {
     const days = 365
     log('Warming activity heatmap cache for %d days', days)
 
-    // When SQLite is not ready, fall back to full computation
-    if (!embedded_index_manager.is_sqlite_ready()) {
-      log('SQLite not ready, using full computation fallback')
+    // When index is not ready, fall back to full computation
+    if (!embedded_index_manager.is_ready()) {
+      log('Index not ready, using full computation fallback')
       cache.activity_heatmap = {
         data: await get_activity_heatmap_data({ days }),
         timestamp: Date.now(),
@@ -132,7 +102,7 @@ async function warm_activity_cache() {
 
     let row_count
     try {
-      row_count = await get_heatmap_daily_count()
+      row_count = await embedded_index_manager.get_heatmap_count()
     } catch (error) {
       log(
         'Failed to query heatmap daily count, using full fallback: %s',
@@ -151,7 +121,7 @@ async function warm_activity_cache() {
       log('Cold start detected, performing full computation')
       const heatmap_data = await compute_fresh_days(days)
       if (!embedded_index_manager.read_only) {
-        await upsert_heatmap_daily_batch({ entries: heatmap_data.data })
+        await embedded_index_manager.upsert_heatmap_daily_batch({ entries: heatmap_data.data })
       }
       cache.activity_heatmap = {
         data: heatmap_data,
@@ -172,7 +142,7 @@ async function warm_activity_cache() {
     let frozen_days, fresh_result
     try {
       ;[frozen_days, fresh_result] = await Promise.all([
-        query_heatmap_daily_all({ days }),
+        embedded_index_manager.query_heatmap_daily({ days }),
         compute_fresh_days(2)
       ])
     } catch (error) {
@@ -215,7 +185,7 @@ async function warm_activity_cache() {
 
     // Persist fresh days (skip in read-only mode)
     if (!embedded_index_manager.read_only) {
-      await upsert_heatmap_daily_batch({ entries: all_fresh })
+      await embedded_index_manager.upsert_heatmap_daily_batch({ entries: all_fresh })
     }
 
     // Merge: frozen days as base, fresh days overwrite matching dates
@@ -295,14 +265,19 @@ async function warm_tasks_cache() {
   try {
     log('Warming tasks cache')
 
-    const all_tasks = await try_sqlite_or_fallback({
-      label: 'tasks cache',
-      sqlite_fn: () =>
-        query_tasks_from_entities({
-          filters: [{ column_id: 'archived', operator: '=', value: false }]
-        }),
-      fallback_fn: () => list_tasks_from_filesystem({ archived: false })
-    })
+    let all_tasks
+    if (embedded_index_manager.is_ready()) {
+      try {
+        all_tasks = await embedded_index_manager.query_tasks_for_activity({
+          archived: false
+        })
+      } catch (error) {
+        log('Index task query failed, falling back: %s', error.message)
+        all_tasks = await list_tasks_from_filesystem({ archived: false })
+      }
+    } else {
+      all_tasks = await list_tasks_from_filesystem({ archived: false })
+    }
 
     // Normalize to nested entity format (SQLite returns flat rows)
     const normalized = all_tasks.map(normalize_sqlite_task)
@@ -348,8 +323,8 @@ async function warm_task_stats_cache() {
  */
 export async function rebuild_activity_heatmap() {
   log('Rebuilding activity heatmap from scratch')
-  if (embedded_index_manager.is_sqlite_ready()) {
-    await truncate_heatmap_daily()
+  if (embedded_index_manager.is_ready()) {
+    await embedded_index_manager.truncate_heatmap_daily()
   }
   cache.activity_heatmap.timestamp = 0
   await warm_activity_cache()

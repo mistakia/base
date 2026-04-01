@@ -3,13 +3,7 @@ import {
   list_tags_from_filesystem,
   read_tag_from_filesystem
 } from '#libs-server/tag/index.mjs'
-import {
-  query_entities_from_sqlite,
-  count_entities_in_sqlite,
-  query_threads_from_sqlite,
-  count_threads_in_sqlite,
-  query_tags_used_by
-} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { normalize_sqlite_thread } from '#server/lib/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
@@ -37,7 +31,7 @@ async function query_threads_by_tag({
 }) {
   try {
     const sort_column = sort === 'created_at' ? 'created_at' : 'updated_at'
-    const sqlite_threads = await query_threads_from_sqlite({
+    const sqlite_threads = await embedded_index_manager.query_threads({
       tags: [tag_base_uri],
       sort: [{ column_id: sort_column, desc: true }],
       limit
@@ -65,7 +59,7 @@ async function query_threads_by_tag({
  */
 async function count_threads_by_tag({ tag_base_uri }) {
   try {
-    return await count_threads_in_sqlite({
+    return await embedded_index_manager.count_threads({
       tags: [tag_base_uri]
     })
   } catch {
@@ -139,7 +133,7 @@ router.get('/', async (req, res) => {
 
       if (!is_redacted) {
         try {
-          tagged_entities = await query_entities_from_sqlite({
+          tagged_entities = await embedded_index_manager.query_entities({
             filters: [
               { column_id: 'tags', operator: 'IN', value: [tag.base_uri] }
             ],
@@ -168,7 +162,7 @@ router.get('/', async (req, res) => {
 
           const [non_completed_count, completed_count, entity_count] =
             await Promise.all([
-              count_entities_in_sqlite({
+              embedded_index_manager.count_entities({
                 filters: [
                   tag_filter,
                   { column_id: 'type', operator: '=', value: 'task' },
@@ -179,7 +173,7 @@ router.get('/', async (req, res) => {
                   }
                 ]
               }),
-              count_entities_in_sqlite({
+              embedded_index_manager.count_entities({
                 filters: [
                   tag_filter,
                   { column_id: 'type', operator: '=', value: 'task' },
@@ -190,7 +184,7 @@ router.get('/', async (req, res) => {
                   }
                 ]
               }),
-              count_entities_in_sqlite({
+              embedded_index_manager.count_entities({
                 filters: [tag_filter]
               })
             ])
@@ -264,7 +258,7 @@ router.get('/', async (req, res) => {
       // Filter to only tags used by a specific entity type or threads
       if (used_by) {
         try {
-          const used_tag_uris = await query_tags_used_by({ used_by })
+          const used_tag_uris = await embedded_index_manager.query_tags({ used_by })
           tags = tags.filter((tag) => used_tag_uris.has(tag.base_uri))
         } catch (err) {
           log('Failed to filter tags by used_by=%s: %s', used_by, err.message)

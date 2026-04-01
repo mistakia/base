@@ -12,10 +12,6 @@ import { check_thread_permission_for_user } from '#server/middleware/permission/
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import { parse_latest_timeline_event_data } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  query_threads_from_sqlite,
-  count_threads_in_sqlite
-} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
@@ -255,8 +251,8 @@ async function process_thread_table_request_indexed({
     return acc
   }, [])
 
-  // Query threads from SQLite
-  const threads = await query_threads_from_sqlite({
+  // Query threads via manager (delegates to active backend)
+  const threads = await embedded_index_manager.query_threads({
     filters,
     sort,
     limit,
@@ -265,7 +261,7 @@ async function process_thread_table_request_indexed({
   })
 
   // Get total count for pagination
-  const total_count = await count_threads_in_sqlite({
+  const total_count = await embedded_index_manager.count_threads({
     filters,
     tags: tags.length > 0 ? tags : undefined
   })
@@ -363,24 +359,21 @@ export async function process_thread_table_request({
   })
 
   try {
-    // Try to use indexed query if available
-    if (embedded_index_manager.is_sqlite_ready()) {
-      log('Using SQLite index for thread query')
-      try {
-        return await process_thread_table_request_indexed({
-          table_state,
-          requesting_user_public_key
-        })
-      } catch (index_error) {
-        log(
-          'SQLite index query failed, falling back to filesystem: %s',
-          index_error.message
-        )
-      }
+    // Try indexed query first (manager handles fallback to filesystem)
+    try {
+      return await process_thread_table_request_indexed({
+        table_state,
+        requesting_user_public_key
+      })
+    } catch (index_error) {
+      log(
+        'Indexed query failed, falling back to filesystem table processing: %s',
+        index_error.message
+      )
     }
 
-    // Fallback to filesystem-based query
-    log('Using filesystem for thread query')
+    // Fallback to filesystem-based table processing (full in-memory sort/filter)
+    log('Using filesystem for thread table query')
     return await process_thread_table_request_filesystem({
       table_state,
       requesting_user_public_key

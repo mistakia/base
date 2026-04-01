@@ -13,7 +13,6 @@ import {
 } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_entities_from_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { search_file_contents_with_context } from '#libs-server/search/ripgrep-file-search.mjs'
 import { search_semantic } from '#libs-server/search/semantic-search-engine.mjs'
 import {
@@ -288,7 +287,7 @@ router.get('/', async (req, res) => {
     let unified_types = [...types]
 
     if (mode === 'full' && types.includes('entities')) {
-      const sqlite_ready = embedded_index_manager.is_sqlite_ready()
+      const sqlite_ready = embedded_index_manager.is_ready()
 
       if (sqlite_ready) {
         // Build SQLite filters for entity_types and tags
@@ -314,7 +313,7 @@ router.get('/', async (req, res) => {
         const per_type_limit = Math.max(1, Math.ceil(limit / types.length))
 
         try {
-          const db_results = await query_entities_from_sqlite({
+          const db_results = await embedded_index_manager.query_entities({
             filters: sqlite_filters,
             search: query,
             limit: per_type_limit

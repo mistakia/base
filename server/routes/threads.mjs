@@ -33,10 +33,7 @@ import { get_active_sessions } from '#libs-server/threads/user-container-manager
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { thread_constants } from '#libs-shared'
-import { enrich_thread_with_timeline } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_threads_from_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { handle_errors } from '#libs-server/utils/api-error.mjs'
 
@@ -92,23 +89,6 @@ export function invalidate_thread_cache(thread_id) {
 /**
  * Helper functions
  */
-
-async function apply_permission_based_redaction(thread, user_public_key) {
-  const permission_result = await check_thread_permission({
-    user_public_key,
-    thread_id: thread.thread_id
-  })
-
-  if (!permission_result.read?.allowed) {
-    log(
-      `Access denied to thread ${thread.thread_id}: ${permission_result.read?.reason}`
-    )
-    return { ...redact_thread_data(thread), can_write: false }
-  }
-
-  const can_write = permission_result.write?.allowed ?? false
-  return { ...thread, can_write }
-}
 
 /**
  * Handles validation errors for thread state updates
@@ -178,9 +158,11 @@ async function apply_batch_permissions_to_threads(
 }
 
 /**
- * Handle thread list request using SQLite index
+ * Handle thread list request via the embedded index manager.
+ * The manager delegates to the active backend and falls back to filesystem
+ * when the index is unavailable.
  */
-async function handle_thread_list_request_indexed({
+async function handle_thread_list_request({
   thread_state,
   user_public_key,
   search,
@@ -217,8 +199,8 @@ async function handle_thread_list_request_indexed({
     log('Failed to fetch models data for cost calculation: %s', error.message)
   }
 
-  // Query from SQLite with search, reference, and tag filters
-  const sqlite_threads = await query_threads_from_sqlite({
+  // Query via manager (handles backend delegation and fallback)
+  const result_threads = await embedded_index_manager.query_threads({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
     limit,
@@ -230,7 +212,7 @@ async function handle_thread_list_request_indexed({
   })
 
   // Normalize to API format
-  const normalized_threads = sqlite_threads.map((thread) =>
+  const normalized_threads = result_threads.map((thread) =>
     normalize_sqlite_thread(thread, models_data)
   )
 
@@ -242,7 +224,8 @@ async function handle_thread_list_request_indexed({
 }
 
 /**
- * Handle thread list request filtered by relation target using SQLite
+ * Handle thread list request filtered by relation target.
+ * Requires the index to be available (no filesystem fallback for relations).
  */
 async function handle_thread_list_by_relation({
   relates_to,
@@ -251,15 +234,13 @@ async function handle_thread_list_by_relation({
   offset,
   requesting_user_key
 }) {
-  // Query threads relating to the target entity
-  const thread_results = await find_threads_relating_to({
+  const thread_results = await embedded_index_manager.find_threads_relating_to({
     base_uri: relates_to,
     relation_type,
     limit,
     offset
   })
 
-  // Normalize thread results to match API format
   const normalized_threads = thread_results.map((thread) => ({
     thread_id: thread.thread_id,
     title: thread.title,
@@ -272,7 +253,6 @@ async function handle_thread_list_by_relation({
     relation_context: thread.context
   }))
 
-  // Apply batch permission checking and redaction
   return apply_batch_permissions_to_threads(
     normalized_threads,
     requesting_user_key
@@ -305,7 +285,6 @@ router.get('/', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
-    const include_timeline = req.query.include_timeline === 'true'
 
     const is_public_request = !requesting_user_key
 
@@ -326,10 +305,14 @@ router.get('/', async (req, res) => {
       res.set('Cache-Control', 'private, no-cache')
     }
 
-    // Handle relation-based queries (find threads relating to a target entity)
-    if (relates_to && embedded_index_manager.is_sqlite_ready()) {
+    // Handle relation-based queries (requires index)
+    if (relates_to) {
+      if (!embedded_index_manager.is_ready()) {
+        return res
+          .status(503)
+          .json({ error: 'Index not available for relation queries' })
+      }
       try {
-        log('Using SQLite for thread relation query: relates_to=%s', relates_to)
         const result = await handle_thread_list_by_relation({
           relates_to,
           relation_type,
@@ -339,7 +322,7 @@ router.get('/', async (req, res) => {
         })
         return res.json(result)
       } catch (error) {
-        log('SQLite relation query failed: %s', error.message)
+        log('Thread relation query failed: %s', error.message)
         return res.status(500).json({
           error: 'Failed to query thread relations',
           message: error.message
@@ -347,56 +330,20 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // Use SQLite for all requests (includes latest_timeline_event from indexed data)
-    if (embedded_index_manager.is_sqlite_ready()) {
-      try {
-        log('Using SQLite index for thread query')
-        const result = await handle_thread_list_request_indexed({
-          thread_state,
-          user_public_key,
-          search,
-          file_ref,
-          dir_ref,
-          tags,
-          limit,
-          offset,
-          requesting_user_key
-        })
-        return res.json(result)
-      } catch (error) {
-        log(
-          'SQLite query failed, falling back to filesystem: %s',
-          error.message
-        )
-      }
-    }
-
-    // Fallback: SQLite not available - fetch from filesystem
-    log('Fetching threads from filesystem')
-
-    // Get all threads from filesystem
-    const all_threads = await threads.list_threads({
-      user_public_key,
+    // Query threads via manager (handles backend delegation and fallback)
+    const result = await handle_thread_list_request({
       thread_state,
+      user_public_key,
+      search,
+      file_ref,
+      dir_ref,
+      tags,
       limit,
-      offset
+      offset,
+      requesting_user_key
     })
 
-    // Enrich threads with latest timeline event (for homepage display)
-    const enriched_threads = include_timeline
-      ? await Promise.all(
-          all_threads.map((thread) => enrich_thread_with_timeline({ thread }))
-        )
-      : all_threads
-
-    // Apply permission checking and redaction to each thread
-    const threads_with_permissions = await Promise.all(
-      enriched_threads.map((thread) =>
-        apply_permission_based_redaction(thread, requesting_user_key)
-      )
-    )
-
-    res.json(threads_with_permissions)
+    res.json(result)
   } catch (error) {
     handle_errors(res, error, 'listing threads')
   }

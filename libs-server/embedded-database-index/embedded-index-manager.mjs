@@ -53,6 +53,8 @@ import {
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION
 } from './sqlite/sqlite-metadata-operations.mjs'
+import sqlite_backend from './backends/sqlite/index.mjs'
+import fallbacks from './fallbacks.mjs'
 import { ENTITY_DIRECTORIES } from './sync/index-sync-filters.mjs'
 import {
   discover_repositories,
@@ -83,6 +85,10 @@ class EmbeddedIndexManager {
     // re-extraction when only metadata changes.
     // Cleared on rebuild and shutdown; bounded by total thread count.
     this._timeline_sync_cache = new Map()
+
+    // Backend and fallback registration
+    this._backend = sqlite_backend
+    this._fallbacks = fallbacks
   }
 
   /**
@@ -863,6 +869,170 @@ class EmbeddedIndexManager {
         log('Error deleting thread relations: %s', error.message)
       }
     }
+  }
+
+  // ---- Query delegation methods ----
+
+  /**
+   * Execute a backend query method with automatic fallback.
+   * If the backend is ready, delegates to it. On failure or unavailability,
+   * falls back to the filesystem fallback if one is registered.
+   * @param {string} method - Backend method name
+   * @param {Object} params - Parameters to pass
+   * @returns {Promise<*>} Query result
+   */
+  async _query_with_fallback(method, params) {
+    if (this.is_ready()) {
+      try {
+        return await this._backend[method](params)
+      } catch (error) {
+        log('Backend %s failed: %s', method, error.message)
+        if (this._fallbacks[method]) {
+          return this._fallbacks[method](params)
+        }
+        throw error
+      }
+    }
+
+    if (this._fallbacks[method]) {
+      return this._fallbacks[method](params)
+    }
+
+    throw new Error(`Index not available and no fallback registered for ${method}`)
+  }
+
+  /**
+   * Execute a backend method that requires the index (no fallback).
+   * Throws if the backend is not ready.
+   * @param {string} method - Backend method name
+   * @param {Object} params - Parameters to pass
+   * @returns {Promise<*>} Result
+   */
+  async _query_index_only(method, params) {
+    if (!this.is_ready()) {
+      throw new Error(`Index not available for ${method}`)
+    }
+    return this._backend[method](params)
+  }
+
+  // Thread queries
+  async query_threads(params) {
+    return this._query_with_fallback('query_threads', params)
+  }
+
+  async count_threads(params) {
+    return this._query_with_fallback('count_threads', params)
+  }
+
+  // Task queries
+  async query_tasks(params) {
+    return this._query_with_fallback('query_tasks', params)
+  }
+
+  async count_tasks(params) {
+    return this._query_with_fallback('count_tasks', params)
+  }
+
+  // Physical item queries
+  async query_physical_items(params) {
+    return this._query_with_fallback('query_physical_items', params)
+  }
+
+  async count_physical_items(params) {
+    return this._query_with_fallback('count_physical_items', params)
+  }
+
+  // Entity queries (no filesystem fallback -- 503 on unavailability)
+  async query_entities(params) {
+    return this._query_index_only('query_entities', params)
+  }
+
+  async count_entities(params) {
+    return this._query_index_only('count_entities', params)
+  }
+
+  async get_entity_by_uri(params) {
+    return this._query_index_only('get_entity_by_uri', params)
+  }
+
+  async get_entity_by_id(params) {
+    return this._query_index_only('get_entity_by_id', params)
+  }
+
+  // Relation queries (no fallback)
+  async find_related_entities(params) {
+    return this._query_index_only('find_related_entities', params)
+  }
+
+  async find_entities_relating_to(params) {
+    return this._query_index_only('find_entities_relating_to', params)
+  }
+
+  async find_threads_relating_to(params) {
+    return this._query_index_only('find_threads_relating_to', params)
+  }
+
+  // Tag queries (no fallback)
+  async query_tags(params) {
+    return this._query_index_only('query_tags', params)
+  }
+
+  async query_tag_statistics(params) {
+    return this._query_index_only('query_tag_statistics', params)
+  }
+
+  // Activity queries (no fallback)
+  async query_git_activity_daily(params) {
+    return this._query_index_only('query_git_activity_daily', params)
+  }
+
+  async upsert_git_activity_daily_batch(params) {
+    return this._query_index_only('upsert_git_activity_daily_batch', params)
+  }
+
+  async query_thread_activity_aggregated(params) {
+    return this._query_index_only('query_thread_activity_aggregated', params)
+  }
+
+  async query_heatmap_daily(params) {
+    return this._query_index_only('query_heatmap_daily', params)
+  }
+
+  async upsert_heatmap_daily_batch(params) {
+    return this._query_index_only('upsert_heatmap_daily_batch', params)
+  }
+
+  async truncate_heatmap_daily() {
+    return this._query_index_only('truncate_heatmap_daily')
+  }
+
+  async get_heatmap_count() {
+    return this._query_index_only('get_heatmap_count')
+  }
+
+  async query_entities_by_thread_activity(params) {
+    return this._query_index_only('query_entities_by_thread_activity', params)
+  }
+
+  async query_tasks_for_activity(params) {
+    return this._query_index_only('query_tasks_for_activity', params)
+  }
+
+  // Embedding queries (no fallback)
+  async upsert_embeddings(params) {
+    return this._query_index_only('upsert_embeddings', params)
+  }
+
+  async search_similar(params) {
+    return this._query_index_only('search_similar', params)
+  }
+
+  async delete_entity_embeddings(params) {
+    return this._query_index_only('delete_entity_embeddings', params)
+  }
+
+  async get_embedding_hashes() {
+    return this._query_index_only('get_embedding_hashes')
   }
 
   get_index_status() {

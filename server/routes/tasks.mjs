@@ -22,7 +22,6 @@ import {
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import { get_cached_tasks } from '#server/services/cache-warmer.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_tasks_from_entities } from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
 
 const log = debug('api:tasks')
@@ -317,7 +316,7 @@ async function handle_task_list_request_indexed(
     archived
   })
 
-  const tasks = await query_tasks_from_entities({
+  const tasks = await embedded_index_manager.query_tasks({
     filters,
     sort: [{ column_id: 'created_at', desc: true }],
     limit,
@@ -461,28 +460,21 @@ async function handle_task_list_request(
   }
 
   // For authenticated requests, try SQLite first for better performance
-  if (user_public_key && embedded_index_manager.is_sqlite_ready()) {
+  if (user_public_key && embedded_index_manager.is_ready()) {
     // Note: tag_entity_ids, organization_ids, person_ids not yet supported in SQLite path
     const has_unsupported_filters =
       tag_entity_ids || organization_ids || person_ids
 
     if (!has_unsupported_filters) {
-      try {
-        log('Using DuckDB index for authenticated task query')
-        const result = await handle_task_list_request_indexed(
-          filter_params,
-          archived,
-          user_public_key,
-          limit,
-          offset
-        )
-        return res.status(200).send(result)
-      } catch (error) {
-        log(
-          'DuckDB query failed, falling back to filesystem: %s',
-          error.message
-        )
-      }
+      log('Using embedded index for authenticated task query')
+      const result = await handle_task_list_request_indexed(
+        filter_params,
+        archived,
+        user_public_key,
+        limit,
+        offset
+      )
+      return res.status(200).send(result)
     }
   }
 
