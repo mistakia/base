@@ -153,8 +153,8 @@ Threads execute workflows in isolated git worktrees:
 
 ## Development Notes
 
-- Node.js 18+ required
-- Uses Yarn 4.2.2 for package management
+- Bun 1.2+ required (runtime, package manager, and CLI shebang)
+- Uses Yarn 4.2.2 for legacy compatibility (Bun is the primary package manager)
 - File-first architecture with no database dependencies
 - All file paths use ES modules (.mjs extension)
 - Test files follow pattern: `*.test.mjs`
@@ -323,39 +323,39 @@ base queue stats
 
 ```bash
 # Validate all markdown entities against schemas
-node cli/validate-filesystem-markdown.mjs /path/to/user-base
-node cli/validate-filesystem-markdown.mjs --exclude_path_patterns "thread/**" /path/to/user-base
+bun cli/validate-filesystem-markdown.mjs /path/to/user-base
+bun cli/validate-filesystem-markdown.mjs --exclude_path_patterns "thread/**" /path/to/user-base
 
 # Fix missing required fields (entity_id, user_public_key, timestamps)
-node cli/update-entity-fields.mjs                    # Apply fixes
-node cli/update-entity-fields.mjs --dry_run          # Preview changes
-node cli/update-entity-fields.mjs --include_path_patterns "task/*.md"
+bun cli/update-entity-fields.mjs                    # Apply fixes
+bun cli/update-entity-fields.mjs --dry_run          # Preview changes
+bun cli/update-entity-fields.mjs --include_path_patterns "task/*.md"
 ```
 
 ### Entity Management
 
 ```bash
 # Move entity and update all references
-node cli/move-entity.mjs task/old-name.md task/new-name.md
-node cli/move-entity.mjs user:task/old.md user:task/subdir/new.md --dry_run
+bun cli/move-entity.mjs task/old-name.md task/new-name.md
+bun cli/move-entity.mjs user:task/old.md user:task/subdir/new.md --dry_run
 
 # Batch add/remove tags from entities
-node cli/manage-tags.mjs add -t javascript -i "task/*.md"
-node cli/manage-tags.mjs remove -t legacy -i "**/*.md" --dry_run
+bun cli/manage-tags.mjs add -t javascript -i "task/*.md"
+bun cli/manage-tags.mjs remove -t legacy -i "**/*.md" --dry_run
 ```
 
 ### Thread Management
 
 ```bash
 # Archive or reactivate threads
-node cli/archive-thread.mjs --thread-id abc123 --completed
-node cli/archive-thread.mjs --thread-id abc123 --reactivate
+bun cli/archive-thread.mjs --thread-id abc123 --completed
+bun cli/archive-thread.mjs --thread-id abc123 --reactivate
 
 # Rebuild embedded database index
-node cli/rebuild-embedded-index.mjs
+bun cli/rebuild-embedded-index.mjs
 
 # Analyze thread for metadata updates (title, relations)
-node cli/analyze-thread-metadata.mjs <thread-id> --dry-run
+bun cli/analyze-thread-metadata.mjs <thread-id> --dry-run
 
 # Queue threads for batch metadata analysis (processed by metadata-queue-processor)
 echo "<thread-id>" >> /tmp/claude-pending-metadata-analysis.queue
@@ -365,7 +365,7 @@ cat /tmp/claude-pending-metadata-analysis.queue   # View pending
 cat /tmp/claude-metadata-processed.log            # View processed
 
 # Analyze thread relations (entity references from timeline)
-node cli/analyze-thread-relations.mjs --thread-id <uuid>
+bun cli/analyze-thread-relations.mjs --thread-id <uuid>
 ```
 
 ### CLI Command Queue
@@ -376,16 +376,16 @@ Tags allow limiting how many commands of a certain type run simultaneously
 
 ```bash
 # Queue a command for background execution
-node cli/queue-command.mjs "yarn test" --tags test,ci --priority 5
+bun cli/queue-command.mjs "yarn test" --tags test,ci --priority 5
 
 # Queue with specific working directory
-node cli/queue-command.mjs "node script.mjs" --tags claude-session --cwd ~/project
+bun cli/queue-command.mjs "bun script.mjs" --tags claude-session --cwd ~/project
 
 # Check job status
-node cli/queue-command.mjs status <job-id>
+bun cli/queue-command.mjs status <job-id>
 
 # View queue statistics
-node cli/queue-command.mjs stats
+bun cli/queue-command.mjs stats
 ```
 
 Tag concurrency limits are configured in `config.json` under `cli_queue.tag_limits`.
@@ -481,15 +481,15 @@ ssh <host> 'load_crontab_files'
 
 ```bash
 # Import Claude Code sessions as threads
-node cli/convert-external-sessions.mjs list --provider claude
-node cli/convert-external-sessions.mjs import --provider claude --dry-run
-node cli/convert-external-sessions.mjs import --provider claude --session-id "uuid"
+bun cli/convert-external-sessions.mjs list --provider claude
+bun cli/convert-external-sessions.mjs import --provider claude --dry-run
+bun cli/convert-external-sessions.mjs import --provider claude --session-id "uuid"
 
 # Import Cursor conversations
-node cli/convert-external-sessions.mjs import --provider cursor --from-date "2025-01-01"
+bun cli/convert-external-sessions.mjs import --provider cursor --from-date "2025-01-01"
 
 # Validate session files without importing
-node cli/convert-external-sessions.mjs validate --provider claude --verbose
+bun cli/convert-external-sessions.mjs validate --provider claude --verbose
 ```
 
 ### Entity Visibility
@@ -512,7 +512,7 @@ base entity get "user:task/my-task.md"
 base entity list -s "feature" -t task --json
 
 # Direct alternatives (when unified CLI is not available)
-node cli/entity-list.mjs -t task --status "In Progress"
+bun cli/entity-list.mjs -t task --status "In Progress"
 ```
 
 ## Git Workflow Rules
