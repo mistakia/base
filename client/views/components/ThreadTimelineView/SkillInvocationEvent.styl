@@ -49,38 +49,34 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
   gap: $space_xs
 
 .skill-invocation__skill-chip
-  display: inline-flex
-  align-items: center
-  padding: 3px $space_sm
   font-family: $font_family_mono
-  font-size: $font_size_sm
+  font-size: $font_size_base
   font-weight: $font_weight_medium
   color: $color_primary
-  background: rgba($color_primary, 0.08)
-  border: 1px solid rgba($color_primary, 0.2)
-  border-radius: $radius_base
-  line-height: 1
-  white-space: nowrap
   cursor: pointer
-  transition: all $transition_fast
 
   &:hover
-    background: rgba($color_primary, 0.14)
-    border-color: $color_primary
+    text-decoration: underline
 
-.skill-invocation__skill-path
+.skill-invocation__skill-link
   font-size: $font_size_xs
   color: $color_text_secondary
+  text-decoration: none
   white-space: nowrap
   overflow: hidden
   text-overflow: ellipsis
   max-width: 300px
 
+  &:hover
+    color: $color_primary
+    text-decoration: underline
+
+.skill-invocation__expand-toggle
+  margin-left: auto
+
 .skill-invocation__expansion
   margin-top: $space_xs
-  margin-left: $space_base
   padding: $space_sm
-  border-left: 2px solid $color_border_light
   font-size: $font_size_sm
   color: $color_text_secondary
   white-space: normal

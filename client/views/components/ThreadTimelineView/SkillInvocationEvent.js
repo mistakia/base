@@ -7,6 +7,21 @@ import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import ExpandToggle from '@components/primitives/ExpandToggle'
 import { get_content_string } from './utils/detect-skill-invocations.js'
 
+const skill_path_to_url = ({ skill_path }) => {
+  if (!skill_path) return null
+  // Convert absolute path to relative URL by stripping user-base prefix
+  // Skill paths look like: /Users/.../user-base/.claude/skills/wrap-up
+  // or /Users/.../user-base/extension/name/skill/name.md
+  const markers = ['/extension/', '/.claude/']
+  for (const marker of markers) {
+    const marker_index = skill_path.indexOf(marker)
+    if (marker_index !== -1) {
+      return skill_path.substring(marker_index + 1)
+    }
+  }
+  return null
+}
+
 const skill_prop_shape = PropTypes.shape({
   command_name: PropTypes.string.isRequired,
   command_args: PropTypes.string,
@@ -24,6 +39,7 @@ const SkillChip = React.memo(({ skill }) => {
 
   const { command_name, expansion_event, skill_path } = skill
   const expansion_content = get_content_string(expansion_event.content)
+  const file_url = skill_path_to_url({ skill_path })
 
   return (
     <div className='skill-invocation__skill'>
@@ -41,10 +57,18 @@ const SkillChip = React.memo(({ skill }) => {
           }}>
           {command_name}
         </span>
-        {skill_path && (
-          <span className='skill-invocation__skill-path'>{skill_path}</span>
+        {file_url && (
+          <a
+            className='skill-invocation__skill-link'
+            href={`/${file_url}`}
+            target='_blank'
+            rel='noopener noreferrer'
+            onClick={(e) => e.stopPropagation()}>
+            {file_url}
+          </a>
         )}
         <ExpandToggle
+          className='skill-invocation__expand-toggle'
           is_expanded={is_expanded}
           on_toggle={on_toggle}
           expanded_label='Collapse'
