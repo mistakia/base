@@ -1,18 +1,7 @@
-import { fileURLToPath } from 'url'
-import { realpathSync } from 'fs'
-
 export * as task from './task/index.mjs'
 export * as github from './integrations/github/index.mjs'
 export * as cloudflare from './integrations/cloudflare.mjs'
-export const isMain = (p) => {
-  const target = fileURLToPath(p)
-  if (process.argv[1] === target) return true
-  try {
-    return realpathSync(process.argv[1]) === target
-  } catch {
-    return false
-  }
-}
+export { isMain } from './is-main.mjs'
 export const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 export * as git from './git/index.mjs'
 export * as markdown from './markdown/index.mjs'
