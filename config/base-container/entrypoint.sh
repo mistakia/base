@@ -60,7 +60,7 @@ if [ "$CONTAINER_MODE" = "user" ]; then
     if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
         export PATH="$BASE_SUBMODULE/node_modules/.bin:$PATH"
         echo "export PATH=\"$BASE_SUBMODULE/node_modules/.bin:\$PATH\"" > /etc/profile.d/base-cli.sh
-        ln -sf "$BASE_SUBMODULE/node_modules/.bin/base" /usr/local/bin/base 2>/dev/null || true
+        ln -sf "$BASE_SUBMODULE/cli/base.mjs" /usr/local/bin/base 2>/dev/null || true
     fi
 
     # Configure ripgrep if config available
@@ -244,7 +244,7 @@ if [ -d "$BASE_SUBMODULE/node_modules/.bin" ]; then
     echo "$BASHRC_PATH" > /etc/profile.d/base-cli.sh
     # Symlink base CLI into /usr/local/bin so it is available in non-login,
     # non-interactive shells (docker exec, Claude Code Bash tool, etc.)
-    ln -sf "$BASE_SUBMODULE/node_modules/.bin/base" /usr/local/bin/base
+    ln -sf "$BASE_SUBMODULE/cli/base.mjs" /usr/local/bin/base
 fi
 
 # Persist MCP environment variables for Claude Code subprocesses
