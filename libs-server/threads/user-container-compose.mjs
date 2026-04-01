@@ -3,6 +3,8 @@ import { mkdir, writeFile } from 'fs/promises'
 import debug from 'debug'
 import YAML from 'yaml'
 
+import { homedir } from 'os'
+
 import { generate_volume_mounts } from './volume-mount-generator.mjs'
 import config from '#config'
 
@@ -73,6 +75,18 @@ export const generate_compose_config = async ({
   }
   if (process.env.BASE_API_HOST) {
     environment.BASE_API_HOST = process.env.BASE_API_HOST
+  }
+
+  // CloakBrowser environment: set HOME and PYTHONPATH so cloak-browser.py
+  // resolves ~ paths correctly and can import from the mounted venv
+  if (thread_config.browser?.enabled) {
+    const host_home = homedir()
+    environment.HOME = host_home
+    // System greenlet (native C ext for container Python) must precede venv packages
+    environment.PYTHONPATH = [
+      '/usr/local/lib/python3.11/dist-packages',
+      `${host_home}/.local/share/cloakbrowser-venv/lib/python3.12/site-packages`
+    ].join(':')
   }
 
   // Resource limits
