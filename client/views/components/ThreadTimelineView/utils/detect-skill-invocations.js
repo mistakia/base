@@ -51,10 +51,11 @@ export const detect_skill_invocations = (timeline_events) => {
     const skill_path = parse_content_tag(expansion_content, SKILL_PATH_PATTERN)
     if (!skill_path) continue
 
-    // Look backward for the nearest preceding unpaired user message
+    // Look backward for the nearest preceding user message (non-meta).
+    // Allow already-paired command messages so multiple expansions from
+    // the same user prompt merge into one skill group.
     let command_index = null
     for (let j = i - 1; j >= 0; j--) {
-      if (paired_indices.has(j)) continue
       const candidate = timeline_events[j]
       if (candidate.type !== 'message' || candidate.role !== 'user') continue
       if (candidate.metadata?.is_meta) continue
