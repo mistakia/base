@@ -40,26 +40,26 @@ fi
 
 cd "$IMPORT_HISTORY_DIR"
 
-# Enforce working tree boundary to prevent cross-submodule contamination.
-# Without this, detached HEAD or misconfigured core.worktree can cause git to
-# resolve the working tree to the parent user-base directory, staging files
-# from sibling submodules (e.g., thread's UUID dirs).
+# Enforce working tree and git dir boundary to prevent cross-submodule
+# contamination. Both must be set together before any git commands run.
+# Setting only GIT_WORK_TREE leaves GIT_DIR unset, causing git to search
+# upward and potentially find the parent user-base .git directory. This
+# led to import-history files being staged into base-ios's index (8,494
+# stale entries, Mar 2026).
 export GIT_WORK_TREE="$IMPORT_HISTORY_DIR"
-
-# Safety checks
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+export GIT_DIR
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)" || {
     echo "Not in a git repository" >&2
     exit 0
-fi
+}
 
 # Check for merge conflicts
-if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+if [ -f "$GIT_DIR/MERGE_HEAD" ]; then
     echo "Merge in progress, skipping auto-commit" >&2
     exit 0
 fi
 
 # Check for rebase in progress
-GIT_DIR=$(git rev-parse --git-dir)
 if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     echo "Rebase in progress, skipping auto-commit" >&2
     exit 0
