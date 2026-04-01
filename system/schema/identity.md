@@ -158,6 +158,32 @@ properties:
           type: string
           required: false
           description: Explanation for the rule
+  - name: tag_rules
+    type: array
+    required: false
+    description: User-specific tag-based permission rules
+    items:
+      type: object
+      properties:
+        - name: action
+          type: string
+          enum:
+            - allow
+            - deny
+          required: true
+          description: Whether to allow or deny access
+        - name: tag
+          type: string
+          required: true
+          description: Base URI of a tag entity (exact match)
+        - name: pattern
+          type: string
+          required: false
+          description: Optional resource path glob to scope the rule
+        - name: reason
+          type: string
+          required: false
+          description: Explanation for the rule
 type_name: identity
 updated_at: '2026-02-07T21:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'

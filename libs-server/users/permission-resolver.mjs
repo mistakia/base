@@ -37,29 +37,29 @@ function is_valid_rule(rule) {
 }
 
 /**
- * Resolve all permission rules for an identity
- * Rules are merged in priority order:
- * 1. User-specific rules from identity entity
- * 2. Role rules from has_role relations in order
+ * Resolve rules from an identity by field name
+ * Collects rules from the identity entity first, then from roles in relation order.
  *
  * @param {Object} params - Parameters
- * @param {Object} params.identity - Identity entity with rules and relations
- * @returns {Promise<Array>} Flat array of permission rules compatible with rule-engine
+ * @param {Object} params.identity - Identity entity
+ * @param {string} params.field - Field name on identity/role ('rules' or 'tag_rules')
+ * @returns {Promise<Array>} Flat array of rules with source metadata
  */
-export async function resolve_user_rules({ identity }) {
+async function resolve_identity_rules({ identity, field }) {
   if (!identity) {
-    log('No identity provided, returning empty rules')
+    log(`No identity provided, returning empty ${field}`)
     return []
   }
 
   const all_rules = []
 
   // Step 1: Add user-specific rules first (highest priority)
-  if (identity.rules && Array.isArray(identity.rules)) {
+  const identity_rules = identity[field]
+  if (identity_rules && Array.isArray(identity_rules)) {
     log(
-      `Adding ${identity.rules.length} user-specific rules for ${identity.username}`
+      `Adding ${identity_rules.length} user-specific ${field} for ${identity.username}`
     )
-    for (const rule of identity.rules) {
+    for (const rule of identity_rules) {
       if (is_valid_rule(rule)) {
         all_rules.push({
           ...rule,
@@ -72,10 +72,8 @@ export async function resolve_user_rules({ identity }) {
 
   // Step 2: Load all roles in parallel, then add rules in order
   const role_base_uris = get_role_base_uris_from_identity(identity)
-  log(`Found ${role_base_uris.length} role relations for ${identity.username}`)
 
   if (role_base_uris.length > 0) {
-    // Load all roles in parallel
     const role_results = await Promise.all(
       role_base_uris.map(async (base_uri) => {
         try {
@@ -87,14 +85,14 @@ export async function resolve_user_rules({ identity }) {
       })
     )
 
-    // Add rules from each role in order (preserving relation order)
     for (let i = 0; i < role_base_uris.length; i++) {
       const role = role_results[i]
       const role_base_uri = role_base_uris[i]
+      const role_rules = role?.[field]
 
-      if (role && role.rules && Array.isArray(role.rules)) {
-        log(`Adding ${role.rules.length} rules from role ${role_base_uri}`)
-        for (const rule of role.rules) {
+      if (role_rules && Array.isArray(role_rules)) {
+        log(`Adding ${role_rules.length} ${field} from role ${role_base_uri}`)
+        for (const rule of role_rules) {
           if (is_valid_rule(rule)) {
             all_rules.push({
               ...rule,
@@ -109,8 +107,32 @@ export async function resolve_user_rules({ identity }) {
     }
   }
 
-  log(`Resolved ${all_rules.length} total rules for ${identity.username}`)
+  log(
+    `Resolved ${all_rules.length} total ${field} for ${identity.username}`
+  )
   return all_rules
+}
+
+/**
+ * Resolve all permission rules for an identity
+ *
+ * @param {Object} params - Parameters
+ * @param {Object} params.identity - Identity entity with rules and relations
+ * @returns {Promise<Array>} Flat array of permission rules compatible with rule-engine
+ */
+export async function resolve_user_rules({ identity }) {
+  return resolve_identity_rules({ identity, field: 'rules' })
+}
+
+/**
+ * Resolve all tag-based permission rules for an identity
+ *
+ * @param {Object} params - Parameters
+ * @param {Object} params.identity - Identity entity with tag_rules and relations
+ * @returns {Promise<Array>} Flat array of tag rules
+ */
+export async function resolve_user_tag_rules({ identity }) {
+  return resolve_identity_rules({ identity, field: 'tag_rules' })
 }
 
 /**
@@ -160,6 +182,7 @@ export async function convert_identity_to_user({ identity }) {
 
 export default {
   resolve_user_rules,
+  resolve_user_tag_rules,
   get_identity_permissions,
   convert_identity_to_user
 }

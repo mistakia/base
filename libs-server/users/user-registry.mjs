@@ -8,6 +8,7 @@ import {
 } from '#libs-server/users/identity-loader.mjs'
 import {
   resolve_user_rules,
+  resolve_user_tag_rules,
   convert_identity_to_user
 } from '#libs-server/users/permission-resolver.mjs'
 import { clear_role_cache } from '#libs-server/users/role-loader.mjs'
@@ -104,13 +105,15 @@ class UserRegistry {
   }
 
   /**
-   * Get resolved permission rules for a user
+   * Resolve rules for a user identity using the provided resolver function
    *
    * @param {Object} params - Parameters
    * @param {string} params.public_key - User's public key
-   * @returns {Promise<Array>} Array of permission rules
+   * @param {Function} params.resolver - Resolver function ({identity}) => Promise<Array>
+   * @param {string} params.label - Label for log messages
+   * @returns {Promise<Array>} Array of resolved rules
    */
-  async get_user_rules({ public_key }) {
+  async _resolve_rules_for_identity({ public_key, resolver, label }) {
     if (!public_key) {
       return []
     }
@@ -122,10 +125,10 @@ class UserRegistry {
           username: 'public'
         })
         if (public_identity) {
-          return await resolve_user_rules({ identity: public_identity })
+          return await resolver({ identity: public_identity })
         }
       } catch (error) {
-        log(`Error loading public identity rules: ${error.message}`)
+        log(`Error loading public identity ${label}: ${error.message}`)
       }
       return []
     }
@@ -133,13 +136,43 @@ class UserRegistry {
     try {
       const identity = await load_identity_by_public_key({ public_key })
       if (identity) {
-        return await resolve_user_rules({ identity })
+        return await resolver({ identity })
       }
     } catch (error) {
-      log(`Error loading identity rules: ${error.message}`)
+      log(`Error loading identity ${label}: ${error.message}`)
     }
 
     return []
+  }
+
+  /**
+   * Get resolved permission rules for a user
+   *
+   * @param {Object} params - Parameters
+   * @param {string} params.public_key - User's public key
+   * @returns {Promise<Array>} Array of permission rules
+   */
+  async get_user_rules({ public_key }) {
+    return this._resolve_rules_for_identity({
+      public_key,
+      resolver: resolve_user_rules,
+      label: 'rules'
+    })
+  }
+
+  /**
+   * Get resolved tag-based permission rules for a user
+   *
+   * @param {Object} params - Parameters
+   * @param {string} params.public_key - User's public key
+   * @returns {Promise<Array>} Array of tag permission rules
+   */
+  async get_user_tag_rules({ public_key }) {
+    return this._resolve_rules_for_identity({
+      public_key,
+      resolver: resolve_user_tag_rules,
+      label: 'tag rules'
+    })
   }
 
   /**

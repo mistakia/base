@@ -1,7 +1,10 @@
 import debug from 'debug'
 
 import user_registry from '#libs-server/users/user-registry.mjs'
-import { evaluate_permission_rules } from '#libs-server/permission/rule-engine.mjs'
+import {
+  evaluate_permission_rules,
+  evaluate_tag_rules
+} from '#libs-server/permission/rule-engine.mjs'
 import { verify_share_token } from '#server/middleware/verify-share-token.mjs'
 import { load_resource_metadata } from './resource-metadata.mjs'
 import { evict_lru_entry } from '#libs-server/utils/lru-cache.mjs'
@@ -49,7 +52,9 @@ export class PermissionContext {
     this.user_public_key = user_public_key
     this._resource_cache = new Map()
     this._user_rules = null
+    this._user_tag_rules = null
     this._public_rules = null
+    this._public_tag_rules = null
     this._global_write = null
     this._global_write_checked = false
   }
@@ -86,59 +91,57 @@ export class PermissionContext {
   }
 
   /**
-   * Get user permission rules with lazy loading
+   * Lazy-load and cache a rule set
    *
-   * @returns {Promise<Array>} Array of permission rules
+   * @param {string} cache_field - Cache property name (e.g., '_user_rules')
+   * @param {Function} loader - Async function that returns the rules array
+   * @returns {Promise<Array>} Cached or freshly loaded rules
    */
-  async get_user_rules() {
-    if (this._user_rules !== null) {
-      return this._user_rules
+  async _get_cached_rules(cache_field, loader) {
+    if (this[cache_field] !== null) {
+      return this[cache_field]
     }
-    this._user_rules = await this._load_user_rules()
-    return this._user_rules
+    try {
+      this[cache_field] = await loader()
+    } catch (error) {
+      log(`Error loading ${cache_field}: ${error.message}`)
+      this[cache_field] = []
+    }
+    return this[cache_field]
   }
 
-  async _load_user_rules() {
-    if (!this.user_public_key || this.user_public_key === 'public') {
-      return []
-    }
-
-    try {
-      // Use registry's get_user_rules which resolves rules from identity and roles
-      const rules = await user_registry.get_user_rules({
-        public_key: this.user_public_key
-      })
+  async get_user_rules() {
+    return this._get_cached_rules('_user_rules', async () => {
+      if (!this.user_public_key || this.user_public_key === 'public') return []
+      const rules = await user_registry.get_user_rules({ public_key: this.user_public_key })
       log(`Loaded ${rules.length} rules for user ${this.user_public_key}`)
       return rules
-    } catch (error) {
-      log(`Error loading user rules: ${error.message}`)
-      return []
-    }
+    })
   }
 
-  /**
-   * Get public user permission rules with lazy loading
-   *
-   * @returns {Promise<Array>} Array of public permission rules
-   */
   async get_public_rules() {
-    if (this._public_rules !== null) {
-      return this._public_rules
-    }
-    this._public_rules = await this._load_public_rules()
-    return this._public_rules
-  }
-
-  async _load_public_rules() {
-    try {
-      // Use registry's get_user_rules which resolves rules from identity and roles
+    return this._get_cached_rules('_public_rules', async () => {
       const rules = await user_registry.get_user_rules({ public_key: 'public' })
       log(`Loaded ${rules.length} public rules`)
       return rules
-    } catch (error) {
-      log(`Error loading public rules: ${error.message}`)
-      return []
-    }
+    })
+  }
+
+  async get_user_tag_rules() {
+    return this._get_cached_rules('_user_tag_rules', async () => {
+      if (!this.user_public_key || this.user_public_key === 'public') return []
+      const tag_rules = await user_registry.get_user_tag_rules({ public_key: this.user_public_key })
+      log(`Loaded ${tag_rules.length} tag rules for user ${this.user_public_key}`)
+      return tag_rules
+    })
+  }
+
+  async get_public_tag_rules() {
+    return this._get_cached_rules('_public_tag_rules', async () => {
+      const tag_rules = await user_registry.get_user_tag_rules({ public_key: 'public' })
+      log(`Loaded ${tag_rules.length} public tag rules`)
+      return tag_rules
+    })
   }
 
   /**
@@ -147,8 +150,10 @@ export class PermissionContext {
    * Priority order:
    * 1. Ownership (user owns the resource)
    * 2. User-specific rules (authenticated users, excluding public)
-   * 3. public_read setting (if explicitly set)
-   * 4. Public user rules (fallback)
+   * 3. User tag-based rules (authenticated users, excluding public)
+   * 4. public_read setting (if explicitly set)
+   * 5. Public user rules (fallback)
+   * 6. Public tag rules (fallback)
    *
    * @param {Object} params - Parameters
    * @param {string} params.resource_path - Base-URI path of the resource
@@ -220,8 +225,26 @@ export class PermissionContext {
         }
 
         log(
-          `No matching user rules for ${resource_path}, continuing to public_read check`
+          `No matching user rules for ${resource_path}, continuing to tag rules check`
         )
+      }
+
+      // Step 3b: Check user tag-based rules
+      const user_tag_rules = await this.get_user_tag_rules()
+      const tag_result = evaluate_tag_rules({
+        tag_rules: user_tag_rules,
+        resource_path,
+        resource_tags: resource_metadata?.tags
+      })
+
+      if (tag_result !== null) {
+        log(
+          `User tag rule matched for ${resource_path}: ${tag_result.allowed ? 'ALLOWED' : 'DENIED'}`
+        )
+        return {
+          allowed: tag_result.allowed,
+          reason: tag_result.reason
+        }
       }
     }
 
@@ -250,12 +273,39 @@ export class PermissionContext {
       user_public_key: 'public'
     })
 
-    log(
-      `Public rule result for ${resource_path}: ${public_result.allowed ? 'ALLOWED' : 'DENIED'}`
-    )
+    if (public_result.matching_rule !== null) {
+      log(
+        `Public rule result for ${resource_path}: ${public_result.allowed ? 'ALLOWED' : 'DENIED'}`
+      )
+      return {
+        allowed: public_result.allowed,
+        reason: public_result.reason
+      }
+    }
+
+    // Step 6: Fall back to public tag rules
+    const public_tag_rules = await this.get_public_tag_rules()
+    const public_tag_result = evaluate_tag_rules({
+      tag_rules: public_tag_rules,
+      resource_path,
+      resource_tags: resource_metadata?.tags
+    })
+
+    if (public_tag_result !== null) {
+      log(
+        `Public tag rule result for ${resource_path}: ${public_tag_result.allowed ? 'ALLOWED' : 'DENIED'}`
+      )
+      return {
+        allowed: public_tag_result.allowed,
+        reason: public_tag_result.reason
+      }
+    }
+
+    // Default deny
+    log(`No matching rules for ${resource_path}, defaulting to deny`)
     return {
-      allowed: public_result.allowed,
-      reason: public_result.reason
+      allowed: false,
+      reason: 'No matching permission rules (default deny)'
     }
   }
 
@@ -384,7 +434,9 @@ export class PermissionContext {
   clear_cache() {
     this._resource_cache.clear()
     this._user_rules = null
+    this._user_tag_rules = null
     this._public_rules = null
+    this._public_tag_rules = null
     this._global_write = null
     this._global_write_checked = false
   }

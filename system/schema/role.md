@@ -29,6 +29,32 @@ properties:
           type: string
           required: false
           description: Explanation for the rule
+  - name: tag_rules
+    type: array
+    required: false
+    description: Tag-based permission rules for category-level access control
+    items:
+      type: object
+      properties:
+        - name: action
+          type: string
+          enum:
+            - allow
+            - deny
+          required: true
+          description: Whether to allow or deny access
+        - name: tag
+          type: string
+          required: true
+          description: Base URI of a tag entity (exact match)
+        - name: pattern
+          type: string
+          required: false
+          description: Optional resource path glob to scope the rule
+        - name: reason
+          type: string
+          required: false
+          description: Explanation for the rule
 public_read: true
 type_name: role
 updated_at: '2026-02-07T21:00:00.000Z'
@@ -42,15 +68,26 @@ Roles define reusable sets of permission rules that can be assigned to identitie
 
 ## Rule Evaluation
 
-Rules are evaluated in array order. The first matching rule determines the permission outcome.
+Rules are evaluated in array order. The first matching rule determines the permission outcome. Path-based rules (`rules`) are evaluated before tag-based rules (`tag_rules`).
 
 ## Rule Structure
 
-Each rule contains:
+Each path rule contains:
 
 - `action`: Either `allow` or `deny`
 - `pattern`: Glob pattern to match resource paths (uses picomatch)
 - `reason`: Optional explanation for the rule
+
+## Tag Rule Structure
+
+Each tag rule contains:
+
+- `action`: Either `allow` or `deny`
+- `tag`: Base URI of a tag entity (exact string match, no globs)
+- `pattern`: Optional resource path glob to scope which resource types the tag rule applies to
+- `reason`: Optional explanation for the rule
+
+Tag rules enable category-level access control based on resource tags, eliminating manual per-resource path whitelisting.
 
 ## Common Roles
 
@@ -66,5 +103,9 @@ type: role
 rules:
   - action: allow
     pattern: '**/*'
+tag_rules:
+  - action: allow
+    tag: user:tag/league-xo-football.md
+    reason: grant access to all league-tagged resources
 ---
 ```
