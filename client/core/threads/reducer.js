@@ -104,6 +104,18 @@ function append_timeline_entry(state, thread_id, entry) {
   )
 }
 
+function remove_optimistic_entries(state, thread_id) {
+  return update_selected_thread_if_matches(state, thread_id, (thread_data) =>
+    thread_data.update('timeline', (timeline) => {
+      if (timeline && Array.isArray(timeline)) {
+        const filtered = timeline.filter((e) => !e._optimistic)
+        return filtered.length !== timeline.length ? filtered : timeline
+      }
+      return timeline
+    })
+  )
+}
+
 // ============================================================================
 // Default Table Configuration
 // ============================================================================
@@ -622,6 +634,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       return state.setIn(
         ['thread_pending_resumes', thread_id],
         Map({
+          prompt: opts.prompt || '',
           prompt_snippet: (opts.prompt || '').slice(0, 120),
           status: 'submitted',
           job_id: null,
@@ -674,12 +687,16 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
         return state
       }
-      return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
-        entry.merge({
-          status: 'failed',
-          error_message: error || 'Resume failed'
-        })
+      let new_state = state.updateIn(
+        ['thread_pending_resumes', thread_id],
+        (entry) =>
+          entry.merge({
+            status: 'failed',
+            error_message: error || 'Resume failed'
+          })
       )
+      new_state = remove_optimistic_entries(new_state, thread_id)
+      return new_state
     }
 
     case threads_action_types.THREAD_JOB_STARTED: {
@@ -733,7 +750,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         .findEntry((entry) => entry.get('job_id') === job_id)
       if (match) {
         const [matched_thread_id] = match
-        return state.updateIn(
+        let new_state = state.updateIn(
           ['thread_pending_resumes', matched_thread_id],
           (entry) =>
             entry.merge({
@@ -741,6 +758,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
               error_message: payload.error_message || 'Job failed'
             })
         )
+        new_state = remove_optimistic_entries(new_state, matched_thread_id)
+        return new_state
       }
       return state
     }

@@ -699,11 +699,12 @@ export const create_session_claude_cli = async ({
   })
 
   // Common spawn options
-  // - stdio: 'ignore' because CLI writes output to .claude/ directory
+  // - stdio: stdin/stdout ignored (CLI writes output to .claude/ directory),
+  //   stderr piped to capture error diagnostics on non-zero exit
   // - detached: true ensures the process survives if the parent (base-api) is killed
   const base_spawn_options = {
     shell: false,
-    stdio: 'ignore',
+    stdio: ['ignore', 'ignore', 'pipe'],
     detached: true
   }
 
@@ -784,8 +785,20 @@ export const create_session_claude_cli = async ({
     }
 
     // Spawn Claude CLI process
-    // stdio: 'ignore' because CLI writes output to .claude/ directory
     const child = spawn(spawn_command, spawn_args, spawn_options)
+
+    // Collect stderr for diagnostics (capped to prevent unbounded memory use)
+    const MAX_STDERR_BYTES = 8192
+    const stderr_chunks = []
+    let stderr_bytes = 0
+    if (child.stderr) {
+      child.stderr.on('data', (chunk) => {
+        if (stderr_bytes < MAX_STDERR_BYTES) {
+          stderr_chunks.push(chunk)
+          stderr_bytes += chunk.length
+        }
+      })
+    }
 
     // Setup timeout protection
     const timeout_handle = setup_process_timeout({
@@ -801,7 +814,15 @@ export const create_session_claude_cli = async ({
     child.on('close', (code, signal) => {
       clear_process_timeout(timeout_handle)
 
+      const stderr_output = Buffer.concat(stderr_chunks)
+        .toString('utf8')
+        .slice(0, MAX_STDERR_BYTES)
+        .trim()
+
       log(`Process closed: exit_code=${code}, signal=${signal || 'none'}`)
+      if (stderr_output) {
+        log(`Process stderr: ${stderr_output}`)
+      }
 
       if (code === 0) {
         guarded_resolve(
@@ -813,7 +834,10 @@ export const create_session_claude_cli = async ({
         )
       } else {
         const signal_info = signal ? ` (signal: ${signal})` : ''
-        const error_message = `Claude CLI exited with code ${code}${signal_info}`
+        const stderr_info = stderr_output
+          ? `: ${stderr_output.slice(0, 500)}`
+          : ''
+        const error_message = `Claude CLI exited with code ${code}${signal_info}${stderr_info}`
         log(`Error: ${error_message}`)
         guarded_reject(new Error(error_message))
       }

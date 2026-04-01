@@ -64,6 +64,18 @@ const SheetThreadInput = ({
   const has_pending_resume =
     pending_resume && pending_resume.get('status') !== 'failed'
 
+  // Restore prompt text to input when a resume job fails
+  useEffect(() => {
+    if (
+      pending_resume &&
+      pending_resume.get('status') === 'failed' &&
+      pending_resume.get('prompt') &&
+      !message
+    ) {
+      set_message(pending_resume.get('prompt'))
+    }
+  }, [pending_resume]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handle_submit = useCallback(
     (e) => {
       e.preventDefault()
