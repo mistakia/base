@@ -71,12 +71,15 @@ export function verify(signature, message, pubKey) {
 
 /**
  * Blake2b hash.
- * @param {Buffer|string} message - Data to hash
+ * @param {Buffer|string|Uint8Array} message - Data to hash (strings treated as UTF-8)
  * @param {number} [length=32] - Output length in bytes
  * @returns {Buffer} Hash output
  */
 export function hash(message, length = 32) {
-  const msg = to_buffer(message)
+  const msg =
+    typeof message === 'string'
+      ? Buffer.from(message, 'utf8')
+      : to_buffer(message)
   const output = blake2b(msg, null, length)
   return Buffer.from(output)
 }
