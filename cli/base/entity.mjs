@@ -11,8 +11,6 @@ import { list_entities } from '../entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
-import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 import {
   parse_time_period_date,
   parse_time_period_ms,
@@ -825,7 +823,7 @@ async function handle_list(argv) {
       const since_date = parse_time_period_date(period)
       await embedded_index_manager.initialize()
 
-      entities = await query_entities_by_thread_activity({
+      entities = await embedded_index_manager.query_entities_by_thread_activity({
         since_date,
         entity_types: argv.type || null,
         limit: argv.limit,
@@ -1035,9 +1033,8 @@ async function handle_threads(argv) {
     const threads = await query(
       () => fetch_entity_threads_from_api(argv),
       async () => {
-        // Initialize embedded index for direct DuckDB access
-        await embedded_index_manager.ensure_ready()
-        return find_threads_relating_to({
+        await embedded_index_manager.initialize()
+        return embedded_index_manager.find_threads_relating_to({
           base_uri: argv.base_uri,
           relation_type: argv['relation-type'] || null,
           limit: argv.limit,
@@ -1441,17 +1438,14 @@ async function handle_tree(argv) {
       return
     }
 
-    const fetch_relations_sqlite = async (uri) => {
-      const { find_related_entities, find_entities_relating_to } = await import(
-        '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
-      )
+    const fetch_relations_direct = async (uri) => {
       await embedded_index_manager.initialize({ read_only: true })
-      const forward = await find_related_entities({
+      const forward = await embedded_index_manager.find_related_entities({
         base_uri: uri,
         limit: 100,
         offset: 0
       })
-      const reverse = await find_entities_relating_to({
+      const reverse = await embedded_index_manager.find_entities_relating_to({
         base_uri: uri,
         limit: 100,
         offset: 0
@@ -1469,10 +1463,10 @@ async function handle_tree(argv) {
             })
             return api_get('/api/entities/relations', params)
           },
-          () => fetch_relations_sqlite(uri)
+          () => fetch_relations_direct(uri)
         )
       } catch {
-        return await fetch_relations_sqlite(uri)
+        return await fetch_relations_direct(uri)
       }
     }
 
@@ -1529,17 +1523,16 @@ async function handle_tree(argv) {
     }
 
     const fetch_project_entities = async (tag_uri) => {
-      const duckdb_fallback = async () => {
-        const { execute_sqlite_query } = await import(
-          '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
-        )
+      const direct_fallback = async () => {
         await embedded_index_manager.initialize({ read_only: true })
-        const result = await execute_sqlite_query({
-          query:
-            'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
-          parameters: [tag_uri]
+        const entities = await embedded_index_manager.query_entities({
+          filters: [
+            { column_id: 'tags', operator: 'IN', value: [tag_uri] }
+          ],
+          limit: 1000,
+          offset: 0
         })
-        return result.map((r) => r.entity_base_uri)
+        return entities.map((e) => e.base_uri)
       }
 
       try {
@@ -1547,9 +1540,9 @@ async function handle_tree(argv) {
           const params = new URLSearchParams({ tags: tag_uri })
           const data = await api_get('/api/entities', params)
           return (data.entities || data).map((e) => e.base_uri)
-        }, duckdb_fallback)
+        }, direct_fallback)
       } catch {
-        return await duckdb_fallback()
+        return await direct_fallback()
       }
     }
 

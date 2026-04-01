@@ -191,7 +191,7 @@ async function fetch_relations_from_api({
   return api_get('/api/entities/relations', params)
 }
 
-async function fetch_relations_from_sqlite({
+async function fetch_relations_direct({
   base_uri,
   direction,
   relation_type,
@@ -204,15 +204,8 @@ async function fetch_relations_from_sqlite({
       '#libs-server/embedded-database-index/embedded-index-manager.mjs'
     )
   ).default
-  const { find_related_entities, find_entities_relating_to } = await import(
-    '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
-  )
 
   await embedded_index_manager.initialize()
-
-  if (!embedded_index_manager.is_ready()) {
-    throw new Error('Embedded index manager failed to initialize')
-  }
 
   const query_params = {
     base_uri,
@@ -226,12 +219,12 @@ async function fetch_relations_from_sqlite({
 
   try {
     if (direction === 'forward' || direction === 'both') {
-      result.forward = await find_related_entities(query_params)
+      result.forward = await embedded_index_manager.find_related_entities(query_params)
       result.counts.forward = result.forward.length
     }
 
     if (direction === 'reverse' || direction === 'both') {
-      result.reverse = await find_entities_relating_to(query_params)
+      result.reverse = await embedded_index_manager.find_entities_relating_to(query_params)
       result.counts.reverse = result.reverse.length
     }
   } finally {
@@ -257,7 +250,7 @@ async function handle_relations(argv, direction) {
 
     const result = await query(
       () => fetch_relations_from_api(params),
-      () => fetch_relations_from_sqlite(params)
+      () => fetch_relations_direct(params)
     )
 
     // Apply source-type filtering to reverse relations (only reverse has sources)
