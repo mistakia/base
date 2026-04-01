@@ -42,16 +42,29 @@ dim() { echo -e "${DIM}$*${RESET}"; }
 
 # Detect platform
 detect_platform() {
-  local os arch
+  local os arch uname_s
 
-  case "$(uname -s)" in
+  uname_s="$(uname -s)"
+
+  case "$uname_s" in
     Darwin) os="darwin" ;;
     Linux)  os="linux" ;;
+    MINGW*|MSYS*)
+      error "Git Bash / MINGW detected. Use the PowerShell installer instead:"
+      error "  irm ${BASE_URL}/install.ps1 | iex"
+      exit 1
+      ;;
     *)
-      error "Unsupported operating system: $(uname -s)"
+      error "Unsupported operating system: $uname_s"
       exit 1
       ;;
   esac
+
+  # Detect WSL (runs Linux binary, but warn about PATH differences)
+  if [ "$os" = "linux" ] && grep -qi microsoft /proc/version 2>/dev/null; then
+    dim "WSL detected: installing Linux binary (works natively in WSL)"
+    dim "For native Windows, use: irm ${BASE_URL}/install.ps1 | iex"
+  fi
 
   case "$(uname -m)" in
     arm64|aarch64) arch="arm64" ;;
@@ -139,6 +152,41 @@ main() {
     error "Failed to download binary from ${download_url}"
     error "Check your internet connection and try again."
     exit 1
+  fi
+
+  # Verify checksum
+  local checksums_url="${BASE_URL}/releases/${VERSION}/checksums.sha256"
+  local checksums_file
+  checksums_file="$(mktemp)"
+
+  if download "$checksums_url" "$checksums_file" 2>/dev/null; then
+    local expected_hash
+    expected_hash="$(grep "  ${binary_name}$" "$checksums_file" | awk '{print $1}')"
+
+    if [ -n "$expected_hash" ]; then
+      local actual_hash
+      if command -v shasum >/dev/null 2>&1; then
+        actual_hash="$(shasum -a 256 "$tmp_file" | awk '{print $1}')"
+      elif command -v sha256sum >/dev/null 2>&1; then
+        actual_hash="$(sha256sum "$tmp_file" | awk '{print $1}')"
+      fi
+
+      if [ -n "${actual_hash:-}" ]; then
+        if [ "$actual_hash" != "$expected_hash" ]; then
+          rm -f "$checksums_file"
+          error "Checksum verification failed!"
+          error "  Expected: $expected_hash"
+          error "  Actual:   $actual_hash"
+          exit 1
+        fi
+        dim "Checksum verified"
+      fi
+    fi
+
+    rm -f "$checksums_file"
+  else
+    dim "Checksums not available (skipping verification)"
+    rm -f "$checksums_file"
   fi
 
   # Install binary

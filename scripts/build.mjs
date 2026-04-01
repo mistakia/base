@@ -29,7 +29,8 @@ const TARGETS = [
   'bun-darwin-arm64',
   'bun-darwin-x64',
   'bun-linux-x64',
-  'bun-linux-arm64'
+  'bun-linux-arm64',
+  'bun-windows-x64'
 ]
 
 function parse_args() {
@@ -62,7 +63,8 @@ function parse_args() {
 }
 
 function build_target(target) {
-  const output_name = `base-${target.replace('bun-', '')}`
+  const is_windows = target.includes('windows')
+  const output_name = `base-${target.replace('bun-', '')}${is_windows ? '.exe' : ''}`
   const output_path = path.join(DIST_DIR, output_name)
 
   console.log(`Building ${output_name}...`)

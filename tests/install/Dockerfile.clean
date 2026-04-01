@@ -1,0 +1,31 @@
+# Minimal clean environment for testing the Base CLI install pathway.
+# Simulates a new user's machine with no Bun, no Node, no ripgrep.
+#
+# Usage (from repo root):
+#   docker build -f tests/install/Dockerfile.clean -t base-install-test tests/install/
+#   docker run --rm base-install-test
+
+FROM ubuntu:22.04
+
+# Avoid interactive prompts during apt install
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install only the minimal tools a typical user would have
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      curl \
+      ca-certificates \
+      git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root test user
+RUN useradd -m -s /bin/bash testuser
+
+# Copy test script
+COPY test-install.sh /home/testuser/test-install.sh
+RUN chmod +x /home/testuser/test-install.sh
+
+USER testuser
+WORKDIR /home/testuser
+
+ENTRYPOINT ["/home/testuser/test-install.sh"]

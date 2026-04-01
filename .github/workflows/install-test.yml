@@ -1,0 +1,160 @@
+name: Install Test
+
+on:
+  push:
+    paths:
+      - 'scripts/install.sh'
+      - 'scripts/install.ps1'
+      - 'scripts/build.mjs'
+      - 'scripts/deploy.sh'
+      - 'cli/initial-setup.mjs'
+      - 'cli/base/update.mjs'
+      - 'cli/base/install.mjs'
+      - 'config/index.mjs'
+      - 'tests/install/**'
+      - '.github/workflows/install-test.yml'
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  linux-docker:
+    name: Linux (${{ matrix.distro }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        distro:
+          - ubuntu:22.04
+          - ubuntu:24.04
+          - debian:bookworm-slim
+          - fedora:39
+          - alpine:3.19
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build test image
+        run: |
+          cat > /tmp/Dockerfile <<'DOCKERFILE'
+          FROM ${{ matrix.distro }}
+
+          # Install dependencies per distro
+          RUN if command -v apt-get >/dev/null 2>&1; then \
+                apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git; \
+              elif command -v dnf >/dev/null 2>&1; then \
+                dnf install -y curl ca-certificates git; \
+              elif command -v apk >/dev/null 2>&1; then \
+                apk add --no-cache curl ca-certificates git bash; \
+              fi
+
+          RUN useradd -m -s /bin/bash testuser 2>/dev/null || adduser -D -s /bin/bash testuser 2>/dev/null
+
+          COPY tests/install/test-install.sh /home/testuser/test-install.sh
+          RUN chmod +x /home/testuser/test-install.sh
+
+          USER testuser
+          WORKDIR /home/testuser
+          ENTRYPOINT ["/home/testuser/test-install.sh"]
+          DOCKERFILE
+
+          docker build -f /tmp/Dockerfile -t install-test .
+
+      - name: Run install test
+        run: docker run --rm install-test
+
+      - name: Upload test logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-test-${{ matrix.distro }}
+          path: /tmp/install-test-*.log
+
+  macos:
+    name: macOS (${{ matrix.runner }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runner:
+          - macos-14
+          - macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run install test
+        run: |
+          export SKIP_INIT=1
+          bash scripts/install.sh
+
+          export PATH="$HOME/.base/bin:$PATH"
+          base --version
+          base --help
+
+          export USER_BASE_DIRECTORY="$HOME/test-user-base"
+          base init --user-base-directory "$USER_BASE_DIRECTORY" --force
+
+          test -d "$USER_BASE_DIRECTORY/task"
+          test -f "$USER_BASE_DIRECTORY/config/config.json"
+
+          echo "macOS install test passed"
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run PowerShell install test
+        shell: pwsh
+        run: |
+          $env:SKIP_INIT = "1"
+          & ./scripts/install.ps1
+
+          $env:Path = "$HOME\.base\bin;$env:Path"
+          base.exe --version
+          base.exe --help
+
+          $env:USER_BASE_DIRECTORY = "$HOME\test-user-base"
+          base.exe init --user-base-directory $env:USER_BASE_DIRECTORY --force
+
+          if (!(Test-Path "$env:USER_BASE_DIRECTORY\task")) { throw "task dir missing" }
+          if (!(Test-Path "$env:USER_BASE_DIRECTORY\config\config.json")) { throw "config missing" }
+
+          Write-Host "Windows install test passed"
+
+      - name: Run bash install test (Git Bash)
+        shell: bash
+        run: |
+          # Git Bash on Windows should detect MINGW and suggest PowerShell
+          output=$(bash scripts/install.sh 2>&1) || true
+          if echo "$output" | grep -q "PowerShell installer"; then
+            echo "MINGW detection works correctly"
+          else
+            echo "WARNING: MINGW detection did not trigger"
+          fi
+
+  from-source:
+    name: From Source
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run from source
+        run: |
+          export USER_BASE_DIRECTORY="$HOME/test-user-base"
+          bun cli/base.mjs init --user-base-directory "$USER_BASE_DIRECTORY" --force
+
+          test -d "$USER_BASE_DIRECTORY/task"
+          test -f "$USER_BASE_DIRECTORY/config/config.json"
+
+          bun cli/base.mjs entity list
+          bun cli/base.mjs --help
+
+          echo "From-source test passed"

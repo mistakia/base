@@ -11,18 +11,33 @@
 
 import fs from 'fs'
 import path from 'path'
+import crypto from 'crypto'
+import { execFile } from 'child_process'
+import { promisify } from 'util'
+
+const exec_file_async = promisify(execFile)
 
 export const command = 'update'
 export const describe = 'Update Base CLI binary and system content'
 
 export const builder = (yargs) =>
-  yargs.option('check', {
-    describe: 'Only check if an update is available (do not download)',
-    type: 'boolean',
-    default: false
-  })
+  yargs
+    .option('check', {
+      describe: 'Only check if an update is available (do not download)',
+      type: 'boolean',
+      default: false
+    })
+    .option('version', {
+      describe: 'Install a specific version (e.g., v1.0.0)',
+      type: 'string'
+    })
 
 const BASE_URL = 'https://base.tint.space'
+
+function release_url(version_tag, file) {
+  const release_path = version_tag || 'latest'
+  return `${BASE_URL}/releases/${release_path}/${file}`
+}
 
 function detect_platform() {
   const platform = process.platform === 'darwin' ? 'darwin' : 'linux'
@@ -43,8 +58,8 @@ function read_local_version() {
   }
 }
 
-async function fetch_remote_version() {
-  const url = `${BASE_URL}/releases/latest/version.json`
+async function fetch_remote_version(version_tag) {
+  const url = release_url(version_tag, 'version.json')
   try {
     const response = await fetch(url)
     if (!response.ok) {
@@ -56,8 +71,8 @@ async function fetch_remote_version() {
   }
 }
 
-async function download_binary(platform, output_path) {
-  const url = `${BASE_URL}/releases/latest/base-${platform}`
+async function download_binary(platform, output_path, version_tag) {
+  const url = release_url(version_tag, `base-${platform}`)
   const response = await fetch(url)
   if (!response.ok) {
     throw new Error(`Download failed: HTTP ${response.status}`)
@@ -66,6 +81,54 @@ async function download_binary(platform, output_path) {
   const buffer = await response.arrayBuffer()
   fs.writeFileSync(output_path, Buffer.from(buffer))
   fs.chmodSync(output_path, 0o755)
+}
+
+function compute_file_hash(file_path) {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha256')
+    const stream = fs.createReadStream(file_path)
+    stream.on('data', (chunk) => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+    stream.on('error', reject)
+  })
+}
+
+async function verify_checksum(file_path, platform, version_tag) {
+  const checksums_url = release_url(version_tag, 'checksums.sha256')
+  try {
+    const response = await fetch(checksums_url)
+    if (!response.ok) {
+      console.log('Checksums not available (skipping verification)')
+      return true
+    }
+
+    const checksums_text = await response.text()
+    const binary_name = `base-${platform}`
+    const line = checksums_text
+      .split('\n')
+      .find((l) => l.trim().endsWith(`  ${binary_name}`))
+
+    if (!line) {
+      console.log('No checksum entry for this platform (skipping verification)')
+      return true
+    }
+
+    const expected_hash = line.trim().split(/\s+/)[0]
+    const actual_hash = await compute_file_hash(file_path)
+
+    if (actual_hash !== expected_hash) {
+      console.error('Checksum verification failed!')
+      console.error(`  Expected: ${expected_hash}`)
+      console.error(`  Actual:   ${actual_hash}`)
+      return false
+    }
+
+    console.log('Checksum verified')
+    return true
+  } catch {
+    console.log('Checksum verification unavailable (skipping)')
+    return true
+  }
 }
 
 async function sync_system_content(install_dir) {
@@ -129,15 +192,21 @@ export const handler = async (argv) => {
   )
 
   // Check for updates
-  const remote_version = await fetch_remote_version()
+  const version_tag = argv.version
+  const remote_version = await fetch_remote_version(version_tag)
 
   if (!remote_version) {
-    console.log('Could not check for updates (base.tint.space unreachable)')
+    const target = version_tag || 'latest'
+    console.log(
+      `Could not fetch version info for ${target} (base.tint.space unreachable)`
+    )
     return
   }
 
   const needs_update =
-    !local_version || local_version.version !== remote_version.version
+    !local_version ||
+    local_version.version !== remote_version.version ||
+    version_tag
 
   if (!needs_update) {
     console.log(`Already up to date (v${remote_version.version})`)
@@ -149,7 +218,11 @@ export const handler = async (argv) => {
     return
   }
 
-  console.log(`New version available: v${remote_version.version}`)
+  if (version_tag) {
+    console.log(`Installing version: ${version_tag}`)
+  } else {
+    console.log(`New version available: v${remote_version.version}`)
+  }
 
   if (argv.check) {
     console.log('Run `base update` to install the update')
@@ -164,10 +237,41 @@ export const handler = async (argv) => {
 
   try {
     const tmp_path = `${binary_path}.tmp`
-    await download_binary(platform, tmp_path)
+    await download_binary(platform, tmp_path, version_tag)
 
-    // Atomic replace
+    // Verify checksum before replacing
+    const checksum_ok = await verify_checksum(tmp_path, platform, version_tag)
+    if (!checksum_ok) {
+      fs.unlinkSync(tmp_path)
+      console.error('Update aborted: checksum mismatch')
+      process.exit(1)
+    }
+
+    // Backup current binary before replacing
+    const backup_path = `${binary_path}.bak`
+    if (fs.existsSync(binary_path)) {
+      fs.copyFileSync(binary_path, backup_path)
+    }
+
+    // Replace binary
     fs.renameSync(tmp_path, binary_path)
+
+    // Smoke test: verify the new binary can report its version
+    try {
+      await exec_file_async(binary_path, ['--version'], { timeout: 10000 })
+    } catch {
+      console.error('Smoke test failed: new binary cannot run --version')
+      if (fs.existsSync(backup_path)) {
+        fs.renameSync(backup_path, binary_path)
+        console.error('Rolled back to previous binary')
+      }
+      process.exit(1)
+    }
+
+    // Clean up backup from previous successful update
+    if (fs.existsSync(backup_path)) {
+      fs.unlinkSync(backup_path)
+    }
 
     // Write version.json
     fs.writeFileSync(

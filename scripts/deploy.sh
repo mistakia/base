@@ -42,14 +42,16 @@ USER_BASE="$(cd "$PROJECT_ROOT/../../.." && pwd)"
 SKIP_BUILD=false
 SYSTEM_ONLY=false
 CONTENT_ONLY=false
+RELEASE_VERSION=""
 
 for arg in "$@"; do
   case "$arg" in
     --skip-build) SKIP_BUILD=true ;;
     --system-only) SYSTEM_ONLY=true ;;
     --content-only) CONTENT_ONLY=true ;;
+    --version=*) RELEASE_VERSION="${arg#--version=}" ;;
     --help)
-      echo "Usage: deploy.sh [--skip-build] [--system-only] [--content-only]"
+      echo "Usage: deploy.sh [--skip-build] [--system-only] [--content-only] [--version=vX.Y.Z]"
       exit 0
       ;;
   esac
@@ -120,6 +122,18 @@ generate_checksums() {
 
   if [ -s "$checksum_file" ]; then
     success "Checksums written to $checksum_file"
+
+    # GPG sign checksums if gpg is available and a signing key exists
+    if command -v gpg >/dev/null 2>&1; then
+      if gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep -q sec; then
+        gpg --detach-sign --armor "$checksum_file"
+        if [ -f "$checksum_file.asc" ]; then
+          success "Checksums signed: $checksum_file.asc"
+        fi
+      else
+        info "No GPG secret key found, skipping signature"
+      fi
+    fi
   fi
 }
 
@@ -129,10 +143,42 @@ deploy_releases() {
 
   generate_checksums
 
-  # Upload binaries, version.json, and checksums (not system/ or content/ subdirs)
+  # Upload to releases/latest/
   rsync -avz --progress --chmod=F755 \
-    --include='base-*' --include='version.json' --include='checksums.sha256' --exclude='*' \
+    --include='base-*' --include='version.json' --include='checksums.sha256' --include='checksums.sha256.asc' --exclude='*' \
     "$DIST_DIR/" "$SSH_HOST:$REMOTE_BASE/releases/latest/"
+
+  # If --version specified, create immutable versioned release directory
+  if [ -n "$RELEASE_VERSION" ]; then
+    # Validate version format to prevent command injection in SSH commands
+    if ! echo "$RELEASE_VERSION" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+      error "Invalid version format: $RELEASE_VERSION (expected vX.Y.Z)"
+      exit 1
+    fi
+
+    info "Creating versioned release: $RELEASE_VERSION"
+    ssh "$SSH_HOST" "mkdir -p '$REMOTE_BASE/releases/$RELEASE_VERSION'"
+    rsync -avz --progress --chmod=F755 \
+      --include='base-*' --include='version.json' --include='checksums.sha256' --include='checksums.sha256.asc' --exclude='*' \
+      "$DIST_DIR/" "$SSH_HOST:$REMOTE_BASE/releases/$RELEASE_VERSION/"
+
+    # Update versions.json index using jq
+    local version_entry
+    version_entry="{\"version\":\"$RELEASE_VERSION\",\"date\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
+
+    ssh "$SSH_HOST" "
+      VERSIONS_FILE='$REMOTE_BASE/releases/versions.json'
+      if [ -f \"\$VERSIONS_FILE\" ]; then
+        if ! grep -q '\"$RELEASE_VERSION\"' \"\$VERSIONS_FILE\"; then
+          TMP=\$(mktemp)
+          jq --argjson entry '$version_entry' '. = [\$entry] + .' \"\$VERSIONS_FILE\" > \"\$TMP\" && mv \"\$TMP\" \"\$VERSIONS_FILE\"
+        fi
+      else
+        echo '[$version_entry]' > \"\$VERSIONS_FILE\"
+      fi
+    "
+    success "Versioned release $RELEASE_VERSION created"
+  fi
 
   # Upload install script to root
   scp "$SCRIPT_DIR/install.sh" "$SSH_HOST:$REMOTE_BASE/install.sh"

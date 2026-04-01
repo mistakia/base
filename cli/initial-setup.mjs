@@ -288,13 +288,16 @@ Owner identity for this user-base instance.
 function check_prerequisites() {
   const results = []
 
-  // Node.js 18+
-  const node_version = process.versions.node
-  const major = parseInt(node_version.split('.')[0], 10)
+  // Runtime: Bun or Node.js 18+
+  const is_bun = typeof process.versions.bun !== 'undefined'
+  const runtime_version = is_bun ? process.versions.bun : process.versions.node
+  const major = parseInt(runtime_version.split('.')[0], 10)
+  const runtime_name = is_bun ? 'Bun' : 'Node.js 18+'
+  const runtime_ok = is_bun ? true : major >= 18
   results.push({
-    name: 'Node.js 18+',
-    ok: major >= 18,
-    detail: `v${node_version}`
+    name: runtime_name,
+    ok: runtime_ok,
+    detail: `v${runtime_version}`
   })
 
   // git
@@ -464,40 +467,89 @@ export const handler = async (argv) => {
     ? path.dirname(path.dirname(process.argv[0]))
     : null
 
-  // Download system content on first run if compiled binary and not present
+  // Download system content on first run if compiled binary and not present.
+  // Uses a .download-complete marker to detect partial downloads from prior
+  // interrupted runs. Retries up to 3 times with exponential backoff.
   if (is_compiled && install_dir) {
     const system_dir = path.join(install_dir, 'system')
-    if (!fs.existsSync(path.join(system_dir, 'schema'))) {
+    const marker_path = path.join(system_dir, '.download-complete')
+    const needs_download =
+      !fs.existsSync(path.join(system_dir, 'schema')) ||
+      !fs.existsSync(marker_path)
+
+    if (needs_download) {
       if (!argv.json) {
         console.log('Downloading system content...')
       }
-      try {
-        const response = await fetch(
-          'https://base.tint.space/system/manifest.json'
-        )
-        if (response.ok) {
+
+      const max_retries = 3
+      let success = false
+
+      for (let attempt = 1; attempt <= max_retries; attempt++) {
+        try {
+          const fetch_opts = { signal: AbortSignal.timeout(30000) }
+          const response = await fetch(
+            'https://base.tint.space/system/manifest.json',
+            fetch_opts
+          )
+          if (!response.ok) {
+            throw new Error(`manifest fetch failed: ${response.status}`)
+          }
           const manifest = await response.json()
-          for (const file of manifest.files || []) {
-            const file_path = typeof file === 'string' ? file : file.path
-            const file_url = `https://base.tint.space/system/${file_path}`
-            const local_path = path.join(system_dir, file_path)
-            fs.mkdirSync(path.dirname(local_path), { recursive: true })
-            const file_response = await fetch(file_url)
-            if (file_response.ok) {
-              fs.writeFileSync(local_path, await file_response.text())
+          let all_files_ok = true
+
+          // Download files with bounded concurrency
+          const files = manifest.files || []
+          const batch_size = 10
+          for (let i = 0; i < files.length; i += batch_size) {
+            const batch = files.slice(i, i + batch_size)
+            const results = await Promise.all(
+              batch.map(async (file) => {
+                const file_path = typeof file === 'string' ? file : file.path
+                const file_url = `https://base.tint.space/system/${file_path}`
+                const local_path = path.join(system_dir, file_path)
+                fs.mkdirSync(path.dirname(local_path), { recursive: true })
+                const file_response = await fetch(file_url, fetch_opts)
+                if (file_response.ok) {
+                  fs.writeFileSync(local_path, await file_response.text())
+                  return true
+                }
+                return false
+              })
+            )
+            if (results.some((ok) => !ok)) {
+              all_files_ok = false
             }
           }
-          if (!argv.json) {
-            console.log('System content downloaded.')
+
+          if (all_files_ok) {
+            fs.writeFileSync(marker_path, new Date().toISOString())
+            success = true
+            if (!argv.json) {
+              console.log('System content downloaded.')
+            }
+            break
+          }
+
+          throw new Error('some files failed to download')
+        } catch (err) {
+          if (attempt < max_retries) {
+            const delay_ms = 1000 * Math.pow(2, attempt - 1)
+            if (!argv.json) {
+              console.log(
+                `Download attempt ${attempt} failed, retrying in ${delay_ms / 1000}s...`
+              )
+            }
+            await new Promise((resolve) => setTimeout(resolve, delay_ms))
           }
         }
-      } catch {
-        if (!argv.json) {
-          console.log(
-            'Could not download system content (base.tint.space unreachable).'
-          )
-          console.log('System content will be downloaded on next `base update`.')
-        }
+      }
+
+      if (!success && !argv.json) {
+        console.log(
+          'Could not download system content (base.tint.space unreachable).'
+        )
+        console.log('System content will be downloaded on next `base update`.')
       }
     }
   }

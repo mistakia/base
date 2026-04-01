@@ -69,10 +69,37 @@ function load_config_file(directory) {
   return JSON.parse(raw)
 }
 
-// 1. Always load defaults from base repo (plain JSON, no encryption)
-const defaults = JSON.parse(
-  readFileSync(join(config_dir, 'config.json'), 'utf8')
-)
+// 1. Load defaults from base repo (plain JSON, no encryption).
+// In compiled binary mode, config/config.json may not exist on disk
+// (import.meta.url resolves to Bun's virtual filesystem). Fall back to
+// minimal defaults sufficient for CLI-only operation.
+const config_json_path = join(config_dir, 'config.json')
+const defaults = existsSync(config_json_path)
+  ? JSON.parse(readFileSync(config_json_path, 'utf8'))
+  : {
+      server_port: 8080,
+      server_host: '0.0.0.0',
+      production_url: '',
+      production_wss: '',
+      public_url: '',
+      github_access_token: '',
+      github: { webhook_secret: '', projects: {} },
+      cors_origins: [],
+      system_main_branch: 'main',
+      user_main_branch: 'main',
+      user_id: '',
+      user_public_key: '',
+      jwt: { secret: '', algorithms: ['HS256'] },
+      threads: {
+        cli: {
+          command: 'claude',
+          default_execution_mode: 'container',
+          session_timeout_minutes: 60
+        }
+      },
+      extensions: { discovery_paths: [] },
+      machine_registry: {}
+    }
 log('Loaded base defaults from %s', config_dir)
 
 // 2. Determine user-base config directory
