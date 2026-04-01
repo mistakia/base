@@ -25,63 +25,87 @@ export const get_content_string = (content) => {
   return ''
 }
 
+const extract_command_name_from_path = (skill_path) => {
+  if (!skill_path) return null
+  const segments = skill_path.split('/')
+  const last = segments[segments.length - 1]
+  return last ? `/${last}` : null
+}
+
 export const detect_skill_invocations = (timeline_events) => {
   const paired_indices = new Set()
   const skill_groups = []
 
+  // Anchor on is_meta expansion messages and look backward for the command message
   for (let i = 0; i < timeline_events.length; i++) {
     if (paired_indices.has(i)) continue
 
     const event = timeline_events[i]
-    if (event.type !== 'message' || event.role !== 'user') continue
-    if (event.metadata?.is_meta) continue
-
-    const content_string = get_content_string(event.content)
-    const command_name = parse_content_tag(content_string, COMMAND_NAME_PATTERN)
-    if (!command_name) continue
-
-    // Look ahead for matching is_meta expansion with same timestamp
-    const next_index = i + 1
-    if (next_index >= timeline_events.length) continue
-
-    const next_event = timeline_events[next_index]
     if (
-      next_event.type !== 'message' ||
-      next_event.role !== 'user' ||
-      !next_event.metadata?.is_meta ||
-      next_event.timestamp !== event.timestamp
+      event.type !== 'message' ||
+      event.role !== 'user' ||
+      !event.metadata?.is_meta
     ) continue
 
-    const command_args = parse_content_tag(content_string, COMMAND_ARGS_PATTERN)
-    const expansion_content = get_content_string(next_event.content)
+    const expansion_content = get_content_string(event.content)
     const skill_path = parse_content_tag(expansion_content, SKILL_PATH_PATTERN)
+    if (!skill_path) continue
+
+    // Look backward for the nearest preceding unpaired user message
+    let command_index = null
+    for (let j = i - 1; j >= 0; j--) {
+      if (paired_indices.has(j)) continue
+      const candidate = timeline_events[j]
+      if (candidate.type !== 'message' || candidate.role !== 'user') continue
+      if (candidate.metadata?.is_meta) continue
+      command_index = j
+      break
+    }
+
+    if (command_index === null) continue
+
+    const command_event = timeline_events[command_index]
+    const command_content = get_content_string(command_event.content)
+
+    // Extract command name from tags if present, otherwise from skill path
+    const command_name =
+      parse_content_tag(command_content, COMMAND_NAME_PATTERN) ||
+      extract_command_name_from_path(skill_path)
+    if (!command_name) continue
+
+    const command_args = parse_content_tag(command_content, COMMAND_ARGS_PATTERN)
+
+    // Determine user_text: for tagged commands, use command_args;
+    // for untagged (inline) commands, use the full user message content
+    const has_command_tags = !!parse_content_tag(command_content, COMMAND_NAME_PATTERN)
+    const user_text = has_command_tags ? command_args : command_content
 
     const skill_item = {
-      command_event: event,
-      expansion_event: next_event,
+      command_event,
+      expansion_event: event,
       command_name,
       command_args,
       skill_path
     }
 
-    // Check if this pair can merge with the previous skill group (same timestamp)
+    // Check if this pair can merge with the previous skill group (same command message)
     const last_group = skill_groups[skill_groups.length - 1]
     if (
       last_group &&
-      last_group.skills[0].command_event.timestamp === event.timestamp
+      last_group.indices.includes(command_index)
     ) {
       last_group.skills.push(skill_item)
-      last_group.indices.push(i, next_index)
+      last_group.indices.push(i)
     } else {
       skill_groups.push({
-        indices: [i, next_index],
+        indices: [command_index, i],
         skills: [skill_item],
-        user_text: command_args
+        user_text
       })
     }
 
+    paired_indices.add(command_index)
     paired_indices.add(i)
-    paired_indices.add(next_index)
   }
 
   return { paired_indices, skill_groups }
