@@ -231,6 +231,20 @@ api.use((err, req, res, next) => {
   })
 })
 
+// Static hosting for base.tint.space distribution content (install script, binaries, system content)
+if (config.hosting?.enabled && config.hosting?.static_dir) {
+  const hosting_dir = config.hosting.static_dir
+  if (fs.existsSync(hosting_dir)) {
+    api.use(
+      express.static(hosting_dir, {
+        maxAge: '1h',
+        fallthrough: true
+      })
+    )
+    log(`Hosting static files from ${hosting_dir}`)
+  }
+}
+
 // Raw file serving middleware (before SPA fallback)
 const raw_file = create_raw_file_middleware()
 

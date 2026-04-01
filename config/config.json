@@ -131,6 +131,10 @@
     "missed_check_interval_ms": 300000,
     "run_missed_check": false
   },
+  "hosting": {
+    "enabled": false,
+    "static_dir": ""
+  },
   "user_containers": {
     "enabled": false,
     "data_directory": "/tmp/user-containers",
