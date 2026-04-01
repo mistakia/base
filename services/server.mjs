@@ -23,6 +23,10 @@ import {
   handle_entity_file_delete
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
+  start_sync_trigger_watcher,
+  stop_sync_trigger_watcher
+} from '#libs-server/embedded-database-index/sync/sync-trigger-handler.mjs'
+import {
   start_cache_warmer,
   stop_cache_warmer,
   invalidate_tasks_cache
@@ -312,6 +316,25 @@ try {
       set_watcher_status('entity_file_watcher', 'disabled')
     }
 
+    // Start sync trigger watcher for CLI sync requests (file-based IPC)
+    if (embedded_index_ready) {
+      try {
+        start_sync_trigger_watcher({
+          on_sync_request: async (request) => {
+            logger(
+              `Processing sync trigger request: ${request.request_id} (type: ${request.type})`
+            )
+            return await embedded_index_manager.perform_sync({
+              mode: request.type
+            })
+          }
+        })
+        logger('Sync trigger watcher started')
+      } catch (error) {
+        logger(`Failed to start sync trigger watcher: ${error.message}`)
+      }
+    }
+
     // Initialize embedding pipeline for semantic search (non-blocking background sync)
     if (embedded_index_ready) {
       try {
@@ -466,6 +489,14 @@ const shutdown = async (signal) => {
           logger('Entity file watcher stopped')
         } catch (error) {
           logger(`Error stopping entity file watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          await stop_sync_trigger_watcher()
+          logger('Sync trigger watcher stopped')
+        } catch (error) {
+          logger(`Error stopping sync trigger watcher: ${error.message}`)
         }
       })()
     ])
