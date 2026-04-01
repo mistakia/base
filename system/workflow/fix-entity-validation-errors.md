@@ -58,7 +58,7 @@ base entity validate --exclude-path-patterns "repository/**"
 
 **Required fields:** `entity_id` (UUID), `user_public_key`, `created_at`, `updated_at`
 
-**Fix:** Run `node cli/update-entity-fields.mjs` to auto-populate missing fields.
+**Fix:** Run `bun cli/update-entity-fields.mjs` to auto-populate missing fields.
 
 ### Invalid entity_id Pattern
 

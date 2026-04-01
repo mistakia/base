@@ -26,7 +26,7 @@ describe('extension CLI commands', () => {
       NODE_ENV: undefined,
       ...env_overrides
     }
-    return execSync(`node ${BASE_CLI} ${args}`, {
+    return execSync(`bun ${BASE_CLI} ${args}`, {
       env,
       encoding: 'utf-8',
       timeout: 15000

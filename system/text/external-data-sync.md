@@ -111,19 +111,19 @@ The system includes comprehensive tools for managing import history files to pre
 
 ```bash
 # Keep only 5 most recent files for GitHub entities
-node cli/import-history/cleanup-import-history.mjs --external-system github --keep-count 5
+bun cli/import-history/cleanup-import-history.mjs --external-system github --keep-count 5
 
 # Preview cleanup for specific entity without making changes
-node cli/import-history/cleanup-import-history.mjs --entity-id abc123 --dry-run
+bun cli/import-history/cleanup-import-history.mjs --entity-id abc123 --dry-run
 
 # Show summary statistics across all systems
-node cli/import-history/cleanup-import-history.mjs --summary
+bun cli/import-history/cleanup-import-history.mjs --summary
 
 # List all import history files
-node cli/import-history/cleanup-import-history.mjs --list
+bun cli/import-history/cleanup-import-history.mjs --list
 
 # Clean up all systems keeping default 10 files per entity
-node cli/import-history/cleanup-import-history.mjs
+bun cli/import-history/cleanup-import-history.mjs
 ```
 
 **Safety Features**:

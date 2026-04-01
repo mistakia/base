@@ -42,7 +42,7 @@ Key commands:
 ```bash
 # Tag statistics - show entity counts per tag
 base tag stats
-# or: node cli/entity-list.mjs --tag-stats
+# or: bun cli/entity-list.mjs --tag-stats
 
 # Tags below minimum threshold (15 entities)
 base tag stats --below-threshold 15

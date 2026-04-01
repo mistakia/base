@@ -80,7 +80,7 @@ These observations are **transient pipeline markers**. They are removed automati
 The CLI queue system enables background processing of evaluation workflows:
 
 ```bash
-node cli/queue-command.mjs "command" --tags tag1,tag2 --priority N
+bun cli/queue-command.mjs "command" --tags tag1,tag2 --priority N
 ```
 
 - **Priority**: Lower number = higher priority (default: 10, use 5 for draft evaluation)

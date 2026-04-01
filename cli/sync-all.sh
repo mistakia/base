@@ -299,7 +299,7 @@ ensure_thread_merge_drivers() {
 
     # json-field-merge (metadata.json) -- only remaining driver after bulk data moved to rsync
     git -C "$full_path" config --local merge.json-field-merge.name "JSON field-level merge driver"
-    git -C "$full_path" config --local merge.json-field-merge.driver "node $SCRIPT_DIR/json-merge-driver.mjs %O %A %B"
+    git -C "$full_path" config --local merge.json-field-merge.driver "bun $SCRIPT_DIR/json-merge-driver.mjs %O %A %B"
 }
 
 # Log a sync telemetry event to JSONL file.

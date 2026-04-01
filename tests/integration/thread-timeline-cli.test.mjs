@@ -72,7 +72,7 @@ describe('Thread timeline CLI', function () {
   })
 
   const run = (args) =>
-    execute(`node ${cli_path} ${args} --user_base_directory "${test_dir}"`, {
+    execute(`bun ${cli_path} ${args} --user_base_directory "${test_dir}"`, {
       cwd: path.resolve('.'),
       env: { ...process.env, NODE_ENV: 'test' },
       maxBuffer: 10 * 1024 * 1024

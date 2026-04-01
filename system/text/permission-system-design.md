@@ -1221,10 +1221,10 @@ The migration script converts the legacy `users.json` file to entity-based stora
 
 ```bash
 # Preview migration (dry run)
-node cli/migrate-users-to-entities.mjs --dry-run
+bun cli/migrate-users-to-entities.mjs --dry-run
 
 # Execute migration
-node cli/migrate-users-to-entities.mjs
+bun cli/migrate-users-to-entities.mjs
 ```
 
 ### 11.3 What the Migration Does

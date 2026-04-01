@@ -69,7 +69,7 @@ base entity get "user:task/my-task.md"
 ### Command Invocation
 
 - Preferred: `base entity list` (works in all cases)
-- Alternative: `node cli/entity-list.mjs` (direct database access)
+- Alternative: `bun cli/entity-list.mjs` (direct database access)
 - All CLIs MUST be invoked from the base repository directory
 - Agents SHOULD use the Bash tool to execute CLI commands
 - Commands MUST include appropriate filters to limit result sets
@@ -100,53 +100,53 @@ base entity get "user:task/my-task.md"
 
 ```bash
 # Single type
-node cli/entity-list.mjs -t task
+bun cli/entity-list.mjs -t task
 
 # Multiple types
-node cli/entity-list.mjs -t task -t thread
+bun cli/entity-list.mjs -t task -t thread
 ```
 
 ### Status and Priority Filters
 
 ```bash
 # By status
-node cli/entity-list.mjs -t task --status "In Progress"
+bun cli/entity-list.mjs -t task --status "In Progress"
 
 # By priority
-node cli/entity-list.mjs -t task --priority "High"
+bun cli/entity-list.mjs -t task --priority "High"
 
 # Combined
-node cli/entity-list.mjs -t task --status "Started" --priority "Critical"
+bun cli/entity-list.mjs -t task --status "Started" --priority "Critical"
 ```
 
 ### Tag Filters
 
 ```bash
 # With specific tags
-node cli/entity-list.mjs -t task --tags "user:tag/project-a.md"
+bun cli/entity-list.mjs -t task --tags "user:tag/project-a.md"
 
 # Without any tags
-node cli/entity-list.mjs -t task --without-tags
+bun cli/entity-list.mjs -t task --without-tags
 ```
 
 ### Search
 
 ```bash
 # Search title/description
-node cli/entity-list.mjs -t task -s "authentication"
+bun cli/entity-list.mjs -t task -s "authentication"
 ```
 
 ### Pagination and Sorting
 
 ```bash
 # Limit results
-node cli/entity-list.mjs -t task -l 10
+bun cli/entity-list.mjs -t task -l 10
 
 # Sort by field
-node cli/entity-list.mjs -t task --sort created_at
+bun cli/entity-list.mjs -t task --sort created_at
 
 # Ascending order
-node cli/entity-list.mjs -t task --sort title --asc
+bun cli/entity-list.mjs -t task --sort title --asc
 ```
 
 ## Output Field Options
@@ -154,7 +154,7 @@ node cli/entity-list.mjs -t task --sort title --asc
 Use `--fields` to specify which fields to return:
 
 ```bash
-node cli/entity-list.mjs -t task -f base_uri -f title -f status
+bun cli/entity-list.mjs -t task -f base_uri -f title -f status
 ```
 
 Available fields: `base_uri`, `entity_id`, `type`, `title`, `description`, `status`, `priority`, `tags`, `created_at`, `updated_at`, `archived`
@@ -164,29 +164,29 @@ Available fields: `base_uri`, `entity_id`, `type`, `title`, `description`, `stat
 ### Finding Active Tasks
 
 ```bash
-node cli/entity-list.mjs -t task --status "In Progress" -l 20
+bun cli/entity-list.mjs -t task --status "In Progress" -l 20
 ```
 
 ### Getting Task Details
 
 ```bash
-node cli/entity-list.mjs --one --base-uri "user:task/my-feature.md" --content -v
+bun cli/entity-list.mjs --one --base-uri "user:task/my-feature.md" --content -v
 ```
 
 ### Searching Across Types
 
 ```bash
-node cli/entity-list.mjs -s "database migration" -l 10
+bun cli/entity-list.mjs -s "database migration" -l 10
 ```
 
 ### Finding Untagged Entities
 
 ```bash
-node cli/entity-list.mjs -t task --without-tags -l 50
+bun cli/entity-list.mjs -t task --without-tags -l 50
 ```
 
 ### JSON Output for Processing
 
 ```bash
-node cli/entity-list.mjs -t task --status "Completed" --json
+bun cli/entity-list.mjs -t task --status "Completed" --json
 ```

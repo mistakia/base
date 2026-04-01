@@ -77,7 +77,7 @@ This is a test entity for CLI testing.`
     it('should display help when --help is used', async function () {
       try {
         const { stdout } = await execute(
-          `NODE_ENV=test node ${cli_path} entity visibility --help`
+          `NODE_ENV=test bun ${cli_path} entity visibility --help`
         )
         expect(stdout).to.include('Manage public_read visibility settings')
         expect(stdout).to.include('set <pattern> <value>')
@@ -96,7 +96,7 @@ This is a test entity for CLI testing.`
 
     it('should show error for missing command', async function () {
       try {
-        await execute(`NODE_ENV=test node ${cli_path} entity visibility`)
+        await execute(`NODE_ENV=test bun ${cli_path} entity visibility`)
         throw new Error('Should have failed')
       } catch (error) {
         const output = error.stderr || error.stdout
@@ -111,7 +111,7 @@ This is a test entity for CLI testing.`
 
       // Set public_read to true
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true`
       )
 
       expect(stdout).to.include('SUCCESS')
@@ -130,12 +130,12 @@ This is a test entity for CLI testing.`
 
       // First set to true
       await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true`
       )
 
       // Then set to false
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" false`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" false`
       )
 
       expect(stdout).to.include('SUCCESS')
@@ -154,10 +154,10 @@ This is a test entity for CLI testing.`
 
       // Set to true twice
       await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true`
       )
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true`
       )
 
       expect(stdout).to.include('SUCCESS')
@@ -173,7 +173,7 @@ This is a test entity for CLI testing.`
 
       // Set public_read to true
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${metadata_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${metadata_path}" true`
       )
 
       expect(stdout).to.include('SUCCESS')
@@ -192,12 +192,12 @@ This is a test entity for CLI testing.`
 
       // First set to true
       await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${metadata_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${metadata_path}" true`
       )
 
       // Then set to false
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${metadata_path}" false`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${metadata_path}" false`
       )
 
       expect(stdout).to.include('SUCCESS')
@@ -241,7 +241,7 @@ Test content for ${path.basename(entity_path)}.`
 
       // Set all .md files to public
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${pattern}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${pattern}" true`
       )
 
       expect(stdout).to.include('Found')
@@ -269,7 +269,7 @@ Test content for ${path.basename(entity_path)}.`
 
       // Try to set files that don't exist
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${pattern}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${pattern}" true`
       )
 
       expect(stdout).to.include('No supported files found matching pattern')
@@ -282,7 +282,7 @@ Test content for ${path.basename(entity_path)}.`
 
       // Run in dry-run mode
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true --dry-run`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true --dry-run`
       )
 
       expect(stdout).to.include('Running in dry-run mode')
@@ -305,7 +305,7 @@ Test content for ${path.basename(entity_path)}.`
 
       try {
         await execute(
-          `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" invalid`
+          `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" invalid`
         )
         throw new Error('Should have failed')
       } catch (error) {
@@ -320,7 +320,7 @@ Test content for ${path.basename(entity_path)}.`
       const non_existent = path.join(test_dir, 'non-existent.md')
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${non_existent}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${non_existent}" true`
       )
 
       expect(stdout).to.include('No supported files found matching pattern')
@@ -334,7 +334,7 @@ Test content for ${path.basename(entity_path)}.`
       await fs.writeFile(txt_file, 'This is a text file')
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${txt_file}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${txt_file}" true`
       )
 
       expect(stdout).to.include('No supported files found matching pattern')
@@ -369,7 +369,7 @@ Summary test content.`
 
       // Set all summary files
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${pattern}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${pattern}" true`
       )
 
       expect(stdout).to.include('Summary:')
@@ -384,7 +384,7 @@ Summary test content.`
       this.timeout(10000)
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility get "${test_entity_path}"`
+        `NODE_ENV=test bun ${cli_path} entity visibility get "${test_entity_path}"`
       )
 
       expect(stdout).to.include('test-entity.md')
@@ -396,11 +396,11 @@ Summary test content.`
 
       // Set to true first
       await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility set "${test_entity_path}" true`
+        `NODE_ENV=test bun ${cli_path} entity visibility set "${test_entity_path}" true`
       )
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility get "${test_entity_path}"`
+        `NODE_ENV=test bun ${cli_path} entity visibility get "${test_entity_path}"`
       )
 
       expect(stdout).to.include('test-entity.md')
@@ -413,7 +413,7 @@ Summary test content.`
       const metadata_path = path.join(test_thread_dir, 'metadata.json')
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility get "${metadata_path}"`
+        `NODE_ENV=test bun ${cli_path} entity visibility get "${metadata_path}"`
       )
 
       expect(stdout).to.include('metadata.json')
@@ -440,7 +440,7 @@ Extra entity content.`
       const pattern = path.join(test_dir, '*.md')
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility get "${pattern}"`
+        `NODE_ENV=test bun ${cli_path} entity visibility get "${pattern}"`
       )
 
       expect(stdout).to.include('test-entity.md')
@@ -453,7 +453,7 @@ Extra entity content.`
       const pattern = path.join(test_dir, '*.nonexistent')
 
       const { stdout } = await execute(
-        `NODE_ENV=test node ${cli_path} entity visibility get "${pattern}"`
+        `NODE_ENV=test bun ${cli_path} entity visibility get "${pattern}"`
       )
 
       expect(stdout).to.include('No supported files found matching pattern')
