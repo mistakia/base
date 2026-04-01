@@ -2,12 +2,9 @@
  * SQLite Embedding Queries
  *
  * Query functions for entity embedding CRUD and similarity search.
- * Drop-in replacement for duckdb-embedding-queries.mjs.
  *
- * Key differences from DuckDB:
  * - Embeddings stored as BLOB (serialized Float32Array buffer)
- * - No native array_cosine_similarity() -- computed in JS after fetching rows
- * - bun:sqlite db.function() is not available (as of bun 1.2.18)
+ * - Cosine similarity computed in JS after fetching rows
  */
 
 import debug from 'debug'

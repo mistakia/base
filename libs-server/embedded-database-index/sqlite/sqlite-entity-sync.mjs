@@ -2,7 +2,6 @@
  * SQLite Entity Sync
  *
  * Functions for syncing entities, threads, tags, and relations to SQLite.
- * Drop-in replacement for duckdb-entity-sync.mjs.
  */
 
 import debug from 'debug'

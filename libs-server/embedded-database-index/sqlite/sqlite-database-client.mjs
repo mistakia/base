@@ -2,7 +2,6 @@
  * SQLite Database Client
  *
  * Manages connection to embedded SQLite database using bun:sqlite.
- * Drop-in replacement for DuckDB database client with identical interface.
  */
 
 import fs from 'fs/promises'

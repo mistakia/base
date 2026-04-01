@@ -2,7 +2,6 @@
  * SQLite Relation Queries
  *
  * SQL equivalents for entity relation queries using standard SQL JOINs.
- * Drop-in replacement for duckdb-relation-queries.mjs.
  */
 
 import debug from 'debug'

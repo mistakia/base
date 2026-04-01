@@ -2,7 +2,6 @@
  * SQLite Schema Definitions
  *
  * Defines tables for entities, threads, tags, relations, activity, and embeddings.
- * SQLite equivalent of duckdb-schema-definitions.mjs.
  */
 
 import debug from 'debug'

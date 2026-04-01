@@ -2,7 +2,6 @@
  * SQLite Metadata Operations
  *
  * CRUD operations for the index_metadata table used to track sync state.
- * Drop-in replacement for duckdb-metadata-operations.mjs.
  */
 
 import debug from 'debug'

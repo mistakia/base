@@ -2,11 +2,6 @@
  * SQLite Activity Queries
  *
  * CRUD operations for activity_git_daily table and thread activity aggregation.
- * Drop-in replacement for duckdb-activity-queries.mjs with SQLite dialect.
- *
- * Key SQL dialect changes:
- * - CAST(created_at AS DATE) -> date(created_at) for date extraction
- * - Date objects returned as strings (SQLite stores dates as TEXT)
  */
 
 import debug from 'debug'

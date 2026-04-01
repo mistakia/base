@@ -2,15 +2,6 @@
  * SQLite Table Queries
  *
  * Query functions for entities and threads with react-table filter/sort support.
- * Drop-in replacement for duckdb-table-queries.mjs with SQLite dialect.
- *
- * Key SQL dialect changes from DuckDB:
- * - STRING_AGG -> GROUP_CONCAT
- * - ILIKE -> LIKE (SQLite LIKE is case-insensitive for ASCII by default)
- * - frontmatter->>'key' -> json_extract(frontmatter, '$.key')
- * - REGEXP_REPLACE -> substr/instr or computed in JS
- * - TRY_CAST -> CAST (no TRY_CAST in SQLite)
- * - $1 positional params -> ? placeholder params (same as DuckDB in practice)
  */
 
 import debug from 'debug'
@@ -93,7 +84,7 @@ const VALID_COLUMNS = new Set([
 
 /**
  * Task-specific columns stored in frontmatter JSON
- * Uses json_extract() for SQLite instead of DuckDB's ->> operator
+ * Uses json_extract() for frontmatter field access
  */
 const TASK_FRONTMATTER_COLUMNS = {
   start_by: "json_extract(frontmatter, '$.start_by')",

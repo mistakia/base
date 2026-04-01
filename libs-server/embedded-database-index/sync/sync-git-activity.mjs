@@ -194,7 +194,8 @@ async function get_git_activity_since_sha({
     }
 
     const { stdout } = await execute_shell_command(git_command, {
-      cwd: repo_path
+      cwd: repo_path,
+      timeout: 120_000
     })
 
     return parse_git_log_numstat({ stdout })
@@ -365,7 +366,7 @@ export async function backfill_git_activity_from_scratch({ days = 365 } = {}) {
       // Get all commits in date range (use tab delimiter via %x09 to avoid shell metacharacter validation)
       const { stdout } = await execute_shell_command(
         `git log --since="${since_str}" --format="%H%x09%ad" --date=short --numstat`,
-        { cwd: repo.path }
+        { cwd: repo.path, timeout: 120_000 }
       )
 
       // Parse and merge into combined activity map

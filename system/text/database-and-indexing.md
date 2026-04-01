@@ -166,11 +166,11 @@ Database entities define their structure via `fields` array with type mappings:
 | Module                                                                     | Purpose                                                     |
 | -------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | `libs-server/embedded-database-index/embedded-index-manager.mjs`           | Singleton manager for init, sync, rebuild, shutdown         |
-| `libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs` | Table and index definitions                                 |
-| `libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs`        | Entity batch upsert and tag/relation sync                   |
-| `libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs`      | Entity, thread, and tag statistics queries                  |
-| `libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs`   | Forward and reverse relation queries                        |
-| `libs-server/embedded-database-index/duckdb/duckdb-embedding-queries.mjs`  | Semantic search operations                                  |
+| `libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs` | Table and index definitions                                 |
+| `libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs`        | Entity batch upsert and tag/relation sync                   |
+| `libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs`      | Entity, thread, and tag statistics queries                  |
+| `libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs`   | Forward and reverse relation queries                        |
+| `libs-server/embedded-database-index/sqlite/sqlite-embedding-queries.mjs`  | Semantic search operations                                  |
 | `libs-server/embedded-database-index/entity-data-extractor.mjs`            | Frontmatter extraction and relation parsing                 |
 | `libs-server/database/storage-adapters/`                                   | Backend implementations (DuckDB, PostgreSQL, TSV, Markdown) |
 | `system/schema/database.md`                                                | Database entity type definition                             |

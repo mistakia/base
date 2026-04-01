@@ -160,7 +160,6 @@ class EmbeddedIndexManager {
       enabled: embedded_config.enabled !== false,
       sqlite_path:
         embedded_config.sqlite_path ||
-        embedded_config.duckdb_path?.replace(/duckdb\.db$/, 'sqlite.db') ||
         `${user_base_directory}/embedded-database-index/sqlite.db`,
       file_watcher_enabled: embedded_config.file_watcher_enabled !== false
     }
