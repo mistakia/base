@@ -6,8 +6,8 @@
  * Supports benchmark mode for ground-truth accuracy evaluation.
  *
  * Usage:
- *   node cli/experiment-tag-models.mjs <thread_id> [options]
- *   node cli/experiment-tag-models.mjs --benchmark-path <path> [options]
+ *   bun cli/experiment-tag-models.mjs <thread_id> [options]
+ *   bun cli/experiment-tag-models.mjs --benchmark-path <path> [options]
  *
  * Options:
  *   --models          Comma-separated list of models to test
@@ -15,9 +15,9 @@
  *   --benchmark-path  Path to benchmark cases JSON for ground-truth evaluation
  *
  * Examples:
- *   node cli/experiment-tag-models.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae
- *   node cli/experiment-tag-models.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --models ollama/qwen3:32b,ollama/llama3.3:70b
- *   node cli/experiment-tag-models.mjs --benchmark-path config/tag-benchmarks/benchmark-cases.json --models ollama/devstral-small-2:24b
+ *   bun cli/experiment-tag-models.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae
+ *   bun cli/experiment-tag-models.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --models ollama/qwen3:32b,ollama/llama3.3:70b
+ *   bun cli/experiment-tag-models.mjs --benchmark-path config/tag-benchmarks/benchmark-cases.json --models ollama/devstral-small-2:24b
  */
 
 import fs from 'fs/promises'
@@ -71,10 +71,10 @@ const benchmark_path = benchmark_index !== -1 ? args[benchmark_index + 1] : null
 
 if (!thread_id && !benchmark_path) {
   console.error(
-    'Usage: node cli/experiment-tag-models.mjs <thread_id> [options]'
+    'Usage: bun cli/experiment-tag-models.mjs <thread_id> [options]'
   )
   console.error(
-    '       node cli/experiment-tag-models.mjs --benchmark-path <path> [options]'
+    '       bun cli/experiment-tag-models.mjs --benchmark-path <path> [options]'
   )
   console.error('')
   console.error('Options:')

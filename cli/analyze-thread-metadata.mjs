@@ -3,11 +3,11 @@
  * CLI to analyze thread metadata using OpenCode with local models
  *
  * Usage:
- *   node cli/analyze-thread-metadata.mjs <thread_id> [--dry-run]
+ *   bun cli/analyze-thread-metadata.mjs <thread_id> [--dry-run]
  *
  * Examples:
- *   node cli/analyze-thread-metadata.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --dry-run
- *   node cli/analyze-thread-metadata.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae
+ *   bun cli/analyze-thread-metadata.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --dry-run
+ *   bun cli/analyze-thread-metadata.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae
  */
 
 import debug from 'debug'
@@ -22,7 +22,7 @@ const dry_run = args.includes('--dry-run')
 
 if (!thread_id) {
   console.error(
-    'Usage: node cli/analyze-thread-metadata.mjs <thread_id> [--dry-run]'
+    'Usage: bun cli/analyze-thread-metadata.mjs <thread_id> [--dry-run]'
   )
   console.error('')
   console.error('Options:')

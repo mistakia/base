@@ -7,20 +7,20 @@
  * Optimized for agent use with minimal, tab-separated output by default.
  *
  * Usage:
- *   node cli/entity-list.mjs [options]
+ *   bun cli/entity-list.mjs [options]
  *
  * Examples:
  *   # List all tasks
- *   node cli/entity-list.mjs -t task
+ *   bun cli/entity-list.mjs -t task
  *
  *   # Find tasks with specific status
- *   node cli/entity-list.mjs -t task --status "In Progress"
+ *   bun cli/entity-list.mjs -t task --status "In Progress"
  *
  *   # Get single entity by base_uri
- *   node cli/entity-list.mjs --one --base-uri "user:task/my-task.md"
+ *   bun cli/entity-list.mjs --one --base-uri "user:task/my-task.md"
  *
  *   # Search entities by title
- *   node cli/entity-list.mjs -s "feature"
+ *   bun cli/entity-list.mjs -s "feature"
  */
 
 import debug from 'debug'

@@ -83,7 +83,7 @@ Options:
   --help, -h              Show this help message
 
 Examples:
-  queue-command "yarn test" --tags test,ci --priority 5
+  queue-command "bun test" --tags test,ci --priority 5
   queue-command "node script.mjs" --tags claude-session --cwd ~/project
   queue-command status cli-abc123
   queue-command stats

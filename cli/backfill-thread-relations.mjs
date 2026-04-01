@@ -8,12 +8,12 @@
  * as the source of truth for tracking which threads have been processed.
  *
  * Usage:
- *   node cli/backfill-thread-relations.mjs                    # Process all unanalyzed threads
- *   node cli/backfill-thread-relations.mjs --batch-size 10    # Process 10 at a time
- *   node cli/backfill-thread-relations.mjs --delay 2000       # 2s delay between batches
- *   node cli/backfill-thread-relations.mjs --dry-run          # Preview without changes
- *   node cli/backfill-thread-relations.mjs --limit 100        # Process only first 100
- *   node cli/backfill-thread-relations.mjs --update-entities  # Re-process to add back-references to entities
+ *   bun cli/backfill-thread-relations.mjs                    # Process all unanalyzed threads
+ *   bun cli/backfill-thread-relations.mjs --batch-size 10    # Process 10 at a time
+ *   bun cli/backfill-thread-relations.mjs --delay 2000       # 2s delay between batches
+ *   bun cli/backfill-thread-relations.mjs --dry-run          # Preview without changes
+ *   bun cli/backfill-thread-relations.mjs --limit 100        # Process only first 100
+ *   bun cli/backfill-thread-relations.mjs --update-entities  # Re-process to add back-references to entities
  */
 
 import fs from 'fs/promises'
@@ -58,7 +58,7 @@ if (config.help) {
 Batch backfill thread relations for all existing threads
 
 Usage:
-  node cli/backfill-thread-relations.mjs [options]
+  bun cli/backfill-thread-relations.mjs [options]
 
 Options:
   --batch-size <n>   Number of threads to process per batch (default: 5)
@@ -73,16 +73,16 @@ Options:
 
 Examples:
   # Process in batches of 10
-  node cli/backfill-thread-relations.mjs --batch-size 10
+  bun cli/backfill-thread-relations.mjs --batch-size 10
 
   # Test run on first 10 threads
-  node cli/backfill-thread-relations.mjs --limit 10 --dry-run
+  bun cli/backfill-thread-relations.mjs --limit 10 --dry-run
 
   # Add back-references to entities for already-analyzed threads
-  node cli/backfill-thread-relations.mjs --update-entities --batch-size 20
+  bun cli/backfill-thread-relations.mjs --update-entities --batch-size 20
 
   # Re-analyze all threads and sync to KuzuDB
-  node cli/backfill-thread-relations.mjs --force --sync-kuzu
+  bun cli/backfill-thread-relations.mjs --force --sync-kuzu
 `)
   process.exit(0)
 }

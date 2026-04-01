@@ -12,8 +12,8 @@
  * Also cleans source.provider if it equals "base" (deleted provider).
  *
  * Usage:
- *   node cli/cleanup-thread-tools-metadata.mjs --dry-run   # Preview changes
- *   node cli/cleanup-thread-tools-metadata.mjs              # Apply changes
+ *   bun cli/cleanup-thread-tools-metadata.mjs --dry-run   # Preview changes
+ *   bun cli/cleanup-thread-tools-metadata.mjs              # Apply changes
  */
 
 import fs from 'fs/promises'

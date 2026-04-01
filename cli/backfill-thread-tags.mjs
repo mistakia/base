@@ -6,7 +6,7 @@
  * through the tag analysis pipeline. Respects tags_user_set flag.
  *
  * Usage:
- *   node cli/backfill-thread-tags.mjs [options]
+ *   bun cli/backfill-thread-tags.mjs [options]
  *
  * Options:
  *   --dry-run        Show what would be updated without making changes
@@ -16,9 +16,9 @@
  *   --created-since  Only process threads created since date (ISO format)
  *
  * Examples:
- *   node cli/backfill-thread-tags.mjs --dry-run --limit 10
- *   node cli/backfill-thread-tags.mjs --state active --limit 100
- *   node cli/backfill-thread-tags.mjs --force --created-since 2025-01-01
+ *   bun cli/backfill-thread-tags.mjs --dry-run --limit 10
+ *   bun cli/backfill-thread-tags.mjs --state active --limit 100
+ *   bun cli/backfill-thread-tags.mjs --force --created-since 2025-01-01
  */
 
 import debug from 'debug'
@@ -52,7 +52,7 @@ const created_since =
   created_since_index !== -1 ? args[created_since_index + 1] : undefined
 
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: node cli/backfill-thread-tags.mjs [options]')
+  console.log('Usage: bun cli/backfill-thread-tags.mjs [options]')
   console.log('')
   console.log('Options:')
   console.log(

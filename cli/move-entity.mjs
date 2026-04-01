@@ -6,9 +6,9 @@
 // Handles base_uri updates and reference integrity across the repository.
 //
 // Examples:
-//   node cli/move-entity.mjs task/old-name.md task/new-name.md
-//   node cli/move-entity.mjs user:task/old.md user:task/subdir/new.md
-//   node cli/move-entity.mjs task/old.md task/new.md --dry-run
+//   bun cli/move-entity.mjs task/old-name.md task/new-name.md
+//   bun cli/move-entity.mjs user:task/old.md user:task/subdir/new.md
+//   bun cli/move-entity.mjs task/old.md task/new.md --dry-run
 
 import debug from 'debug'
 import yargs from 'yargs'

@@ -10,13 +10,13 @@
  * Examples:
  *
  *   # Archive a thread as completed
- *   node cli/archive-thread.mjs --thread-id abc123 --completed
+ *   bun cli/archive-thread.mjs --thread-id abc123 --completed
  *
  *   # Archive a thread as user abandoned
- *   node cli/archive-thread.mjs --thread-id abc123 --user-abandoned
+ *   bun cli/archive-thread.mjs --thread-id abc123 --user-abandoned
  *
  *   # Reactivate an archived thread
- *   node cli/archive-thread.mjs --thread-id abc123 --reactivate
+ *   bun cli/archive-thread.mjs --thread-id abc123 --reactivate
  */
 
 import debug from 'debug'

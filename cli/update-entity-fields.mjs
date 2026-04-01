@@ -19,22 +19,22 @@
  * Examples:
  *
  *   # Update all entities with missing fields
- *   node cli/update-entity-fields.mjs
+ *   bun cli/update-entity-fields.mjs
  *
  *   # Preview changes without applying them
- *   node cli/update-entity-fields.mjs --dry_run
+ *   bun cli/update-entity-fields.mjs --dry_run
  *
  *   # Update only task entities
- *   node cli/update-entity-fields.mjs --include_path_patterns "*\/task\/*.md"
+ *   bun cli/update-entity-fields.mjs --include_path_patterns "*\/task\/*.md"
  *
  *   # Update all except archived items
- *   node cli/update-entity-fields.mjs --exclude_path_patterns "*\/archived\/*"
+ *   bun cli/update-entity-fields.mjs --exclude_path_patterns "*\/archived\/*"
  *
  *   # Update with specific user public key
- *   node cli/update-entity-fields.mjs --user_public_key "your-uuid-here"
+ *   bun cli/update-entity-fields.mjs --user_public_key "your-uuid-here"
  *
  *   # Update only user directory entities
- *   node cli/update-entity-fields.mjs --user_base_directory "/path/to/user/base"
+ *   bun cli/update-entity-fields.mjs --user_base_directory "/path/to/user/base"
  *
  * Note: System entities (starting with 'sys:') automatically use the system user public key,
  * while user entities use the provided or configured user public key.

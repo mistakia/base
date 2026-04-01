@@ -6,8 +6,8 @@
  * Extracts entity references from thread timeline.
  *
  * Usage:
- *   node cli/analyze-thread-relations.mjs --thread-id <uuid>
- *   node cli/analyze-thread-relations.mjs --thread-id <uuid> --dry-run
+ *   bun cli/analyze-thread-relations.mjs --thread-id <uuid>
+ *   bun cli/analyze-thread-relations.mjs --thread-id <uuid> --dry-run
  */
 
 import debug from 'debug'

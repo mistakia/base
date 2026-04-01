@@ -6,9 +6,9 @@
 // Follows Base system patterns for consistent CLI behavior and entity processing.
 //
 // Examples:
-//   node cli/manage-tags.mjs add -t javascript -i "task/*.md"
-//   node cli/manage-tags.mjs remove -t legacy -i "**/*.md" -e "archive/*"
-//   node cli/manage-tags.mjs add -t urgent -i "task/*.md" --dry_run
+//   bun cli/manage-tags.mjs add -t javascript -i "task/*.md"
+//   bun cli/manage-tags.mjs remove -t legacy -i "**/*.md" -e "archive/*"
+//   bun cli/manage-tags.mjs add -t urgent -i "task/*.md" --dry_run
 
 import debug from 'debug'
 import yargs from 'yargs'

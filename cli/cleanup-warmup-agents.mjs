@@ -12,7 +12,7 @@
  * - Entry count of 1
  *
  * Usage:
- *   node cli/cleanup-warmup-agents.mjs [--dry-run] [--verbose]
+ *   bun cli/cleanup-warmup-agents.mjs [--dry-run] [--verbose]
  *
  * Options:
  *   --dry-run   Show what would be deleted without actually deleting

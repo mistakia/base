@@ -3,7 +3,7 @@
  * CLI to analyze thread tags using local LLM models
  *
  * Usage:
- *   node cli/analyze-thread-tags.mjs <thread_id> [options]
+ *   bun cli/analyze-thread-tags.mjs <thread_id> [options]
  *
  * Options:
  *   --dry-run    Show what would be updated without making changes
@@ -11,9 +11,9 @@
  *   --model      Specify model to use (default: ollama/qwen2.5:72b)
  *
  * Examples:
- *   node cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --dry-run
- *   node cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --force
- *   node cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --model ollama/qwen3:32b
+ *   bun cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --dry-run
+ *   bun cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --force
+ *   bun cli/analyze-thread-tags.mjs 0149a02f-f3fd-5fd5-9f1a-e860f62e59ae --model ollama/qwen3:32b
  */
 
 import debug from 'debug'
@@ -32,7 +32,7 @@ const model_index = args.indexOf('--model')
 const model = model_index !== -1 ? args[model_index + 1] : undefined
 
 if (!thread_id) {
-  console.error('Usage: node cli/analyze-thread-tags.mjs <thread_id> [options]')
+  console.error('Usage: bun cli/analyze-thread-tags.mjs <thread_id> [options]')
   console.error('')
   console.error('Options:')
   console.error(

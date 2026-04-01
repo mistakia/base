@@ -10,7 +10,7 @@
  * Usage:
  *   base init
  *   base init --user-base-directory /path/to/user-base
- *   node cli/initial-setup.mjs --user-base-directory /tmp/test-user-base
+ *   bun cli/initial-setup.mjs --user-base-directory /tmp/test-user-base
  */
 
 import fs from 'fs'

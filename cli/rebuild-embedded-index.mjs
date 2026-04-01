@@ -8,7 +8,7 @@
  *
  * Usage:
  *   yarn rebuild:index
- *   node cli/rebuild-embedded-index.mjs
+ *   bun cli/rebuild-embedded-index.mjs
  */
 
 import debug from 'debug'

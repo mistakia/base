@@ -7,10 +7,10 @@
  * metadata analysis via the metadata-queue-processor service.
  *
  * Usage:
- *   node cli/backfill-thread-metadata.mjs                    # Queue all unanalyzed threads
- *   node cli/backfill-thread-metadata.mjs --dry-run          # Preview without queueing
- *   node cli/backfill-thread-metadata.mjs --limit 50         # Limit to 50 threads
- *   node cli/backfill-thread-metadata.mjs --verbose          # Show detailed output
+ *   bun cli/backfill-thread-metadata.mjs                    # Queue all unanalyzed threads
+ *   bun cli/backfill-thread-metadata.mjs --dry-run          # Preview without queueing
+ *   bun cli/backfill-thread-metadata.mjs --limit 50         # Limit to 50 threads
+ *   bun cli/backfill-thread-metadata.mjs --verbose          # Show detailed output
  */
 
 import fs from 'fs/promises'
@@ -48,7 +48,7 @@ if (config.help) {
 Batch backfill thread metadata for threads missing title/description
 
 Usage:
-  node cli/backfill-thread-metadata.mjs [options]
+  bun cli/backfill-thread-metadata.mjs [options]
 
 Options:
   --dry-run          Preview changes without queueing
@@ -58,13 +58,13 @@ Options:
 
 Examples:
   # Queue all threads missing metadata
-  node cli/backfill-thread-metadata.mjs
+  bun cli/backfill-thread-metadata.mjs
 
   # Preview what would be queued
-  node cli/backfill-thread-metadata.mjs --dry-run
+  bun cli/backfill-thread-metadata.mjs --dry-run
 
   # Queue only first 20 threads
-  node cli/backfill-thread-metadata.mjs --limit 20 --verbose
+  bun cli/backfill-thread-metadata.mjs --limit 20 --verbose
 `)
   process.exit(0)
 }
