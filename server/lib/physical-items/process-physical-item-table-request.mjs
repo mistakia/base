@@ -12,7 +12,7 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import {
   query_physical_items_from_entities,
   count_physical_items_from_entities
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 const log = debug('physical-items:table')
 

@@ -4,12 +4,12 @@ import {
   read_tag_from_filesystem
 } from '#libs-server/tag/index.mjs'
 import {
-  query_entities_from_duckdb,
-  count_entities_in_duckdb,
-  query_threads_from_duckdb,
-  count_threads_in_duckdb,
+  query_entities_from_sqlite,
+  count_entities_in_sqlite,
+  query_threads_from_sqlite,
+  count_threads_in_sqlite,
   query_tags_used_by
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { normalize_duckdb_thread } from '#server/lib/threads/process-thread-table-request.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
@@ -37,7 +37,7 @@ async function query_threads_by_tag({
 }) {
   try {
     const sort_column = sort === 'created_at' ? 'created_at' : 'updated_at'
-    const duckdb_threads = await query_threads_from_duckdb({
+    const duckdb_threads = await query_threads_from_sqlite({
       tags: [tag_base_uri],
       sort: [{ column_id: sort_column, desc: true }],
       limit
@@ -65,7 +65,7 @@ async function query_threads_by_tag({
  */
 async function count_threads_by_tag({ tag_base_uri }) {
   try {
-    return await count_threads_in_duckdb({
+    return await count_threads_in_sqlite({
       tags: [tag_base_uri]
     })
   } catch {
@@ -139,7 +139,7 @@ router.get('/', async (req, res) => {
 
       if (!is_redacted) {
         try {
-          tagged_entities = await query_entities_from_duckdb({
+          tagged_entities = await query_entities_from_sqlite({
             filters: [
               { column_id: 'tags', operator: 'IN', value: [tag.base_uri] }
             ],
@@ -168,7 +168,7 @@ router.get('/', async (req, res) => {
 
           const [non_completed_count, completed_count, entity_count] =
             await Promise.all([
-              count_entities_in_duckdb({
+              count_entities_in_sqlite({
                 filters: [
                   tag_filter,
                   { column_id: 'type', operator: '=', value: 'task' },
@@ -179,7 +179,7 @@ router.get('/', async (req, res) => {
                   }
                 ]
               }),
-              count_entities_in_duckdb({
+              count_entities_in_sqlite({
                 filters: [
                   tag_filter,
                   { column_id: 'type', operator: '=', value: 'task' },
@@ -190,7 +190,7 @@ router.get('/', async (req, res) => {
                   }
                 ]
               }),
-              count_entities_in_duckdb({
+              count_entities_in_sqlite({
                 filters: [tag_filter]
               })
             ])

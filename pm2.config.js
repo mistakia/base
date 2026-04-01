@@ -50,23 +50,12 @@ const user_base_directory =
 const container_user_base_path =
   process.env.CONTAINER_USER_BASE_PATH || path.join(home_dir, 'user-base')
 
-// Resolve node from .nvmrc to avoid PM2 daemon picking up a different system node
-function get_nvmrc_interpreter() {
-  const nvmrc_path = path.join(__dirname, '.nvmrc')
-  const nvm_dir = process.env.NVM_DIR || path.join(home_dir, '.nvm')
-  try {
-    const version = fs.readFileSync(nvmrc_path, 'utf8').trim()
-    const node_path = path.join(
-      nvm_dir,
-      'versions',
-      'node',
-      version,
-      'bin',
-      'node'
-    )
-    if (fs.existsSync(node_path)) return node_path
-  } catch {}
-  return 'node'
+// Resolve Bun interpreter path for PM2.
+// Falls back to 'bun' on PATH if ~/.bun/bin/bun does not exist.
+function get_bun_interpreter() {
+  const bun_path = path.join(home_dir, '.bun', 'bin', 'bun')
+  if (fs.existsSync(bun_path)) return bun_path
+  return 'bun'
 }
 
 // Resolve machine identity from machine_registry in config.json
@@ -111,7 +100,7 @@ const common_env = {
 }
 
 const defaults = {
-  interpreter: get_nvmrc_interpreter(),
+  interpreter: get_bun_interpreter(),
   cwd: __dirname,
   instances: 1,
   exec_mode: 'fork',
@@ -149,8 +138,7 @@ const all_defined_apps = [
     watch: ['build/bundle-manifest.json'],
     watch_delay: 1000,
     ignore_watch: ['node_modules', 'logs', 'tmp'],
-    max_memory_restart: '3584M',
-    node_args: '--max-old-space-size=3584'
+    max_memory_restart: '3584M'
   }),
   app(
     'metadata-queue-processor',

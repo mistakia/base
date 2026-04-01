@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('stats:collector:task')
 
@@ -14,7 +14,7 @@ export async function collect_task_metrics({ snapshot_date }) {
   const metrics = []
 
   // Task counts by status
-  const status_rows = await execute_duckdb_query({
+  const status_rows = await execute_sqlite_query({
     query: `
       SELECT json_extract_string(frontmatter, '$.status') as status, COUNT(*) as cnt
       FROM entities
@@ -47,7 +47,7 @@ export async function collect_task_metrics({ snapshot_date }) {
   })
 
   // Tasks completed in last 30 days
-  const completed_rows = await execute_duckdb_query({
+  const completed_rows = await execute_sqlite_query({
     query: `
       SELECT COUNT(*) as cnt FROM entities
       WHERE type = 'task'
@@ -65,7 +65,7 @@ export async function collect_task_metrics({ snapshot_date }) {
   })
 
   // Tasks created in last 30 days
-  const created_rows = await execute_duckdb_query({
+  const created_rows = await execute_sqlite_query({
     query: `
       SELECT COUNT(*) as cnt FROM entities
       WHERE type = 'task'
@@ -82,7 +82,7 @@ export async function collect_task_metrics({ snapshot_date }) {
   })
 
   // Average completion days for tasks with both started_at and finished_at
-  const avg_rows = await execute_duckdb_query({
+  const avg_rows = await execute_sqlite_query({
     query: `
       SELECT AVG(
         EPOCH(

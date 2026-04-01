@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { randomUUID } from 'crypto'
 
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import config from '#config'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { clear_identity_cache } from '#libs-server/users/identity-loader.mjs'

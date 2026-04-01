@@ -32,7 +32,16 @@ const log = debug('database:adapter:duckdb')
  * @returns {Object} Connection wrapper with query/run methods
  */
 async function create_dedicated_connection(database_path) {
-  const duckdb = await import('duckdb')
+  let duckdb
+  try {
+    duckdb = await import('duckdb')
+  } catch {
+    throw new Error(
+      'DuckDB is not installed. Install it with: npm install duckdb\n' +
+        'DuckDB is an optional dependency for database storage. ' +
+        'New installs default to SQLite.'
+    )
+  }
 
   return new Promise((resolve, reject) => {
     const db = new duckdb.default.Database(database_path, (err) => {

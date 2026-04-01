@@ -10,14 +10,14 @@ import {
   setup_api_test_registry
 } from '#tests/utils/index.mjs'
 import {
-  upsert_thread_to_duckdb,
-  sync_thread_tags_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
+  upsert_thread_to_sqlite,
+  sync_thread_tags_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 
 chai.use(chaiHttp)
 
@@ -30,10 +30,10 @@ describe('Tags API', () => {
   before(async () => {
     await reset_all_tables()
 
-    // Initialize DuckDB with in-memory database for tests
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    // Initialize SQLite with in-memory database for tests
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
     // Set up temporary repo for filesystem operations
     test_repo = await create_temp_test_repo()
@@ -64,7 +64,7 @@ describe('Tags API', () => {
       test_repo.cleanup()
     }
 
-    await close_duckdb_connection()
+    await close_sqlite_connection()
     await reset_all_tables()
   })
 
@@ -110,9 +110,9 @@ describe('Tags API', () => {
       )
       cleanup_tasks.push(tag_cleanup)
 
-      // Create a thread in DuckDB and tag it directly
+      // Create a thread in SQLite and tag it directly
       const thread_id = 'test-thread-tagged'
-      await upsert_thread_to_duckdb({
+      await upsert_thread_to_sqlite({
         thread_data: {
           thread_id,
           title: 'Tagged Thread',
@@ -127,14 +127,14 @@ describe('Tags API', () => {
           tool_call_count: 0
         }
       })
-      await sync_thread_tags_to_duckdb({
+      await sync_thread_tags_to_sqlite({
         thread_id,
         tag_base_uris: [tag_uri]
       })
 
       // Create an unrelated thread that should NOT appear
       const unrelated_thread_id = 'test-thread-untagged'
-      await upsert_thread_to_duckdb({
+      await upsert_thread_to_sqlite({
         thread_data: {
           thread_id: unrelated_thread_id,
           title: 'Unrelated Thread',

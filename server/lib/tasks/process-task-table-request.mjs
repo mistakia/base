@@ -13,7 +13,7 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import {
   query_tasks_from_entities,
   count_tasks_from_entities
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { apply_tag_redaction_to_tasks } from './tag-visibility.mjs'
 
 const log = debug('tasks:table')

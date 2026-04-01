@@ -1,9 +1,9 @@
 import debug from 'debug'
 
 import {
-  execute_duckdb_query,
-  is_duckdb_initialized
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+  execute_sqlite_query,
+  is_sqlite_initialized
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('activity:task-stats')
 
@@ -12,7 +12,7 @@ const log = debug('activity:task-stats')
  * @returns {Promise<Object>} Summary stats with period breakdowns
  */
 export async function get_task_summary_stats() {
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized, returning empty stats')
     return null
   }
@@ -30,7 +30,7 @@ export async function get_task_summary_stats() {
       since.setDate(since.getDate() - p)
       const since_str = since.toISOString().split('T')[0]
       return [
-        execute_duckdb_query({
+        execute_sqlite_query({
           query: `
             SELECT COUNT(*) as count
             FROM entities
@@ -38,7 +38,7 @@ export async function get_task_summary_stats() {
           `,
           parameters: [since_str]
         }),
-        execute_duckdb_query({
+        execute_sqlite_query({
           query: `
             SELECT COUNT(*) as count
             FROM (
@@ -54,7 +54,7 @@ export async function get_task_summary_stats() {
       ]
     })
 
-    const status_query = execute_duckdb_query({
+    const status_query = execute_sqlite_query({
       query: `
         SELECT status, COUNT(*) as count
         FROM entities
@@ -100,7 +100,7 @@ export async function get_task_summary_stats() {
  * @returns {Promise<Array>} Array of tag stats sorted by staleness
  */
 export async function get_task_stats_by_tag({ days = 90 } = {}) {
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized, returning empty tag stats')
     return []
   }
@@ -112,7 +112,7 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
 
     // Use a subquery to extract finished_at only from task entities,
     // preventing DuckDB from evaluating frontmatter JSON on non-task rows
-    const result = await execute_duckdb_query({
+    const result = await execute_sqlite_query({
       query: `
         SELECT
           et.tag_base_uri,
@@ -190,7 +190,7 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
  * @returns {Promise<Array>} Array of { week, completed, created, open }
  */
 export async function get_task_completion_series({ weeks = 52 } = {}) {
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized, returning empty series')
     return []
   }
@@ -203,7 +203,7 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
     // Query all historical creation and completion events (not windowed)
     // so we can compute accurate cumulative open count
     const [all_creation_rows, all_completion_rows] = await Promise.all([
-      execute_duckdb_query({
+      execute_sqlite_query({
         query: `
           SELECT
             DATE_TRUNC('week', created_at) as week,
@@ -214,7 +214,7 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
           ORDER BY week
         `
       }),
-      execute_duckdb_query({
+      execute_sqlite_query({
         query: `
           SELECT
             DATE_TRUNC('week', finished_at_str::TIMESTAMP) as week,

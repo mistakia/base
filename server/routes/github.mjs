@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import path from 'path'
 
 import config from '#config'
-import { github } from '#libs-server'
+import * as github from '#libs-server/integrations/github/index.mjs'
 import {
   add_files,
   commit_changes

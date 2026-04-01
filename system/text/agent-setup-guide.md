@@ -38,25 +38,6 @@ Base is a human-in-the-loop LLM system built on file primitives. All data is sto
 
 Install these before proceeding. Each includes a verification command.
 
-### Node.js 18+
-
-```bash
-node --version
-# Expected: v18.x.x or higher (v20+ recommended)
-```
-
-Install via [nvm](https://github.com/nvm-sh/nvm) (recommended) or from [nodejs.org](https://nodejs.org/).
-
-### Yarn
-
-```bash
-corepack enable
-yarn --version
-# Expected: 4.x.x
-```
-
-Yarn is included via Node.js corepack. If `corepack enable` is not available, install Yarn separately.
-
 ### git
 
 ```bash
@@ -84,24 +65,28 @@ Redis enables job queuing (BullMQ) and scheduling. Without Redis, the CLI and en
 
 ## Installation
 
-### Step 1: Clone the repository
+### Step 1: Install the Base CLI
+
+```bash
+curl -fsSL https://base.tint.space/install.sh | bash
+```
+
+This downloads a compiled binary to `~/.base/bin/base`, adds it to your PATH, and runs `base init` to create a user-base directory.
+
+**Success**: `base --version` prints the installed version.
+
+Alternatively, install from source (for development):
 
 ```bash
 git clone https://github.com/mistakia/base.git
 cd base
+bun install
+# Use: bun cli/base.mjs <command>
 ```
 
-**Success**: the `base/` directory contains `package.json`, `CLAUDE.md`, `system/`, `cli/`, `server/`, `client/`.
+### Step 2: Initialize a user-base directory
 
-### Step 2: Install dependencies
-
-```bash
-yarn install
-```
-
-**Success**: `node_modules/` directory exists and `node_modules/.bin/base` is present. Some optional native modules (sqlite3, duckdb) may show build warnings -- these are non-fatal.
-
-### Step 3: Initialize a user-base directory
+If the installer did not already run init:
 
 ```bash
 base init --user-base-directory ~/user-base
@@ -262,10 +247,12 @@ Any agent that reads `CLAUDE.md` or `AGENTS.md` from the project root will get c
 
 ### `base: command not found`
 
-The `base` CLI is installed as a local package binary. Either:
-- Run from the base repo directory: `npx base ...`
-- Add `node_modules/.bin` to your PATH: `export PATH="$PWD/node_modules/.bin:$PATH"`
-- Use the full path: `./node_modules/.bin/base ...`
+If installed via curl, ensure `~/.base/bin` is on your PATH:
+```bash
+export PATH="$HOME/.base/bin:$PATH"
+```
+
+If running from source, use `bun cli/base.mjs` directly.
 
 ### `USER_BASE_DIRECTORY is not set`
 
@@ -277,9 +264,9 @@ Run `base setup env` to configure this permanently in your shell profile.
 
 Install ripgrep (see Prerequisites above) or use `base init --force` to skip prerequisite checks. Search functionality requires ripgrep.
 
-### yarn install shows native module warnings
+### bun install shows warnings
 
-Warnings about sqlite3, duckdb, or ed25519-blake2b build failures are non-fatal. These are optional native modules. The core CLI works without them. The embedded database index (DuckDB) and crypto identity system require their respective native modules.
+Warnings about optional native modules (duckdb) are non-fatal. The core CLI works without them. DuckDB is an optional storage backend; the default embedded index uses SQLite (built into Bun).
 
 ### Redis connection errors
 

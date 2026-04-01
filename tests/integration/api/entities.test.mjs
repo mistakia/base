@@ -13,14 +13,14 @@ import { create_test_user, create_auth_token } from '#tests/utils/index.mjs'
 import { setup_test_directories } from '#tests/utils/setup-test-directories.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_entity_to_duckdb,
-  sync_entity_tags_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
+  upsert_entity_to_sqlite,
+  sync_entity_tags_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 chai.should()
@@ -38,12 +38,12 @@ describe('API /entities GET', () => {
     // Setup test directories for base URI registry
     test_directories = setup_test_directories()
 
-    // Initialize DuckDB with in-memory database for tests
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    // Initialize SQLite with in-memory database for tests
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
-    // Mark DuckDB as ready in the index manager
+    // Mark SQLite as ready in the index manager
     embedded_index_manager.duckdb_ready = true
     embedded_index_manager.initialized = true
 
@@ -108,11 +108,11 @@ describe('API /entities GET', () => {
     ]
 
     for (const entity of test_entities) {
-      await upsert_entity_to_duckdb({ entity_data: entity })
+      await upsert_entity_to_sqlite({ entity_data: entity })
     }
 
     // Add tags to first task
-    await sync_entity_tags_to_duckdb({
+    await sync_entity_tags_to_sqlite({
       entity_base_uri: 'user:task/task-1.md',
       tag_base_uris: ['user:tag/test-tag.md']
     })
@@ -122,7 +122,7 @@ describe('API /entities GET', () => {
     if (test_directories && test_directories.cleanup) {
       test_directories.cleanup()
     }
-    await close_duckdb_connection()
+    await close_sqlite_connection()
     embedded_index_manager.duckdb_ready = false
   })
 

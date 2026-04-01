@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * @fileoverview CLI for listing and querying entities
@@ -32,11 +32,11 @@ import path from 'path'
 import is_main from '#libs-server/utils/is-main.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
-  query_entities_from_duckdb,
+  query_entities_from_sqlite,
   get_entity_by_base_uri,
   get_entity_by_id,
-  query_tag_statistics_from_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+  query_tag_statistics_from_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import config from '#config'
 import { format_entity } from './base/lib/format.mjs'
 
@@ -162,7 +162,7 @@ export async function list_entities({
     })
   }
 
-  // search is passed as a dedicated parameter to query_entities_from_duckdb
+  // search is passed as a dedicated parameter to query_entities_from_sqlite
   // which searches across title and description using ILIKE
 
   // Note: yargs interprets --no-<option> as negating the option, setting it to false
@@ -189,7 +189,7 @@ export async function list_entities({
     ? [{ column_id: sort_by, desc: sort_desc }]
     : [{ column_id: 'updated_at', desc: true }]
 
-  const entities = await query_entities_from_duckdb({
+  const entities = await query_entities_from_sqlite({
     filters,
     sort,
     limit,
@@ -342,7 +342,7 @@ if (is_main(import.meta.url)) {
           )
         }
 
-        let stats = await query_tag_statistics_from_duckdb({
+        let stats = await query_tag_statistics_from_sqlite({
           include_zero_count: argv['include-zero-count']
         })
 

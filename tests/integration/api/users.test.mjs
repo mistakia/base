@@ -6,7 +6,7 @@ import crypto, { randomUUID } from 'crypto'
 import server from '#server'
 import config from '#config'
 import { reset_all_tables } from '#tests/utils/index.mjs'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 
 chai.should()

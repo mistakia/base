@@ -8,23 +8,23 @@
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_entity_to_duckdb,
-  upsert_thread_to_duckdb,
-  sync_entity_relations_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
-import { find_threads_relating_to } from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+  upsert_entity_to_sqlite,
+  upsert_thread_to_sqlite,
+  sync_entity_relations_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
+import { find_threads_relating_to } from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 import { format_entity_thread } from '#root/cli/base/lib/format.mjs'
 
 describe('Entity Threads Command Integration', () => {
   before(async () => {
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
 
     // Create test entities (targets for thread relations)
     const test_entities = [
@@ -62,7 +62,7 @@ describe('Entity Threads Command Integration', () => {
     ]
 
     for (const entity of test_entities) {
-      await upsert_entity_to_duckdb({ entity_data: entity })
+      await upsert_entity_to_sqlite({ entity_data: entity })
     }
 
     // Create test threads with various states
@@ -105,11 +105,11 @@ describe('Entity Threads Command Integration', () => {
     ]
 
     for (const thread of test_threads) {
-      await upsert_thread_to_duckdb({ thread_data: thread })
+      await upsert_thread_to_sqlite({ thread_data: thread })
     }
 
     // Create thread-entity relations
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-modify-task',
       relations: [
         {
@@ -120,7 +120,7 @@ describe('Entity Threads Command Integration', () => {
       ]
     })
 
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-access-task',
       relations: [
         {
@@ -131,7 +131,7 @@ describe('Entity Threads Command Integration', () => {
       ]
     })
 
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-active-task',
       relations: [
         {
@@ -142,7 +142,7 @@ describe('Entity Threads Command Integration', () => {
       ]
     })
 
-    await sync_entity_relations_to_duckdb({
+    await sync_entity_relations_to_sqlite({
       source_base_uri: 'user:thread/thread-workflow-access',
       relations: [
         {
@@ -156,7 +156,7 @@ describe('Entity Threads Command Integration', () => {
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch (error) {
       // Ignore cleanup errors
     }

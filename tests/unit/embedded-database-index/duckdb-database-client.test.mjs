@@ -1,52 +1,52 @@
 /**
- * @fileoverview Unit tests for DuckDB database client
+ * @fileoverview Unit tests for SQLite database client
  */
 
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  get_duckdb_connection,
-  execute_duckdb_query,
-  execute_duckdb_run,
-  close_duckdb_connection,
-  is_duckdb_initialized
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+  initialize_sqlite_client,
+  get_sqlite_database,
+  execute_sqlite_query,
+  execute_sqlite_run,
+  close_sqlite_connection,
+  is_sqlite_initialized
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
-describe('DuckDB Database Client', () => {
+describe('SQLite Database Client', () => {
   before(async () => {
     // Ensure clean state by closing any existing connection
-    await close_duckdb_connection()
-    // Initialize DuckDB with in-memory database for tests
-    await initialize_duckdb_client({ in_memory: true })
+    await close_sqlite_connection()
+    // Initialize SQLite with in-memory database for tests
+    await initialize_sqlite_client({ in_memory: true })
   })
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch (error) {
       // Ignore cleanup errors
     }
   })
 
-  describe('initialize_duckdb_client', () => {
-    it('should initialize DuckDB client successfully', () => {
-      const initialized = is_duckdb_initialized()
+  describe('initialize_sqlite_client', () => {
+    it('should initialize SQLite client successfully', () => {
+      const initialized = is_sqlite_initialized()
       expect(initialized).to.equal(true)
     })
   })
 
-  describe('get_duckdb_connection', () => {
-    it('should return a valid DuckDB connection', async () => {
-      const connection = await get_duckdb_connection()
+  describe('get_sqlite_database', () => {
+    it('should return a valid SQLite database', async () => {
+      const connection = await get_sqlite_database()
       expect(connection).to.not.be.undefined
       expect(connection).to.not.be.null
     })
   })
 
-  describe('execute_duckdb_run', () => {
+  describe('execute_sqlite_run', () => {
     it('should execute DDL statements successfully', async () => {
-      await execute_duckdb_run({
+      await execute_sqlite_run({
         query:
           'CREATE TABLE IF NOT EXISTS test_table (id INTEGER, name VARCHAR)'
       })
@@ -54,16 +54,16 @@ describe('DuckDB Database Client', () => {
     })
 
     it('should execute INSERT statements successfully', async () => {
-      await execute_duckdb_run({
+      await execute_sqlite_run({
         query: "INSERT INTO test_table VALUES (1, 'test')"
       })
       // If no error thrown, test passes
     })
   })
 
-  describe('execute_duckdb_query', () => {
+  describe('execute_sqlite_query', () => {
     it('should execute SELECT queries and return results', async () => {
-      const rows = await execute_duckdb_query({
+      const rows = await execute_sqlite_query({
         query: 'SELECT * FROM test_table WHERE id = 1'
       })
       expect(rows).to.be.an('array')
@@ -73,7 +73,7 @@ describe('DuckDB Database Client', () => {
     })
 
     it('should return empty array for no results', async () => {
-      const rows = await execute_duckdb_query({
+      const rows = await execute_sqlite_query({
         query: 'SELECT * FROM test_table WHERE id = 999'
       })
       expect(rows).to.be.an('array')
@@ -82,11 +82,11 @@ describe('DuckDB Database Client', () => {
 
     it('should handle complex queries', async () => {
       // Insert additional test data
-      await execute_duckdb_run({
+      await execute_sqlite_run({
         query: "INSERT INTO test_table VALUES (2, 'second'), (3, 'third')"
       })
 
-      const rows = await execute_duckdb_query({
+      const rows = await execute_sqlite_query({
         query: 'SELECT * FROM test_table ORDER BY id'
       })
       expect(rows).to.be.an('array')
@@ -97,7 +97,7 @@ describe('DuckDB Database Client', () => {
   describe('error handling', () => {
     it('should throw error for invalid SQL', async () => {
       try {
-        await execute_duckdb_query({
+        await execute_sqlite_query({
           query: 'SELECT * FROM nonexistent_table'
         })
         expect.fail('Should have thrown an error')

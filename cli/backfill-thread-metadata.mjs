@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Batch backfill thread metadata (title/description) for threads missing analysis

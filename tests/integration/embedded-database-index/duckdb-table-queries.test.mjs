@@ -1,36 +1,36 @@
 /**
- * @fileoverview Integration tests for DuckDB table queries
+ * @fileoverview Integration tests for SQLite table queries
  */
 
 import { expect } from 'chai'
 
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
 import {
-  upsert_entity_to_duckdb,
-  upsert_thread_to_duckdb,
-  sync_entity_tags_to_duckdb,
-  sync_thread_tags_to_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
+  upsert_entity_to_sqlite,
+  upsert_thread_to_sqlite,
+  sync_entity_tags_to_sqlite,
+  sync_thread_tags_to_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 import {
   query_tasks_from_entities,
-  query_threads_from_duckdb,
+  query_threads_from_sqlite,
   count_tasks_from_entities,
-  count_threads_in_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+  count_threads_in_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
-describe('DuckDB Table Queries Integration', () => {
+describe('SQLite Table Queries Integration', () => {
   before(async () => {
     // Ensure clean state by closing any existing connection
-    await close_duckdb_connection()
-    // Initialize DuckDB with in-memory database for tests
-    await initialize_duckdb_client({ in_memory: true })
+    await close_sqlite_connection()
+    // Initialize SQLite with in-memory database for tests
+    await initialize_sqlite_client({ in_memory: true })
 
     // Create schema
-    await create_duckdb_schema()
+    await create_sqlite_schema()
 
     // Insert test tasks via entities table
     const test_tasks = [
@@ -91,11 +91,11 @@ describe('DuckDB Table Queries Integration', () => {
     ]
 
     for (const task of test_tasks) {
-      await upsert_entity_to_duckdb({ entity_data: task })
+      await upsert_entity_to_sqlite({ entity_data: task })
     }
 
     // Add a test tag to task-1
-    await sync_entity_tags_to_duckdb({
+    await sync_entity_tags_to_sqlite({
       entity_base_uri: 'user:task/task-1.md',
       tag_base_uris: ['user:tag/test-tag.md']
     })
@@ -146,15 +146,15 @@ describe('DuckDB Table Queries Integration', () => {
     ]
 
     for (const thread of test_threads) {
-      await upsert_thread_to_duckdb({ thread_data: thread })
+      await upsert_thread_to_sqlite({ thread_data: thread })
     }
 
     // Add test tags to threads for tag filtering tests
-    await sync_thread_tags_to_duckdb({
+    await sync_thread_tags_to_sqlite({
       thread_id: 'thread-1',
       tag_base_uris: ['user:tag/project-a.md', 'user:tag/priority-high.md']
     })
-    await sync_thread_tags_to_duckdb({
+    await sync_thread_tags_to_sqlite({
       thread_id: 'thread-2',
       tag_base_uris: ['user:tag/project-b.md']
     })
@@ -163,7 +163,7 @@ describe('DuckDB Table Queries Integration', () => {
 
   after(async () => {
     try {
-      await close_duckdb_connection()
+      await close_sqlite_connection()
     } catch (error) {
       // Ignore cleanup errors
     }
@@ -371,9 +371,9 @@ describe('DuckDB Table Queries Integration', () => {
     })
   })
 
-  describe('query_threads_from_duckdb', () => {
+  describe('query_threads_from_sqlite', () => {
     it('should query all threads without filters', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [{ column_id: 'created_at', desc: true }],
         limit: 100,
@@ -385,7 +385,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should filter threads by state', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'active' }
         ],
@@ -402,7 +402,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should search in title using search parameter', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -416,7 +416,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should search in short_description using search parameter', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -433,7 +433,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should filter by file_ref pattern', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -447,7 +447,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should filter by dir_ref pattern', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -461,7 +461,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should combine search with state filter', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'active' }
         ],
@@ -479,7 +479,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should combine file_ref with state filter', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'active' }
         ],
@@ -495,7 +495,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should return file_references and directory_references in results', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [{ column_id: 'thread_id', operator: '=', value: 'thread-1' }],
         sort: [],
         limit: 100,
@@ -512,7 +512,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should filter threads by single tag', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -526,7 +526,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should filter threads by multiple tags (OR logic)', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -542,7 +542,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should combine tag filter with state filter', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'active' }
         ],
@@ -559,7 +559,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should return empty array for non-existent tag', async () => {
-      const threads = await query_threads_from_duckdb({
+      const threads = await query_threads_from_sqlite({
         filters: [],
         sort: [],
         limit: 100,
@@ -572,9 +572,9 @@ describe('DuckDB Table Queries Integration', () => {
     })
   })
 
-  describe('count_threads_in_duckdb', () => {
+  describe('count_threads_in_sqlite', () => {
     it('should count all threads without filters', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: []
       })
 
@@ -582,7 +582,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should count threads with filters', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: [
           { column_id: 'thread_state', operator: '=', value: 'archived' }
         ]
@@ -592,7 +592,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should count threads with search parameter', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: [],
         search: 'database'
       })
@@ -601,7 +601,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should count threads with file_ref parameter', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: [],
         file_ref: 'user:config/*'
       })
@@ -610,7 +610,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should count threads with tags parameter', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: [],
         tags: ['user:tag/project-a.md']
       })
@@ -619,7 +619,7 @@ describe('DuckDB Table Queries Integration', () => {
     })
 
     it('should count threads with multiple tags parameter', async () => {
-      const count = await count_threads_in_duckdb({
+      const count = await count_threads_in_sqlite({
         filters: [],
         tags: ['user:tag/project-a.md', 'user:tag/project-b.md']
       })

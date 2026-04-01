@@ -6,7 +6,6 @@
  */
 
 import debug from 'debug'
-import fetch from 'node-fetch'
 import {
   CHATGPT_BASE_URL,
   CHATGPT_CLIENT_VERSION

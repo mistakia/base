@@ -29,7 +29,7 @@ import {
   upsert_heatmap_daily_batch,
   get_heatmap_daily_count,
   truncate_heatmap_daily
-} from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 
 const log = debug('server:cache-warmer')
 

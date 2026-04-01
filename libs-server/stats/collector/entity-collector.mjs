@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 
-import { execute_duckdb_query } from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('stats:collector:entity')
 
@@ -14,7 +14,7 @@ export async function collect_entity_metrics({ snapshot_date }) {
   const metrics = []
 
   // Entity counts by type
-  const type_rows = await execute_duckdb_query({
+  const type_rows = await execute_sqlite_query({
     query: 'SELECT type, COUNT(*) as cnt FROM entities GROUP BY type'
   })
 
@@ -42,7 +42,7 @@ export async function collect_entity_metrics({ snapshot_date }) {
   })
 
   // Tag count
-  const tag_count_rows = await execute_duckdb_query({
+  const tag_count_rows = await execute_sqlite_query({
     query: 'SELECT COUNT(DISTINCT tag_base_uri) as cnt FROM entity_tags'
   })
   metrics.push({
@@ -55,7 +55,7 @@ export async function collect_entity_metrics({ snapshot_date }) {
   })
 
   // Relation count
-  const relation_rows = await execute_duckdb_query({
+  const relation_rows = await execute_sqlite_query({
     query: 'SELECT COUNT(*) as cnt FROM entity_relations'
   })
   metrics.push({

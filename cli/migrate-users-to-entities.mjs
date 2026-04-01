@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import path from 'path'
 import fs from 'fs/promises'
 import debug from 'debug'
@@ -7,7 +7,7 @@ import { hideBin } from 'yargs/helpers'
 import { v4 as uuid } from 'uuid'
 
 import config from '#config'
-import { isMain } from '#libs-server'
+import { isMain } from '#libs-server/is-main.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { get_user_base_directory as get_user_base_from_registry } from '#libs-server/base-uri/base-directory-registry.mjs'
 

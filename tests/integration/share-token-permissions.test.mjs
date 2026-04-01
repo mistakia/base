@@ -9,17 +9,17 @@
 import chai from 'chai'
 import chaiHttp from 'chai-http'
 import crypto from 'crypto'
-import ed25519 from '@trashman/ed25519-blake2b'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
 import server from '#server'
 import { create_test_user, create_auth_token } from '#tests/utils/index.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 import {
-  initialize_duckdb_client,
-  close_duckdb_connection
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
-import { create_duckdb_schema } from '#libs-server/embedded-database-index/duckdb/duckdb-schema-definitions.mjs'
-import { upsert_entity_to_duckdb } from '#libs-server/embedded-database-index/duckdb/duckdb-entity-sync.mjs'
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
+import { upsert_entity_to_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
@@ -38,13 +38,13 @@ describe('Share Token Integration', () => {
     owner = await create_test_user()
     owner.jwt_token = create_auth_token(owner)
 
-    await close_duckdb_connection()
-    await initialize_duckdb_client({ in_memory: true })
-    await create_duckdb_schema()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
     embedded_index_manager.duckdb_ready = true
     embedded_index_manager.initialized = true
 
-    await upsert_entity_to_duckdb({
+    await upsert_entity_to_sqlite({
       entity_data: {
         entity_id,
         base_uri,
@@ -67,7 +67,7 @@ describe('Share Token Integration', () => {
   })
 
   after(async () => {
-    await close_duckdb_connection()
+    await close_sqlite_connection()
     embedded_index_manager.duckdb_ready = false
   })
 

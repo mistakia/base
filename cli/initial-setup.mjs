@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 /**
  * Idempotent user-base initialization.
@@ -16,15 +16,15 @@
 import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
-import { createRequire } from 'module'
 import { execSync } from 'child_process'
 import { fileURLToPath } from 'url'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const BASE_DIR = path.resolve(__dirname, '..')
-const TEMPLATE_CONFIG_PATH = path.resolve(__dirname, '../config/config.json')
+const BASE_DIR = process.env.SYSTEM_BASE_DIRECTORY || path.resolve(__dirname, '..')
+const TEMPLATE_CONFIG_PATH = path.join(BASE_DIR, 'config', 'config.json')
 
 // Standard entity type directories for a user-base
 const DIRECTORIES = [
@@ -232,26 +232,9 @@ function ensure_owner_identity(base_path, username, summary) {
   let private_key_hex
   const private_key_seed = crypto.randomBytes(32)
 
-  try {
-    // Use ed25519-blake2b for proper key derivation when available
-    const require_fn = createRequire(import.meta.url)
-    const ed25519 = require_fn('@trashman/ed25519-blake2b')
-    const public_key = ed25519.publicKey(private_key_seed)
-    public_key_hex = public_key.toString('hex')
-    private_key_hex = private_key_seed.toString('hex')
-  } catch {
-    // Fallback: native Ed25519 via Node crypto (always available on Node 18+).
-    // Note: native Ed25519 keys use RFC 8032 derivation, which differs from
-    // ed25519-blake2b. Authentication features that rely on ed25519-blake2b
-    // verification will not work with these keys.
-    const key_pair = crypto.generateKeyPairSync('ed25519')
-    const spki = key_pair.publicKey.export({ type: 'spki', format: 'der' })
-    // DER-encoded SPKI for Ed25519 has 12-byte header, raw key starts at offset 12
-    public_key_hex = spki.subarray(12).toString('hex')
-    const pkcs8 = key_pair.privateKey.export({ type: 'pkcs8', format: 'der' })
-    // DER-encoded PKCS8 for Ed25519 has 16-byte header, raw seed starts at offset 16
-    private_key_hex = pkcs8.subarray(16).toString('hex')
-  }
+  const public_key = ed25519.publicKey(private_key_seed)
+  public_key_hex = public_key.toString('hex')
+  private_key_hex = private_key_seed.toString('hex')
 
   const now = new Date().toISOString()
   const entity_id = crypto.randomUUID()
@@ -474,6 +457,51 @@ export const handler = async (argv) => {
     fs.mkdirSync(base_path, { recursive: true })
   }
 
+  // Detect compiled binary mode: SYSTEM_BASE_DIRECTORY points to ~/.base
+  // when running from compiled binary, or to the repo checkout in development.
+  const is_compiled = process.env.SYSTEM_BASE_DIRECTORY?.includes('.base')
+  const install_dir = is_compiled
+    ? path.dirname(path.dirname(process.argv[0]))
+    : null
+
+  // Download system content on first run if compiled binary and not present
+  if (is_compiled && install_dir) {
+    const system_dir = path.join(install_dir, 'system')
+    if (!fs.existsSync(path.join(system_dir, 'schema'))) {
+      if (!argv.json) {
+        console.log('Downloading system content...')
+      }
+      try {
+        const response = await fetch(
+          'https://base.tint.space/system/manifest.json'
+        )
+        if (response.ok) {
+          const manifest = await response.json()
+          for (const file of manifest.files || []) {
+            const file_path = typeof file === 'string' ? file : file.path
+            const file_url = `https://base.tint.space/system/${file_path}`
+            const local_path = path.join(system_dir, file_path)
+            fs.mkdirSync(path.dirname(local_path), { recursive: true })
+            const file_response = await fetch(file_url)
+            if (file_response.ok) {
+              fs.writeFileSync(local_path, await file_response.text())
+            }
+          }
+          if (!argv.json) {
+            console.log('System content downloaded.')
+          }
+        }
+      } catch {
+        if (!argv.json) {
+          console.log(
+            'Could not download system content (base.tint.space unreachable).'
+          )
+          console.log('System content will be downloaded on next `base update`.')
+        }
+      }
+    }
+  }
+
   for (const dir_info of DIRECTORIES) {
     ensure_directory(base_path, dir_info, summary)
   }
@@ -535,6 +563,9 @@ export const handler = async (argv) => {
     console.log('\n--- Next Steps ---\n')
     console.log(`1. Set the environment variable (add to your shell profile):`)
     console.log(`   export USER_BASE_DIRECTORY="${base_path}"`)
+    if (is_compiled && install_dir) {
+      console.log(`   export SYSTEM_BASE_DIRECTORY="${install_dir}"`)
+    }
     console.log('')
     console.log('2. Try your first command:')
     console.log('   base entity create "user:task/hello-world.md" --type task --title "Hello World" --description "My first task"')

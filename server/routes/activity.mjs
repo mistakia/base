@@ -19,7 +19,7 @@ import {
   query_entities_by_thread_activity,
   query_git_activity_daily,
   query_thread_activity_aggregated
-} from '#libs-server/embedded-database-index/duckdb/duckdb-activity-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 import {
   parse_time_period_date,
   is_valid_time_period

@@ -21,13 +21,13 @@ import {
   find_related_entities,
   find_entities_relating_to,
   find_threads_relating_to
-} from '#libs-server/embedded-database-index/duckdb/duckdb-relation-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 import {
-  query_entities_from_duckdb,
+  query_entities_from_sqlite,
   get_entity_by_base_uri,
   get_entity_by_id,
-  count_entities_in_duckdb
-} from '#libs-server/embedded-database-index/duckdb/duckdb-table-queries.mjs'
+  count_entities_in_sqlite
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 import { PermissionContext } from '#server/middleware/permission/permission-context.mjs'
 import {
   redact_base_uri,
@@ -192,14 +192,14 @@ router.get('/', async (req, res) => {
     // Query entities and count
     // search is passed as a dedicated parameter to search across title and description
     const [entities, total] = await Promise.all([
-      query_entities_from_duckdb({
+      query_entities_from_sqlite({
         filters,
         sort: sort_config,
         limit,
         offset,
         search
       }),
-      count_entities_in_duckdb({ filters, search })
+      count_entities_in_sqlite({ filters, search })
     ])
 
     // Apply permission-based filtering and tag/relation redaction

@@ -15,7 +15,7 @@ import {
   upsert_embeddings,
   delete_entity_embeddings,
   get_embedding_hashes
-} from '#libs-server/embedded-database-index/duckdb/duckdb-embedding-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-embedding-queries.mjs'
 import { extract_base_uri_from_entity_path } from '#libs-server/embedded-database-index/sync/index-file-watcher.mjs'
 
 const log = debug('search:embedding-pipeline')

@@ -4,9 +4,9 @@ import debug from 'debug'
 
 import config from '#config'
 import {
-  execute_duckdb_query,
-  is_duckdb_initialized
-} from '#libs-server/embedded-database-index/duckdb/duckdb-database-client.mjs'
+  execute_sqlite_query,
+  is_sqlite_initialized
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('activity:thread')
@@ -21,7 +21,7 @@ const log = debug('activity:thread')
 async function get_token_usage_by_date({ since_date, until_date }) {
   const token_by_date = new Map()
 
-  if (!is_duckdb_initialized()) {
+  if (!is_sqlite_initialized()) {
     log('DuckDB not initialized, skipping token usage aggregation')
     return token_by_date
   }
@@ -41,7 +41,7 @@ async function get_token_usage_by_date({ since_date, until_date }) {
       ORDER BY date
     `
 
-    const results = await execute_duckdb_query({
+    const results = await execute_sqlite_query({
       query,
       parameters: [since_date, until_date]
     })
