@@ -4,6 +4,9 @@ import nock from 'nock'
 import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
 import config from '#config'
 
+// nock intercepts Node.js http/https modules but cannot intercept Bun's native fetch
+const is_bun = typeof globalThis.Bun !== 'undefined'
+
 describe('sync_task_to_github', () => {
   const test_token = 'test-github-token'
   const test_project_config = {
@@ -109,7 +112,9 @@ describe('sync_task_to_github', () => {
     expect(result.skipped_reason).to.equal('no project config found')
   })
 
-  it('should map status to correct option ID and call update_github_project_item', async () => {
+  it('should map status to correct option ID and call update_github_project_item', async function () {
+    if (is_bun) return this.skip()
+
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql', (body) => {
         const input = body.variables?.input
@@ -139,7 +144,8 @@ describe('sync_task_to_github', () => {
     expect(graphql_scope.isDone()).to.be.true
   })
 
-  it('should map priority to correct option ID', async () => {
+  it('should map priority to correct option ID', async function () {
+    if (is_bun) return this.skip()
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql', (body) => {
         const input = body.variables?.input
@@ -166,7 +172,8 @@ describe('sync_task_to_github', () => {
     expect(graphql_scope.isDone()).to.be.true
   })
 
-  it('should close issue when status is Completed', async () => {
+  it('should close issue when status is Completed', async function () {
+    if (is_bun) return this.skip()
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql')
       .reply(200, {
@@ -194,7 +201,8 @@ describe('sync_task_to_github', () => {
     expect(rest_scope.isDone()).to.be.true
   })
 
-  it('should close issue when status is Abandoned', async () => {
+  it('should close issue when status is Abandoned', async function () {
+    if (is_bun) return this.skip()
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql')
       .reply(200, {
@@ -221,7 +229,8 @@ describe('sync_task_to_github', () => {
     expect(rest_scope.isDone()).to.be.true
   })
 
-  it('should reopen issue when status changes from terminal to active', async () => {
+  it('should reopen issue when status changes from terminal to active', async function () {
+    if (is_bun) return this.skip()
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql')
       .reply(200, {
@@ -262,7 +271,8 @@ describe('sync_task_to_github', () => {
     expect(result.errors[0].field).to.equal('general')
   })
 
-  it('should use default project config when repo-specific config not found', async () => {
+  it('should use default project config when repo-specific config not found', async function () {
+    if (is_bun) return this.skip()
     config.github.projects = {
       default: test_project_config
     }
@@ -290,7 +300,8 @@ describe('sync_task_to_github', () => {
     expect(graphql_scope.isDone()).to.be.true
   })
 
-  it('should not close issue when transitioning between non-terminal statuses', async () => {
+  it('should not close issue when transitioning between non-terminal statuses', async function () {
+    if (is_bun) return this.skip()
     const graphql_scope = nock('https://api.github.com')
       .post('/graphql')
       .reply(200, {

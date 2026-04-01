@@ -49,9 +49,13 @@ describe('read_modify_write', () => {
         modify_call_count++
         const data = JSON.parse(content)
 
-        // On first attempt, simulate a concurrent write by touching the file
+        // On first attempt, simulate a concurrent write by touching the file.
+        // Force a future mtime so the conflict is detected even when the
+        // filesystem clock granularity is coarser than execution speed (Bun).
         if (modify_call_count === 1) {
           await fs.writeFile(file_path, JSON.stringify({ count: 5 }), 'utf8')
+          const future = new Date(Date.now() + 2000)
+          await fs.utimes(file_path, future, future)
         }
 
         data.count += 10
@@ -80,6 +84,8 @@ describe('read_modify_write', () => {
 
         if (modify_call_count === 1) {
           await fs.writeFile(file_path, 'version-2', 'utf8')
+          const future = new Date(Date.now() + 2000)
+          await fs.utimes(file_path, future, future)
         }
 
         return content + '-modified'
@@ -104,6 +110,9 @@ describe('read_modify_write', () => {
           counter++
           // Always cause a conflict by modifying the file
           await fs.writeFile(file_path, `conflict-${counter}`, 'utf8')
+          // Each iteration must produce a distinct mtime so pre_stat != post_stat
+          const future = new Date(Date.now() + counter * 2000)
+          await fs.utimes(file_path, future, future)
           return content + '-modified'
         }
       })

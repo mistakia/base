@@ -4,7 +4,7 @@ import { access, mkdir, copyFile, readFile } from 'fs/promises'
 import { constants, existsSync } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
-import glob_pkg from 'glob'
+import { glob } from 'glob'
 import debug from 'debug'
 
 import config from '#config'
@@ -22,7 +22,6 @@ import {
 } from './user-container-manager.mjs'
 
 const execAsync = promisify(exec)
-const glob = promisify(glob_pkg)
 const log = debug('threads:claude-cli')
 
 // =============================================================================

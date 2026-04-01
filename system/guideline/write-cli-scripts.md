@@ -31,8 +31,8 @@ visibility_analyzed_at: '2026-02-16T04:30:30.682Z'
 
 #### File Structure and Format
 
-- Node.js CLI scripts MUST use the `.mjs` extension for ES module compatibility
-- Node.js CLI scripts SHOULD include a shebang line (`#!/usr/bin/env node`) if directly executable
+- CLI scripts MUST use the `.mjs` extension for ES module compatibility
+- CLI scripts SHOULD include a shebang line (`#!/usr/bin/env bun`) if directly executable
 - Node.js CLI scripts SHOULD define a modular main function with a descriptive name (e.g., `run`, `main`, etc.)
 - Node.js CLI scripts SHOULD export the main function as default export if needed elsewhere
 - Node.js CLI scripts SHOULD include error handling with try/catch blocks
