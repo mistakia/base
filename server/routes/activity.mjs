@@ -57,9 +57,9 @@ router.get('/heatmap', async (req, res) => {
       return res.json(cached_data)
     }
 
-    // Try DuckDB fast path before falling back to slow file aggregation
+    // Try SQLite fast path before falling back to slow file aggregation
     log(
-      `Fetching activity heatmap data for ${days} days (cache miss, trying DuckDB)`
+      `Fetching activity heatmap data for ${days} days (cache miss, trying SQLite)`
     )
     try {
       const [git_activity, thread_activity, task_activity] = await Promise.all([
@@ -80,13 +80,13 @@ router.get('/heatmap', async (req, res) => {
           days
         })
         log(
-          `Returning DuckDB heatmap data: ${heatmap_data.data.length} days, max_score: ${heatmap_data.max_score}`
+          `Returning SQLite heatmap data: ${heatmap_data.data.length} days, max_score: ${heatmap_data.max_score}`
         )
         return res.json(heatmap_data)
       }
-    } catch (duckdb_error) {
+    } catch (sqlite_error) {
       log(
-        `DuckDB heatmap query failed, falling back to file aggregation: ${duckdb_error.message}`
+        `SQLite heatmap query failed, falling back to file aggregation: ${sqlite_error.message}`
       )
     }
 

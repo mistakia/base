@@ -12,7 +12,7 @@ import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/in
 const log = debug('activity:thread')
 
 /**
- * Get token usage aggregated by date from DuckDB
+ * Get token usage aggregated by date from SQLite
  * @param {Object} params Parameters
  * @param {string} params.since_date ISO date string (YYYY-MM-DD)
  * @param {string} params.until_date ISO date string (YYYY-MM-DD)
@@ -22,14 +22,14 @@ async function get_token_usage_by_date({ since_date, until_date }) {
   const token_by_date = new Map()
 
   if (!is_sqlite_initialized()) {
-    log('DuckDB not initialized, skipping token usage aggregation')
+    log('SQLite not initialized, skipping token usage aggregation')
     return token_by_date
   }
 
   try {
     const query = `
       SELECT
-        CAST(created_at AS DATE) as date,
+        date(created_at) as date,
         SUM(COALESCE(total_input_tokens, 0)) as input_tokens,
         SUM(COALESCE(total_output_tokens, 0)) as output_tokens,
         SUM(COALESCE(cache_creation_input_tokens, 0)) as cache_creation_tokens,
@@ -37,7 +37,7 @@ async function get_token_usage_by_date({ since_date, until_date }) {
         SUM(COALESCE(total_tokens, 0)) as total_tokens
       FROM threads
       WHERE created_at >= ? AND created_at <= ?
-      GROUP BY CAST(created_at AS DATE)
+      GROUP BY date(created_at)
       ORDER BY date
     `
 
@@ -52,7 +52,7 @@ async function get_token_usage_by_date({ since_date, until_date }) {
           ? row.date.toISOString().split('T')[0]
           : String(row.date).split('T')[0]
 
-      // Convert BigInt values from DuckDB to Numbers
+      // Convert values to Numbers
       const input_tokens = Number(row.input_tokens || 0)
       const output_tokens = Number(row.output_tokens || 0)
       const cache_creation_tokens = Number(row.cache_creation_tokens || 0)
@@ -67,7 +67,7 @@ async function get_token_usage_by_date({ since_date, until_date }) {
       })
     }
   } catch (error) {
-    log(`Failed to get token usage from DuckDB: ${error.message}`)
+    log(`Failed to get token usage from SQLite: ${error.message}`)
   }
 
   return token_by_date
@@ -174,7 +174,7 @@ export async function aggregate_thread_activity({ days = 365 } = {}) {
 
   log(`Aggregating thread activity from ${since_str} to ${until_str}`)
 
-  // Get token usage from DuckDB
+  // Get token usage from SQLite
   const token_activity = await get_token_usage_by_date({
     since_date: since_str,
     until_date: until_str

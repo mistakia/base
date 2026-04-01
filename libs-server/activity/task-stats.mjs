@@ -13,7 +13,7 @@ const log = debug('activity:task-stats')
  */
 export async function get_task_summary_stats() {
   if (!is_sqlite_initialized()) {
-    log('DuckDB not initialized, returning empty stats')
+    log('SQLite not initialized, returning empty stats')
     return null
   }
 
@@ -22,9 +22,9 @@ export async function get_task_summary_stats() {
     const periods = [3, 10, 30]
 
     // Note: completions queries use a subquery to materialize the type='task'
-    // filter before extracting frontmatter->>'finished_at'. DuckDB's optimizer
-    // otherwise evaluates JSON extraction across all entity types, causing a
-    // cast error on non-task frontmatter structures.
+    // filter before extracting frontmatter finished_at. SQLite's optimizer
+    // otherwise evaluates JSON extraction across all entity types, causing
+    // errors on non-task frontmatter structures.
     const period_queries = periods.flatMap((p) => {
       const since = new Date(now)
       since.setDate(since.getDate() - p)
@@ -42,12 +42,12 @@ export async function get_task_summary_stats() {
           query: `
             SELECT COUNT(*) as count
             FROM (
-              SELECT frontmatter->>'finished_at' as finished_at_str
+              SELECT json_extract(frontmatter, '$.finished_at') as finished_at_str
               FROM entities
               WHERE type = 'task' AND status = 'Completed'
             ) task_completions
             WHERE finished_at_str IS NOT NULL
-              AND finished_at_str::TIMESTAMP >= ?::TIMESTAMP
+              AND date(finished_at_str) >= ?
           `,
           parameters: [since_str]
         })
@@ -101,7 +101,7 @@ export async function get_task_summary_stats() {
  */
 export async function get_task_stats_by_tag({ days = 90 } = {}) {
   if (!is_sqlite_initialized()) {
-    log('DuckDB not initialized, returning empty tag stats')
+    log('SQLite not initialized, returning empty tag stats')
     return []
   }
 
@@ -111,45 +111,49 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
     const since_str = since.toISOString().split('T')[0]
 
     // Use a subquery to extract finished_at only from task entities,
-    // preventing DuckDB from evaluating frontmatter JSON on non-task rows
+    // preventing SQLite from evaluating frontmatter JSON on non-task rows
     const result = await execute_sqlite_query({
       query: `
         SELECT
           et.tag_base_uri,
-          COUNT(*) FILTER (
-            WHERE e.status IS NOT NULL
+          SUM(CASE
+            WHEN e.status IS NOT NULL
               AND e.status != ''
               AND e.status NOT IN ('Completed', 'Abandoned')
               AND e.archived = false
-          ) as open_count,
-          COUNT(*) FILTER (
-            WHERE e.status = 'Completed'
+            THEN 1 ELSE 0
+          END) as open_count,
+          SUM(CASE
+            WHEN e.status = 'Completed'
               AND e.finished_at_str IS NOT NULL
-              AND e.finished_at_str::TIMESTAMP >= ?::TIMESTAMP
-          ) as completed_in_period,
-          COUNT(*) FILTER (
-            WHERE e.created_at >= ?::TIMESTAMP
-          ) as created_in_period,
+              AND date(e.finished_at_str) >= ?
+            THEN 1 ELSE 0
+          END) as completed_in_period,
+          SUM(CASE
+            WHEN e.created_at >= ?
+            THEN 1 ELSE 0
+          END) as created_in_period,
           MAX(CASE
             WHEN e.status = 'Completed' AND e.finished_at_str IS NOT NULL
-            THEN e.finished_at_str::TIMESTAMP
+            THEN e.finished_at_str
             ELSE NULL
           END) as last_completed_at
         FROM entity_tags et
         JOIN (
           SELECT base_uri, status, archived, created_at,
-                 frontmatter->>'finished_at' as finished_at_str
+                 json_extract(frontmatter, '$.finished_at') as finished_at_str
           FROM entities
           WHERE type = 'task'
         ) e ON e.base_uri = et.entity_base_uri
         GROUP BY et.tag_base_uri
-        HAVING COUNT(*) FILTER (
-          WHERE e.status IS NOT NULL
+        HAVING SUM(CASE
+          WHEN e.status IS NOT NULL
             AND e.status != ''
             AND e.status NOT IN ('Completed', 'Abandoned')
             AND e.archived = false
-        ) > 0
-        ORDER BY last_completed_at ASC NULLS FIRST
+          THEN 1 ELSE 0
+        END) > 0
+        ORDER BY last_completed_at ASC
       `,
       parameters: [since_str, since_str]
     })
@@ -191,7 +195,7 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
  */
 export async function get_task_completion_series({ weeks = 52 } = {}) {
   if (!is_sqlite_initialized()) {
-    log('DuckDB not initialized, returning empty series')
+    log('SQLite not initialized, returning empty series')
     return []
   }
 
@@ -206,26 +210,26 @@ export async function get_task_completion_series({ weeks = 52 } = {}) {
       execute_sqlite_query({
         query: `
           SELECT
-            DATE_TRUNC('week', created_at) as week,
+            date(created_at, 'weekday 0', '-6 days') as week,
             COUNT(*) as created
           FROM entities
           WHERE type = 'task'
-          GROUP BY DATE_TRUNC('week', created_at)
+          GROUP BY date(created_at, 'weekday 0', '-6 days')
           ORDER BY week
         `
       }),
       execute_sqlite_query({
         query: `
           SELECT
-            DATE_TRUNC('week', finished_at_str::TIMESTAMP) as week,
+            date(finished_at_str, 'weekday 0', '-6 days') as week,
             COUNT(*) as completed
           FROM (
-            SELECT frontmatter->>'finished_at' as finished_at_str
+            SELECT json_extract(frontmatter, '$.finished_at') as finished_at_str
             FROM entities
             WHERE type = 'task' AND status = 'Completed'
           ) task_completions
           WHERE finished_at_str IS NOT NULL
-          GROUP BY DATE_TRUNC('week', finished_at_str::TIMESTAMP)
+          GROUP BY date(finished_at_str, 'weekday 0', '-6 days')
           ORDER BY week
         `
       })

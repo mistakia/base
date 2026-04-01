@@ -3,7 +3,7 @@
  *
  * Proactively maintains warm caches for public endpoints.
  * Ensures fast response times even after periods of no traffic.
- * Uses DuckDB for fast queries when available, falls back to filesystem.
+ * Uses SQLite for fast queries when available, falls back to filesystem.
  */
 
 import debug from 'debug'
@@ -88,7 +88,7 @@ export const CACHE_TTL = {
 
 /**
  * Compute fresh heatmap entries for the given number of trailing days
- * using the DuckDB fast path (git + thread activity queries).
+ * using the SQLite fast path (git + thread activity queries).
  * @param {number} days Number of days to compute
  * @returns {Promise<Object>} Heatmap data with data array, max_score, date_range
  */
@@ -108,10 +108,10 @@ async function compute_fresh_days(days) {
 
 /**
  * Warm the activity heatmap cache
- * Uses an incremental strategy when DuckDB is available:
+ * Uses an incremental strategy when SQLite is available:
  *   - Cold start (empty table): full computation + bulk insert
  *   - Incremental: read frozen past days from cache table, recompute only today + yesterday
- * Falls back to full computation when DuckDB is unavailable.
+ * Falls back to full computation when SQLite is unavailable.
  */
 async function warm_activity_cache() {
   try {
@@ -341,7 +341,7 @@ async function warm_task_stats_cache() {
 
 /**
  * Rebuild the activity heatmap from scratch.
- * Truncates the DuckDB cache table and performs a full recomputation.
+ * Truncates the SQLite cache table and performs a full recomputation.
  */
 export async function rebuild_activity_heatmap() {
   log('Rebuilding activity heatmap from scratch')

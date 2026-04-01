@@ -8,11 +8,11 @@ import {
 const log = debug('activity:task')
 
 /**
- * Aggregate task activity from DuckDB entities table
+ * Aggregate task activity from SQLite entities table
  *
  * Uses separate queries for creations and completions. The completions query
  * uses a subquery to materialize the type='task' filter before applying
- * frontmatter JSON extraction, preventing DuckDB from evaluating
+ * frontmatter JSON extraction, preventing SQLite from evaluating
  * frontmatter->>'finished_at' on non-task entity rows (which causes a
  * JSON cast error due to incompatible frontmatter structures).
  *
@@ -22,7 +22,7 @@ const log = debug('activity:task')
  */
 export async function aggregate_task_activity({ days = 365 } = {}) {
   if (!is_sqlite_initialized()) {
-    log('DuckDB not initialized, skipping task activity aggregation')
+    log('SQLite not initialized, skipping task activity aggregation')
     return []
   }
 
@@ -39,27 +39,27 @@ export async function aggregate_task_activity({ days = 365 } = {}) {
     const [creation_rows, completion_rows] = await Promise.all([
       execute_sqlite_query({
         query: `
-          SELECT CAST(created_at AS DATE) as date, COUNT(*) as count
+          SELECT date(created_at) as date, COUNT(*) as count
           FROM entities
           WHERE type = 'task' AND created_at >= ? AND created_at <= ?
-          GROUP BY CAST(created_at AS DATE)
+          GROUP BY date(created_at)
         `,
         parameters: [since_str, until_str]
       }),
       execute_sqlite_query({
         query: `
           SELECT
-            CAST(finished_at_str::TIMESTAMP AS DATE) as date,
+            date(finished_at_str) as date,
             COUNT(*) as count
           FROM (
-            SELECT frontmatter->>'finished_at' as finished_at_str
+            SELECT json_extract(frontmatter, '$.finished_at') as finished_at_str
             FROM entities
             WHERE type = 'task' AND status = 'Completed'
           ) task_completions
           WHERE finished_at_str IS NOT NULL
-            AND finished_at_str::TIMESTAMP >= ?::TIMESTAMP
-            AND finished_at_str::TIMESTAMP <= ?::TIMESTAMP
-          GROUP BY CAST(finished_at_str::TIMESTAMP AS DATE)
+            AND date(finished_at_str) >= ?
+            AND date(finished_at_str) <= ?
+          GROUP BY date(finished_at_str)
         `,
         parameters: [since_str, until_str]
       })
@@ -103,7 +103,7 @@ export async function aggregate_task_activity({ days = 365 } = {}) {
     log(`Aggregated task activity for ${result.length} days`)
     return result
   } catch (error) {
-    log(`Failed to aggregate task activity from DuckDB: ${error.message}`)
+    log(`Failed to aggregate task activity from SQLite: ${error.message}`)
     return []
   }
 }

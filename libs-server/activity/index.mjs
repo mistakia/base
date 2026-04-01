@@ -14,7 +14,7 @@ export { calculate_activity_score } from './calculate-activity-score.mjs'
 
 /**
  * Merge git and thread activity arrays and calculate scores
- * Shared logic used by both full computation and DuckDB-backed queries.
+ * Shared logic used by both full computation and SQLite-backed queries.
  *
  * @param {Object} params Parameters
  * @param {Array} params.git_activity Array of git activity entries
