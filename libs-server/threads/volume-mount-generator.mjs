@@ -1,6 +1,7 @@
 import { join, basename } from 'path'
 import { access } from 'fs/promises'
 import { constants } from 'fs'
+import { homedir } from 'os'
 import debug from 'debug'
 
 import config from '#config'
@@ -101,6 +102,27 @@ export const generate_volume_mounts = async ({
     const container_target = target || join(container_user_base_path, source)
     const mount_mode = mode === 'rw' ? 'cached' : 'ro'
     mounts.push(`${host_source}:${container_target}:${mount_mode}`)
+  }
+
+  // CloakBrowser runtime mounts (when browser.enabled is true)
+  if (thread_config.browser?.enabled) {
+    const host_home = homedir()
+    const browser_mounts = [
+      { host: join(host_home, '.local/share/cloakbrowser-venv'), mode: 'ro' },
+      { host: join(host_home, '.cloakbrowser'), mode: 'ro' },
+      { host: join(host_home, '.cloakbrowser-profiles'), mode: 'cached' },
+      { host: join(host_home, '.local/state/cloak-browser'), mode: 'cached' }
+    ]
+
+    for (const { host, mode } of browser_mounts) {
+      try {
+        await access(host, constants.F_OK)
+        mounts.push(`${host}:${host}:${mode}`)
+        log(`Browser mount: ${host} (${mode})`)
+      } catch {
+        log(`Warning: Browser path '${host}' does not exist, skipping`)
+      }
+    }
   }
 
   log(`Generated ${mounts.length} volume mounts for ${username}`)

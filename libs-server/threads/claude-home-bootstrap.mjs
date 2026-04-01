@@ -6,6 +6,8 @@ import {
   access,
   symlink,
   readlink,
+  readdir,
+  lstat,
   unlink
 } from 'fs/promises'
 import { constants } from 'fs'
@@ -357,6 +359,83 @@ const create_claude_dir_structure = async (base_dir) => {
 }
 
 /**
+ * Provision Claude Code skills into a user's claude-home directory.
+ *
+ * Copies SKILL.md files from the host's .claude/skills/ into the user's
+ * bootstrapped claude-home skills/ directory so they are discoverable
+ * by Claude Code sessions using --setting-sources user.
+ *
+ * @param {Object} params
+ * @param {Object} params.thread_config - User's thread configuration
+ * @param {string} params.user_base_directory - Host path to user-base
+ * @param {string} params.claude_home - Path to the user's claude-home directory
+ */
+export const provision_skills = async ({
+  thread_config,
+  user_base_directory,
+  claude_home
+}) => {
+  const skills_config = thread_config.skills
+  if (!skills_config || (Array.isArray(skills_config) && skills_config.length === 0)) {
+    log('No skills configured, skipping provisioning')
+    return
+  }
+
+  const host_skills_dir = join(user_base_directory, '.claude', 'skills')
+  try {
+    await access(host_skills_dir, constants.F_OK)
+  } catch {
+    log(`Skills source directory not found at ${host_skills_dir}, skipping`)
+    return
+  }
+
+  // Determine which skills to provision
+  let skill_names
+  if (skills_config === '*') {
+    const entries = await readdir(host_skills_dir)
+    skill_names = []
+    for (const entry of entries) {
+      const entry_path = join(host_skills_dir, entry)
+      const stat = await lstat(entry_path)
+      // Skip symlinks that may point to non-existent targets
+      if (stat.isSymbolicLink()) {
+        try {
+          await access(entry_path, constants.F_OK)
+        } catch {
+          log(`Skipping broken symlink: ${entry}`)
+          continue
+        }
+      }
+      if (stat.isDirectory() || stat.isSymbolicLink()) {
+        skill_names.push(entry)
+      }
+    }
+  } else if (Array.isArray(skills_config)) {
+    skill_names = skills_config
+  } else {
+    log(`Invalid skills config value: ${skills_config}, skipping`)
+    return
+  }
+
+  const target_skills_dir = join(claude_home, 'skills')
+
+  for (const name of skill_names) {
+    const source_skill_md = join(host_skills_dir, name, 'SKILL.md')
+    try {
+      await access(source_skill_md, constants.F_OK)
+    } catch {
+      log(`SKILL.md not found for skill '${name}', skipping`)
+      continue
+    }
+
+    const target_skill_dir = join(target_skills_dir, name)
+    await mkdir(target_skill_dir, { recursive: true })
+    await copyFile(source_skill_md, join(target_skill_dir, 'SKILL.md'))
+    log(`Provisioned skill: ${name}`)
+  }
+}
+
+/**
  * Bootstrap a user's claude-home directory
  *
  * Creates directory structure, copies credentials, and generates settings.
@@ -389,6 +468,17 @@ export const bootstrap_claude_home = async ({
   // Create primary directory structure
   await create_claude_dir_structure(claude_home)
   log(`Created directory structure for ${username}`)
+
+  // Provision skills (non-blocking -- failure should not prevent session startup)
+  try {
+    await provision_skills({
+      thread_config,
+      user_base_directory: config.user_base_directory,
+      claude_home
+    })
+  } catch (error) {
+    log(`Warning: skill provisioning failed for ${username}: ${error.message}`)
+  }
 
   // Copy primary credentials
   await copy_credentials_idempotent({
@@ -523,6 +613,7 @@ export const regenerate_settings = async ({
 
 export default {
   bootstrap_claude_home,
+  provision_skills,
   generate_user_settings,
   generate_deny_rules,
   refresh_credentials,

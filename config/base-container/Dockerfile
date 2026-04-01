@@ -17,6 +17,31 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip \
     && rm -rf /var/lib/apt/lists/*
 
+# Install Chromium headless dependencies for CloakBrowser
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libglib2.0-0 \
+    libnss3 \
+    libnspr4 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libdrm2 \
+    libdbus-1-3 \
+    libxkbcommon0 \
+    libx11-6 \
+    libxcomposite1 \
+    libxdamage1 \
+    libxext6 \
+    libxfixes3 \
+    libxrandr2 \
+    libgbm1 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libasound2 \
+    libexpat1 \
+    libxcb1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install Bun (required by base CLI -- all shebangs use #!/usr/bin/env bun)
 # Copy binaries to /usr/local/bin instead of symlinking from /root/.bun/
 # because /root/ is mode 700 and inaccessible to the node user via gosu
