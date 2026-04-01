@@ -130,12 +130,9 @@ async function handle_list(argv) {
 async function handle_stats(argv) {
   let exit_code = 0
   try {
-    const { query_tag_statistics_from_sqlite } = await import(
-      '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
-    )
     await embedded_index_manager.initialize()
 
-    let stats = await query_tag_statistics_from_sqlite({
+    let stats = await embedded_index_manager.query_tag_statistics({
       include_zero_count: argv['include-zero-count']
     })
 

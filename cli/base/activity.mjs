@@ -5,7 +5,6 @@
  */
 
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { query_entities_by_thread_activity } from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 import {
   parse_time_period_date,
   is_valid_time_period
@@ -124,7 +123,7 @@ async function handle_entities(argv) {
     const since_date = parse_time_period_date(period)
     await embedded_index_manager.initialize()
 
-    const entities = await query_entities_by_thread_activity({
+    const entities = await embedded_index_manager.query_entities_by_thread_activity({
       since_date,
       entity_types: argv.type || null,
       limit: argv.limit,

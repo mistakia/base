@@ -129,49 +129,6 @@ export function format_entity_thread(thread, { verbose = false } = {}) {
 }
 
 /**
- * Check if an error indicates the API server is unavailable
- *
- * @param {Error} error - Error from fetch attempt
- * @returns {boolean} True if the error indicates server is unreachable
- */
-export function is_api_unavailable(error) {
-  return (
-    error.cause?.code === 'ECONNREFUSED' ||
-    error.message.includes('ECONNREFUSED') ||
-    error.message.includes('fetch failed') ||
-    error.message.includes('Unable to connect')
-  )
-}
-
-/**
- * Output results with consistent formatting
- *
- * @param {Object[]} items - Array of items to output
- * @param {Object} options - Output options
- * @param {boolean} options.json - Output as JSON
- * @param {boolean} options.verbose - Verbose output
- * @param {Function} options.formatter - Item formatting function
- * @param {string} options.empty_message - Message when no results
- */
-/**
- * Try API call first, fall back to local function if server is unavailable
- *
- * @param {Function} api_fn - Async function calling the HTTP API
- * @param {Function} fallback_fn - Async function using direct access
- * @returns {*} Result from whichever function succeeded
- */
-export async function with_api_fallback(api_fn, fallback_fn) {
-  try {
-    return await api_fn()
-  } catch (error) {
-    if (is_api_unavailable(error)) {
-      return await fallback_fn()
-    }
-    throw error
-  }
-}
-
-/**
  * Output results with consistent formatting
  *
  * @param {Object[]} items - Array of items to output

@@ -5,7 +5,6 @@
  */
 
 import { list_entities } from '../entity-list.mjs'
-import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { format_entity, output_results, flush_and_exit } from './lib/format.mjs'
 import { query, api_get } from './lib/data-access.mjs'
 
@@ -77,8 +76,6 @@ export const handler = async (argv) => {
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
-  } finally {
-    await embedded_index_manager.shutdown()
   }
   flush_and_exit(exit_code)
 }
