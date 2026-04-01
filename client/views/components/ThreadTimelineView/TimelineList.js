@@ -5,6 +5,7 @@ import { Box } from '@mui/material'
 import TimelineEvent from './TimelineEvent'
 import CollapsibleToolGroup from './CollapsibleToolGroup'
 import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
+import SkillInvocationEvent from './SkillInvocationEvent'
 import { group_tool_entries } from './utils/group-tool-entries'
 import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
 import './Timeline.styl'
@@ -274,6 +275,16 @@ const TimelineList = ({
   const render_timeline_event = React.useCallback(
     (entry, index) => {
       const entry_key = `${entry.type}-${entry.index || index}`
+
+      if (entry.type === 'skill_invocation') {
+        return (
+          <SkillInvocationEvent
+            key={entry_key}
+            skills={entry.skills}
+            user_text={entry.user_text}
+          />
+        )
+      }
 
       if (entry.type === 'task_group') {
         return (

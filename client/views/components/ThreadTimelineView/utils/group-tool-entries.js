@@ -1,11 +1,36 @@
 import { is_displayable_system_event } from './system-event-utils.js'
+import { detect_skill_invocations } from './detect-skill-invocations.js'
 
 // Utility to group tool calls with their corresponding results
 export const group_tool_entries = (timeline_events) => {
+  // Pre-pass: detect and pair skill invocation messages
+  const { paired_indices, skill_groups } = detect_skill_invocations(timeline_events)
+
+  // Build a map of index -> skill_group for insertion at first occurrence
+  const skill_group_at_index = new Map()
+  for (const group of skill_groups) {
+    skill_group_at_index.set(group.indices[0], group)
+  }
+
   const grouped_entries = []
   const pending_tool_calls = new Map() // Track tool calls waiting for results
 
   timeline_events.forEach((timeline_event, index) => {
+    // Skip entries already paired as skill invocations
+    if (paired_indices.has(index)) {
+      // Insert skill_invocation group at the first index of each group
+      const skill_group = skill_group_at_index.get(index)
+      if (skill_group) {
+        grouped_entries.push({
+          type: 'skill_invocation',
+          timeline_event: skill_group.skills[0].command_event,
+          skills: skill_group.skills,
+          user_text: skill_group.user_text,
+          index
+        })
+      }
+      return
+    }
     if (timeline_event.type === 'message') {
       // Handle messages that might contain tool_use content blocks
       if (Array.isArray(timeline_event.content)) {
