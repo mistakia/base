@@ -146,6 +146,7 @@
     },
     "never_mount": ["config/", "identity/", "role/", "import-history/", ".git/"],
     "container_ready_timeout_ms": 60000,
-    "default_deny_bash_patterns": ["curl *", "wget *", "nc *", "ssh *", "sudo *", "docker *", "rm -rf *"]
+    "default_deny_bash_patterns": ["curl *", "wget *", "nc *", "ssh *", "sudo *", "docker *", "rm -rf *"],
+    "browser_home": ""
   }
 }

@@ -34,6 +34,7 @@ const is_safe_mount_source = (source) => {
  * @param {string} params.user_base_directory - Host path to user-base
  * @param {string} params.user_data_directory - Host path to user container data parent
  * @param {string} params.container_user_base_path - Container-internal user-base path
+ * @param {string} [params.browser_home_override] - Override browser home path (for testing)
  * @returns {Promise<string[]>} Array of Docker volume mount strings (host:container:mode)
  */
 export const generate_volume_mounts = async ({
@@ -42,7 +43,8 @@ export const generate_volume_mounts = async ({
   user_base_directory,
   user_data_directory,
   container_user_base_path,
-  accounts_config = config.claude_accounts
+  accounts_config = config.claude_accounts,
+  browser_home_override
 }) => {
   if (!container_user_base_path) {
     throw new Error(
@@ -106,7 +108,8 @@ export const generate_volume_mounts = async ({
 
   // CloakBrowser runtime mounts (when browser.enabled is true)
   if (thread_config.browser?.enabled) {
-    const host_home = homedir()
+    const user_containers_config = config.user_containers || {}
+    const host_home = browser_home_override || user_containers_config.browser_home || homedir()
     const browser_mounts = [
       { host: join(host_home, '.local/share/cloakbrowser-venv'), mode: 'ro' },
       { host: join(host_home, '.cloakbrowser'), mode: 'ro' },

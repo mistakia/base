@@ -7,6 +7,7 @@ import {
   generate_user_settings,
   generate_deny_rules,
   bootstrap_claude_home,
+  provision_skills,
   NEVER_MOUNT_DIRS
 } from '#libs-server/threads/claude-home-bootstrap.mjs'
 
@@ -444,6 +445,140 @@ describe('claude-home-bootstrap', () => {
       } catch (error) {
         expect(error.message).to.include('credentials not found')
       }
+    })
+  })
+
+  describe('provision_skills', () => {
+    let tmp_dir
+    let user_base_directory
+    let claude_home
+
+    beforeEach(async () => {
+      tmp_dir = await mkdtemp(join(tmpdir(), 'skills-test-'))
+      user_base_directory = join(tmp_dir, 'user-base')
+      claude_home = join(tmp_dir, 'claude-home')
+
+      // Create skills source directory with test skills
+      const skills_dir = join(user_base_directory, '.claude', 'skills')
+      await mkdir(join(skills_dir, 'skill-a'), { recursive: true })
+      await writeFile(join(skills_dir, 'skill-a', 'SKILL.md'), '---\nname: skill-a\n---')
+      await mkdir(join(skills_dir, 'skill-b'), { recursive: true })
+      await writeFile(join(skills_dir, 'skill-b', 'SKILL.md'), '---\nname: skill-b\n---')
+      // Skill without SKILL.md
+      await mkdir(join(skills_dir, 'skill-empty'), { recursive: true })
+
+      // Create claude-home target
+      await mkdir(claude_home, { recursive: true })
+    })
+
+    it('should provision all skills with wildcard string', async () => {
+      await provision_skills({
+        thread_config: { skills: '*' },
+        user_base_directory,
+        claude_home
+      })
+
+      const skill_a = await readFile(join(claude_home, 'skills', 'skill-a', 'SKILL.md'), 'utf-8')
+      expect(skill_a).to.include('skill-a')
+
+      const skill_b = await readFile(join(claude_home, 'skills', 'skill-b', 'SKILL.md'), 'utf-8')
+      expect(skill_b).to.include('skill-b')
+    })
+
+    it('should provision all skills with array wildcard ["*"]', async () => {
+      await provision_skills({
+        thread_config: { skills: ['*'] },
+        user_base_directory,
+        claude_home
+      })
+
+      const skill_a_exists = await access(join(claude_home, 'skills', 'skill-a', 'SKILL.md'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skill_a_exists).to.be.true
+    })
+
+    it('should provision only named skills from explicit array', async () => {
+      await provision_skills({
+        thread_config: { skills: ['skill-a'] },
+        user_base_directory,
+        claude_home
+      })
+
+      const skill_a_exists = await access(join(claude_home, 'skills', 'skill-a', 'SKILL.md'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skill_a_exists).to.be.true
+
+      const skill_b_exists = await access(join(claude_home, 'skills', 'skill-b', 'SKILL.md'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skill_b_exists).to.be.false
+    })
+
+    it('should skip skills with missing SKILL.md', async () => {
+      await provision_skills({
+        thread_config: { skills: ['skill-empty'] },
+        user_base_directory,
+        claude_home
+      })
+
+      const dir_exists = await access(join(claude_home, 'skills', 'skill-empty'))
+        .then(() => true)
+        .catch(() => false)
+      expect(dir_exists).to.be.false
+    })
+
+    it('should skip when skills config is absent', async () => {
+      await provision_skills({
+        thread_config: {},
+        user_base_directory,
+        claude_home
+      })
+
+      const skills_dir_exists = await access(join(claude_home, 'skills'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skills_dir_exists).to.be.false
+    })
+
+    it('should skip when skills config is empty array', async () => {
+      await provision_skills({
+        thread_config: { skills: [] },
+        user_base_directory,
+        claude_home
+      })
+
+      const skills_dir_exists = await access(join(claude_home, 'skills'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skills_dir_exists).to.be.false
+    })
+
+    it('should skip when skills source directory does not exist', async () => {
+      await provision_skills({
+        thread_config: { skills: '*' },
+        user_base_directory: join(tmp_dir, 'nonexistent'),
+        claude_home
+      })
+
+      const skills_dir_exists = await access(join(claude_home, 'skills'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skills_dir_exists).to.be.false
+    })
+
+    it('should skip invalid skills config values', async () => {
+      await provision_skills({
+        thread_config: { skills: 123 },
+        user_base_directory,
+        claude_home
+      })
+
+      const skills_dir_exists = await access(join(claude_home, 'skills'))
+        .then(() => true)
+        .catch(() => false)
+      expect(skills_dir_exists).to.be.false
     })
   })
 

@@ -136,6 +136,33 @@ properties:
               get, search, thread list) are allowed.
             items:
               type: string
+      - name: skills
+        type: array
+        required: false
+        description: >-
+          Claude Code skills to provision into the user's claude-home. Set to ["*"] for all
+          skills or an explicit list of skill names. When absent, no skills are provisioned.
+        items:
+          type: string
+      - name: browser
+        type: object
+        required: false
+        description: >-
+          CloakBrowser runtime configuration. When enabled, mounts host CloakBrowser
+          infrastructure (venv, Chromium, profiles, daemon state) and sets PYTHONPATH.
+        properties:
+          - name: enabled
+            type: boolean
+            required: false
+            description: Whether to mount CloakBrowser runtime. Default false
+          - name: container_python_version
+            type: string
+            required: false
+            description: Container system Python version for PYTHONPATH. Default '3.11'
+          - name: venv_python_version
+            type: string
+            required: false
+            description: Host venv Python version for PYTHONPATH. Default '3.12'
   - name: rules
     type: array
     required: false
@@ -216,6 +243,8 @@ Identities with `permissions.create_threads: true` can have a `thread_config` ob
 Tool availability is controlled via `tools` (allowlist), `disallowed_tools` (denylist), and `permission_mode`. Working directories are derived from `rw` mounts rather than configured separately.
 
 The `base_cli` sub-config controls whether the base CLI is available in user containers. When enabled, the base submodule is mounted read-only and write operations are blocked by default.
+
+The `skills` array controls which Claude Code skills are provisioned into the user's claude-home directory during bootstrap. The `browser` sub-config enables CloakBrowser runtime access by mounting host infrastructure and injecting `CLOAKBROWSER_HOME` and `PYTHONPATH` environment variables.
 
 ## Special Identities
 

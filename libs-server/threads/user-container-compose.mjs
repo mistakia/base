@@ -81,7 +81,8 @@ export const generate_compose_config = async ({
   // to find profiles, daemon state, and venv. PYTHONPATH provides the mounted
   // venv packages with system greenlet (native C ext) taking precedence.
   if (thread_config.browser?.enabled) {
-    const host_home = homedir()
+    const browser_home_config = (config.user_containers || {}).browser_home
+    const host_home = browser_home_config || homedir()
     const browser_config = thread_config.browser
     const container_python_version = browser_config.container_python_version || '3.11'
     const venv_python_version = browser_config.venv_python_version || '3.12'

@@ -195,6 +195,78 @@ describe('volume-mount-generator', () => {
     })
   })
 
+  describe('browser mounts', () => {
+    it('should add browser mounts when browser.enabled is true', async () => {
+      // Create mock browser paths in a tmp location
+      const browser_tmp = await mkdtemp(join(tmpdir(), 'browser-mount-test-'))
+      await mkdir(join(browser_tmp, '.local/share/cloakbrowser-venv'), { recursive: true })
+      await mkdir(join(browser_tmp, '.cloakbrowser'), { recursive: true })
+      await mkdir(join(browser_tmp, '.cloakbrowser-profiles'), { recursive: true })
+      await mkdir(join(browser_tmp, '.local/state/cloak-browser'), { recursive: true })
+
+      const thread_config = {
+        mounts: [],
+        browser: { enabled: true }
+      }
+
+      const mounts = await generate_volume_mounts({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null,
+        browser_home_override: browser_tmp
+      })
+
+      // claude-home + 4 browser mounts
+      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      expect(browser_mounts).to.have.lengthOf(4)
+
+      const venv_mount = browser_mounts.find((m) => m.includes('cloakbrowser-venv'))
+      expect(venv_mount).to.include(':ro')
+
+      const profiles_mount = browser_mounts.find((m) => m.includes('cloakbrowser-profiles'))
+      expect(profiles_mount).to.include(':cached')
+    })
+
+    it('should not add browser mounts when browser is absent', async () => {
+      const thread_config = { mounts: [] }
+
+      const mounts = await generate_volume_mounts({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null
+      })
+
+      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      expect(browser_mounts).to.have.lengthOf(0)
+    })
+
+    it('should skip browser paths that do not exist on host', async () => {
+      const thread_config = {
+        mounts: [],
+        browser: { enabled: true }
+      }
+
+      const mounts = await generate_volume_mounts({
+        username: 'testuser',
+        thread_config,
+        user_base_directory,
+        user_data_directory,
+        container_user_base_path: CONTAINER_USER_BASE_PATH,
+        accounts_config: null,
+        browser_home_override: '/nonexistent/path'
+      })
+
+      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      expect(browser_mounts).to.have.lengthOf(0)
+    })
+  })
+
   describe('get_allowed_working_directories', () => {
     it('should derive directories from rw mounts only', () => {
       const thread_config = {
