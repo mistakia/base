@@ -27,7 +27,7 @@ export const builder = (yargs) =>
       type: 'boolean',
       default: false
     })
-    .option('version', {
+    .option('target-version', {
       describe: 'Install a specific version (e.g., v1.0.0)',
       type: 'string'
     })
@@ -192,7 +192,7 @@ export const handler = async (argv) => {
   )
 
   // Check for updates
-  const version_tag = argv.version
+  const version_tag = argv.targetVersion
   const remote_version = await fetch_remote_version(version_tag)
 
   if (!remote_version) {
