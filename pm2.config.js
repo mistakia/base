@@ -134,7 +134,7 @@ const machine_services = machine_config.services || [
 ]
 
 const all_defined_apps = [
-  app('base-api', 'services/server.mjs', {
+  app('base-api', 'services/server-pm2.cjs', {
     watch: ['build/bundle-manifest.json'],
     watch_delay: 1000,
     ignore_watch: ['node_modules', 'logs', 'tmp'],
