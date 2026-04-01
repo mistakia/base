@@ -41,7 +41,7 @@ const getArg = (name, defaultValue) => {
   return args[index + 1] || defaultValue
 }
 
-const config = {
+const options = {
   batchSize: parseInt(getArg('batch-size', '5'), 10),
   delayMs: parseInt(getArg('delay', '1000'), 10),
   dryRun: getArg('dry-run', false),
@@ -53,7 +53,7 @@ const config = {
   help: getArg('help', false) || getArg('h', false)
 }
 
-if (config.help) {
+if (options.help) {
   console.log(`
 Batch backfill thread relations for all existing threads
 
@@ -126,7 +126,7 @@ async function findThreadsNeedingAnalysis() {
         if (metadata.relations_analyzed_at) {
           stats.already_analyzed++
           // Skip if not forcing re-analysis
-          if (!config.force) {
+          if (!options.force) {
             continue
           }
         }
@@ -138,7 +138,7 @@ async function findThreadsNeedingAnalysis() {
           updated_at: metadata.updated_at
         })
       } catch (err) {
-        if (config.verbose) {
+        if (options.verbose) {
           console.error(
             `  Warning: Could not read ${metadataPath}: ${err.message}`
           )
@@ -209,7 +209,7 @@ async function findThreadsNeedingEntityUpdate() {
           relation_count: entityRelations.length
         })
       } catch (err) {
-        if (config.verbose) {
+        if (options.verbose) {
           console.error(
             `  Warning: Could not read ${metadataPath}: ${err.message}`
           )
@@ -318,35 +318,35 @@ function printProgress(current, total) {
  * Main execution
  */
 async function main() {
-  const modeLabel = config.updateEntities
+  const modeLabel = options.updateEntities
     ? 'Entity Back-Reference Update'
     : 'Thread Relations Backfill'
   console.log(`\n=== ${modeLabel} ===\n`)
   console.log(`Configuration:`)
   console.log(
-    `  Mode: ${config.updateEntities ? 'update-entities' : 'analyze'}`
+    `  Mode: ${options.updateEntities ? 'update-entities' : 'analyze'}`
   )
-  console.log(`  Batch size: ${config.batchSize}`)
-  console.log(`  Delay between batches: ${config.delayMs}ms`)
-  console.log(`  Dry run: ${config.dryRun}`)
-  console.log(`  Force re-analysis: ${config.force}`)
-  console.log(`  Sync to KuzuDB: ${config.syncKuzu}`)
-  console.log(`  Limit: ${config.limit || 'unlimited'}`)
+  console.log(`  Batch size: ${options.batchSize}`)
+  console.log(`  Delay between batches: ${options.delayMs}ms`)
+  console.log(`  Dry run: ${options.dryRun}`)
+  console.log(`  Force re-analysis: ${options.force}`)
+  console.log(`  Sync to KuzuDB: ${options.syncKuzu}`)
+  console.log(`  Limit: ${options.limit || 'unlimited'}`)
   console.log('')
 
   // Find threads based on mode
-  const scanMessage = config.updateEntities
+  const scanMessage = options.updateEntities
     ? 'Scanning for threads needing entity back-references...'
     : 'Scanning for threads needing analysis...'
   console.log(scanMessage)
 
-  let threadsToProcess = config.updateEntities
+  let threadsToProcess = options.updateEntities
     ? await findThreadsNeedingEntityUpdate()
     : await findThreadsNeedingAnalysis()
 
   // Apply limit if specified
-  if (config.limit > 0) {
-    threadsToProcess = threadsToProcess.slice(0, config.limit)
+  if (options.limit > 0) {
+    threadsToProcess = threadsToProcess.slice(0, options.limit)
   }
 
   stats.to_process = threadsToProcess.length
@@ -363,14 +363,14 @@ async function main() {
   // Process in batches
   console.log('Processing threads...\n')
 
-  for (let i = 0; i < threadsToProcess.length; i += config.batchSize) {
-    const batch = threadsToProcess.slice(i, i + config.batchSize)
+  for (let i = 0; i < threadsToProcess.length; i += options.batchSize) {
+    const batch = threadsToProcess.slice(i, i + options.batchSize)
 
     // Process batch in parallel
     const promises = batch.map(async (thread) => {
       const result = await processThread(thread.thread_id, {
-        dryRun: config.dryRun,
-        force: config.force || config.updateEntities // Force re-analysis in update mode or when explicit
+        dryRun: options.dryRun,
+        force: options.force || options.updateEntities // Force re-analysis in update mode or when explicit
       })
 
       stats.processed++
@@ -407,8 +407,8 @@ async function main() {
     printProgress(stats.processed, stats.to_process)
 
     // Delay between batches (unless last batch)
-    if (i + config.batchSize < threadsToProcess.length) {
-      await sleep(config.delayMs)
+    if (i + options.batchSize < threadsToProcess.length) {
+      await sleep(options.delayMs)
     }
   }
 
@@ -425,7 +425,7 @@ async function main() {
   console.log(`  - Errors: ${stats.errors}`)
   console.log(`Total relations: ${stats.total_relations}`)
   if (
-    config.updateEntities ||
+    options.updateEntities ||
     stats.back_refs_added > 0 ||
     stats.back_refs_skipped > 0
   ) {
@@ -439,7 +439,7 @@ async function main() {
     `Average: ${stats.processed > 0 ? (elapsed / stats.processed).toFixed(0) : 0}ms per thread`
   )
 
-  if (config.dryRun) {
+  if (options.dryRun) {
     console.log('\n[DRY RUN] No changes were made')
   }
 
