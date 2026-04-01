@@ -211,7 +211,8 @@ async function handle_thread_list_request({
     tags
   })
 
-  // Normalize to API format
+  // Normalize to API format (in fallback mode, filesystem objects lack token
+  // counts and cost data -- normalize_sqlite_thread coerces these to null/0)
   const normalized_threads = result_threads.map((thread) =>
     normalize_sqlite_thread(thread, models_data)
   )

@@ -205,6 +205,9 @@ router.get('/', async (req, res) => {
     })
   } catch (error) {
     log('Error querying entities: %s', error.message)
+    if (error.message?.startsWith('Index not available')) {
+      return res.status(503).send({ error: 'Database not available' })
+    }
     res.status(500).send({ error: error.message })
   }
 })
@@ -253,6 +256,9 @@ router.get('/threads', async (req, res) => {
     })
   } catch (error) {
     log('Error querying entity threads: %s', error.message)
+    if (error.message?.startsWith('Index not available')) {
+      return res.status(503).send({ error: 'Database not available' })
+    }
     res.status(500).send({ error: error.message })
   }
 })
@@ -348,6 +354,9 @@ router.get('/relations', async (req, res) => {
     })
   } catch (error) {
     log('Error querying relations: %s', error.message)
+    if (error.message?.startsWith('Index not available')) {
+      return res.status(503).send({ error: 'Database not available' })
+    }
     res.status(500).send({ error: error.message })
   }
 })

@@ -67,6 +67,9 @@ router.get('/:token', async (req, res) => {
     return res.status(404).json({ error: 'Shared resource not found' })
   } catch (error) {
     log('Error resolving share link: %s', error.message)
+    if (error.message?.startsWith('Index not available')) {
+      return res.status(503).json({ error: 'Database not available' })
+    }
     return res.status(500).json({ error: 'Failed to resolve share link' })
   }
 })

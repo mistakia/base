@@ -875,30 +875,23 @@ class EmbeddedIndexManager {
 
   /**
    * Execute a backend query method with automatic fallback.
-   * If the backend is ready, delegates to it. On failure or unavailability,
-   * falls back to the filesystem fallback if one is registered.
+   * Always tries the backend first (the database may be available even if
+   * the manager was not formally initialized). On failure, falls back to
+   * the filesystem fallback if one is registered.
    * @param {string} method - Backend method name
    * @param {Object} params - Parameters to pass
    * @returns {Promise<*>} Query result
    */
   async _query_with_fallback(method, params) {
-    if (this.is_ready()) {
-      try {
-        return await this._backend[method](params)
-      } catch (error) {
-        log('Backend %s failed: %s', method, error.message)
-        if (this._fallbacks[method]) {
-          return this._fallbacks[method](params)
-        }
-        throw error
+    try {
+      return await this._backend[method](params)
+    } catch (error) {
+      log('Backend %s failed: %s', method, error.message)
+      if (this._fallbacks[method]) {
+        return this._fallbacks[method](params)
       }
+      throw error
     }
-
-    if (this._fallbacks[method]) {
-      return this._fallbacks[method](params)
-    }
-
-    throw new Error(`Index not available and no fallback registered for ${method}`)
   }
 
   /**
@@ -1015,7 +1008,7 @@ class EmbeddedIndexManager {
   }
 
   async query_tasks_for_activity(params) {
-    return this._query_index_only('query_tasks_for_activity', params)
+    return this._query_with_fallback('query_tasks_for_activity', params)
   }
 
   // Embedding queries (no fallback)

@@ -446,7 +446,9 @@ export async function process_task_table_request({
   })
 
   try {
-    // Try indexed query first (manager handles backend delegation)
+    // Try indexed query first (manager handles routine index-down via
+    // _query_with_fallback; this outer catch handles unexpected errors
+    // like database corruption or normalization failures)
     try {
       return await process_task_table_request_indexed({
         table_state,
@@ -454,7 +456,7 @@ export async function process_task_table_request({
       })
     } catch (index_error) {
       log(
-        'Indexed query failed, falling back to filesystem table processing: %s',
+        'Indexed task query failed unexpectedly, falling back to filesystem table processing: %s',
         index_error.message
       )
     }

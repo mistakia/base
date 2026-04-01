@@ -8,7 +8,6 @@
 
 import { authenticated_fetch } from './auth.mjs'
 import { SERVER_URL } from './format.mjs'
-import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 /**
  * Check if an error indicates the API server is unavailable
@@ -142,25 +141,3 @@ export async function api_mutate(path, method, body) {
   return response.json()
 }
 
-/**
- * Execute an index-backed query using the detected backend.
- * If backend is 'api', calls the API endpoint. Otherwise, initializes the
- * embedded index manager and delegates to the named manager method.
- *
- * Callers must still call `embedded_index_manager.shutdown()` in their
- * finally block when using this method.
- *
- * @param {string} manager_method - Manager method name (e.g., 'find_threads_relating_to')
- * @param {Object} params - Parameters passed to both api_get and manager method
- * @param {string} api_path - API endpoint path (e.g., '/api/entities/threads')
- * @returns {Promise<any>}
- */
-export async function index_query(manager_method, params, api_path) {
-  return query(
-    () => api_get(api_path, params),
-    async () => {
-      await embedded_index_manager.initialize()
-      return embedded_index_manager[manager_method](params)
-    }
-  )
-}

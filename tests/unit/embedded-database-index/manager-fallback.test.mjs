@@ -108,14 +108,15 @@ describe('Embedded Index Manager Fallback', function () {
     })
 
     describe('methods without registered fallbacks', () => {
-      it('should throw when no fallback is registered for the method', async () => {
+      it('should rethrow backend error when no fallback is registered', async () => {
         manager._fallbacks = {} // Empty fallbacks
 
         try {
           await manager.query_threads({})
           expect.fail('Should have thrown')
         } catch (error) {
-          expect(error.message).to.include('no fallback registered')
+          // Backend error is rethrown since no fallback exists
+          expect(error).to.be.an('error')
         }
       })
     })

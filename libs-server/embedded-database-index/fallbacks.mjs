@@ -9,7 +9,7 @@
 
 import debug from 'debug'
 
-import list_threads from '#libs-server/threads/list-threads.mjs'
+import list_threads, { list_thread_ids } from '#libs-server/threads/list-threads.mjs'
 import { list_tasks_from_filesystem } from '#libs-server/task/index.mjs'
 import { list_physical_items_from_filesystem } from '#libs-server/physical-items/list-physical-items-from-filesystem.mjs'
 
@@ -46,7 +46,8 @@ async function query_threads({ filters = [], limit = 50, offset = 0 } = {}) {
 
 /**
  * Count threads from filesystem.
- * Returns total count by listing without pagination.
+ * Uses lightweight directory listing when no filters are applied,
+ * otherwise falls back to full metadata loading.
  */
 async function count_threads({ filters = [] } = {}) {
   log('Falling back to filesystem for thread count')
@@ -54,10 +55,17 @@ async function count_threads({ filters = [] } = {}) {
   const user_public_key = get_filter_value(filters, 'user_public_key')
   const thread_state = get_filter_value(filters, 'thread_state')
 
+  // Fast path: no filters, just count directories
+  if (!user_public_key && !thread_state) {
+    const ids = await list_thread_ids()
+    return ids.length
+  }
+
+  // Filtered count requires loading metadata
   const all = await list_threads({
     user_public_key,
     thread_state,
-    limit: Infinity,
+    limit: 10000,
     offset: 0
   })
   return all.length
@@ -89,6 +97,15 @@ async function count_tasks({ filters = [] } = {}) {
 }
 
 /**
+ * Query tasks for activity from filesystem.
+ * Accepts the same params as the SQLite query_tasks_for_activity backend method.
+ */
+async function query_tasks_for_activity({ archived = false } = {}) {
+  log('Falling back to filesystem for task activity query')
+  return list_tasks_from_filesystem({ archived })
+}
+
+/**
  * Query physical items from filesystem.
  */
 async function query_physical_items() {
@@ -109,6 +126,7 @@ const fallbacks = {
   count_threads,
   query_tasks,
   count_tasks,
+  query_tasks_for_activity,
   query_physical_items,
   count_physical_items
 }

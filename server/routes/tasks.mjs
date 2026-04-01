@@ -466,15 +466,22 @@ async function handle_task_list_request(
       tag_entity_ids || organization_ids || person_ids
 
     if (!has_unsupported_filters) {
-      log('Using embedded index for authenticated task query')
-      const result = await handle_task_list_request_indexed(
-        filter_params,
-        archived,
-        user_public_key,
-        limit,
-        offset
-      )
-      return res.status(200).send(result)
+      try {
+        log('Using embedded index for authenticated task query')
+        const result = await handle_task_list_request_indexed(
+          filter_params,
+          archived,
+          user_public_key,
+          limit,
+          offset
+        )
+        return res.status(200).send(result)
+      } catch (error) {
+        log(
+          'Indexed task query failed, falling back to filesystem: %s',
+          error.message
+        )
+      }
     }
   }
 

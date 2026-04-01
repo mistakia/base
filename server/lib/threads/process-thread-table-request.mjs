@@ -62,6 +62,7 @@ export function normalize_sqlite_thread(thread, models_data) {
     source_provider: thread.source_provider || null,
     inference_provider: thread.inference_provider,
     primary_model: thread.primary_model,
+    models: thread.models || (thread.primary_model ? [thread.primary_model] : []),
 
     // Working directory
     working_directory: thread.working_directory,
@@ -359,7 +360,9 @@ export async function process_thread_table_request({
   })
 
   try {
-    // Try indexed query first (manager handles fallback to filesystem)
+    // Try indexed query first (manager handles routine index-down via
+    // _query_with_fallback; this outer catch handles unexpected errors
+    // like database corruption or normalization failures)
     try {
       return await process_thread_table_request_indexed({
         table_state,
@@ -367,7 +370,7 @@ export async function process_thread_table_request({
       })
     } catch (index_error) {
       log(
-        'Indexed query failed, falling back to filesystem table processing: %s',
+        'Indexed thread query failed unexpectedly, falling back to filesystem table processing: %s',
         index_error.message
       )
     }

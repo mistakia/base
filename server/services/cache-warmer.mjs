@@ -18,8 +18,6 @@ import {
   get_task_stats_by_tag,
   get_task_completion_series
 } from '#libs-server/activity/task-stats.mjs'
-import { list_tasks_from_filesystem } from '#libs-server/task/index.mjs'
-
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 const log = debug('server:cache-warmer')
@@ -265,19 +263,9 @@ async function warm_tasks_cache() {
   try {
     log('Warming tasks cache')
 
-    let all_tasks
-    if (embedded_index_manager.is_ready()) {
-      try {
-        all_tasks = await embedded_index_manager.query_tasks_for_activity({
-          archived: false
-        })
-      } catch (error) {
-        log('Index task query failed, falling back: %s', error.message)
-        all_tasks = await list_tasks_from_filesystem({ archived: false })
-      }
-    } else {
-      all_tasks = await list_tasks_from_filesystem({ archived: false })
-    }
+    const all_tasks = await embedded_index_manager.query_tasks_for_activity({
+      archived: false
+    })
 
     // Normalize to nested entity format (SQLite returns flat rows)
     const normalized = all_tasks.map(normalize_sqlite_task)
