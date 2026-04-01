@@ -148,6 +148,31 @@ When an `allow` rule grants access to a nested path, parent directories are impl
 }
 ```
 
+### 2.4 Tag-Based Permission Rules
+
+Tag rules provide category-level access control based on resource tags, complementing path-based rules.
+
+**Tag Rule Structure:**
+
+```javascript
+{
+  "action": "allow" | "deny",
+  "tag": "user:tag/league-xo-football.md",  // Exact tag base_uri (no globs)
+  "pattern": "user:thread/**",              // Optional resource path scope
+  "reason": "grant access to league threads" // Optional
+}
+```
+
+**Evaluation:**
+
+- Tag rules are evaluated after path rules and before `public_read`
+- First matching tag rule wins (same as path rules)
+- Returns `null` (fallthrough) when no rules match, unlike path rules which default deny
+- `tag` field uses exact string matching against the resource's tags array
+- Optional `pattern` field scopes which resource types the tag rule applies to
+
+**Use Case:** Threads tagged with `user:tag/league-xo-football.md` are automatically accessible to users with the `league-xo-football` role, eliminating manual thread ID whitelisting.
+
 ## 3. Permission Decision Flow
 
 ### 3.1 Read Permission Priority
@@ -159,24 +184,41 @@ Read permissions are checked in this order (first match wins):
    - If `user_public_key === resource.owner_public_key` → ALLOW
    - Reason: "User is owner of the resource"
 
-2. **User-Specific Rules** (authenticated users only)
+2. **Share Token** (if provided)
 
-   - Load user's rules from `users.json`
-   - Evaluate rules using rule engine
+   - Verify token against resource entity_id
+   - If valid → ALLOW
+
+3. **User-Specific Path Rules** (authenticated users only)
+
+   - Load user's rules from identity and roles
+   - Evaluate rules using rule engine (picomatch patterns)
    - If match found → use rule's action (allow/deny)
 
-3. **Explicit public_read Setting**
+4. **User-Specific Tag Rules** (authenticated users only)
+
+   - Load user's tag_rules from identity and roles
+   - Evaluate tag rules against resource tags
+   - If match found → use rule's action (allow/deny)
+
+5. **Explicit public_read Setting**
 
    - If `public_read === true` → ALLOW ("Resource has public_read explicitly enabled")
    - If `public_read === false` → DENY ("Resource has public_read explicitly disabled")
 
-4. **Public User Rules** (fallback)
+6. **Public User Path Rules** (fallback)
 
    - Load rules for the "public" user entry
    - Evaluate rules using rule engine
    - If match found → use rule's action
 
-5. **Default** → DENY ("No matching permission rules")
+7. **Public User Tag Rules** (fallback)
+
+   - Load tag_rules for the "public" user entry
+   - Evaluate tag rules against resource tags
+   - If match found → use rule's action
+
+8. **Default** → DENY ("No matching permission rules")
 
 ### 3.2 Write Permission Priority
 
@@ -1052,6 +1094,10 @@ rules:
   - action: deny
     pattern: 'user:private/**'
     reason: private content
+tag_rules:
+  - action: allow
+    tag: user:tag/league-xo-football.md
+    reason: grant access to all league-tagged resources
 ---
 ```
 
@@ -1061,6 +1107,12 @@ rules:
 | ------- | ----- | -------------------------------- |
 | `rules` | array | Array of permission rule objects |
 
+**Optional Fields:**
+
+| Field        | Type  | Description                                |
+| ------------ | ----- | ------------------------------------------ |
+| `tag_rules`  | array | Array of tag-based permission rule objects |
+
 **Rule Object Structure:**
 
 | Field     | Type   | Required | Description                          |
@@ -1068,6 +1120,15 @@ rules:
 | `action`  | string | Yes      | `allow` or `deny`                    |
 | `pattern` | string | Yes      | Glob pattern or `is_owner`           |
 | `reason`  | string | No       | Human-readable reason for deny rules |
+
+**Tag Rule Object Structure:**
+
+| Field     | Type   | Required | Description                                  |
+| --------- | ------ | -------- | -------------------------------------------- |
+| `action`  | string | Yes      | `allow` or `deny`                            |
+| `tag`     | string | Yes      | Base URI of tag entity (exact match)         |
+| `pattern` | string | No       | Resource path glob to scope the rule         |
+| `reason`  | string | No       | Human-readable reason                        |
 
 **Common Roles:**
 

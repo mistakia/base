@@ -13,6 +13,7 @@ const log = debug('permission:resource-metadata')
  * @property {string|null} owner_public_key - Owner's public key or null if unknown
  * @property {{explicit: boolean, value: boolean}} public_read - Public read status
  * @property {'thread'|'entity'|'file'} resource_type - Type of resource
+ * @property {string[]} tags - Array of tag base_uris assigned to the resource
  * @property {Object} raw - Original metadata for callers needing full data
  */
 
@@ -58,6 +59,7 @@ export const load_thread_metadata = async ({ thread_id }) => {
     return {
       owner_public_key: extract_owner_public_key(raw),
       public_read: extract_public_read(raw),
+      tags: raw?.tags || [],
       resource_type: 'thread',
       raw
     }
@@ -108,6 +110,7 @@ export const load_entity_metadata = async ({ resource_path }) => {
     return {
       owner_public_key: extract_owner_public_key(raw),
       public_read: extract_public_read(raw),
+      tags: raw?.tags || [],
       resource_type: 'entity',
       raw
     }

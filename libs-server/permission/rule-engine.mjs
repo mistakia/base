@@ -147,6 +147,64 @@ export const evaluate_permission_rules = async ({
 }
 
 /**
+ * Evaluates tag-based permission rules against a resource's tags
+ *
+ * Unlike evaluate_permission_rules which returns default deny, this function
+ * returns null when no rules match to signal fallthrough to the next priority level.
+ *
+ * @param {Object} params - Parameters for tag rule evaluation
+ * @param {Array} params.tag_rules - Array of tag permission rules to evaluate
+ * @param {string} params.resource_path - Base-URI path of the resource being accessed
+ * @param {string[]} params.resource_tags - Array of tag base_uris assigned to the resource
+ * @returns {Object|null} Evaluation result with allowed/denied status and matching rule, or null if no rules match
+ */
+export const evaluate_tag_rules = ({ tag_rules, resource_path, resource_tags }) => {
+  log(
+    `Evaluating tag rules for path: ${resource_path}, tags: [${(resource_tags || []).join(', ')}]`
+  )
+
+  if (!tag_rules || !Array.isArray(tag_rules) || tag_rules.length === 0) {
+    log('No tag rules provided, returning null (fallthrough)')
+    return null
+  }
+
+  if (!resource_tags || !Array.isArray(resource_tags) || resource_tags.length === 0) {
+    log('No resource tags, returning null (fallthrough)')
+    return null
+  }
+
+  for (const rule of tag_rules) {
+    if (!rule.tag || !rule.action) {
+      log(`Skipping invalid tag rule: ${JSON.stringify(rule)}`)
+      continue
+    }
+
+    // If pattern is specified, check resource_path matches
+    if (rule.pattern) {
+      const pattern_matcher = picomatch(rule.pattern)
+      if (!pattern_matcher(resource_path)) {
+        continue
+      }
+    }
+
+    // Check if the rule's tag is in the resource's tags (exact string match)
+    if (resource_tags.includes(rule.tag)) {
+      log(
+        `Tag rule matched: tag=${rule.tag}, pattern=${rule.pattern || '*'} -> ${rule.action}`
+      )
+      return {
+        allowed: rule.action === 'allow',
+        reason: `${rule.action} by tag rule: ${rule.tag}`,
+        matching_rule: rule
+      }
+    }
+  }
+
+  log('No matching tag rules, returning null (fallthrough)')
+  return null
+}
+
+/**
  * Validates a permission rule structure
  *
  * @param {Object} rule - Rule to validate

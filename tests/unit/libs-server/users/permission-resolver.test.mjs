@@ -5,6 +5,7 @@ import os from 'os'
 
 import {
   resolve_user_rules,
+  resolve_user_tag_rules,
   get_identity_permissions,
   convert_identity_to_user
 } from '#libs-server/users/permission-resolver.mjs'
@@ -308,6 +309,126 @@ describe('permission-resolver', function () {
 
       expect(result.permissions.rules).to.have.lengthOf(1)
       expect(result.permissions.rules[0].source).to.equal('role')
+    })
+  })
+
+  describe('resolve_user_tag_rules', () => {
+    it('should return empty array for null identity', async () => {
+      const result = await resolve_user_tag_rules({ identity: null })
+      expect(result).to.be.an('array')
+      expect(result).to.have.lengthOf(0)
+    })
+
+    it('should return empty array when identity has no tag_rules and no roles', async () => {
+      const identity = {
+        username: 'testuser',
+        base_uri: 'user:identity/testuser.md'
+      }
+      const result = await resolve_user_tag_rules({ identity })
+      expect(result).to.be.an('array')
+      expect(result).to.have.lengthOf(0)
+    })
+
+    it('should collect identity tag_rules with source metadata', async () => {
+      const identity = {
+        username: 'testuser',
+        base_uri: 'user:identity/testuser.md',
+        tag_rules: [
+          { action: 'allow', tag: 'user:tag/league.md' },
+          { action: 'deny', tag: 'user:tag/sensitive.md' }
+        ]
+      }
+
+      const result = await resolve_user_tag_rules({ identity })
+
+      expect(result).to.have.lengthOf(2)
+      expect(result[0].action).to.equal('allow')
+      expect(result[0].tag).to.equal('user:tag/league.md')
+      expect(result[0].source).to.equal('identity')
+      expect(result[0].source_uri).to.equal('user:identity/testuser.md')
+      expect(result[1].source).to.equal('identity')
+    })
+
+    it('should collect role tag_rules in relation order', async () => {
+      await write_entity_to_filesystem({
+        absolute_path: path.join(role_dir, 'tag-role.md'),
+        entity_properties: {
+          title: 'TagRole',
+          base_uri: 'user:role/tag-role.md',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
+          rules: [{ action: 'allow', pattern: 'user:task/**' }],
+          tag_rules: [
+            {
+              action: 'allow',
+              tag: 'user:tag/league.md',
+              reason: 'league access'
+            }
+          ]
+        },
+        entity_type: 'role',
+        entity_content: '# TagRole'
+      })
+
+      const identity = {
+        username: 'testuser',
+        base_uri: 'user:identity/testuser.md',
+        relations: ['has_role [[user:role/tag-role.md]]']
+      }
+
+      const result = await resolve_user_tag_rules({ identity })
+
+      expect(result).to.have.lengthOf(1)
+      expect(result[0].tag).to.equal('user:tag/league.md')
+      expect(result[0].source).to.equal('role')
+      expect(result[0].source_uri).to.equal('user:role/tag-role.md')
+    })
+
+    it('should place identity tag_rules before role tag_rules', async () => {
+      await write_entity_to_filesystem({
+        absolute_path: path.join(role_dir, 'tag-role2.md'),
+        entity_properties: {
+          title: 'TagRole2',
+          base_uri: 'user:role/tag-role2.md',
+          user_public_key:
+            '0000000000000000000000000000000000000000000000000000000000000000',
+          rules: [],
+          tag_rules: [{ action: 'allow', tag: 'user:tag/from-role.md' }]
+        },
+        entity_type: 'role',
+        entity_content: '# TagRole2'
+      })
+
+      const identity = {
+        username: 'testuser',
+        base_uri: 'user:identity/testuser.md',
+        tag_rules: [{ action: 'deny', tag: 'user:tag/from-identity.md' }],
+        relations: ['has_role [[user:role/tag-role2.md]]']
+      }
+
+      const result = await resolve_user_tag_rules({ identity })
+
+      expect(result).to.have.lengthOf(2)
+      expect(result[0].source).to.equal('identity')
+      expect(result[0].tag).to.equal('user:tag/from-identity.md')
+      expect(result[1].source).to.equal('role')
+      expect(result[1].tag).to.equal('user:tag/from-role.md')
+    })
+
+    it('should skip invalid tag rules', async () => {
+      const identity = {
+        username: 'testuser',
+        base_uri: 'user:identity/testuser.md',
+        tag_rules: [
+          'not-an-object',
+          { action: 'allow', tag: 'user:tag/valid.md' }
+        ]
+      }
+
+      const result = await resolve_user_tag_rules({ identity })
+
+      expect(result).to.have.lengthOf(1)
+      expect(result[0].tag).to.equal('user:tag/valid.md')
     })
   })
 })
