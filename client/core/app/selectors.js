@@ -52,6 +52,20 @@ export const get_can_create_threads = createSelector(
   }
 )
 
+export const get_user_preferences = createSelector([get_app], (app) => {
+  return app.get('user_preferences')
+})
+
+export const get_notification_sound_enabled = createSelector(
+  [get_user_preferences],
+  (preferences) => {
+    if (!preferences || preferences.notification_sound_enabled === undefined) {
+      return true
+    }
+    return preferences.notification_sound_enabled
+  }
+)
+
 export const get_can_resume_thread = createSelector(
   [get_app, (_, thread) => thread],
   (app, thread) => {

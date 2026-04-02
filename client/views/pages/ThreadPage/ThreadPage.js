@@ -11,22 +11,30 @@ import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
+import use_dynamic_favicon from '@views/hooks/use-dynamic-favicon.js'
 
 const ThreadPage = ({
   thread_data,
   is_loading,
   error,
+  active_session,
   load_thread,
   select_thread,
   clear_selected_thread
 }) => {
   const { '*': id } = useParams()
   const thread_data_js = thread_data?.toJS ? thread_data.toJS() : thread_data
+  const is_waiting = active_session?.status === 'idle'
   const page_meta = use_page_meta({
     thread_data: thread_data_js,
-    custom_title: is_loading ? 'Loading Thread...' : null,
+    custom_title: is_loading
+      ? 'Loading Thread...'
+      : is_waiting
+        ? `[Waiting] ${thread_data_js?.title || 'Thread'}`
+        : null,
     custom_description: error ? 'Error loading thread content' : null
   })
+  use_dynamic_favicon(is_waiting)
 
   useEffect(() => {
     if (id) {
@@ -128,6 +136,7 @@ ThreadPage.propTypes = {
   thread_data: ImmutablePropTypes.map,
   is_loading: PropTypes.bool.isRequired,
   error: PropTypes.string,
+  active_session: PropTypes.object,
   load_thread: PropTypes.func.isRequired,
   select_thread: PropTypes.func.isRequired,
   clear_selected_thread: PropTypes.func.isRequired

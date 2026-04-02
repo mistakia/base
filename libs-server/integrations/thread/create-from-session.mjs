@@ -97,6 +97,16 @@ export const create_thread_from_session = async ({
         : session_metadata.end_time
       : null
 
+    // Flag anomaly: non-empty session with zero assistant messages
+    if (
+      counts.message_count > 0 &&
+      detailed_counts.assistant_message_count === 0
+    ) {
+      log(
+        `Warning: session ${normalized_session.session_id} has ${counts.message_count} messages but 0 assistant messages (possible silent failure)`
+      )
+    }
+
     // Extract default title from initial user prompt
     const initial_prompt = extract_initial_user_prompt_from_messages({
       messages: normalized_session.messages

@@ -36,9 +36,19 @@ export const app_actions = {
     type: app_actions.CLEAR_AUTH
   }),
 
-  ...create_api_action_types('POST_USER_SESSION')
+  SET_USER_PREFERENCE: 'SET_USER_PREFERENCE',
+
+  set_user_preference: ({ key, value }) => ({
+    type: app_actions.SET_USER_PREFERENCE,
+    payload: { key, value }
+  }),
+
+  ...create_api_action_types('POST_USER_SESSION'),
+  ...create_api_action_types('PUT_USER_PREFERENCES')
 }
 
 // API actions
 export const post_user_session_request_actions =
   create_api_actions('POST_USER_SESSION')
+export const put_user_preferences_request_actions =
+  create_api_actions('PUT_USER_PREFERENCES')

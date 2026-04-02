@@ -163,6 +163,15 @@ properties:
             type: string
             required: false
             description: Host venv Python version for PYTHONPATH. Default '3.12'
+  - name: preferences
+    type: object
+    required: false
+    description: User preference settings for the web client
+    properties:
+      - name: notification_sound_enabled
+        type: boolean
+        required: false
+        description: Whether to play a sound when a thread session transitions from active to idle
   - name: rules
     type: array
     required: false
@@ -245,6 +254,12 @@ Tool availability is controlled via `tools` (allowlist), `disallowed_tools` (den
 The `base_cli` sub-config controls whether the base CLI is available in user containers. When enabled, the base submodule is mounted read-only and write operations are blocked by default.
 
 The `skills` array controls which Claude Code skills are provisioned into the user's claude-home directory during bootstrap. The `browser` sub-config enables CloakBrowser runtime access by mounting host infrastructure and injecting `CLOAKBROWSER_HOME` and `PYTHONPATH` environment variables.
+
+## Preferences
+
+The `preferences` object stores user-specific settings for the web client. These are persisted to the identity entity file via the `PUT /api/users/preferences` endpoint with auto-commit. Currently supported:
+
+- `notification_sound_enabled` (boolean): Play a sound when a session transitions from active to idle. Defaults to true when not set.
 
 ## Special Identities
 

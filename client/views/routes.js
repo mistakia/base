@@ -10,6 +10,7 @@ const PhysicalItemsPage = React.lazy(
   () => import('@pages/PhysicalItemsPage.js')
 )
 const FinancePage = React.lazy(() => import('@pages/FinancePage/index.js'))
+const SettingsPage = React.lazy(() => import('@pages/SettingsPage/index.js'))
 
 const Routes = () => {
   return (
@@ -56,6 +57,16 @@ const Routes = () => {
         element={
           <Suspense fallback={null}>
             <FinancePage />
+          </Suspense>
+        }
+      />
+
+      {/* Settings page */}
+      <Route
+        path='/settings'
+        element={
+          <Suspense fallback={null}>
+            <SettingsPage />
           </Suspense>
         }
       />

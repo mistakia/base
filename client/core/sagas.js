@@ -15,6 +15,7 @@ import { task_stats_sagas } from './task-stats/index.js'
 import { finance_sagas } from './finance/index.js'
 import { physical_items_sagas } from './physical-items/index.js'
 import { entity_sagas } from './entities/index.js'
+import { thread_notifications_sagas } from './thread-notifications/index.js'
 
 export default function* root_saga() {
   yield all([
@@ -32,6 +33,7 @@ export default function* root_saga() {
     ...task_stats_sagas,
     ...finance_sagas,
     ...physical_items_sagas,
-    ...entity_sagas
+    ...entity_sagas,
+    ...thread_notifications_sagas
   ])
 }
