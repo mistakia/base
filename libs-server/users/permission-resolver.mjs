@@ -177,6 +177,10 @@ export async function convert_identity_to_user({ identity }) {
     user.thread_config = identity.thread_config
   }
 
+  if (identity.preferences) {
+    user.preferences = identity.preferences
+  }
+
   return user
 }
 

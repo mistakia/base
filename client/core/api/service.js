@@ -30,6 +30,17 @@ export const api = {
     const url = `${API_URL}/users/session`
     return { url, method: 'DELETE' }
   },
+  put_user_preferences({ preferences }) {
+    const url = `${API_URL}/users/preferences`
+    return {
+      url,
+      method: 'PUT',
+      body: JSON.stringify({ preferences }),
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    }
+  },
   get_tasks({ limit = 100, offset = 0, ...params } = {}) {
     const url = `${API_URL}/tasks?${qs.stringify({ limit, offset, ...params })}`
     return { url }

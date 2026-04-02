@@ -1,9 +1,16 @@
+import path from 'path'
 import express from 'express'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import jwt from 'jsonwebtoken'
 
 import config from '#config'
 import user_registry from '#libs-server/users/user-registry.mjs'
+import {
+  load_identity_by_public_key
+} from '#libs-server/users/identity-loader.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { add_files, commit_changes } from '#libs-server/git/commit-operations.mjs'
 import {
   is_nonce_used,
   mark_nonce_used
@@ -256,6 +263,76 @@ router.get('/:username', async (req, res) => {
       // Return filtered public data
       res.status(200).send(filter_public_user_data(user))
     }
+  } catch (error) {
+    log(error)
+    res.status(500).send({ error: error.message })
+  }
+})
+
+router.put('/preferences', async (req, res) => {
+  const { log } = req.app.locals
+  try {
+    const { preferences } = req.body
+    if (!preferences || typeof preferences !== 'object') {
+      return res.status(400).send({ error: 'missing or invalid preferences' })
+    }
+
+    const auth_header = req.headers.authorization
+    if (!auth_header) {
+      return res.status(401).send({ error: 'unauthorized' })
+    }
+
+    let user_public_key
+    try {
+      const token = auth_header.replace('Bearer ', '')
+      const decoded = jwt.verify(token, config.jwt.secret)
+      user_public_key = decoded.user_public_key
+    } catch (err) {
+      return res.status(401).send({ error: 'invalid token' })
+    }
+
+    const identity = await load_identity_by_public_key({
+      public_key: user_public_key
+    })
+    if (!identity) {
+      return res.status(404).send({ error: 'identity not found' })
+    }
+
+    const absolute_path = identity.absolute_path
+    const { entity_properties, entity_content } =
+      await read_entity_from_filesystem({ absolute_path })
+
+    const merged_preferences = {
+      ...(entity_properties.preferences || {}),
+      ...preferences
+    }
+    entity_properties.preferences = merged_preferences
+
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties,
+      entity_type: 'identity',
+      entity_content: entity_content || ''
+    })
+
+    const user_base_directory = config.user_base_directory
+    if (user_base_directory) {
+      try {
+        const relative_path = path.relative(user_base_directory, absolute_path)
+        await add_files({
+          worktree_path: user_base_directory,
+          files_to_add: [relative_path]
+        })
+        await commit_changes({
+          worktree_path: user_base_directory,
+          commit_message: `chore: update user preferences for ${identity.username}`
+        })
+      } catch (error) {
+        log(`Auto-commit preferences failed (non-fatal): ${error.message}`)
+      }
+    }
+
+    res.status(200).send({ success: true, preferences: merged_preferences })
   } catch (error) {
     log(error)
     res.status(500).send({ error: error.message })

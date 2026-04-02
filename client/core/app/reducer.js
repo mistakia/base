@@ -9,6 +9,7 @@ const initial_state = new Record({
   user_token: null,
   current_user: null,
   user_permissions: null,
+  user_preferences: null,
   is_establishing_session: false,
   session_error: null,
   config: null
@@ -49,6 +50,7 @@ export function app_reducer(state = initial_state(), { payload, type }) {
             }
           : null,
         user_permissions: payload.data.permissions || null,
+        user_preferences: payload.data.preferences || null,
         config: payload.data.config || null,
         session_error: null
       })
@@ -59,6 +61,19 @@ export function app_reducer(state = initial_state(), { payload, type }) {
         session_error: payload.error
       })
 
+    case app_actions.SET_USER_PREFERENCE:
+      return state.merge({
+        user_preferences: {
+          ...(state.get('user_preferences') || {}),
+          [payload.key]: payload.value
+        }
+      })
+
+    case app_actions.PUT_USER_PREFERENCES_FULFILLED:
+      return state.merge({
+        user_preferences: payload.data.preferences
+      })
+
     case app_actions.CLEAR_AUTH:
       return state.merge({
         user_private_key: null,
@@ -66,6 +81,7 @@ export function app_reducer(state = initial_state(), { payload, type }) {
         user_token: null,
         current_user: null,
         user_permissions: null,
+        user_preferences: null,
         is_establishing_session: false,
         session_error: null,
         config: null

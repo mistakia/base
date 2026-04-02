@@ -87,6 +87,17 @@ function* handle_post_user_session_fulfilled({ payload }) {
   yield call(handle_page_refresh_after_session_success)
 }
 
+function* update_user_preference({ payload }) {
+  const { key, value } = payload
+  try {
+    yield call(dispatch_fetch, api.put_user_preferences({
+      preferences: { [key]: value }
+    }))
+  } catch (err) {
+    console.warn('Failed to update preference:', err.message)
+  }
+}
+
 export function* clear_auth() {
   // Clear server-side cookie before clearing local storage
   try {
@@ -174,6 +185,10 @@ export function* watch_clear_auth() {
   yield takeLatest(app_actions.CLEAR_AUTH, clear_auth)
 }
 
+export function* watch_set_user_preference() {
+  yield takeLatest(app_actions.SET_USER_PREFERENCE, update_user_preference)
+}
+
 //= ====================================
 //  ROOT
 // -------------------------------------
@@ -183,5 +198,6 @@ export const app_sagas = [
   fork(watch_location_change),
   fork(watch_load_from_private_key),
   fork(watch_post_user_session_fulfilled),
-  fork(watch_clear_auth)
+  fork(watch_clear_auth),
+  fork(watch_set_user_preference)
 ]
