@@ -1,4 +1,5 @@
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { promisify } from 'util'
 import { exec } from 'child_process'
 import debug from 'debug'
@@ -144,6 +145,30 @@ export const ensure_user_container_running = async ({
   // Check if already running
   if (await is_user_container_running({ container_name })) {
     log(`Container ${container_name} already running`)
+
+    // Verify claude-home has settings.json -- if the container was rebuilt
+    // (clearing bind mounts), claude-home may be empty despite container running
+    const user_data_directory = get_user_data_directory()
+    const admin_claude_home = get_container_claude_home()
+    const settings_path = join(
+      user_data_directory,
+      username,
+      'claude-home',
+      'settings.json'
+    )
+    if (!existsSync(settings_path)) {
+      log(
+        `settings.json missing for ${username}, re-bootstrapping claude-home`
+      )
+      await bootstrap_claude_home({
+        username,
+        thread_config,
+        user_data_directory,
+        admin_claude_home,
+        container_user_base_path: CONTAINER_USER_BASE_PATH
+      })
+    }
+
     return container_name
   }
 
