@@ -17,6 +17,8 @@ import FileAutocompleteSuggestions from './FileAutocompleteSuggestions.js'
 import useFileAutocomplete from './use-file-autocomplete.js'
 import use_draft_persistence from './use-draft-persistence.js'
 import use_voice_input from './use-voice-input.js'
+import use_prompt_history from './use-prompt-history.js'
+import PromptHistoryPanel from './PromptHistoryPanel.js'
 import './GlobalThreadInput.styl'
 
 // Constants
@@ -207,6 +209,7 @@ export default function GlobalThreadInput() {
   )
 
   const voice = use_voice_input({ on_transcript: handle_voice_transcript })
+  const prompt_history = use_prompt_history()
 
   const handle_voice_toggle = useCallback(() => {
     if (voice.is_recording) {
@@ -333,6 +336,8 @@ export default function GlobalThreadInput() {
   // Event handlers
   const handle_close = () => {
     if (!is_loading) {
+      prompt_history.close_panel()
+      prompt_history.reset_navigation()
       dispatch(thread_prompt_actions.close())
     }
   }
@@ -343,6 +348,8 @@ export default function GlobalThreadInput() {
     if (!message.trim()) {
       return
     }
+
+    prompt_history.record_prompt(message)
 
     if (is_resume_mode && thread_id) {
       dispatch(
@@ -391,10 +398,40 @@ export default function GlobalThreadInput() {
     }
   }, [message, cursor_position])
 
+  const handle_history_close = useCallback(() => {
+    prompt_history.close_panel()
+    input_ref.current?.focus()
+  }, [prompt_history.close_panel])
+
+  const handle_history_select = useCallback(
+    (index) => {
+      const text = prompt_history.select_entry(index)
+      if (text !== null) {
+        set_message(text)
+        requestAnimationFrame(() => {
+          const el = input_ref.current
+          if (el) {
+            el.textContent = text
+            set_cursor_offset(el, text.length)
+            el.focus()
+          }
+        })
+      }
+    },
+    [prompt_history.select_entry, set_message]
+  )
+
   const handle_key_down = (e) => {
-    // Escape always closes the overlay (and dismisses autocomplete if visible)
+    // Escape: close autocomplete, then history panel, then overlay
     if (e.key === 'Escape') {
-      autocomplete.handle_escape()
+      if (autocomplete.is_visible) {
+        autocomplete.handle_escape()
+        return
+      }
+      if (prompt_history.is_panel_open) {
+        handle_history_close()
+        return
+      }
       handle_close()
       return
     }
@@ -402,6 +439,58 @@ export default function GlobalThreadInput() {
     // Delegate to autocomplete for other keys if suggestions are visible
     if (autocomplete.handle_keydown(e)) {
       return
+    }
+
+    // Toggle history panel with Cmd/Ctrl+H
+    if ((e.metaKey || e.ctrlKey) && e.key === 'h') {
+      e.preventDefault()
+      prompt_history.toggle_panel()
+      return
+    }
+
+    // If history panel is open, let it handle navigation keys
+    if (prompt_history.is_panel_open) {
+      return
+    }
+
+    // Inline history navigation: ArrowUp at cursor position 0
+    if (e.key === 'ArrowUp' && !e.metaKey && !e.ctrlKey) {
+      const el = input_ref.current
+      if (el && get_cursor_offset(el) === 0) {
+        const text = prompt_history.navigate_back(message)
+        if (text !== null) {
+          e.preventDefault()
+          set_message(text)
+          requestAnimationFrame(() => {
+            el.textContent = text
+            set_cursor_offset(el, 0)
+          })
+          return
+        }
+      }
+    }
+
+    // Inline history navigation: ArrowDown at cursor end
+    if (
+      e.key === 'ArrowDown' &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      prompt_history.is_navigating
+    ) {
+      const el = input_ref.current
+      const text_length = (el?.textContent || '').length
+      if (el && get_cursor_offset(el) === text_length) {
+        const text = prompt_history.navigate_forward()
+        if (text !== null) {
+          e.preventDefault()
+          set_message(text)
+          requestAnimationFrame(() => {
+            el.textContent = text
+            set_cursor_offset(el, text.length)
+          })
+          return
+        }
+      }
     }
 
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -455,6 +544,11 @@ export default function GlobalThreadInput() {
     if (!text || !text.trim()) {
       text = ''
       el.innerHTML = ''
+    }
+
+    // Reset history navigation when user types
+    if (prompt_history.is_navigating) {
+      prompt_history.reset_navigation()
     }
 
     set_message(text)
@@ -584,6 +678,16 @@ export default function GlobalThreadInput() {
                 Cannot resume this thread. Switch to New to create a new thread.
               </Typography>
             </Box>
+          )}
+          {prompt_history.is_panel_open && (
+            <PromptHistoryPanel
+              entries={prompt_history.filtered_entries}
+              filter_text={prompt_history.filter_text}
+              on_filter_change={prompt_history.set_filter_text}
+              on_select={handle_history_select}
+              on_close={handle_history_close}
+              on_clear={prompt_history.clear_history}
+            />
           )}
           <form onSubmit={handle_submit}>
             <Box className='input-container-with-autocomplete'>

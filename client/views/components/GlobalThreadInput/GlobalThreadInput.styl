@@ -134,6 +134,94 @@ $overlay-margin = 24px
       font-weight: 400
 
 // ============================================================================
+// Prompt History Panel
+// ============================================================================
+
+.prompt-history-panel
+  max-height: 240px
+  display: flex
+  flex-direction: column
+  border-bottom: 1px solid var(--color-border-light, #e9ecef)
+  margin-bottom: $spacing-xs
+
+.prompt-history-filter
+  display: flex
+  align-items: center
+  gap: $spacing-xs
+  padding-bottom: $spacing-xs
+
+  .prompt-history-filter-input
+    flex: 1
+    min-width: 0
+    border: 1px solid var(--color-border-light, #e9ecef)
+    background: transparent
+    padding: 4px $spacing-xs
+    font-family: inherit
+    font-size: 12px
+    color: var(--color-text, #212529)
+    outline: none
+
+    &::placeholder
+      color: var(--color-text-tertiary, #b0b0b0)
+
+    &:focus
+      border-color: var(--color-border, #ced4da)
+
+  .prompt-history-clear-btn
+    flex-shrink: 0
+    background: transparent
+    border: none
+    cursor: pointer
+    font-family: inherit
+    font-size: 11px
+    font-weight: 500
+    text-transform: uppercase
+    letter-spacing: 0.5px
+    color: var(--color-text-secondary, #6c757d)
+    padding: 4px $spacing-xs
+
+    &:hover
+      color: var(--color-text, #212529)
+
+.prompt-history-list
+  overflow-y: auto
+  flex: 1
+  min-height: 0
+
+.prompt-history-entry
+  display: flex
+  align-items: center
+  justify-content: space-between
+  gap: $spacing-xs
+  padding: 4px $spacing-xs
+  cursor: pointer
+  transition: background 0.15s ease
+
+  &:hover,
+  &.prompt-history-entry--selected
+    background: var(--color-surface-hover, #fafafa)
+
+  .prompt-history-entry-text
+    flex: 1
+    min-width: 0
+    overflow: hidden
+    text-overflow: ellipsis
+    white-space: nowrap
+    font-size: 13px
+    color: var(--color-text, #212529)
+
+  .prompt-history-timestamp
+    flex-shrink: 0
+    font-size: 11px
+    color: var(--color-text-tertiary, #b0b0b0)
+
+.prompt-history-empty
+  padding: $spacing-sm $spacing-xs
+  text-align: center
+  font-size: 12px
+  color: var(--color-text-secondary, #6c757d)
+
+// ============================================================================
 // Input Container with Autocomplete
 // ============================================================================
 
