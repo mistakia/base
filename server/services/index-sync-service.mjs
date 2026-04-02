@@ -31,10 +31,64 @@ import {
   start_thread_sync_request_watcher,
   stop_thread_sync_request_watcher
 } from '#libs-server/embedded-database-index/sync/thread-sync-ipc.mjs'
+import {
+  initialize_embedding_pipeline,
+  handle_embedding_file_change,
+  handle_embedding_file_delete
+} from '#libs-server/search/embedding-pipeline.mjs'
 
 const log = debug('index-sync')
 
+const SERVER_LOCK_FILE = '.server-lock'
+
 let is_running = false
+
+/**
+ * Write server lock file to indicate the sync service is the active writer.
+ * CLI tools use this lock file to detect whether to use IPC or direct mode.
+ */
+async function write_server_lock_file() {
+  const lock_path = path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    SERVER_LOCK_FILE
+  )
+
+  const lock_data = {
+    pid: process.pid,
+    started_at: new Date().toISOString(),
+    service: 'index-sync-service'
+  }
+
+  try {
+    const dir = path.dirname(lock_path)
+    await fs.mkdir(dir, { recursive: true })
+    await fs.writeFile(lock_path, JSON.stringify(lock_data, null, 2))
+    log('Lock file written: %s', lock_path)
+  } catch (error) {
+    log('Failed to write lock file: %s', error.message)
+  }
+}
+
+/**
+ * Remove server lock file on shutdown.
+ */
+async function remove_server_lock_file() {
+  const lock_path = path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    SERVER_LOCK_FILE
+  )
+
+  try {
+    await fs.unlink(lock_path)
+    log('Lock file removed')
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      log('Failed to remove lock file: %s', error.message)
+    }
+  }
+}
 
 /**
  * Read thread metadata from filesystem.
@@ -84,11 +138,33 @@ export const start_index_sync_service = async () => {
     return
   }
 
-  // Start entity file watcher for database sync
+  // Write lock file to indicate sync service is the active writer
+  await write_server_lock_file()
+
+  // Initialize embedding pipeline for semantic search
+  try {
+    initialize_embedding_pipeline({
+      user_base_directory: config.user_base_directory
+    })
+    log('Embedding pipeline initialized')
+  } catch (error) {
+    log('Failed to initialize embedding pipeline: %s', error.message)
+  }
+
+  // Start entity file watcher for database sync (with embedding callbacks)
   const index_config = embedded_index_manager.get_index_config()
   if (index_config.file_watcher_enabled) {
     try {
-      start_index_sync_watcher()
+      start_index_sync_watcher({
+        on_entity_change: (file_path) => {
+          handle_embedding_file_change(file_path)
+        },
+        on_entity_delete: (file_path) => {
+          handle_embedding_file_delete(file_path).catch((error) => {
+            log('Embedding delete failed for %s: %s', file_path, error.message)
+          })
+        }
+      })
       log('Entity file watcher started')
     } catch (error) {
       log('Failed to start entity file watcher: %s', error.message)
@@ -187,6 +263,8 @@ export const stop_index_sync_service = async () => {
   } catch (error) {
     log('Error shutting down embedded index: %s', error.message)
   }
+
+  await remove_server_lock_file()
 
   is_running = false
   log('Index sync service stopped')

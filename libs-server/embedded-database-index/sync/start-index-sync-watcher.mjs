@@ -106,7 +106,7 @@ export const thread_sync_forwarding_hooks = {
   }
 }
 
-export function start_index_sync_watcher({ on_task_change } = {}) {
+export function start_index_sync_watcher({ on_task_change, on_entity_change, on_entity_delete } = {}) {
   log('Starting index sync watcher')
 
   start_index_file_watcher({
@@ -140,6 +140,10 @@ export function start_index_sync_watcher({ on_task_change } = {}) {
           entity_data: result.entity_properties
         })
         log('Synced entity (%s): %s', entity_type, base_uri)
+
+        if (on_entity_change) {
+          on_entity_change(file_path)
+        }
       } catch (error) {
         log('Error handling entity change %s: %s', file_path, error.message)
       }
@@ -163,6 +167,10 @@ export function start_index_sync_watcher({ on_task_change } = {}) {
 
         await embedded_index_manager.remove_entity({ base_uri })
         log('Removed entity (%s): %s', entity_type, base_uri)
+
+        if (on_entity_delete) {
+          on_entity_delete(file_path)
+        }
       } catch (error) {
         log('Error handling entity delete %s: %s', file_path, error.message)
       }

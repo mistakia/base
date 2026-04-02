@@ -127,6 +127,7 @@ function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
 // Services to run on this machine. Defaults to all services if not configured.
 const machine_services = machine_config.services || [
   'base-api',
+  'index-sync-service',
   'metadata-queue-processor',
   'cli-queue-worker',
   'schedule-processor',
@@ -139,6 +140,10 @@ const all_defined_apps = [
     watch_delay: 1000,
     ignore_watch: ['node_modules', 'logs', 'tmp'],
     max_memory_restart: '3584M'
+  }),
+  app('index-sync-service', 'server/services/index-sync-service.mjs', {
+    max_memory_restart: '512M',
+    env: { DEBUG: 'index-sync*,embedded-index*' }
   }),
   app(
     'metadata-queue-processor',

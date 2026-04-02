@@ -1,7 +1,6 @@
 import '../polyfills/node25-slow-buffer.cjs'
 import debug from 'debug'
 import path from 'path'
-import fs from 'fs/promises'
 
 import server from '#server/index.mjs'
 import config from '#config'
@@ -15,17 +14,7 @@ import {
   stop_worker
 } from '#server/services/threads/job-worker.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import {
-  thread_index_sync_hooks,
-  start_index_sync_watcher,
-  stop_index_file_watcher,
-  handle_entity_file_change,
-  handle_entity_file_delete
-} from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
-import {
-  start_sync_trigger_watcher,
-  stop_sync_trigger_watcher
-} from '#libs-server/embedded-database-index/sync/sync-trigger-handler.mjs'
+import { thread_sync_forwarding_hooks } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
 import {
   start_cache_warmer,
   stop_cache_warmer,
@@ -58,11 +47,6 @@ import {
 } from '#libs-server/git/git-status-cache.mjs'
 import { get_known_repositories } from '#server/routes/git.mjs'
 import { invalidate as invalidate_file_path_cache } from '#libs-server/search/file-path-cache.mjs'
-import {
-  initialize_embedding_pipeline,
-  handle_embedding_file_change,
-  handle_embedding_file_delete
-} from '#libs-server/search/embedding-pipeline.mjs'
 import { broadcast_authenticated } from '#server/websocket.mjs'
 import {
   discover_extensions,
@@ -81,54 +65,6 @@ const debounced_invalidate_file_path_cache = () => {
   }, 1000)
 }
 
-const SERVER_LOCK_FILE = '.server-lock'
-
-/**
- * Write server lock file to indicate server is running
- */
-async function write_server_lock_file({ port }) {
-  const lock_path = path.join(
-    config.user_base_directory,
-    'embedded-database-index',
-    SERVER_LOCK_FILE
-  )
-
-  const lock_data = {
-    pid: process.pid,
-    started_at: new Date().toISOString(),
-    port
-  }
-
-  try {
-    // Ensure directory exists
-    const dir = path.dirname(lock_path)
-    await fs.mkdir(dir, { recursive: true })
-    await fs.writeFile(lock_path, JSON.stringify(lock_data, null, 2))
-  } catch (error) {
-    // Non-fatal, log but continue
-    debug('server')(`Failed to write lock file: ${error.message}`)
-  }
-}
-
-/**
- * Remove server lock file on shutdown
- */
-async function remove_server_lock_file() {
-  const lock_path = path.join(
-    config.user_base_directory,
-    'embedded-database-index',
-    SERVER_LOCK_FILE
-  )
-
-  try {
-    await fs.unlink(lock_path)
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      debug('server')(`Failed to remove lock file: ${error.message}`)
-    }
-  }
-}
-
 const logger = debug('server')
 debug.enable('server,api,threads:*,embedded-index*')
 
@@ -139,7 +75,7 @@ let embedded_index_ready = false
 
 try {
   logger('Initializing embedded index before server start...')
-  await embedded_index_manager.initialize()
+  await embedded_index_manager.initialize({ read_only: true })
   const status = embedded_index_manager.get_index_status()
   logger(`Embedded index initialized (sqlite: ${status.sqlite_ready})`)
   embedded_index_ready = status.sqlite_ready
@@ -181,9 +117,6 @@ try {
   const { server_port, server_host } = config
   server.listen(server_port, server_host, async () => {
     logger(`API listening on ${server_host}:${server_port}`)
-
-    // Write lock file to indicate server is running
-    await write_server_lock_file({ port: server_port })
 
     const file_watcher_config = config.file_watchers || {}
 
@@ -297,56 +230,6 @@ try {
       logger(worker_error)
     }
 
-    // Start entity file watcher for database sync
-    if (embedded_index_ready) {
-      const index_config = embedded_index_manager.get_index_config()
-      if (index_config.file_watcher_enabled) {
-        try {
-          start_index_sync_watcher({ on_task_change: invalidate_tasks_cache })
-          set_watcher_status('entity_file_watcher', 'ready')
-          logger('Entity file watcher started')
-        } catch (error) {
-          set_watcher_status('entity_file_watcher', 'failed')
-          logger(`Failed to start entity file watcher: ${error.message}`)
-        }
-      } else {
-        set_watcher_status('entity_file_watcher', 'disabled')
-      }
-    } else {
-      set_watcher_status('entity_file_watcher', 'disabled')
-    }
-
-    // Start sync trigger watcher for CLI sync requests (file-based IPC)
-    if (embedded_index_ready) {
-      try {
-        await start_sync_trigger_watcher({
-          on_sync_request: async (request) => {
-            logger(
-              `Processing sync trigger request: ${request.request_id} (type: ${request.type})`
-            )
-            return await embedded_index_manager.perform_sync({
-              mode: request.type
-            })
-          }
-        })
-        logger('Sync trigger watcher started')
-      } catch (error) {
-        logger(`Failed to start sync trigger watcher: ${error.message}`)
-      }
-    }
-
-    // Initialize embedding pipeline for semantic search (non-blocking background sync)
-    if (embedded_index_ready) {
-      try {
-        initialize_embedding_pipeline({
-          user_base_directory: config.user_base_directory
-        })
-        logger('Embedding pipeline initialized')
-      } catch (error) {
-        logger(`Failed to initialize embedding pipeline: ${error.message}`)
-      }
-    }
-
     // Start cache warmer after embedded index (can now use SQLite for reads)
     try {
       await start_cache_warmer()
@@ -356,14 +239,14 @@ try {
       logger(error)
     }
 
-    // Attach thread sync hooks to the already-running thread watcher.
-    // Thread changes are synced directly to SQLite.
+    // Attach thread sync forwarding hooks to the already-running thread watcher.
+    // Thread changes are forwarded via IPC queue to the index-sync-service.
     if (embedded_index_ready) {
       try {
-        set_thread_watcher_hooks(thread_index_sync_hooks)
-        logger('Thread index sync hooks attached')
+        set_thread_watcher_hooks(thread_sync_forwarding_hooks)
+        logger('Thread sync forwarding hooks attached')
       } catch (hook_error) {
-        logger(`Failed to set thread index sync hooks: ${hook_error.message}`)
+        logger(`Failed to set thread sync forwarding hooks: ${hook_error.message}`)
         logger(hook_error)
       }
     }
@@ -392,17 +275,11 @@ try {
             : null,
         entity_index: embedded_index_ready
           ? {
-              on_change: (file_path) => {
-                handle_entity_file_change(file_path)
-                handle_embedding_file_change(file_path)
+              on_change: () => {
+                invalidate_tasks_cache()
               },
-              on_delete: (file_path) => {
-                handle_entity_file_delete(file_path)
-                handle_embedding_file_delete(file_path).catch((error) => {
-                  logger(
-                    `Embedding delete failed for ${file_path}: ${error.message}`
-                  )
-                })
+              on_delete: () => {
+                invalidate_tasks_cache()
               }
             }
           : null,
@@ -483,22 +360,6 @@ const shutdown = async (signal) => {
           logger(`Error stopping user-base watcher: ${error.message}`)
         }
       })(),
-      (async () => {
-        try {
-          stop_index_file_watcher()
-          logger('Entity file watcher stopped')
-        } catch (error) {
-          logger(`Error stopping entity file watcher: ${error.message}`)
-        }
-      })(),
-      (async () => {
-        try {
-          await stop_sync_trigger_watcher()
-          logger('Sync trigger watcher stopped')
-        } catch (error) {
-          logger(`Error stopping sync trigger watcher: ${error.message}`)
-        }
-      })()
     ])
 
     // Phase 2: Cleanup caches and embedded index (sequential - may depend on watchers being stopped)
@@ -514,13 +375,6 @@ const shutdown = async (signal) => {
       logger('Embedded index shut down')
     } catch (error) {
       logger(`Error shutting down embedded index: ${error.message}`)
-    }
-
-    try {
-      await remove_server_lock_file()
-      logger('Server lock file removed')
-    } catch (error) {
-      logger(`Error removing lock file: ${error.message}`)
     }
 
     try {
