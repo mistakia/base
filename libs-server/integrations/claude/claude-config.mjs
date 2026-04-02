@@ -46,9 +46,9 @@ export function get_all_claude_projects_directories() {
     Array.isArray(accounts.accounts) &&
     accounts.accounts.length > 0
   ) {
-    return accounts.accounts.map(
-      (acct) => `${acct.config_dir.replace(/\/$/, '')}/projects`
-    )
+    return accounts.accounts
+      .filter((acct) => acct.config_dir)
+      .map((acct) => `${acct.config_dir.replace(/\/$/, '')}/projects`)
   }
   return [CLAUDE_DEFAULT_PATHS.claude_projects_directory]
 }

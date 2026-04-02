@@ -83,7 +83,8 @@ export const scan_claude_agent_relationships = async ({
   claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
   claude_projects_directories = null
 } = {}) => {
-  log(`Scanning agent relationships in: ${claude_projects_directories ? claude_projects_directories.join(', ') : claude_projects_directory}`)
+  const dirs = claude_projects_directories || [claude_projects_directory]
+  log(`Scanning agent relationships in: ${dirs.join(', ')}`)
 
   const parent_to_agent_files = new Map()
   const agent_session_ids = new Set()
@@ -163,7 +164,8 @@ export const find_claude_sessions_from_filesystem = async ({
   session_id = null,
   session_file = null
 }) => {
-  log(`Finding Claude sessions from filesystem: ${claude_projects_directories ? claude_projects_directories.join(', ') : claude_projects_directory}`)
+  const dirs = claude_projects_directories || [claude_projects_directory]
+  log(`Finding Claude sessions from filesystem: ${dirs.join(', ')}`)
 
   if (session_file) {
     log_debug(`Using direct session file path: ${session_file}`)
@@ -266,7 +268,10 @@ export const validate_claude_session_structure = ({ session }) => {
     'metadata',
     'queue-operation',
     'progress',
-    'attachment'
+    'attachment',
+    'last-prompt',
+    'agent-name',
+    'custom-title'
   ]
 
   // Conversation entry types that represent actual user/assistant interaction

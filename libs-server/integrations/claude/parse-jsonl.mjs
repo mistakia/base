@@ -23,6 +23,7 @@ export const find_claude_project_files = async ({
 } = {}) => {
   const dirs = claude_projects_directories || [claude_projects_directory]
   const all_files = []
+  const errors = []
 
   for (const dir of dirs) {
     try {
@@ -44,8 +45,13 @@ export const find_claude_project_files = async ({
       )
     } catch (error) {
       log(`Error finding Claude project files in ${dir}: ${error.message}`)
-      // Continue with other directories
+      errors.push(error)
     }
+  }
+
+  // Throw if all directories failed
+  if (all_files.length === 0 && errors.length === dirs.length) {
+    throw errors[0]
   }
 
   return all_files

@@ -275,7 +275,10 @@ const normalize_claude_entry = ({ entry, index }) => {
     'attachment',
     'imagePasteIds',
     'origin',
-    'merged_sequence'
+    'merged_sequence',
+    'agentName',
+    'customTitle',
+    'lastPrompt'
   ]
 
   all_entry_keys.forEach((key) => {
@@ -338,6 +341,9 @@ const normalize_claude_entry = ({ entry, index }) => {
     case 'progress':
     case 'queue-operation':
     case 'attachment':
+    case 'last-prompt':
+    case 'agent-name':
+    case 'custom-title':
       return null
 
     default:
@@ -732,6 +738,7 @@ const extract_session_metadata = (entries, file_metadata) => {
   let permission_mode = null
   let inference_geo = null
   let cache_creation = null
+  let session_title = null
 
   entries.forEach((entry) => {
     // Count messages by type
@@ -772,6 +779,10 @@ const extract_session_metadata = (entries, file_metadata) => {
       }
     } else if (entry.type === 'attachment') {
       attachment_count++
+    } else if (entry.type === 'custom-title' || entry.type === 'agent-name') {
+      if (!session_title) {
+        session_title = entry.customTitle || entry.agentName || null
+      }
     }
   })
 
@@ -805,6 +816,7 @@ const extract_session_metadata = (entries, file_metadata) => {
     file_source: file_metadata.file_path,
     plan_slug,
     permission_mode,
+    session_title,
     attachment_count: attachment_count > 0 ? attachment_count : undefined,
     inference_geo,
     cache_creation
