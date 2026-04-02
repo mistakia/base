@@ -43,11 +43,16 @@ export const is_agent_file_path = (file_path) => {
  * @yields {{ file_path: string, session_id: string, is_agent: boolean }} Session file info
  */
 export async function* iterate_claude_session_files({
-  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
+  claude_projects_directories = null
 } = {}) {
-  log(`Iterating Claude session files from: ${claude_projects_directory}`)
+  const dirs = claude_projects_directories || [claude_projects_directory]
+  log(`Iterating Claude session files from: ${dirs.join(', ')}`)
 
-  const files = await find_claude_project_files({ claude_projects_directory })
+  const files = await find_claude_project_files({
+    claude_projects_directory,
+    claude_projects_directories
+  })
 
   for (const { file_path, base_name } of files) {
     yield {
@@ -75,9 +80,10 @@ export async function* iterate_claude_session_files({
  *   - parent_session_files: Map<session_id, file_path> - Parent session file paths
  */
 export const scan_claude_agent_relationships = async ({
-  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
+  claude_projects_directories = null
 } = {}) => {
-  log(`Scanning agent relationships in: ${claude_projects_directory}`)
+  log(`Scanning agent relationships in: ${claude_projects_directories ? claude_projects_directories.join(', ') : claude_projects_directory}`)
 
   const parent_to_agent_files = new Map()
   const agent_session_ids = new Set()
@@ -87,7 +93,8 @@ export const scan_claude_agent_relationships = async ({
   let agent_count = 0
 
   for await (const { file_path, session_id } of iterate_claude_session_files({
-    claude_projects_directory
+    claude_projects_directory,
+    claude_projects_directories
   })) {
     total_files++
 
@@ -151,11 +158,12 @@ export const find_claude_sessions_from_data = async ({ sessions = [] }) => {
  */
 export const find_claude_sessions_from_filesystem = async ({
   claude_projects_directory,
+  claude_projects_directories = null,
   filter_sessions = null,
   session_id = null,
   session_file = null
 }) => {
-  log(`Finding Claude sessions from filesystem: ${claude_projects_directory}`)
+  log(`Finding Claude sessions from filesystem: ${claude_projects_directories ? claude_projects_directories.join(', ') : claude_projects_directory}`)
 
   if (session_file) {
     log_debug(`Using direct session file path: ${session_file}`)
@@ -180,7 +188,8 @@ export const find_claude_sessions_from_filesystem = async ({
     log_debug(`Looking up specific session ID: ${session_id}`)
     const found_file = await find_session_file_by_id({
       session_id,
-      claude_projects_directory
+      claude_projects_directory,
+      claude_projects_directories
     })
 
     if (found_file) {
@@ -214,6 +223,7 @@ export const find_claude_sessions_from_filesystem = async ({
 
   const sessions = await parse_all_claude_files({
     claude_projects_directory,
+    claude_projects_directories,
     filter_sessions
   })
 
@@ -254,7 +264,9 @@ export const validate_claude_session_structure = ({ session }) => {
     'permission-mode',
     'summary',
     'metadata',
-    'queue-operation'
+    'queue-operation',
+    'progress',
+    'attachment'
   ]
 
   // Conversation entry types that represent actual user/assistant interaction

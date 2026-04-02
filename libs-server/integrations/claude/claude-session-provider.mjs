@@ -33,6 +33,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
   async find_sessions({
     claude_sessions = [],
     claude_projects_directory,
+    claude_projects_directories,
     filter_sessions,
     session_id,
     session_file
@@ -42,12 +43,15 @@ export class ClaudeSessionProvider extends SessionProviderBase {
       return await find_claude_sessions_from_data({ sessions: claude_sessions })
     }
 
+    const config = get_claude_config({ claude_projects_directory })
+    const dirs = claude_projects_directories || config.claude_projects_directories
+
     // If session_file or session_id is specified but no sessions provided,
     // only scan the specified file/session, don't fall back to scanning all files
     if (session_file || session_id) {
-      const config = get_claude_config({ claude_projects_directory })
       return await find_claude_sessions_from_filesystem({
         claude_projects_directory: config.claude_projects_directory,
+        claude_projects_directories: dirs,
         filter_sessions,
         session_id,
         session_file
@@ -55,9 +59,9 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     }
 
     // Otherwise discover from filesystem (all files)
-    const config = get_claude_config({ claude_projects_directory })
     return await find_claude_sessions_from_filesystem({
       claude_projects_directory: config.claude_projects_directory,
+      claude_projects_directories: dirs,
       filter_sessions
     })
   }
@@ -112,6 +116,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
    */
   async *stream_sessions({
     claude_projects_directory,
+    claude_projects_directories,
     filter_sessions,
     session_id,
     session_file,
@@ -120,6 +125,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     to_date = null
   } = {}) {
     const config = get_claude_config({ claude_projects_directory })
+    const dirs = claude_projects_directories || config.claude_projects_directories
 
     // For single session lookups, use existing find_sessions (already optimized)
     // Then group agents with their parents to avoid yielding agents as standalone sessions
@@ -127,6 +133,7 @@ export class ClaudeSessionProvider extends SessionProviderBase {
       this.log(`Loading single session: ${session_id || session_file}`)
       const sessions = await this.find_sessions({
         claude_projects_directory: config.claude_projects_directory,
+        claude_projects_directories: dirs,
         filter_sessions,
         session_id,
         session_file
@@ -163,7 +170,8 @@ export class ClaudeSessionProvider extends SessionProviderBase {
     // For bulk imports: use streaming with agent index
     this.log('Building agent relationship index for streaming...')
     const agent_index = await scan_claude_agent_relationships({
-      claude_projects_directory: config.claude_projects_directory
+      claude_projects_directory: config.claude_projects_directory,
+      claude_projects_directories: dirs
     })
 
     this.log('Streaming sessions with agent merging...')

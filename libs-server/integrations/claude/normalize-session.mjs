@@ -204,15 +204,6 @@ export const normalize_claude_session = (claude_session) => {
 }
 
 const normalize_claude_entry = ({ entry, index }) => {
-  // Skip file-history-snapshot entries - these are filtered during parsing
-  // but this provides a safety check if any slip through
-  if (entry.type === 'file-history-snapshot') {
-    log_debug(
-      `Skipping file-history-snapshot entry in normalize (messageId: ${entry.messageId})`
-    )
-    return null
-  }
-
   // Track all properties found in the entry for completeness analysis
   const all_entry_keys = Object.keys(entry)
   const known_keys = [
@@ -245,7 +236,46 @@ const normalize_claude_entry = ({ entry, index }) => {
     'isSnapshotUpdate',
     'cache_creation_input_tokens',
     'cache_read_input_tokens',
-    'service_tier'
+    'service_tier',
+    'logicalParentUuid',
+    'sourceToolAssistantUUID',
+    'teamName',
+    'agentSessionId',
+    'parentAgentId',
+    'agentId',
+    'hookCount',
+    'hookInfos',
+    'hookErrors',
+    'preventedContinuation',
+    'error',
+    'cause',
+    'retryInMs',
+    'retryAttempt',
+    'maxRetries',
+    'subtype',
+    'slug',
+    'operation',
+    'permissionMode',
+    'durationMs',
+    'stopReason',
+    'hasOutput',
+    'messageCount',
+    'parentToolUseID',
+    'sourceToolUseID',
+    'toolName',
+    'thinkingMetadata',
+    'todos',
+    'compactMetadata',
+    'microcompactMetadata',
+    'isVisibleInTranscriptOnly',
+    'planContent',
+    'data',
+    'promptId',
+    'entrypoint',
+    'attachment',
+    'imagePasteIds',
+    'origin',
+    'merged_sequence'
   ]
 
   all_entry_keys.forEach((key) => {
@@ -302,6 +332,13 @@ const normalize_claude_entry = ({ entry, index }) => {
           ...entry.metadata
         }
       }
+
+    case 'file-history-snapshot':
+    case 'permission-mode':
+    case 'progress':
+    case 'queue-operation':
+    case 'attachment':
+      return null
 
     default:
       log_unsupported({ category: 'entry_types', value: entry.type })
@@ -379,7 +416,8 @@ const normalize_user_entry = (entry, base_normalized) => {
           'thinking',
           'thinking.thinking',
           'thinking.signature',
-          'image'
+          'image',
+          'document'
         ].includes(content_item.type)
       ) {
         log_unsupported({
@@ -433,7 +471,10 @@ const normalize_assistant_entry = (entry, base_normalized) => {
     'stop_reason',
     'stop_sequence',
     'id',
-    'type'
+    'type',
+    'stop_details',
+    'context_management',
+    'container'
   ]
 
   Object.keys(message).forEach((key) => {
@@ -454,7 +495,11 @@ const normalize_assistant_entry = (entry, base_normalized) => {
       'cache_read_input_tokens',
       'cache_creation_input_tokens',
       'service_tier',
-      'server_tool_use'
+      'server_tool_use',
+      'cache_creation',
+      'inference_geo',
+      'iterations',
+      'speed'
     ]
     Object.keys(message.usage).forEach((key) => {
       if (!known_usage_keys.includes(key)) {
@@ -540,6 +585,17 @@ const extract_user_content = (message) => {
                 ...item.metadata
               }
             }
+          case 'document':
+            return {
+              type: 'document',
+              content: item.content || item.source?.data || '[Document]',
+              metadata: {
+                source_type: item.source?.type,
+                media_type: item.source?.media_type,
+                title: item.title,
+                ...item.metadata
+              }
+            }
           default:
             log_unsupported({
               category: 'content_types',
@@ -579,7 +635,9 @@ const extract_assistant_content = (message) => {
             'content',
             'thinking',
             'metadata',
-            'source' // for images
+            'source', // for images
+            'signature',
+            'caller'
           ]
           Object.keys(item).forEach((key) => {
             if (!known_content_keys.includes(key)) {
@@ -610,6 +668,17 @@ const extract_assistant_content = (message) => {
               metadata: {
                 source_type: item.source?.type,
                 media_type: item.source?.media_type,
+                ...item.metadata
+              }
+            }
+          case 'document':
+            return {
+              type: 'document',
+              content: item.content || item.source?.data || '[Document]',
+              metadata: {
+                source_type: item.source?.type,
+                media_type: item.source?.media_type,
+                title: item.title,
                 ...item.metadata
               }
             }
@@ -659,6 +728,10 @@ const extract_session_metadata = (entries, file_metadata) => {
   // Count messages by type
   let user_message_count = 0
   let assistant_message_count = 0
+  let attachment_count = 0
+  let permission_mode = null
+  let inference_geo = null
+  let cache_creation = null
 
   entries.forEach((entry) => {
     // Count messages by type
@@ -680,12 +753,25 @@ const extract_session_metadata = (entries, file_metadata) => {
           (usage.output_tokens || 0) +
           (usage.cache_read_input_tokens || 0) +
           (usage.cache_creation_input_tokens || 0)
+
+        if (!inference_geo && usage.inference_geo) {
+          inference_geo = usage.inference_geo
+        }
+        if (!cache_creation && usage.cache_creation) {
+          cache_creation = usage.cache_creation
+        }
       }
 
       // Track models
       if (entry.message?.model) {
         models.add(entry.message.model)
       }
+    } else if (entry.type === 'permission-mode') {
+      if (entry.permissionMode) {
+        permission_mode = entry.permissionMode
+      }
+    } else if (entry.type === 'attachment') {
+      attachment_count++
     }
   })
 
@@ -717,7 +803,11 @@ const extract_session_metadata = (entries, file_metadata) => {
     entry_count: entries.length,
     summaries,
     file_source: file_metadata.file_path,
-    plan_slug
+    plan_slug,
+    permission_mode,
+    attachment_count: attachment_count > 0 ? attachment_count : undefined,
+    inference_geo,
+    cache_creation
   }
 }
 

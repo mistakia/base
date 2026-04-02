@@ -186,7 +186,7 @@ const convert_message_to_timeline_entry = ({
   // Normalize timestamp to ISO string regardless of input type
   let iso_timestamp
   const ts = message.timestamp
-  if (ts instanceof Date) {
+  if (ts instanceof Date && !isNaN(ts.getTime())) {
     iso_timestamp = ts.toISOString()
   } else if (typeof ts === 'string' || typeof ts === 'number') {
     const d = new Date(ts)

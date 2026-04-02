@@ -18,30 +18,37 @@ const log_debug = debug('integrations:claude:parse-jsonl:debug')
 const MAX_PROGRESS_FULL_OUTPUT_CHARS = 10 * 1024
 
 export const find_claude_project_files = async ({
-  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
+  claude_projects_directories = null
 } = {}) => {
-  try {
-    const expanded_dir = claude_projects_directory.replace(
-      '~',
-      process.env.HOME
-    )
-    log(`Looking for Claude project files in ${expanded_dir}`)
+  const dirs = claude_projects_directories || [claude_projects_directory]
+  const all_files = []
 
-    const files = await list_files_recursive({
-      directory: expanded_dir,
-      file_extension: '.jsonl',
-      absolute_paths: true
-    })
+  for (const dir of dirs) {
+    try {
+      const expanded_dir = dir.replace('~', process.env.HOME)
+      log(`Looking for Claude project files in ${expanded_dir}`)
 
-    log(`Found ${files.length} Claude project files via recursive scan`)
-    return files.map((file) => ({
-      file_path: file,
-      base_name: path.basename(file, '.jsonl')
-    }))
-  } catch (error) {
-    log(`Error finding Claude project files: ${error.message}`)
-    throw error
+      const files = await list_files_recursive({
+        directory: expanded_dir,
+        file_extension: '.jsonl',
+        absolute_paths: true
+      })
+
+      log(`Found ${files.length} Claude project files via recursive scan`)
+      all_files.push(
+        ...files.map((file) => ({
+          file_path: file,
+          base_name: path.basename(file, '.jsonl')
+        }))
+      )
+    } catch (error) {
+      log(`Error finding Claude project files in ${dir}: ${error.message}`)
+      // Continue with other directories
+    }
   }
+
+  return all_files
 }
 
 /**
@@ -55,43 +62,41 @@ export const find_claude_project_files = async ({
  */
 export const find_session_file_by_id = async ({
   session_id,
-  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory
+  claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
+  claude_projects_directories = null
 }) => {
-  try {
-    const expanded_dir = claude_projects_directory.replace(
-      '~',
-      process.env.HOME
-    )
-    const target_filename = `${session_id}.jsonl`
+  const dirs = claude_projects_directories || [claude_projects_directory]
+  const target_filename = `${session_id}.jsonl`
 
-    log_debug(`Searching for session file: ${target_filename}`)
+  log_debug(`Searching for session file: ${target_filename}`)
 
-    // Search for the specific file
-    const files = await list_files_recursive({
-      directory: expanded_dir,
-      file_extension: '.jsonl',
-      absolute_paths: true
-    })
+  for (const dir of dirs) {
+    try {
+      const expanded_dir = dir.replace('~', process.env.HOME)
 
-    // Find matching file (exact match on filename, not in subagents directory)
-    const matching_file = files.find((file) => {
-      const filename = path.basename(file)
-      const parent_dir = path.basename(path.dirname(file))
-      // Exclude files in subagents directories
-      return filename === target_filename && parent_dir !== 'subagents'
-    })
+      const files = await list_files_recursive({
+        directory: expanded_dir,
+        file_extension: '.jsonl',
+        absolute_paths: true
+      })
 
-    if (matching_file) {
-      log_debug(`Found session file: ${matching_file}`)
-      return matching_file
+      const matching_file = files.find((file) => {
+        const filename = path.basename(file)
+        const parent_dir = path.basename(path.dirname(file))
+        return filename === target_filename && parent_dir !== 'subagents'
+      })
+
+      if (matching_file) {
+        log_debug(`Found session file: ${matching_file}`)
+        return matching_file
+      }
+    } catch (error) {
+      log(`Error finding session file by ID in ${dir}: ${error.message}`)
     }
-
-    log_debug(`Session file not found for ID: ${session_id}`)
-    return null
-  } catch (error) {
-    log(`Error finding session file by ID: ${error.message}`)
-    return null
   }
+
+  log_debug(`Session file not found for ID: ${session_id}`)
+  return null
 }
 
 export const parse_claude_jsonl_file = async (file_path) => {
@@ -195,12 +200,14 @@ export const parse_claude_jsonl_file = async (file_path) => {
 
 export const parse_all_claude_files = async ({
   claude_projects_directory = CLAUDE_DEFAULT_PATHS.claude_projects_directory,
+  claude_projects_directories = null,
   filter_sessions = null
 } = {}) => {
   try {
     const start_time = Date.now()
     const files = await find_claude_project_files({
-      claude_projects_directory
+      claude_projects_directory,
+      claude_projects_directories
     })
 
     log(

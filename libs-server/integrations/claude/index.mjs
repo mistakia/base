@@ -44,6 +44,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
 
       for await (const session of provider.stream_sessions({
         claude_projects_directory: config.claude_projects_directory,
+        claude_projects_directories: config.claude_projects_directories,
         filter_sessions: config.filter_sessions,
         session_id: options.session_id,
         session_file: options.session_file,
@@ -79,6 +80,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       include_warm_agents: false,
       provider_options: {
         claude_projects_directory: config.claude_projects_directory,
+        claude_projects_directories: config.claude_projects_directories,
         filter_sessions: config.filter_sessions,
         session_id: options.session_id,
         session_file: options.session_file,
@@ -122,6 +124,7 @@ export const list_claude_sessions = async (options = {}) => {
   try {
     const sessions = await provider.find_sessions({
       claude_projects_directory: config.claude_projects_directory,
+      claude_projects_directories: config.claude_projects_directories,
       filter_sessions: config.filter_sessions
     })
 
