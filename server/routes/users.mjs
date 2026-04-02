@@ -277,19 +277,11 @@ router.put('/preferences', async (req, res) => {
       return res.status(400).send({ error: 'missing or invalid preferences' })
     }
 
-    const auth_header = req.headers.authorization
-    if (!auth_header) {
+    if (!req.user) {
       return res.status(401).send({ error: 'unauthorized' })
     }
 
-    let user_public_key
-    try {
-      const token = auth_header.replace('Bearer ', '')
-      const decoded = jwt.verify(token, config.jwt.secret)
-      user_public_key = decoded.user_public_key
-    } catch (err) {
-      return res.status(401).send({ error: 'invalid token' })
-    }
+    const { user_public_key } = req.user
 
     const identity = await load_identity_by_public_key({
       public_key: user_public_key
