@@ -66,7 +66,7 @@ const debounced_invalidate_file_path_cache = () => {
 }
 
 const logger = debug('server')
-debug.enable('server,api,threads:*,embedded-index*')
+debug.enable(process.env.DEBUG || 'server,api')
 
 // Initialize embedded index (SQLite) BEFORE accepting connections.
 // This ensures thread list queries use SQLite instead of expensive filesystem

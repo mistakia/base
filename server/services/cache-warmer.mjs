@@ -330,15 +330,23 @@ export function invalidate_activity_cache() {
 }
 
 /**
- * Invalidate tasks cache (called by file watcher)
+ * Invalidate tasks cache (called by file watcher).
+ * Debounced to coalesce rapid-fire events (e.g., FSEvents reconciliation
+ * re-emits thousands of entity files, each calling this function).
  */
+let tasks_invalidation_timer = null
 export function invalidate_tasks_cache() {
   cache.tasks.timestamp = 0
   cache.task_stats.timestamp = 0
-  log('Tasks cache invalidated')
-  // Immediately re-warm in background
-  warm_tasks_cache()
-  warm_task_stats_cache()
+
+  if (tasks_invalidation_timer) return
+
+  tasks_invalidation_timer = setTimeout(() => {
+    tasks_invalidation_timer = null
+    log('Tasks cache invalidated, re-warming')
+    warm_tasks_cache()
+    warm_task_stats_cache()
+  }, 2000)
 }
 
 /**
@@ -437,6 +445,11 @@ export function stop_cache_warmer() {
   if (task_stats_interval) {
     clearInterval(task_stats_interval)
     task_stats_interval = null
+  }
+
+  if (tasks_invalidation_timer) {
+    clearTimeout(tasks_invalidation_timer)
+    tasks_invalidation_timer = null
   }
 
   log('Cache warmer service stopped')
