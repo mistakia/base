@@ -1,13 +1,12 @@
-// Chokidar retained: watches 1 queue file. Not worth migrating to @parcel/watcher.
-import chokidar from 'chokidar'
 import fs from 'fs/promises'
 import debug from 'debug'
 
 /**
  * Generic file-based queue processor
  *
- * Watches a queue file for items to process and runs a configurable
- * processing function on each item.
+ * Polls a queue file for items to process and runs a configurable
+ * processing function on each item. Uses a recursive setTimeout loop
+ * to ensure sequential execution.
  */
 export class FileBasedQueueProcessor {
   /**
@@ -20,9 +19,7 @@ export class FileBasedQueueProcessor {
    * @param {string} config.processed_file_path - Path to the processed log file
    * @param {Function} config.process_item - Async function to process each item
    * @param {Function} [config.format_log_details] - Optional function to format details for processed log
-   * @param {number} [config.stability_threshold_ms=1000] - File stability threshold
-   * @param {number} [config.poll_interval_ms=100] - Poll interval for file watcher
-   * @param {number} [config.process_delay_ms=2000] - Delay before processing to batch entries
+   * @param {number} [config.poll_interval_ms=2000] - Poll interval for checking queue file
    * @param {number} [config.item_delay_ms=500] - Delay between processing items
    */
   constructor(config) {
@@ -33,13 +30,11 @@ export class FileBasedQueueProcessor {
     this.process_item = config.process_item
     this.format_log_details = config.format_log_details || (() => '')
 
-    this.stability_threshold_ms = config.stability_threshold_ms || 1000
-    this.poll_interval_ms = config.poll_interval_ms || 100
-    this.process_delay_ms = config.process_delay_ms || 2000
+    this.poll_interval_ms = config.poll_interval_ms || 2000
     this.item_delay_ms = config.item_delay_ms || 500
 
-    this.watcher = null
-    this.process_timeout = null
+    this.poll_active = false
+    this.poll_timeout = null
     this.is_processing = false
   }
 
@@ -106,6 +101,19 @@ export class FileBasedQueueProcessor {
   }
 
   /**
+   * Check if the queue file exists
+   * @returns {Promise<boolean>}
+   */
+  async queue_file_exists() {
+    try {
+      await fs.access(this.queue_file_path)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  /**
    * Process all items in the queue
    */
   async process_queue() {
@@ -120,7 +128,6 @@ export class FileBasedQueueProcessor {
       const queue = await this.read_queue_file()
 
       if (queue.length === 0) {
-        this.log('Queue is empty')
         return
       }
 
@@ -165,83 +172,40 @@ export class FileBasedQueueProcessor {
   }
 
   /**
-   * Schedule queue processing with debounce
+   * Poll loop using recursive setTimeout to ensure sequential execution.
+   * Each iteration waits for processing to complete before scheduling the next.
    */
-  schedule_processing() {
-    if (this.process_timeout) {
-      clearTimeout(this.process_timeout)
+  async poll_loop() {
+    if (!this.poll_active) {
+      return
     }
 
-    this.process_timeout = setTimeout(() => {
-      this.process_queue()
-    }, this.process_delay_ms)
-  }
+    const exists = await this.queue_file_exists()
+    if (exists) {
+      await this.process_queue()
+    }
 
-  /**
-   * Handle queue file changes
-   * @param {string} event_type - Chokidar event type
-   * @param {string} file_path - Path to the changed file
-   */
-  handle_queue_file_change(event_type, file_path) {
-    this.log(`Queue file ${event_type}: ${file_path}`)
-    this.schedule_processing()
-  }
-
-  /**
-   * Create watcher configuration
-   * @returns {Object} Chokidar configuration
-   */
-  create_watcher_config() {
-    return {
-      awaitWriteFinish: {
-        stabilityThreshold: this.stability_threshold_ms,
-        pollInterval: this.poll_interval_ms
-      },
-      persistent: true,
-      ignoreInitial: false,
-      // Use polling on macOS because /tmp -> /private/tmp symlink breaks FSEvents
-      usePolling: process.platform === 'darwin',
-      interval: 500
+    if (this.poll_active) {
+      this.poll_timeout = setTimeout(() => this.poll_loop(), this.poll_interval_ms)
     }
   }
 
   /**
    * Start the queue processor
-   * @returns {Object} Watcher instance
    */
   start() {
-    if (this.watcher) {
+    if (this.poll_active) {
       this.log(`${this.name} already running`)
-      return this.watcher
+      return
     }
 
     this.log(`Starting ${this.name}`)
-    this.log(`Watching: ${this.queue_file_path}`)
+    this.log(`Polling: ${this.queue_file_path} every ${this.poll_interval_ms}ms`)
 
-    try {
-      const config = this.create_watcher_config()
-      this.watcher = chokidar.watch(this.queue_file_path, config)
+    this.poll_active = true
 
-      this.watcher.on('add', (path) =>
-        this.handle_queue_file_change('add', path)
-      )
-      this.watcher.on('change', (path) =>
-        this.handle_queue_file_change('change', path)
-      )
-      this.watcher.on('error', (error) => {
-        this.log('Queue watcher error:', error)
-      })
-      this.watcher.on('ready', () => {
-        this.log(`${this.name} ready`)
-        // Process any existing queue entries on startup
-        this.schedule_processing()
-      })
-
-      return this.watcher
-    } catch (error) {
-      this.log(`Failed to start ${this.name}:`, error)
-      throw error
-    }
+    // Process any existing queue entries on startup, then begin polling
+    this.poll_loop()
   }
 
   /**
@@ -249,26 +213,21 @@ export class FileBasedQueueProcessor {
    * @returns {Promise<void>}
    */
   async stop() {
-    if (!this.watcher) {
+    if (!this.poll_active) {
       this.log(`No ${this.name} to stop`)
       return
     }
 
     this.log(`Stopping ${this.name}`)
 
-    if (this.process_timeout) {
-      clearTimeout(this.process_timeout)
-      this.process_timeout = null
+    this.poll_active = false
+
+    if (this.poll_timeout) {
+      clearTimeout(this.poll_timeout)
+      this.poll_timeout = null
     }
 
-    try {
-      await this.watcher.close()
-      this.watcher = null
-      this.log(`${this.name} stopped`)
-    } catch (error) {
-      this.log(`Error stopping ${this.name}:`, error)
-      throw error
-    }
+    this.log(`${this.name} stopped`)
   }
 }
 

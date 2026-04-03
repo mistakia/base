@@ -99,11 +99,9 @@ const processor = new FileBasedQueueProcessor({
 
 /**
  * Start the metadata queue processor
- * @param {Object} [params] - Configuration parameters
- * @returns {Object} Watcher instance
  */
 export const start_metadata_queue_processor = () => {
-  return processor.start()
+  processor.start()
 }
 
 /**
