@@ -422,18 +422,18 @@ export const is_agent_session = ({ session }) => {
 }
 
 /**
- * Check if an agent session is a "warm" initialization agent
- * Warm agents should be excluded from import as they provide no analytical value.
+ * Check if a session is a "warm" initialization session
+ * Warm sessions should be excluded from import as they provide no analytical value.
  *
- * Warm agent patterns:
+ * Warm session patterns:
  * - Single entry with assistant role containing "ready to help" message
  * - First entry with user role and content "Warmup"
  *
  * @param {Object} params - Parameters object
  * @param {Object} params.session - Raw Claude session data
- * @returns {boolean} True if agent is a warm/initialization agent
+ * @returns {boolean} True if session is a warm/initialization session
  */
-export const is_warm_agent = ({ session }) => {
+export const is_warm_session = ({ session }) => {
   if (!session.entries || session.entries.length === 0) {
     return true // Empty sessions are considered warm
   }
@@ -571,7 +571,7 @@ export const group_sessions_with_agents = ({
   for (const session of sessions) {
     if (is_agent_session({ session })) {
       // Check if warm agent should be excluded
-      if (!include_warm_agents && is_warm_agent({ session })) {
+      if (!include_warm_agents && is_warm_session({ session })) {
         warm_agents_excluded++
         log_debug(`Excluding warm agent: ${session.session_id}`)
         continue

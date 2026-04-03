@@ -22,7 +22,7 @@ import { ChatGPTSessionProvider } from '#libs-server/integrations/chatgpt/chatgp
 import { PiSessionProvider } from '#libs-server/integrations/pi/pi-session-provider.mjs'
 import {
   is_agent_session,
-  is_warm_agent as is_warm_session
+  is_warm_session
 } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
 import { merge_and_sequence_agent_sessions } from '#libs-server/integrations/claude/merge-agent-sessions.mjs'
 

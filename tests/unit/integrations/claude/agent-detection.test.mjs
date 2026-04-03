@@ -3,7 +3,7 @@ import { expect } from 'chai'
 
 import {
   is_agent_session,
-  is_warm_agent,
+  is_warm_session,
   get_agent_parent_session_id,
   get_agent_id,
   group_sessions_with_agents
@@ -67,7 +67,7 @@ describe('Claude Agent Session Detection', () => {
     })
   })
 
-  describe('is_warm_agent', () => {
+  describe('is_warm_session', () => {
     it('should identify warm agent with single "ready to help" message', () => {
       const session = {
         session_id: 'agent-warmup1',
@@ -84,7 +84,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.true
+      expect(is_warm_session({ session })).to.be.true
     })
 
     it('should identify warm agent with "Warmup" first user message', () => {
@@ -111,7 +111,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.true
+      expect(is_warm_session({ session })).to.be.true
     })
 
     it('should identify warm agent with case-insensitive "warmup"', () => {
@@ -130,7 +130,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.true
+      expect(is_warm_session({ session })).to.be.true
     })
 
     it('should return false for work agents with actual content', () => {
@@ -157,7 +157,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.false
+      expect(is_warm_session({ session })).to.be.false
     })
 
     it('should return true for empty sessions', () => {
@@ -167,7 +167,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.true
+      expect(is_warm_session({ session })).to.be.true
     })
 
     it('should handle array content format', () => {
@@ -188,7 +188,7 @@ describe('Claude Agent Session Detection', () => {
         metadata: {}
       }
 
-      expect(is_warm_agent({ session })).to.be.true
+      expect(is_warm_session({ session })).to.be.true
     })
   })
 

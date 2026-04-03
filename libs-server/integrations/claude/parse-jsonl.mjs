@@ -6,7 +6,7 @@ import debug from 'debug'
 
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
-import { is_warm_agent, is_agent_file_path } from './claude-session-helpers.mjs'
+import { is_warm_session, is_agent_file_path } from './claude-session-helpers.mjs'
 
 const log = debug('integrations:claude:parse-jsonl')
 const log_debug = debug('integrations:claude:parse-jsonl:debug')
@@ -414,7 +414,7 @@ export async function* stream_claude_sessions({
             // Skip warm agents unless explicitly included
             if (
               !include_warm_agents &&
-              is_warm_agent({ session: agent_session })
+              is_warm_session({ session: agent_session })
             ) {
               log_debug(`Skipping warm agent: ${agent_session.session_id}`)
               continue
