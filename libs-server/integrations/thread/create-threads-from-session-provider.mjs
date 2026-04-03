@@ -20,7 +20,10 @@ import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-s
 import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-session-provider.mjs'
 import { ChatGPTSessionProvider } from '#libs-server/integrations/chatgpt/chatgpt-session-provider.mjs'
 import { PiSessionProvider } from '#libs-server/integrations/pi/pi-session-provider.mjs'
-import { is_agent_session } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
+import {
+  is_agent_session,
+  is_warm_agent as is_warm_session
+} from '#libs-server/integrations/claude/claude-session-helpers.mjs'
 import { merge_and_sequence_agent_sessions } from '#libs-server/integrations/claude/merge-agent-sessions.mjs'
 
 const log = debug('integrations:thread:create-from-session-provider')
@@ -135,6 +138,21 @@ export const create_threads_from_session_provider = async ({
           `Invalid session ${raw_session.session_id}: ${validation.errors.join(', ')}`
         )
       }
+      continue
+    }
+
+    // Skip warm/warmup sessions (e.g., cache-priming "Warmup" sessions)
+    if (!include_warm_agents && is_warm_session({ session: raw_session })) {
+      results.skipped.push({
+        session_id: session_provider.get_session_id(raw_session),
+        reason: 'warm_session'
+      })
+      if (verbose) {
+        log_debug(
+          `Skipping warm session: ${session_provider.get_session_id(raw_session)}`
+        )
+      }
+      sessions_processed++
       continue
     }
 
