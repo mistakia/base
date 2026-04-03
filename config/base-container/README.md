@@ -1,27 +1,30 @@
 # Base Container
 
-Persistent Docker container providing Claude Code CLI, OpenCode CLI, and development tooling for interactive sessions. Services (base-api, schedule-processor, cli-queue-worker, metadata-queue-processor, transcription-service) run natively via PM2 for filesystem performance.
+Persistent Docker container providing Claude Code CLI, OpenCode CLI, and development tooling for interactive sessions. Services (base-api, index-sync-service, schedule-processor, cli-queue-worker, metadata-queue-processor, transcription-service) run natively via PM2 for filesystem performance.
 
 ## Prerequisites
 
-- **Primary machine (macOS)**: Docker Desktop for macOS, Node.js 20+, PM2 (`bun install -g pm2`)
-- **Secondary machine (Linux)**: Docker Engine (user in `docker` group), Node.js 20+, PM2
-- `CONFIG_ENCRYPTION_KEY` environment variable set in shell profile (required for base CLI)
+- Docker Desktop (macOS/Windows) or Docker Engine (Linux, user in `docker` group)
+- Node.js 20+, PM2 (`bun install -g pm2`)
+- `CONFIG_ENCRYPTION_KEY` environment variable set in shell profile (required when config contains encrypted values)
 
 ## File Structure
 
 ```
-config/base-container/
+# Base repo (generic defaults)
+repository/active/base/config/base-container/
   Dockerfile                  # Container image (Claude Code, OpenCode, dev tools)
   docker-compose.yml          # Base compose (interactive container only)
-  docker-compose.storage.yml  # Storage server overrides
-  docker-compose.macbook.yml  # MacBook overrides
   entrypoint.sh               # Container initialization
-  config.storage.env          # Per-machine env for container hooks
-  config.macbook.env          # Per-machine env for container hooks
+  settings.container.json     # Default Claude Code settings for container
+
+# User-base (machine-specific overrides)
+config/base-container/
+  docker-compose.<machine>.yml  # Per-machine compose overrides
+  config.<machine>.env          # Per-machine env for container hooks
 
 repository/active/base/
-  pm2.config.js               # Unified PM2 config for all 5 services (auto-detects machine)
+  pm2.config.js               # Unified PM2 config for all 6 services (auto-detects machine)
 ```
 
 ## Service Management (PM2)
@@ -70,21 +73,11 @@ cli/base-container.sh container-stop
 
 ## Data Directories
 
-Each machine has a local data directory for persistent `~/.claude` and `~/.opencode` state (not version controlled, not synced):
-
-| Machine        | Path                            |
-| -------------- | ------------------------------- |
-| Linux server | Configurable (e.g., `/data/base-container-data/`) |
-| macOS        | `$HOME/.base-container-data/`                     |
+Each machine has a local data directory for persistent `~/.claude` and `~/.opencode` state (not version controlled, not synced). The default location is `$HOME/.base-container-data/`.
 
 One-time setup:
 
 ```bash
-# Linux server (adjust path as needed)
-mkdir -p $DATA_DIR/base-container-data/{claude-home/projects,opencode-data}
-chown -R $USER:$USER $DATA_DIR/base-container-data
-
-# macOS
 mkdir -p $HOME/.base-container-data/{claude-home/projects,opencode-data}
 ```
 
@@ -120,16 +113,18 @@ cli/base-container.sh sync-sessions
 Only session JSONL files should be synced with `sync-sessions`. Settings, cache,
 todos, plans, and statsig are container-owned and must not be synced.
 
-## Per-Machine Differences
+## Multi-Machine Setup (Optional)
 
-| Aspect             | Linux Server                     | macOS                                             |
+For single-machine setups, the base `docker-compose.yml` is sufficient. For multi-machine deployments, create per-machine compose overrides in your user-base at `config/base-container/docker-compose.<machine>.yml`.
+
+Common differences between Linux and macOS hosts:
+
+| Aspect             | Linux                            | macOS                                             |
 | ------------------ | -------------------------------- | ------------------------------------------------- |
 | Container network  | `host` (localhost reaches host)  | Bridge (`host.docker.internal`)                   |
-| Thread rsync       | Skipped (`SKIP_THREAD_RSYNC=1`)  | Required (syncs via SSH)                          |
-| SSH config         | Mounted from `~/.ssh`            | Mounted from host `~/.ssh`                        |
-| SSH agent          | Not used                         | Proxied via socat (auto-configured by entrypoint) |
-| PM2 log directory  | `~/logs/`                        | `~/logs/`                                         |
-| Machine identifier | `BASE_CONTAINER_MACHINE=storage` | `BASE_CONTAINER_MACHINE=macbook`                  |
+| SSH agent          | Not typically needed             | Proxied via socat (auto-configured by entrypoint) |
+| Thread sync        | May skip rsync (`SKIP_THREAD_RSYNC=1`) | Syncs via SSH to other machines              |
+| Machine identifier | `BASE_CONTAINER_MACHINE=<name>`  | `BASE_CONTAINER_MACHINE=<name>`                   |
 
 ## Container Context for Claude Code
 
@@ -137,7 +132,7 @@ The entrypoint generates a context file at `/tmp/container-context.txt` that des
 
 The context includes:
 
-- Which machine the container is running on (storage or macbook)
+- Which machine the container is running on (from `BASE_CONTAINER_MACHINE` env var)
 - Network mode and service accessibility
 - SSH host configuration availability
 
@@ -151,6 +146,6 @@ The context includes:
 
 **SSH host aliases not working**: The host's SSH config is mounted read-only with root ownership. The entrypoint copies the config to a node-owned directory (`/home/node/.ssh-local`) and symlinks `/home/node/.ssh` to it. If `ssh storage` fails with "Could not resolve hostname", restart the container to trigger the entrypoint SSH setup.
 
-**Hook scripts fail with "command not found"**: Ensure base submodule dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd $USER_BASE_DIRECTORY/repository/active/base && bun install`.
+**Hook scripts fail with "command not found"**: Ensure base repo dependencies are installed. The entrypoint installs them on first boot, but you can manually run `cd $USER_BASE_DIRECTORY/repository/active/base && bun install`.
 
 **Submodule operations fail (storage server)**: Ensure `git config --global protocol.file.allow always` is set (done by entrypoint).

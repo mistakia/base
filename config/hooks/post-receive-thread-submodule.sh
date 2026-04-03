@@ -15,7 +15,11 @@
 # Configuration: Set these variables for your deployment, or override via
 # environment variables in the bare repo's hooks/environment file.
 
-WORKING_DIR="${HOOK_THREAD_WORKING_DIR:-${USER_BASE_DIRECTORY:-/mnt/md0/user-base}/thread}"
+if [ -z "$HOOK_THREAD_WORKING_DIR" ] && [ -z "$USER_BASE_DIRECTORY" ]; then
+    echo "ERROR: Set HOOK_THREAD_WORKING_DIR or USER_BASE_DIRECTORY" >&2
+    exit 1
+fi
+WORKING_DIR="${HOOK_THREAD_WORKING_DIR:-${USER_BASE_DIRECTORY}/thread}"
 LOG_FILE="${HOOK_LOG_FILE:-${HOME}/logs/user-base-threads-post-receive.log}"
 
 mkdir -p "$(dirname "$LOG_FILE")"

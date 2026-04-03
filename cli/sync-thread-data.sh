@@ -11,7 +11,7 @@
 #
 # Environment variables:
 #   REMOTE_THREAD_PATH       - Full rsync target (e.g., storage:/data/user-base/thread/)
-#   REMOTE_USER_BASE_DIRECTORY - Remote user-base path (default: /mnt/md0/user-base)
+#   REMOTE_USER_BASE_DIRECTORY - Remote user-base path (required if REMOTE_THREAD_PATH not set)
 #   SYNC_ROLE                - "primary" or "secondary" (default: auto-detect from platform)
 #
 # Called by:
@@ -64,7 +64,12 @@ elif [ -z "$SSH_AUTH_SOCK" ]; then
 fi
 
 # Remote thread path: set via REMOTE_THREAD_PATH env var or derive from SSH host alias + path
-REMOTE_STORAGE_THREAD_PATH="${REMOTE_THREAD_PATH:-storage:${REMOTE_USER_BASE_DIRECTORY:-/mnt/md0/user-base}/thread/}"
+# REMOTE_THREAD_PATH takes precedence; otherwise construct from REMOTE_USER_BASE_DIRECTORY
+if [ -z "$REMOTE_THREAD_PATH" ] && [ -z "$REMOTE_USER_BASE_DIRECTORY" ]; then
+    echo "ERROR: Set REMOTE_THREAD_PATH or REMOTE_USER_BASE_DIRECTORY" >&2
+    exit 1
+fi
+REMOTE_STORAGE_THREAD_PATH="${REMOTE_THREAD_PATH:-storage:${REMOTE_USER_BASE_DIRECTORY}/thread/}"
 
 # Common rsync filter flags for thread bulk data.
 # Filter order matters (first match wins):

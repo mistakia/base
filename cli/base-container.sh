@@ -247,7 +247,11 @@ case "${1:-}" in
         SESSION_DIR="projects/$(echo "$USER_BASE_DIR" | tr '/' '-' | sed 's/^-//')"
         if [ "$MACHINE" = "macbook" ]; then
             LOCAL_PATH="$HOME/.base-container-data/claude-home/$SESSION_DIR/"
-            REMOTE_CONTAINER_DATA="${REMOTE_CONTAINER_DATA_PATH:-storage:${REMOTE_USER_BASE_DIRECTORY:-/mnt/md0}/base-container-data}"
+            if [ -z "$REMOTE_CONTAINER_DATA_PATH" ] && [ -z "$REMOTE_USER_BASE_DIRECTORY" ]; then
+                echo "ERROR: Set REMOTE_CONTAINER_DATA_PATH or REMOTE_USER_BASE_DIRECTORY" >&2
+                exit 1
+            fi
+            REMOTE_CONTAINER_DATA="${REMOTE_CONTAINER_DATA_PATH:-storage:$(dirname "$REMOTE_USER_BASE_DIRECTORY")/base-container-data}"
             REMOTE_PATH="$REMOTE_CONTAINER_DATA/claude-home/$SESSION_DIR/"
             echo "Syncing sessions to remote storage..."
             rsync -av --include='*.jsonl' --exclude='*' "$LOCAL_PATH" "$REMOTE_PATH"

@@ -43,8 +43,8 @@ fi
 DEPLOY_HOOKS_CONF="$USER_BASE_DIRECTORY/config/deploy-hooks.conf"
 if [ ! -f "$DEPLOY_HOOKS_CONF" ]; then
     echo "Error: Deploy hooks config not found: $DEPLOY_HOOKS_CONF" >&2
-    echo "Create this file with REMOTE_HOST, BARE_REPO_DIR, REMOTE_USER_BASE," >&2
-    echo "MACBOOK_USER_BASE, POST_RECEIVE_HOOKS, and POST_COMMIT_SUBMODULES." >&2
+    echo "Create this file with REMOTE_HOST, BARE_REPO_DIR, REMOTE_USER_BASE_DIRECTORY," >&2
+    echo "MACBOOK_USER_BASE_DIRECTORY, POST_RECEIVE_HOOKS, and POST_COMMIT_SUBMODULES." >&2
     exit 1
 fi
 source "$DEPLOY_HOOKS_CONF"
@@ -80,7 +80,7 @@ if [ "$DEPLOY_POST_RECEIVE" = true ]; then
 # Updates local working copy
 # MacBook-initiated sync model: storage does not trigger macbook sync (see sync-thread-data.sh)
 
-USER_BASE_DIRECTORY=$REMOTE_USER_BASE
+USER_BASE_DIRECTORY=$REMOTE_USER_BASE_DIRECTORY
 CLI_DIR=\"\$USER_BASE_DIRECTORY/repository/active/base/cli\"
 
 # Update local working copy (backgrounded so hook returns quickly)
