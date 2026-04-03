@@ -24,7 +24,11 @@ let stored_on_entity_change = null
 let stored_on_entity_delete = null
 
 // Debounce to prevent rapid re-indexing
-const entity_debouncer = create_keyed_debouncer(500)
+const entity_debouncer = create_keyed_debouncer(500, {
+  on_error: (error, key) => {
+    log('Debounced entity sync error for %s: %s', key, error.message)
+  }
+})
 
 function get_user_base_directory() {
   return config.user_base_directory

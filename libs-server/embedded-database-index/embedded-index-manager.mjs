@@ -400,6 +400,17 @@ class EmbeddedIndexManager {
         await drop_sqlite_schema()
         await create_sqlite_schema()
         log('SQLite schema rebuilt')
+
+        // Write schema version immediately after schema creation.
+        // This prevents a mid-rebuild kill from triggering another full rebuild
+        // on restart -- the next startup will attempt incremental sync instead,
+        // which is much less memory-intensive.
+        await set_index_metadata({
+          key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
+          value: CURRENT_SCHEMA_VERSION
+        })
+        await checkpoint_sqlite()
+        log('Schema version checkpointed early')
       } catch (error) {
         log('Error rebuilding SQLite schema: %s', error.message)
       }

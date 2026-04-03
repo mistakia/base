@@ -22,8 +22,10 @@ import { ENTITY_DIRECTORIES } from '#libs-server/embedded-database-index/sync/in
 const log = debug('file-subscriptions:user-base-watcher')
 
 const RECONCILIATION_DEBOUNCE_MS = 5000
+const RECONCILIATION_COOLDOWN_MS = 60000
 let reconciliation_timer = null
 let is_reconciling = false
+let last_reconciliation_completed_at = 0
 
 // Directories ignored by @parcel/watcher subscription.
 // These are either covered by dedicated watchers or contain non-entity data.
@@ -205,6 +207,16 @@ async function reconcile_entity_directories({
     return
   }
 
+  const elapsed = Date.now() - last_reconciliation_completed_at
+  if (elapsed < RECONCILIATION_COOLDOWN_MS) {
+    log(
+      'Skipping reconciliation, last completed %ds ago (cooldown: %ds)',
+      Math.round(elapsed / 1000),
+      RECONCILIATION_COOLDOWN_MS / 1000
+    )
+    return
+  }
+
   is_reconciling = true
   log('Starting entity reconciliation scan')
   let file_count = 0
@@ -234,6 +246,7 @@ async function reconcile_entity_directories({
     }
   } finally {
     is_reconciling = false
+    last_reconciliation_completed_at = Date.now()
   }
 
   log('Entity reconciliation complete: %d files re-emitted', file_count)

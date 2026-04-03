@@ -142,7 +142,8 @@ const all_defined_apps = [
     max_memory_restart: '3584M'
   }),
   app('index-sync-service', 'server/services/index-sync-service.mjs', {
-    max_memory_restart: '512M',
+    max_memory_restart: '768M',
+    exp_backoff_restart_delay: 1000,
     env: { DEBUG: 'index-sync*,embedded-index*' }
   }),
   app(

@@ -322,14 +322,25 @@ if (is_main_module) {
   log('Starting index sync service as standalone service')
   start_index_sync_service()
 
-  const shutdown = async () => {
-    log('Received shutdown signal')
+  const shutdown = async (reason) => {
+    log('Shutting down (%s)', reason)
     await stop_index_sync_service()
-    process.exit(0)
+    process.exit(reason === 'SIGINT' || reason === 'SIGTERM' ? 0 : 1)
   }
 
-  process.on('SIGINT', shutdown)
-  process.on('SIGTERM', shutdown)
+  process.on('SIGINT', () => shutdown('SIGINT'))
+  process.on('SIGTERM', () => shutdown('SIGTERM'))
+
+  process.on('uncaughtException', (error) => {
+    log('Uncaught exception: %s', error.message)
+    log('%s', error.stack)
+    shutdown('uncaughtException')
+  })
+
+  process.on('unhandledRejection', (reason) => {
+    log('Unhandled rejection: %O', reason)
+    shutdown('unhandledRejection')
+  })
 }
 
 export default start_index_sync_service
