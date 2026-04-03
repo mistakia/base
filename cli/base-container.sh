@@ -138,7 +138,6 @@ usage() {
     echo "    --wait           Wait for active sessions to finish, then stop"
     echo "  build              Build the Docker container image"
     echo "  rebuild            Rebuild Docker image from scratch (no cache)"
-    echo "  sync-sessions      Sync session JSONL files between machines"
     echo ""
     echo "PM2 services: $PM2_SERVICES"
     echo "Detected machine: $MACHINE"
@@ -242,22 +241,6 @@ case "${1:-}" in
     opencode)
         shift
         docker exec -it base-container opencode "$@"
-        ;;
-    sync-sessions)
-        SESSION_DIR="projects/$(echo "$USER_BASE_DIR" | tr '/' '-' | sed 's/^-//')"
-        if [ "$MACHINE" = "macbook" ]; then
-            LOCAL_PATH="$HOME/.base-container-data/claude-home/$SESSION_DIR/"
-            if [ -z "$REMOTE_CONTAINER_DATA_PATH" ] && [ -z "$REMOTE_USER_BASE_DIRECTORY" ]; then
-                echo "ERROR: Set REMOTE_CONTAINER_DATA_PATH or REMOTE_USER_BASE_DIRECTORY" >&2
-                exit 1
-            fi
-            REMOTE_CONTAINER_DATA="${REMOTE_CONTAINER_DATA_PATH:-storage:$(dirname "$REMOTE_USER_BASE_DIRECTORY")/base-container-data}"
-            REMOTE_PATH="$REMOTE_CONTAINER_DATA/claude-home/$SESSION_DIR/"
-            echo "Syncing sessions to remote storage..."
-            rsync -av --include='*.jsonl' --exclude='*' "$LOCAL_PATH" "$REMOTE_PATH"
-        else
-            echo "Sessions are local on this server. Use the primary machine to push sessions here."
-        fi
         ;;
     *)
         usage

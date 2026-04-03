@@ -102,16 +102,17 @@ Primary synchronization happens through git in the `thread/` submodule:
 This is the normal cross-machine continuity path and includes session raw-data
 needed for restore on resume.
 
-`sync-sessions` is a manual recovery tool only. Use it only when JSONL files are
-missing from container `~/.claude/projects` and you need to repopulate that cache:
+`sync-container-sessions.sh` (in user-base `cli/`) is a manual recovery tool only.
+Use it only when JSONL files are missing from container `~/.claude/projects` and
+you need to repopulate that cache:
 
 ```bash
 # Manual recovery: sync session JSONL files to storage server container data
-cli/base-container.sh sync-sessions
+cli/sync-container-sessions.sh
 ```
 
-Only session JSONL files should be synced with `sync-sessions`. Settings, cache,
-todos, plans, and statsig are container-owned and must not be synced.
+Only session JSONL files should be synced. Settings, cache, todos, plans, and
+statsig are container-owned and must not be synced.
 
 ## Multi-Machine Setup (Optional)
 
