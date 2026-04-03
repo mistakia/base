@@ -271,19 +271,39 @@ class EmbeddedIndexManager {
         return
       }
 
-      // Try incremental sync first
-      log('Attempting incremental sync')
-      const incremental_result = await sync_index_on_startup({
-        index_manager: this
-      })
-
-      if (incremental_result.success) {
-        log('Incremental sync successful: %o', incremental_result.stats)
-        return
+      // Check if a previous rebuild was interrupted (e.g., OOM kill).
+      // If so, skip incremental sync (which would miss most data since
+      // repo sync state was never written) and go straight to resync.
+      let rebuild_was_interrupted = false
+      try {
+        const rebuild_flag = await get_index_metadata({
+          key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS
+        })
+        rebuild_was_interrupted = rebuild_flag === 'true'
+      } catch {
+        // Metadata read failure is non-fatal
       }
 
-      // Incremental failed, try resync
-      log('Incremental sync failed, attempting resync')
+      if (rebuild_was_interrupted) {
+        log(
+          'Previous rebuild was interrupted, skipping incremental sync and attempting resync'
+        )
+      } else {
+        // Try incremental sync first
+        log('Attempting incremental sync')
+        const incremental_result = await sync_index_on_startup({
+          index_manager: this
+        })
+
+        if (incremental_result.success) {
+          log('Incremental sync successful: %o', incremental_result.stats)
+          return
+        }
+
+        log('Incremental sync failed, attempting resync')
+      }
+
+      // Resync: update-in-place without dropping tables
       const resync_result = await resync_full_index({ index_manager: this })
 
       if (resync_result.success) {
@@ -401,16 +421,22 @@ class EmbeddedIndexManager {
         await create_sqlite_schema()
         log('SQLite schema rebuilt')
 
-        // Write schema version immediately after schema creation.
-        // This prevents a mid-rebuild kill from triggering another full rebuild
-        // on restart -- the next startup will attempt incremental sync instead,
-        // which is much less memory-intensive.
+        // Write schema version and rebuild_in_progress flag immediately.
+        // The schema version prevents the next startup from triggering another
+        // full rebuild (which OOMs again). The rebuild_in_progress flag tells
+        // the next startup to use resync (update-in-place) instead of
+        // incremental sync, which would miss all data since repo sync state
+        // hasn't been written yet.
         await set_index_metadata({
           key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
           value: CURRENT_SCHEMA_VERSION
         })
+        await set_index_metadata({
+          key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS,
+          value: 'true'
+        })
         await checkpoint_sqlite()
-        log('Schema version checkpointed early')
+        log('Schema version and rebuild_in_progress flag checkpointed')
       } catch (error) {
         log('Error rebuilding SQLite schema: %s', error.message)
       }
@@ -435,7 +461,7 @@ class EmbeddedIndexManager {
       }
     }
 
-    // Set schema version and sync state for all repositories
+    // Clear rebuild_in_progress and set sync state for all repositories
     if (this.sqlite_ready) {
       try {
         const user_base_directory = config.user_base_directory
@@ -460,12 +486,12 @@ class EmbeddedIndexManager {
 
         await set_repo_sync_state({ state: new_sync_state })
         await set_index_metadata({
-          key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
-          value: CURRENT_SCHEMA_VERSION
+          key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS,
+          value: null
         })
 
         // Force checkpoint to persist all changes to disk.
-        // This ensures schema version survives ungraceful shutdowns (e.g., PM2 SIGKILL).
+        // This ensures sync state survives ungraceful shutdowns (e.g., PM2 SIGKILL).
         await checkpoint_sqlite()
       } catch (error) {
         log('Error updating sync metadata after rebuild: %s', error.message)

@@ -65,7 +65,8 @@ export const INDEX_METADATA_KEYS = {
   LAST_SYNC_TIMESTAMP: 'last_sync_timestamp',
   SCHEMA_VERSION: 'schema_version',
   REPO_SYNC_STATE: 'repo_sync_state',
-  ACTIVITY_GIT_SYNC_STATE: 'activity_git_sync_state'
+  ACTIVITY_GIT_SYNC_STATE: 'activity_git_sync_state',
+  REBUILD_IN_PROGRESS: 'rebuild_in_progress'
 }
 
 /**

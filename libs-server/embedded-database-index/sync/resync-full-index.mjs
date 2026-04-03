@@ -234,7 +234,12 @@ export async function resync_full_index({ index_manager }) {
         key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
         value: CURRENT_SCHEMA_VERSION
       })
-      // Force checkpoint to persist schema version
+      // Clear rebuild_in_progress flag if it was set by an interrupted rebuild
+      await set_index_metadata({
+        key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS,
+        value: null
+      })
+      // Force checkpoint to persist metadata
       await checkpoint_sqlite()
       metadata_updated = true
     } catch (metadata_error) {
