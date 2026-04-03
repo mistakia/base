@@ -200,8 +200,8 @@ export const assign_merged_sequence_numbers = ({ session }) => {
 
   // Sort entries in place to avoid creating a full copy of potentially huge arrays
   session.entries.sort((a, b) => {
-    const time_a = new Date(a.timestamp).getTime()
-    const time_b = new Date(b.timestamp).getTime()
+    const time_a = a.timestamp ? new Date(a.timestamp).getTime() || 0 : 0
+    const time_b = b.timestamp ? new Date(b.timestamp).getTime() || 0 : 0
 
     // If timestamps are equal, preserve relative order
     // (agent entries should come after their spawn point)

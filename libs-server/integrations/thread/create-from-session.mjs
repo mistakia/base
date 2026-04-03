@@ -23,6 +23,22 @@ const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
 
 /**
+ * Safely convert a date value to ISO string, returning null for invalid dates.
+ * Handles Date objects (including Invalid Date), ISO strings, and null/undefined.
+ */
+const safe_date_to_iso = (value) => {
+  if (value == null) return null
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value.toISOString()
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const d = new Date(value)
+    return isNaN(d.getTime()) ? null : d.toISOString()
+  }
+  return null
+}
+
+/**
  * Create a stable string representation for comparison by sorting keys recursively
  * and excluding timestamp fields that shouldn't trigger updates
  */
@@ -86,16 +102,8 @@ export const create_thread_from_session = async ({
 
     // Extract timeline timestamps for thread creation
     const session_metadata = normalized_session.metadata || {}
-    const timeline_created_at = session_metadata.start_time
-      ? session_metadata.start_time instanceof Date
-        ? session_metadata.start_time.toISOString()
-        : session_metadata.start_time
-      : null
-    const timeline_updated_at = session_metadata.end_time
-      ? session_metadata.end_time instanceof Date
-        ? session_metadata.end_time.toISOString()
-        : session_metadata.end_time
-      : null
+    const timeline_created_at = safe_date_to_iso(session_metadata.start_time)
+    const timeline_updated_at = safe_date_to_iso(session_metadata.end_time)
 
     // Flag anomaly: non-empty session with zero assistant messages
     if (
@@ -602,11 +610,8 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
     if (metadata_changed) {
       // Only update updated_at when meaningful changes exist
       const session_metadata = normalized_session.metadata || {}
-      const timeline_updated_at = session_metadata.end_time
-        ? session_metadata.end_time instanceof Date
-          ? session_metadata.end_time.toISOString()
-          : session_metadata.end_time
-        : new Date().toISOString()
+      const timeline_updated_at =
+        safe_date_to_iso(session_metadata.end_time) || new Date().toISOString()
 
       updated_metadata.updated_at = timeline_updated_at
 
