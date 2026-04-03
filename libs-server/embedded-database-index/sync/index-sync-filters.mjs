@@ -27,7 +27,12 @@ export const ENTITY_DIRECTORIES = [
   'text',
   'workflow',
   'physical-item',
-  'physical-location'
+  'physical-location',
+  'person',
+  'role',
+  'identity',
+  'scheduled-command',
+  'extension'
 ]
 
 /**

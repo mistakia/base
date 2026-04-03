@@ -71,7 +71,7 @@ The user-base watcher creates a single @parcel/watcher subscription and routes e
 4. Remaining events route to `file_subscription` (WebSocket notifications)
 5. `.md` files in entity directories additionally route to `entity_index` (SQLite sync)
 
-Entity directories: task, tag, guideline, text, workflow, physical-item, physical-location.
+Entity directories: task, tag, guideline, text, workflow, physical-item, physical-location, person, role, identity, scheduled-command, extension.
 
 ### Ignore Patterns
 

@@ -20,6 +20,11 @@ describe('Index File Watcher', () => {
       expect(ENTITY_DIRECTORIES).to.include('workflow')
       expect(ENTITY_DIRECTORIES).to.include('physical-item')
       expect(ENTITY_DIRECTORIES).to.include('physical-location')
+      expect(ENTITY_DIRECTORIES).to.include('person')
+      expect(ENTITY_DIRECTORIES).to.include('role')
+      expect(ENTITY_DIRECTORIES).to.include('identity')
+      expect(ENTITY_DIRECTORIES).to.include('scheduled-command')
+      expect(ENTITY_DIRECTORIES).to.include('extension')
     })
   })
 
