@@ -18,8 +18,6 @@
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
-// Chokidar retained: watches 2 IPC files. Not worth migrating to @parcel/watcher.
-import chokidar from 'chokidar'
 
 import config from '#config'
 
@@ -29,11 +27,11 @@ const QUEUE_FILE_NAME = '.thread-sync-queue'
 const DELETE_PREFIX = 'DELETE:'
 const PROCESSING_SUFFIX = '.processing'
 const MAX_QUEUE_SIZE_BYTES = 1024 * 1024 // 1MB
-const PROCESS_DELAY_MS = 1000
 const OPERATION_TIMEOUT_MS = 30000
+const POLL_INTERVAL_MS = 5000
 
-let queue_watcher = null
-let process_timeout = null
+let poll_active = false
+let poll_timeout = null
 let is_processing = false
 
 /**
@@ -237,6 +235,8 @@ function with_timeout(promise, ms) {
  * @param {Function} callbacks.on_thread_delete - Called with { thread_id }
  */
 async function process_queue({ on_thread_sync, on_thread_delete }) {
+  // Defense-in-depth: structurally impossible with sequential poll_loop,
+  // but guards against future callers invoking process_queue concurrently.
   if (is_processing) {
     log('Already processing thread sync queue, skipping')
     return
@@ -292,23 +292,27 @@ async function process_queue({ on_thread_sync, on_thread_delete }) {
 }
 
 /**
- * Schedule queue processing with debounce.
+ * Poll loop using recursive setTimeout to ensure sequential execution.
+ * Each iteration waits for processing to complete before scheduling the next.
  *
  * @param {Object} callbacks - on_thread_sync and on_thread_delete
  */
-function schedule_processing(callbacks) {
-  if (process_timeout) {
-    clearTimeout(process_timeout)
+async function poll_loop(callbacks) {
+  if (!poll_active) {
+    return
   }
 
-  process_timeout = setTimeout(() => {
-    process_queue(callbacks)
-  }, PROCESS_DELAY_MS)
+  await process_queue(callbacks)
+
+  if (poll_active) {
+    poll_timeout = setTimeout(() => poll_loop(callbacks), POLL_INTERVAL_MS)
+  }
 }
 
 /**
- * Start watching the thread sync queue file.
- * Called by the sync service to receive forwarded thread sync requests.
+ * Start polling for thread sync queue entries.
+ * Uses a simple polling loop instead of filesystem event watchers to avoid
+ * FSEvents reliability issues (dropped events under high filesystem load).
  *
  * @param {Object} params
  * @param {Function} params.on_thread_sync - Called with { thread_id } for each sync request
@@ -318,57 +322,35 @@ export function start_thread_sync_request_watcher({
   on_thread_sync,
   on_thread_delete
 }) {
-  if (queue_watcher) {
+  if (poll_active) {
     log('Thread sync request watcher already running')
     return
   }
 
-  const queue_path = get_queue_file_path()
-  log('Starting thread sync request watcher for %s', queue_path)
+  log('Starting thread sync request watcher for %s', get_queue_file_path())
 
   const callbacks = { on_thread_sync, on_thread_delete }
+  poll_active = true
 
-  queue_watcher = chokidar.watch(queue_path, {
-    persistent: true,
-    ignoreInitial: false,
-    awaitWriteFinish: {
-      stabilityThreshold: 300,
-      pollInterval: 100
-    }
-  })
-
-  queue_watcher.on('add', () => schedule_processing(callbacks))
-  queue_watcher.on('change', () => schedule_processing(callbacks))
-  queue_watcher.on('error', (error) => {
-    log('Thread sync queue watcher error: %s', error.message)
-  })
-  queue_watcher.on('ready', () => {
-    log('Thread sync request watcher ready')
-    // Process any existing queue entries on startup
-    schedule_processing(callbacks)
-  })
+  // Process any existing queue entries on startup, then begin polling
+  poll_loop(callbacks)
 }
 
 /**
  * Stop the thread sync request watcher.
  */
-export async function stop_thread_sync_request_watcher() {
-  if (!queue_watcher) {
+export function stop_thread_sync_request_watcher() {
+  if (!poll_active) {
     return
   }
 
   log('Stopping thread sync request watcher')
+  poll_active = false
 
-  if (process_timeout) {
-    clearTimeout(process_timeout)
-    process_timeout = null
+  if (poll_timeout) {
+    clearTimeout(poll_timeout)
+    poll_timeout = null
   }
 
-  try {
-    await queue_watcher.close()
-    queue_watcher = null
-    log('Thread sync request watcher stopped')
-  } catch (error) {
-    log('Error stopping thread sync request watcher: %s', error.message)
-  }
+  log('Thread sync request watcher stopped')
 }

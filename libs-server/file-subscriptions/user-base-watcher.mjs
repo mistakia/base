@@ -12,6 +12,7 @@
  * See: task/base/reduce-inotify-watch-count.md
  */
 
+import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
@@ -20,8 +21,13 @@ import { ENTITY_DIRECTORIES } from '#libs-server/embedded-database-index/sync/in
 
 const log = debug('file-subscriptions:user-base-watcher')
 
+const RECONCILIATION_DEBOUNCE_MS = 5000
+let reconciliation_timer = null
+let is_reconciling = false
+
 // Directories ignored by @parcel/watcher subscription.
 // These are either covered by dedicated watchers or contain non-entity data.
+// Reducing scope reduces FSEvents kernel buffer pressure on macOS.
 const USER_BASE_IGNORE = [
   // Ignore at any depth
   '**/dist',
@@ -35,7 +41,11 @@ const USER_BASE_IGNORE = [
   // Ignore at user-base root only (covered by dedicated watchers or non-entity)
   'thread',
   'import-history',
-  'embedded-database-index'
+  'embedded-database-index',
+  // Non-entity data directories (frequent writes, no entity content)
+  'database',
+  'data',
+  'files'
 ]
 
 // Directories excluded from file subscription event routing.
@@ -107,6 +117,10 @@ export async function start_user_base_watcher({
           )
         }
       }
+    },
+    on_error: () => {
+      log('FSEvents error received, scheduling entity reconciliation')
+      schedule_reconciliation({ user_base_directory, entity_index })
     }
   })
 
@@ -180,6 +194,69 @@ function route_event({
 }
 
 /**
+ * Scan entity directories for .md files and re-emit change events.
+ * Called when FSEvents drops events so the entity index can catch up.
+ */
+async function reconcile_entity_directories({
+  user_base_directory,
+  entity_index
+}) {
+  if (!entity_index || is_reconciling) {
+    return
+  }
+
+  is_reconciling = true
+  log('Starting entity reconciliation scan')
+  let file_count = 0
+
+  try {
+    for (const dir_name of ENTITY_DIRECTORIES) {
+      const dir_path = path.join(user_base_directory, dir_name)
+      try {
+        const entries = await fs.readdir(dir_path, {
+          withFileTypes: true,
+          recursive: true
+        })
+        for (const entry of entries) {
+          if (entry.isFile() && entry.name.endsWith('.md')) {
+            const file_path = path.join(entry.parentPath, entry.name)
+            entity_index.on_change(file_path)
+            file_count++
+          }
+        }
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          log('Error scanning %s: %s', dir_name, error.message)
+        }
+      }
+      // Yield to event loop between directories to avoid blocking
+      await new Promise((resolve) => setImmediate(resolve))
+    }
+  } finally {
+    is_reconciling = false
+  }
+
+  log('Entity reconciliation complete: %d files re-emitted', file_count)
+}
+
+/**
+ * Schedule a debounced reconciliation scan for entity directories.
+ * Coalesces rapid FSEvents error bursts into a single scan.
+ */
+function schedule_reconciliation(params) {
+  if (reconciliation_timer) {
+    clearTimeout(reconciliation_timer)
+  }
+
+  reconciliation_timer = setTimeout(() => {
+    reconciliation_timer = null
+    reconcile_entity_directories(params).catch((error) => {
+      log('Reconciliation scan failed: %s', error.message)
+    })
+  }, RECONCILIATION_DEBOUNCE_MS)
+}
+
+/**
  * Stop the user-base watcher.
  * @returns {Promise<void>}
  */
@@ -190,6 +267,12 @@ export async function stop_user_base_watcher() {
   }
 
   log('Stopping user-base watcher')
+
+  if (reconciliation_timer) {
+    clearTimeout(reconciliation_timer)
+    reconciliation_timer = null
+  }
+
   await subscription.unsubscribe()
   subscription = null
   log('User-base watcher stopped')
