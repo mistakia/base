@@ -4,5 +4,6 @@ export { app_sagas } from './sagas'
 export {
   get_app,
   get_user_preferences,
-  get_notification_sound_enabled
+  get_notification_sound_enabled,
+  get_user_settings_open
 } from './selectors'

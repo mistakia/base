@@ -6,6 +6,8 @@ export const app_actions = {
   LOAD_KEYS: 'LOAD_KEYS',
   LOAD_FROM_PRIVATE_KEY: 'LOAD_FROM_PRIVATE_KEY',
   CLEAR_AUTH: 'CLEAR_AUTH',
+  OPEN_USER_SETTINGS: 'OPEN_USER_SETTINGS',
+  CLOSE_USER_SETTINGS: 'CLOSE_USER_SETTINGS',
 
   load: () => ({
     type: app_actions.APP_LOAD
@@ -34,6 +36,14 @@ export const app_actions = {
 
   clear_auth: () => ({
     type: app_actions.CLEAR_AUTH
+  }),
+
+  open_user_settings: () => ({
+    type: app_actions.OPEN_USER_SETTINGS
+  }),
+
+  close_user_settings: () => ({
+    type: app_actions.CLOSE_USER_SETTINGS
   }),
 
   SET_USER_PREFERENCE: 'SET_USER_PREFERENCE',

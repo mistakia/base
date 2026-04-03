@@ -1,0 +1,141 @@
+@import '@styles/variables'
+
+$settings_panel_width = 360px
+
+.user-settings-panel__backdrop
+  position: fixed
+  top: 0
+  left: 0
+  right: 0
+  bottom: 0
+  background: rgba(0, 0, 0, 0.2)
+  z-index: 1299
+
+.user-settings-panel__container
+  position: fixed
+  top: 0
+  right: 0
+  bottom: 0
+  width: $settings_panel_width
+  max-width: 95vw
+  z-index: 1300
+  transform: translateX(100%)
+  transition: transform $transition_layout
+  pointer-events: none
+
+  &--open
+    transform: translateX(0)
+    pointer-events: auto
+
+  @media (max-width: 768px)
+    top: auto
+    bottom: 0
+    left: 0
+    width: 100%
+    max-width: 100%
+    height: 80vh
+    transform: translateY(100%)
+
+    &--open
+      transform: translateY(0)
+
+.user-settings-panel__panel
+  height: 100%
+  background: $color_surface
+  border-left: 1px solid $color_border_light
+  display: flex
+  flex-direction: column
+
+  @media (max-width: 768px)
+    border-left: none
+    border-top: 1px solid $color_border_light
+
+.user-settings-panel__header
+  flex-shrink: 0
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: $space_sm $space_base
+  border-bottom: 1px solid $color_border_light
+  min-height: 44px
+
+.user-settings-panel__title
+  font-size: $font_size_sm
+  font-weight: $font_weight_semibold
+  color: $color_text
+
+.user-settings-panel__close
+  flex-shrink: 0
+  background: none
+  border: none
+  cursor: pointer
+  width: 28px
+  height: 28px
+  display: flex
+  align-items: center
+  justify-content: center
+  font-size: 18px
+  color: $color_text_tertiary
+  transition: color $transition_fast
+
+  &:hover
+    color: $color_text
+
+.user-settings-panel__content
+  flex: 1
+  overflow-y: auto
+  padding: $space_base
+
+.user-settings-panel__section
+  margin-bottom: $space_lg
+
+  &:last-child
+    margin-bottom: 0
+
+.user-settings-panel__section-title
+  font-size: $font_size_xs
+  font-weight: $font_weight_semibold
+  color: $color_text_secondary
+  text-transform: uppercase
+  letter-spacing: 0.04em
+  margin-bottom: $space_sm
+
+.user-settings-panel__row
+  display: flex
+  align-items: center
+  gap: $space_sm
+  padding: $space_xs 0
+  font-size: $font_size_sm
+  color: $color_text
+
+  input[type="checkbox"]
+    cursor: pointer
+
+  label&
+    cursor: pointer
+
+.user-settings-panel__label
+  color: $color_text_secondary
+  flex-shrink: 0
+
+.user-settings-panel__value
+  color: $color_text
+  font-family: $font_family_mono
+  overflow: hidden
+  text-overflow: ellipsis
+  white-space: nowrap
+
+.user-settings-panel__sign-out
+  background: none
+  border: 1px solid $color_border
+  border-radius: $radius_base
+  padding: $space_xs $space_base
+  font-size: $font_size_sm
+  font-family: $font_family_mono
+  color: $color_text_secondary
+  cursor: pointer
+  transition: color $transition_fast, border-color $transition_fast
+
+  &:hover
+    color: $color_error
+    border-color: $color_error

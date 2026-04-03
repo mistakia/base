@@ -20,25 +20,11 @@ $status_bar_color = #000000
     justify-content: center
     height: 100%
 
+    &--clickable
+      cursor: pointer
+
   &:hover
     background-color: rgba(0,0,0,0.02)
-
-.auth-status-bar__clear-key
-  background: none
-  border: none
-  color: rgba(0, 0, 0, 0.4)
-  font-size: var(--font-size-base)
-  cursor: pointer
-  padding: 0
-  width: 20px
-  height: 20px
-  border-radius: 50%
-  transition: all 0.2s ease
-  margin-left: var(--space-sm)
-  
-  &:hover
-    color: rgba(0, 0, 0, 0.8)
-    background: rgba(0, 0, 0, 0.1)
 
 .auth-status-bar--no-key
   .auth-status-bar__container

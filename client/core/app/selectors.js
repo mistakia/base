@@ -66,6 +66,10 @@ export const get_notification_sound_enabled = createSelector(
   }
 )
 
+export const get_user_settings_open = createSelector([get_app], (app) =>
+  app.get('user_settings_open')
+)
+
 export const get_can_resume_thread = createSelector(
   [get_app, (_, thread) => thread],
   (app, thread) => {

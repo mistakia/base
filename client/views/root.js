@@ -20,6 +20,7 @@ import Notification from '@components/Notification'
 import GlobalThreadInput from '@components/GlobalThreadInput'
 import FloatingSessionsPanel from '@components/FloatingSessionsPanel/FloatingSessionsPanel.js'
 import ThreadSheet from '@components/ThreadSheet/ThreadSheet.js'
+import UserSettingsPanel from '@components/UserSettingsPanel'
 import CommandPalette from '@components/CommandPalette'
 import ShortcutReference from '@components/ShortcutReference'
 import { get_notification_info } from '@core/notification/selectors'
@@ -305,6 +306,7 @@ const Root = () => {
             <ThreadPromptContainer />
             <FloatingSessionsPanel />
             <ThreadSheet />
+            <UserSettingsPanel />
             <SearchPaletteContainer />
             <ShortcutReferenceContainer />
           </AppInitializer>

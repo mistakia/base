@@ -3,7 +3,10 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
 import { app_actions } from '@core/app/actions'
-import { get_authentication_state, get_app } from '@core/app/selectors'
+import {
+  get_authentication_state,
+  get_app
+} from '@core/app/selectors'
 import { format_public_key } from '@views/utils/format-public-key'
 
 import './AuthStatusBar.styl'
@@ -62,9 +65,9 @@ class AuthStatusBar extends Component {
     }
   }
 
-  handle_clear_private_key = () => {
+  handle_open_settings = () => {
     const { dispatch } = this.props
-    dispatch(app_actions.clear_auth())
+    dispatch(app_actions.open_user_settings())
   }
 
   handle_key_press = (event) => {
@@ -81,21 +84,6 @@ class AuthStatusBar extends Component {
     if (cleaned.length === 64) {
       this.submit_private_key(cleaned)
     }
-  }
-
-  render_clear_button() {
-    const { user_public_key } = this.props
-
-    if (!user_public_key) return null
-
-    return (
-      <button
-        className='auth-status-bar__clear-key'
-        onClick={this.handle_clear_private_key}
-        title='Clear private key'>
-        ×
-      </button>
-    )
   }
 
   render_no_private_key() {
@@ -127,7 +115,6 @@ class AuthStatusBar extends Component {
               <div className='auth-status-bar__error'>{input_error}</div>
             )}
           </div>
-          {this.render_clear_button()}
         </div>
       </div>
     )
@@ -150,7 +137,6 @@ class AuthStatusBar extends Component {
             <span className='auth-status-bar__key'>{truncated_key}</span>
             <span className='auth-status-bar__loading'>{status_text}</span>
           </div>
-          {this.render_clear_button()}
         </div>
       </div>
     )
@@ -163,12 +149,13 @@ class AuthStatusBar extends Component {
 
     return (
       <div className='auth-status-bar auth-status-bar--authenticated'>
-        <div className='auth-status-bar__container'>
+        <div
+          className='auth-status-bar__container auth-status-bar__container--clickable'
+          onClick={this.handle_open_settings}>
           <div className='auth-status-bar__user-info'>
             <span className='auth-status-bar__username'>{username}</span>
             <span className='auth-status-bar__public-key'>{formatted_key}</span>
           </div>
-          {this.render_clear_button()}
         </div>
       </div>
     )
