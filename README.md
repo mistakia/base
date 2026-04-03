@@ -26,7 +26,8 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 
 ## Prerequisites
 
-- **Node.js 18+** and **Corepack** (for Yarn): `corepack enable`
+- **Node.js 18+**
+- **Bun** -- [install](https://bun.sh/docs/installation)
 - **git**
 - **ripgrep** (`rg`) -- [install](https://github.com/BurntSushi/ripgrep#installation)
 - **Build tools** (for native dependencies): `python3`, `make`, `g++` / Xcode CLI tools
@@ -37,7 +38,6 @@ A human-in-the-loop LLM system built on file primitives. All data is markdown fi
 ```bash
 # Clone and install
 git clone https://github.com/mistakia/base.git && cd base
-corepack enable
 bun install
 
 # Set user-base directory (add to your shell profile)

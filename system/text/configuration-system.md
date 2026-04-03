@@ -33,7 +33,7 @@ File: `config/config.json` in the base repository.
 
 File: `{USER_BASE_DIRECTORY}/config/config.json`.
 
-- Loaded via `@tsmx/secure-config` (supports `ENCRYPTED|...` values)
+- Loaded with inline AES-256-CBC decryption (supports `ENCRYPTED|...` values)
 - Deep-merged over base defaults (nested objects merged recursively, scalars overwritten)
 - Contains secrets, machine_registry, deployment-specific values, API tokens
 
@@ -41,7 +41,7 @@ File: `{USER_BASE_DIRECTORY}/config/config.json`.
 
 When `NODE_ENV=test`:
 
-- Uses `config/config-test.json` directly via `secure_config`
+- Uses `config/config-test.json` directly
 - Bypasses user-base config entirely
 - Sets `user_base_directory` to a random temporary path for isolation
 
@@ -49,20 +49,20 @@ When `NODE_ENV=test`:
 
 ```
 if NODE_ENV === 'test':
-config = secure_config(config-test.json)
+  config = load(config-test.json)
 else if user-base config exists:
-config = deep_merge(base_defaults, secure_config(user_config))
+  config = deep_merge(base_defaults, decrypt(user_config))
 else:
-config = base_defaults (with warning)
+  config = base_defaults (with warning)
 ```
 
 ## Encrypted Values
 
-The `@tsmx/secure-config` library provides transparent encryption/decryption:
+The config loader (`config/index.mjs`) provides inline AES-256-CBC decryption:
 
-- Values prefixed with `ENCRYPTED|...` are automatically decrypted on load
+- Values prefixed with `ENCRYPTED|iv|ciphertext` are automatically decrypted on load
 - Raw values (no prefix) pass through unchanged
-- Decryption key provided via `CONFIG_ENCRYPTION_KEY` environment variable
+- Decryption key provided via `CONFIG_ENCRYPTION_KEY` environment variable (only required when encrypted values are present)
 - Typically encrypted: `jwt.secret`, `github_access_token`, `github.webhook_secret`, API tokens
 
 ## Machine Registry
