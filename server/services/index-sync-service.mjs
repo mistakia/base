@@ -21,8 +21,14 @@ import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   start_index_sync_watcher,
-  stop_index_file_watcher
+  stop_index_file_watcher,
+  handle_entity_file_change,
+  handle_entity_file_delete
 } from '#libs-server/embedded-database-index/sync/start-index-sync-watcher.mjs'
+import {
+  start_user_base_watcher,
+  stop_user_base_watcher
+} from '#libs-server/file-subscriptions/user-base-watcher.mjs'
 import {
   start_sync_trigger_watcher,
   stop_sync_trigger_watcher
@@ -171,6 +177,26 @@ export const start_index_sync_service = async () => {
     }
   }
 
+  // Start user-base-watcher for real-time entity file change detection.
+  // The index file watcher only stores callbacks; user-base-watcher provides
+  // the actual filesystem subscription that triggers them.
+  try {
+    await start_user_base_watcher({
+      user_base_directory: config.user_base_directory,
+      entity_index: {
+        on_change: (absolute_path) => {
+          handle_entity_file_change(absolute_path)
+        },
+        on_delete: (absolute_path) => {
+          handle_entity_file_delete(absolute_path)
+        }
+      }
+    })
+    log('User-base watcher started for entity file detection')
+  } catch (error) {
+    log('Failed to start user-base watcher: %s', error.message)
+  }
+
   // Start sync trigger watcher for CLI and API sync requests
   try {
     start_sync_trigger_watcher({
@@ -248,6 +274,13 @@ export const stop_index_sync_service = async () => {
     log('Sync trigger watcher stopped')
   } catch (error) {
     log('Error stopping sync trigger watcher: %s', error.message)
+  }
+
+  try {
+    await stop_user_base_watcher()
+    log('User-base watcher stopped')
+  } catch (error) {
+    log('Error stopping user-base watcher: %s', error.message)
   }
 
   try {

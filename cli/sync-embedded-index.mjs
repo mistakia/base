@@ -177,7 +177,7 @@ async function trigger_sync_via_server({ mode, verbose }) {
   const result = await poll_for_sync_result({
     result_path,
     request_id,
-    timeout_ms: 300000, // 5 minutes for full resync
+    timeout_ms: 900000, // 15 minutes for full resync on spinning disks
     poll_interval_ms: 500
   })
 

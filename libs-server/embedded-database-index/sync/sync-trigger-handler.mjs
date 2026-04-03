@@ -9,8 +9,6 @@ import crypto from 'crypto'
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
-// Chokidar retained: watches 2 IPC trigger files. Not worth migrating to @parcel/watcher.
-import chokidar from 'chokidar'
 
 import config from '#config'
 
@@ -18,8 +16,9 @@ const log = debug('embedded-index:sync:trigger')
 
 const TRIGGER_FILE_NAME = '.sync-request'
 const RESULT_FILE_NAME = '.sync-result'
+const POLL_INTERVAL_MS = 1000
 
-let trigger_watcher = null
+let poll_timer = null
 let trigger_directory = null
 
 /**
@@ -92,7 +91,9 @@ export async function write_sync_result({
 }
 
 /**
- * Start watching for sync trigger files
+ * Start polling for sync trigger files.
+ * Uses filesystem polling instead of chokidar because chokidar under Bun
+ * on Linux fails to detect file creation at watched paths reliably.
  * @param {Object} params
  * @param {string} params.trigger_directory - Directory to watch (optional, defaults to embedded-database-index)
  * @param {Function} params.on_sync_request - Callback when sync is requested
@@ -101,7 +102,7 @@ export async function start_sync_trigger_watcher({
   trigger_directory: dir,
   on_sync_request
 }) {
-  if (trigger_watcher) {
+  if (poll_timer) {
     log('Sync trigger watcher already running')
     return
   }
@@ -110,90 +111,93 @@ export async function start_sync_trigger_watcher({
 
   const trigger_path = path.join(trigger_directory, TRIGGER_FILE_NAME)
 
-  // Clean up any stale trigger file before starting the watcher.
-  // A leftover file from a previous server run would cause chokidar to treat
-  // new atomic renames as 'change' events instead of 'add', which would be
-  // missed if we only listened for 'add'.
+  // Clean up any stale trigger file from a previous run
   await delete_file_if_exists(trigger_path)
 
-  log('Starting sync trigger watcher for %s', trigger_path)
+  log('Starting sync trigger poller for %s (interval: %dms)', trigger_path, POLL_INTERVAL_MS)
 
-  trigger_watcher = chokidar.watch(trigger_path, {
-    persistent: true,
-    ignoreInitial: true,
-    awaitWriteFinish: {
-      stabilityThreshold: 100,
-      pollInterval: 50
-    }
-  })
+  let is_processing = false
 
-  const handle_trigger = async (file_path) => {
-    log('Sync trigger file detected: %s', file_path)
+  const poll = async () => {
+    if (is_processing) return
 
-    // Read the trigger request
-    const request = await read_trigger_file(file_path)
-    if (!request) {
-      log('Invalid trigger file, ignoring')
-      await delete_file_if_exists(file_path)
-      return
+    try {
+      await fs.access(trigger_path)
+    } catch {
+      return // File doesn't exist, nothing to do
     }
 
-    log(
-      'Processing sync request: %s (type: %s)',
-      request.request_id,
-      request.type
-    )
+    is_processing = true
+    log('Sync trigger file detected: %s', trigger_path)
 
-    // Execute the sync request
-    // Note: Trigger file is deleted AFTER writing result for crash recovery.
-    // If server crashes mid-processing, trigger file remains as evidence.
-    if (on_sync_request) {
-      try {
-        const result = await on_sync_request(request)
-        await write_sync_result({
-          trigger_directory,
-          request_id: request.request_id,
-          result
-        })
-      } catch (error) {
-        log('Error processing sync request: %s', error.message)
-        await write_sync_result({
-          trigger_directory,
-          request_id: request.request_id,
-          result: {
-            success: false,
-            error: error.message
-          }
-        })
+    try {
+      const request = await read_trigger_file(trigger_path)
+      if (!request) {
+        log('Invalid trigger file, ignoring')
+        await delete_file_if_exists(trigger_path)
+        is_processing = false
+        return
       }
-    }
 
-    // Delete the trigger file after processing completes
-    await delete_file_if_exists(file_path)
+      log(
+        'Processing sync request: %s (type: %s)',
+        request.request_id,
+        request.type
+      )
+
+      if (on_sync_request) {
+        try {
+          const result = await on_sync_request(request)
+          await write_sync_result({
+            trigger_directory,
+            request_id: request.request_id,
+            result
+          })
+        } catch (error) {
+          log('Error processing sync request: %s', error.message)
+          await write_sync_result({
+            trigger_directory,
+            request_id: request.request_id,
+            result: {
+              success: false,
+              error: error.message
+            }
+          })
+        }
+      }
+
+      await delete_file_if_exists(trigger_path)
+    } catch (error) {
+      log('Error in sync trigger poll: %s', error.message)
+    } finally {
+      is_processing = false
+    }
   }
 
-  // Handle both 'add' (new file) and 'change' (atomic rename overwriting
-  // an existing file) to cover all cases reliably.
-  trigger_watcher.on('add', handle_trigger)
-  trigger_watcher.on('change', handle_trigger)
+  poll_timer = setInterval(poll, POLL_INTERVAL_MS)
 
-  log('Sync trigger watcher started')
+  // Process any existing trigger file immediately
+  poll()
+
+  log('Sync trigger poller started')
 }
 
 /**
  * Stop the sync trigger watcher
  */
 export async function stop_sync_trigger_watcher() {
-  if (trigger_watcher) {
-    await trigger_watcher.close()
-    trigger_watcher = null
-    log('Sync trigger watcher stopped')
+  if (poll_timer) {
+    clearInterval(poll_timer)
+    poll_timer = null
+    log('Sync trigger poller stopped')
   }
 }
 
 /**
  * Write a sync request trigger file (used by CLI)
- * Uses atomic write pattern (write temp + rename) to prevent race conditions.
+ * Uses direct write instead of atomic rename because chokidar on Linux
+ * under Bun does not detect files created via fs.rename() when watching
+ * a non-existent file path (inotify rename events are missed).
  * @param {Object} params
  * @param {string} params.trigger_directory - Directory for trigger file
  * @param {'incremental'|'resync'|'reset'} params.request_type - Type of sync
@@ -206,7 +210,6 @@ export async function write_sync_trigger({
   const request_id = crypto.randomUUID()
   const trigger_dir = dir || get_trigger_directory()
   const trigger_path = path.join(trigger_dir, TRIGGER_FILE_NAME)
-  const temp_path = path.join(trigger_dir, `.sync-request-${request_id}.tmp`)
 
   const request_data = {
     request_id,
@@ -215,17 +218,7 @@ export async function write_sync_trigger({
     requested_by: 'cli'
   }
 
-  // Write to temp file first, then atomically rename
-  await fs.writeFile(temp_path, JSON.stringify(request_data, null, 2))
-
-  try {
-    // Atomic rename - if trigger file exists, this will overwrite it
-    await fs.rename(temp_path, trigger_path)
-  } catch (error) {
-    // Clean up temp file on error
-    await delete_file_if_exists(temp_path)
-    throw error
-  }
+  await fs.writeFile(trigger_path, JSON.stringify(request_data, null, 2))
 
   log('Wrote sync trigger: %s (type: %s)', request_id, request_type)
   return request_id
