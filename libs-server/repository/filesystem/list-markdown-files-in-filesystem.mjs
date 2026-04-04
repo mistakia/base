@@ -14,7 +14,6 @@ import {
 import { load_entity_scan_config } from '#libs-server/entity/filesystem/entity-scan-config.mjs'
 
 const log = debug('markdown:scanner:filesystem')
-debug.enable('markdown:scanner:filesystem')
 
 /**
  * Get list of markdown files from the filesystem recursively, including separate user repositories
@@ -92,6 +91,8 @@ export async function list_markdown_files_in_filesystem({
 }
 
 if (is_main(import.meta.url)) {
+  debug.enable('markdown:scanner:filesystem')
+
   const argv = add_directory_cli_options(
     yargs(hideBin(process.argv)).parserConfiguration({
       'comma-separated-values': true,
