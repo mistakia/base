@@ -367,6 +367,10 @@ if (is_main_module) {
     debug.enable('index-sync*,embedded-index*')
   }
 
+  console.error(
+    `[index-sync-service] bootstrap: is_direct=${is_direct_execution} is_pm2=${is_pm2_execution} debug_log_override=${is_pm2_execution} log_enabled=${log.enabled}`
+  )
+
   log('Starting index sync service as standalone service')
   start_index_sync_service()
 
