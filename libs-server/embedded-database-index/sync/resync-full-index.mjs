@@ -9,7 +9,7 @@
 import debug from 'debug'
 
 import config from '#config'
-import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
+import { stream_entity_file_chunks } from './stream-entity-files.mjs'
 import {
   execute_sqlite_query,
   checkpoint_sqlite
@@ -24,10 +24,7 @@ import {
   discover_repositories,
   get_repository_head_sha
 } from './repository-discovery.mjs'
-import {
-  ENTITY_DIRECTORIES,
-  DEFAULT_EXCLUDE_PATTERNS
-} from './index-sync-filters.mjs'
+import { ENTITY_DIRECTORIES } from './index-sync-filters.mjs'
 import {
   list_thread_ids,
   process_threads_in_batches
@@ -102,53 +99,47 @@ export async function resync_full_index({ index_manager }) {
   }
 
   try {
-    // Phase 1: Sync all entities from filesystem
-    log('Phase 1: Syncing entities from filesystem')
+    // Phase 1: Stream and sync all entities from filesystem
+    // Streams entities in chunks to avoid loading all into memory at once.
+    // Collects base_uri strings (not full objects) for orphan detection.
+    log('Phase 1: Streaming entities from filesystem')
 
-    const entities = await list_entity_files_from_filesystem({
-      include_path_patterns: ENTITY_DIRECTORIES.map((dir) => `${dir}/**`),
-      exclude_path_patterns: DEFAULT_EXCLUDE_PATTERNS
-    })
-
-    log('Found %d entities to sync', entities.length)
-
-    // Collect all filesystem URIs BEFORE syncing to ensure orphan detection
-    // is based on filesystem presence, not sync success. This prevents
-    // data loss when entities fail to sync due to transient errors.
     const filesystem_entity_uris = new Set()
-    for (const entity of entities) {
-      const base_uri =
-        entity.entity_properties?.base_uri || entity.file_info?.base_uri
-      if (base_uri) {
+
+    for await (const chunk of stream_entity_file_chunks({
+      entity_directories: ENTITY_DIRECTORIES
+    })) {
+      for (const entity of chunk) {
+        const base_uri =
+          entity.entity_properties?.base_uri || entity.file_info?.base_uri
+
+        if (!base_uri) {
+          continue
+        }
+
+        // Collect URI for orphan detection (strings only, much smaller than full objects)
         filesystem_entity_uris.add(base_uri)
-      }
-    }
 
-    // Now sync each entity
-    for (const entity of entities) {
-      const base_uri =
-        entity.entity_properties?.base_uri || entity.file_info?.base_uri
+        try {
+          const result = await index_manager.sync_entity({
+            base_uri,
+            entity_data: entity.entity_properties,
+            skip_ipc: true
+          })
 
-      if (!base_uri) {
-        continue
-      }
-
-      try {
-        const result = await index_manager.sync_entity({
-          base_uri,
-          entity_data: entity.entity_properties
-        })
-
-        if (result.success) {
-          stats.entities_synced++
-        } else {
+          if (result.success) {
+            stats.entities_synced++
+          } else {
+            stats.entities_failed++
+          }
+        } catch (error) {
+          log('Error syncing entity %s: %s', base_uri, error.message)
           stats.entities_failed++
         }
-      } catch (error) {
-        log('Error syncing entity %s: %s', base_uri, error.message)
-        stats.entities_failed++
       }
     }
+
+    log('Streamed and synced %d entities', filesystem_entity_uris.size)
 
     // Phase 2: Sync all threads from filesystem using batched processing
     log('Phase 2: Syncing threads from filesystem')

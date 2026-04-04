@@ -87,7 +87,8 @@ export async function start_user_base_watcher({
   user_base_directory,
   file_subscription,
   entity_index,
-  repo_file
+  repo_file,
+  metrics
 }) {
   if (subscription) {
     log('User-base watcher already running')
@@ -100,6 +101,7 @@ export async function start_user_base_watcher({
     directory: user_base_directory,
     ignore: USER_BASE_IGNORE,
     on_events: (events) => {
+      if (metrics) metrics.increment('watcher_events_total')
       for (const event of events) {
         try {
           route_event({
@@ -122,7 +124,8 @@ export async function start_user_base_watcher({
     },
     on_error: () => {
       log('FSEvents error received, scheduling entity reconciliation')
-      schedule_reconciliation({ user_base_directory, entity_index })
+      if (metrics) metrics.increment('fsevents_errors')
+      schedule_reconciliation({ user_base_directory, entity_index, metrics })
     }
   })
 
@@ -201,7 +204,8 @@ function route_event({
  */
 async function reconcile_entity_directories({
   user_base_directory,
-  entity_index
+  entity_index,
+  metrics
 }) {
   if (!entity_index || is_reconciling) {
     return
@@ -218,6 +222,8 @@ async function reconcile_entity_directories({
   }
 
   is_reconciling = true
+  if (metrics) metrics.increment('reconciliations')
+  const reconcile_start = Date.now()
   log('Starting entity reconciliation scan')
   let file_count = 0
 
@@ -247,6 +253,11 @@ async function reconcile_entity_directories({
   } finally {
     is_reconciling = false
     last_reconciliation_completed_at = Date.now()
+
+    if (metrics) {
+      metrics.timing('reconciliation', Date.now() - reconcile_start)
+      metrics.gauge('reconciliation_files', file_count)
+    }
   }
 
   log('Entity reconciliation complete: %d files re-emitted', file_count)
@@ -256,14 +267,14 @@ async function reconcile_entity_directories({
  * Schedule a debounced reconciliation scan for entity directories.
  * Coalesces rapid FSEvents error bursts into a single scan.
  */
-function schedule_reconciliation(params) {
+function schedule_reconciliation({ user_base_directory, entity_index, metrics }) {
   if (reconciliation_timer) {
     clearTimeout(reconciliation_timer)
   }
 
   reconciliation_timer = setTimeout(() => {
     reconciliation_timer = null
-    reconcile_entity_directories(params).catch((error) => {
+    reconcile_entity_directories({ user_base_directory, entity_index, metrics }).catch((error) => {
       log('Reconciliation scan failed: %s', error.message)
     })
   }, RECONCILIATION_DEBOUNCE_MS)

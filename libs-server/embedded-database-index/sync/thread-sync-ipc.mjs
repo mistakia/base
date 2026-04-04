@@ -25,6 +25,7 @@ const log = debug('embedded-index:sync:thread-ipc')
 
 const QUEUE_FILE_NAME = '.thread-sync-queue'
 const DELETE_PREFIX = 'DELETE:'
+const OVERFLOW_PREFIX = 'OVERFLOW:'
 const PROCESSING_SUFFIX = '.processing'
 const MAX_QUEUE_SIZE_BYTES = 1024 * 1024 // 1MB
 const OPERATION_TIMEOUT_MS = 30000
@@ -65,10 +66,25 @@ async function append_to_queue(content, description) {
       const stats = await fs.stat(queue_path)
       if (stats.size > MAX_QUEUE_SIZE_BYTES) {
         log(
-          'Queue file exceeds size limit (%d bytes), skipping: %s',
+          'Queue file exceeds size limit (%d bytes), writing overflow marker: %s',
           stats.size,
           description
         )
+        // Write overflow marker only once -- avoid growing the file further
+        // with repeated markers on every subsequent write attempt.
+        try {
+          const content = await fs.readFile(queue_path, 'utf-8')
+          const last_line = content.trimEnd().split('\n').pop() || ''
+          if (!last_line.startsWith(OVERFLOW_PREFIX)) {
+            await fs.appendFile(
+              queue_path,
+              `${OVERFLOW_PREFIX}${Date.now()}\n`,
+              'utf-8'
+            )
+          }
+        } catch {
+          // Best-effort overflow marker
+        }
         return
       }
     } catch {
@@ -155,7 +171,7 @@ async function acquire_queue_for_processing() {
  * Delete requests take precedence over sync requests for the same thread_id.
  *
  * @param {string} file_path - Path to the file to read
- * @returns {Promise<{ syncs: string[], deletes: string[] }>}
+ * @returns {Promise<{ syncs: string[], deletes: string[], has_overflow: boolean }>}
  */
 async function read_and_parse_queue(file_path) {
   try {
@@ -167,9 +183,12 @@ async function read_and_parse_queue(file_path) {
 
     const delete_set = new Set()
     const sync_set = new Set()
+    let has_overflow = false
 
     for (const line of lines) {
-      if (line.startsWith(DELETE_PREFIX)) {
+      if (line.startsWith(OVERFLOW_PREFIX)) {
+        has_overflow = true
+      } else if (line.startsWith(DELETE_PREFIX)) {
         const thread_id = line.slice(DELETE_PREFIX.length)
         delete_set.add(thread_id)
         sync_set.delete(thread_id)
@@ -182,14 +201,15 @@ async function read_and_parse_queue(file_path) {
 
     return {
       syncs: [...sync_set],
-      deletes: [...delete_set]
+      deletes: [...delete_set],
+      has_overflow
     }
   } catch (error) {
     if (error.code === 'ENOENT') {
-      return { syncs: [], deletes: [] }
+      return { syncs: [], deletes: [], has_overflow: false }
     }
     log('Failed to read queue file: %s', error.message)
-    return { syncs: [], deletes: [] }
+    return { syncs: [], deletes: [], has_overflow: false }
   }
 }
 
@@ -234,7 +254,12 @@ function with_timeout(promise, ms) {
  * @param {Function} callbacks.on_thread_sync - Called with { thread_id }
  * @param {Function} callbacks.on_thread_delete - Called with { thread_id }
  */
-async function process_queue({ on_thread_sync, on_thread_delete }) {
+async function process_queue({
+  on_thread_sync,
+  on_thread_delete,
+  on_overflow,
+  metrics
+}) {
   // Defense-in-depth: structurally impossible with sequential poll_loop,
   // but guards against future callers invoking process_queue concurrently.
   if (is_processing) {
@@ -250,9 +275,12 @@ async function process_queue({ on_thread_sync, on_thread_delete }) {
       return
     }
 
-    const { syncs, deletes } = await read_and_parse_queue(processing_path)
+    const { syncs, deletes, has_overflow } =
+      await read_and_parse_queue(processing_path)
 
-    if (syncs.length === 0 && deletes.length === 0) {
+    if (metrics) metrics.gauge('ipc_queue_depth', syncs.length + deletes.length)
+
+    if (syncs.length === 0 && deletes.length === 0 && !has_overflow) {
       await remove_processing_file()
       return
     }
@@ -269,16 +297,39 @@ async function process_queue({ on_thread_sync, on_thread_delete }) {
           on_thread_delete({ thread_id }),
           OPERATION_TIMEOUT_MS
         )
+        if (metrics) metrics.increment('ipc_deletes_processed')
       } catch (error) {
         log('Error processing thread delete %s: %s', thread_id, error.message)
+        if (metrics) {
+          if (error.message?.includes('timed out')) {
+            metrics.increment('ipc_timeouts')
+          }
+        }
       }
     }
 
     for (const thread_id of syncs) {
       try {
         await with_timeout(on_thread_sync({ thread_id }), OPERATION_TIMEOUT_MS)
+        if (metrics) metrics.increment('ipc_syncs_processed')
       } catch (error) {
         log('Error processing thread sync %s: %s', thread_id, error.message)
+        if (metrics) {
+          if (error.message?.includes('timed out')) {
+            metrics.increment('ipc_timeouts')
+          }
+        }
+      }
+    }
+
+    // Handle overflow: trigger thread directory re-scan to recover missed syncs
+    if (has_overflow && on_overflow) {
+      log('Queue overflow detected, triggering thread directory re-scan')
+      if (metrics) metrics.increment('ipc_overflow_events')
+      try {
+        await on_overflow()
+      } catch (error) {
+        log('Overflow recovery failed: %s', error.message)
       }
     }
 
@@ -320,7 +371,9 @@ async function poll_loop(callbacks) {
  */
 export function start_thread_sync_request_watcher({
   on_thread_sync,
-  on_thread_delete
+  on_thread_delete,
+  on_overflow,
+  metrics
 }) {
   if (poll_active) {
     log('Thread sync request watcher already running')
@@ -329,7 +382,7 @@ export function start_thread_sync_request_watcher({
 
   log('Starting thread sync request watcher for %s', get_queue_file_path())
 
-  const callbacks = { on_thread_sync, on_thread_delete }
+  const callbacks = { on_thread_sync, on_thread_delete, on_overflow, metrics }
   poll_active = true
 
   // Process any existing queue entries on startup, then begin polling

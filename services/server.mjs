@@ -39,6 +39,10 @@ import {
   stop_user_base_watcher
 } from '#libs-server/file-subscriptions/user-base-watcher.mjs'
 import {
+  start_entity_change_watcher,
+  stop_entity_change_watcher
+} from '#libs-server/embedded-database-index/sync/entity-change-ipc.mjs'
+import {
   initialize_cache,
   get_cached_status_all,
   invalidate_repo,
@@ -273,16 +277,9 @@ try {
                 }
               }
             : null,
-        entity_index: embedded_index_ready
-          ? {
-              on_change: () => {
-                invalidate_tasks_cache()
-              },
-              on_delete: () => {
-                invalidate_tasks_cache()
-              }
-            }
-          : null,
+        // entity_index callbacks removed -- entity change notifications now
+        // arrive via IPC from index-sync-service (entity-change-ipc.mjs),
+        // eliminating duplicate @parcel/watcher entity directory callbacks
         repo_file:
           file_watcher_config.git_status_watcher_enabled !== false
             ? { on_change: handle_external_repo_file_event }
@@ -294,6 +291,22 @@ try {
       set_watcher_status('user_base_watcher', 'failed')
       logger(`Failed to start user-base watcher: ${watcher_error.message}`)
       logger(watcher_error)
+    }
+
+    // Start entity change IPC watcher to receive cache invalidation
+    // notifications from index-sync-service (replaces entity_index callbacks)
+    if (embedded_index_ready) {
+      try {
+        start_entity_change_watcher({
+          on_entity_change: ({ entries }) => {
+            logger('Entity change IPC: %d entries, invalidating cache', entries.length)
+            invalidate_tasks_cache()
+          }
+        })
+        logger('Entity change IPC watcher started')
+      } catch (ipc_error) {
+        logger(`Failed to start entity change IPC watcher: ${ipc_error.message}`)
+      }
     }
 
     logger('All watchers initialized')
@@ -358,6 +371,14 @@ const shutdown = async (signal) => {
           logger('User-base watcher stopped')
         } catch (error) {
           logger(`Error stopping user-base watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          stop_entity_change_watcher()
+          logger('Entity change IPC watcher stopped')
+        } catch (error) {
+          logger(`Error stopping entity change IPC watcher: ${error.message}`)
         }
       })(),
     ])

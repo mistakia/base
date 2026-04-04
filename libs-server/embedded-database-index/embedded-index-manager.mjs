@@ -65,7 +65,8 @@ import {
   process_threads_in_batches
 } from '#libs-server/threads/list-threads.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
-import { list_entity_files_from_filesystem } from '#libs-server/repository/filesystem/list-entity-files-from-filesystem.mjs'
+import { stream_entity_file_chunks } from './sync/stream-entity-files.mjs'
+import { write_entity_change_notification } from './sync/entity-change-ipc.mjs'
 
 const log = debug('embedded-index')
 
@@ -83,12 +84,24 @@ class EmbeddedIndexManager {
     // Map of thread_id -> { size: number, mtime: number, event_data: Object }
     // Caches timeline extraction results keyed by file size + mtime to skip
     // re-extraction when only metadata changes.
-    // Cleared on rebuild and shutdown; bounded by total thread count.
+    // Cleared on rebuild and shutdown; evicts oldest entries when exceeding cap.
     this._timeline_sync_cache = new Map()
+    this._timeline_cache_max_size = 5000
 
     // Backend and fallback registration
     this._backend = sqlite_backend
     this._fallbacks = fallbacks
+
+    // Metrics collector (set externally via set_metrics)
+    this._metrics = null
+  }
+
+  /**
+   * Set the metrics collector instance.
+   * @param {Object} metrics - Metrics collector from create_sync_metrics
+   */
+  set_metrics(metrics) {
+    this._metrics = metrics
   }
 
   /**
@@ -508,6 +521,9 @@ class EmbeddedIndexManager {
     }
 
     try {
+      // Thread ID list is bounded and acceptable: UUIDs are ~36 bytes each,
+      // so even 10,000 threads is ~360KB. The real memory savings come from
+      // process_threads_in_batches loading metadata per-batch (100 at a time).
       const thread_ids = await list_thread_ids()
       log(
         'Populating %d threads to index using batched processing',
@@ -537,21 +553,15 @@ class EmbeddedIndexManager {
     }
 
     try {
-      const entities = await list_entity_files_from_filesystem({
-        include_path_patterns: ENTITY_DIRECTORIES.map((dir) => `${dir}/**`)
-      })
-
-      log(
-        'Populating %d entities to index using batch operations',
-        entities.length
-      )
+      log('Populating entities to index using streaming batch operations')
 
       let synced = 0
       let failed = 0
 
-      for (let i = 0; i < entities.length; i += BATCH_CHUNK_SIZE) {
-        const chunk = entities.slice(i, i + BATCH_CHUNK_SIZE)
-
+      for await (const chunk of stream_entity_file_chunks({
+        entity_directories: ENTITY_DIRECTORIES,
+        chunk_size: BATCH_CHUNK_SIZE
+      })) {
         // Prepare batch data for this chunk
         const entity_batch = []
         const tags_batch = []
@@ -620,7 +630,7 @@ class EmbeddedIndexManager {
    * Sync an entity to the embedded database
    * @returns {{ success: boolean, sqlite_synced: boolean }}
    */
-  async sync_entity({ base_uri, entity_data }) {
+  async sync_entity({ base_uri, entity_data, skip_ipc = false }) {
     const result = { success: true, sqlite_synced: false }
 
     if (this._is_write_blocked('sync_entity')) {
@@ -631,6 +641,8 @@ class EmbeddedIndexManager {
       log('Index manager not initialized, skipping entity sync')
       return { success: false, sqlite_synced: false }
     }
+
+    const start = Date.now()
 
     const unified_entity_data = extract_unified_entity_data({
       entity_properties: entity_data
@@ -658,9 +670,26 @@ class EmbeddedIndexManager {
           relations
         })
         result.sqlite_synced = true
+        if (this._metrics) {
+          this._metrics.increment('entity_syncs')
+          this._metrics.timing('entity_sync', Date.now() - start)
+          this._metrics.record_sync()
+        }
+        // Notify base-api of entity change via IPC (skipped during bulk resync)
+        if (!skip_ipc) {
+          try {
+            await write_entity_change_notification({
+              event_type: 'update',
+              base_uri
+            })
+          } catch (ipc_error) {
+            log('Entity change IPC write failed: %s', ipc_error.message)
+          }
+        }
       } catch (error) {
         log('Error syncing entity to SQLite: %s', error.message)
         result.success = false
+        if (this._metrics) this._metrics.increment('sync_errors')
       }
     }
 
@@ -680,8 +709,19 @@ class EmbeddedIndexManager {
     if (this.sqlite_ready) {
       try {
         await delete_entity_from_sqlite({ base_uri })
+        if (this._metrics) this._metrics.increment('entity_deletes')
+        // Notify base-api of entity deletion via IPC
+        try {
+          await write_entity_change_notification({
+            event_type: 'delete',
+            base_uri
+          })
+        } catch (ipc_error) {
+          log('Entity change IPC write failed: %s', ipc_error.message)
+        }
       } catch (error) {
         log('Error removing entity from SQLite: %s', error.message)
+        if (this._metrics) this._metrics.increment('sync_errors')
       }
     }
   }
@@ -765,6 +805,8 @@ class EmbeddedIndexManager {
       return { success: false, sqlite_synced: false }
     }
 
+    const start = Date.now()
+
     // Sync to SQLite
     if (this.sqlite_ready) {
       try {
@@ -798,12 +840,14 @@ class EmbeddedIndexManager {
           cached_timeline.mtime === timeline_mtime
         ) {
           latest_event_data = cached_timeline.event_data
+          if (this._metrics) this._metrics.increment('cache_hits')
           log(
             'Skipping timeline re-extraction for %s (size unchanged at %d)',
             thread_id,
             timeline_size
           )
         } else {
+          if (this._metrics) this._metrics.increment('cache_misses')
           latest_event_data = await read_and_extract_latest_event({
             thread_id
           })
@@ -812,6 +856,18 @@ class EmbeddedIndexManager {
             mtime: timeline_mtime,
             event_data: latest_event_data
           })
+          // Evict oldest entry when cache exceeds cap (Map preserves insertion order).
+          // Size exceeds cap by at most 1 per insertion, so a single eviction suffices.
+          if (this._timeline_sync_cache.size > this._timeline_cache_max_size) {
+            const oldest_key = this._timeline_sync_cache.keys().next().value
+            this._timeline_sync_cache.delete(oldest_key)
+          }
+          if (this._metrics) {
+            this._metrics.gauge(
+              'cache_size',
+              this._timeline_sync_cache.size
+            )
+          }
         }
 
         await upsert_thread_to_sqlite({
@@ -821,9 +877,15 @@ class EmbeddedIndexManager {
           }
         })
         result.sqlite_synced = true
+        if (this._metrics) {
+          this._metrics.increment('thread_syncs')
+          this._metrics.timing('thread_sync', Date.now() - start)
+          this._metrics.record_sync()
+        }
       } catch (error) {
         log('Error syncing thread to SQLite: %s', error.message)
         result.success = false
+        if (this._metrics) this._metrics.increment('sync_errors')
       }
 
       // Sync thread relations if present (outside main try-catch to not affect thread sync result)
@@ -890,8 +952,10 @@ class EmbeddedIndexManager {
     if (this.sqlite_ready) {
       try {
         await delete_thread_from_sqlite({ thread_id })
+        if (this._metrics) this._metrics.increment('thread_deletes')
       } catch (error) {
         log('Error removing thread from SQLite: %s', error.message)
+        if (this._metrics) this._metrics.increment('sync_errors')
       }
 
       // Clean up thread relations
@@ -1071,6 +1135,11 @@ class EmbeddedIndexManager {
       sqlite_ready: this.sqlite_ready,
       config: this.index_config
     }
+  }
+
+  async checkpoint() {
+    if (!this.sqlite_ready) return
+    await checkpoint_sqlite()
   }
 
   is_ready() {

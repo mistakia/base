@@ -42,12 +42,17 @@ import {
   handle_embedding_file_change,
   handle_embedding_file_delete
 } from '#libs-server/search/embedding-pipeline.mjs'
+import { create_sync_metrics } from '#libs-server/embedded-database-index/sync/sync-metrics.mjs'
 
 const log = debug('index-sync')
 
 const SERVER_LOCK_FILE = '.server-lock'
 
+const WAL_CHECKPOINT_INTERVAL_MS = 600000 // 10 minutes
+
 let is_running = false
+let metrics = null
+let wal_checkpoint_interval = null
 
 /**
  * Write server lock file to indicate the sync service is the active writer.
@@ -128,6 +133,7 @@ export const start_index_sync_service = async () => {
   }
 
   log('Starting index sync service')
+  const startup_start = Date.now()
 
   // Initialize embedded index manager (SQLite in write mode)
   try {
@@ -143,6 +149,14 @@ export const start_index_sync_service = async () => {
     log('Failed to initialize embedded index: %s', error.message)
     return
   }
+
+  // Initialize metrics collector
+  metrics = create_sync_metrics({
+    get_sqlite_ready: () => embedded_index_manager.is_sqlite_ready(),
+    get_cache_size: () => embedded_index_manager._timeline_sync_cache.size
+  })
+  embedded_index_manager.set_metrics(metrics)
+  metrics.start()
 
   // Write lock file to indicate sync service is the active writer
   await write_server_lock_file()
@@ -190,7 +204,8 @@ export const start_index_sync_service = async () => {
         on_delete: (absolute_path) => {
           handle_entity_file_delete(absolute_path)
         }
-      }
+      },
+      metrics
     })
     log('User-base watcher started for entity file detection')
   } catch (error) {
@@ -219,6 +234,12 @@ export const start_index_sync_service = async () => {
   // Start thread sync request watcher for forwarded thread syncs from API
   try {
     start_thread_sync_request_watcher({
+      metrics,
+      on_overflow: async () => {
+        log('Thread IPC overflow recovery: re-syncing all threads')
+        await embedded_index_manager._populate_threads_from_filesystem()
+        log('Thread IPC overflow recovery complete')
+      },
       on_thread_sync: async ({ thread_id }) => {
         let metadata = await read_thread_metadata_from_disk(thread_id)
         if (!metadata) {
@@ -246,7 +267,19 @@ export const start_index_sync_service = async () => {
     log('Failed to start thread sync request watcher: %s', error.message)
   }
 
+  // Periodic WAL checkpoint to prevent unbounded WAL growth
+  wal_checkpoint_interval = setInterval(async () => {
+    try {
+      await embedded_index_manager.checkpoint()
+      log('Periodic WAL checkpoint completed')
+    } catch (error) {
+      log('WAL checkpoint failed: %s', error.message)
+    }
+  }, WAL_CHECKPOINT_INTERVAL_MS)
+  if (wal_checkpoint_interval.unref) wal_checkpoint_interval.unref()
+
   is_running = true
+  metrics.timing('startup', Date.now() - startup_start)
   log('Index sync service started')
 }
 
@@ -261,6 +294,15 @@ export const stop_index_sync_service = async () => {
   }
 
   log('Stopping index sync service')
+
+  if (wal_checkpoint_interval) {
+    clearInterval(wal_checkpoint_interval)
+    wal_checkpoint_interval = null
+  }
+
+  if (metrics) {
+    metrics.stop()
+  }
 
   try {
     await stop_thread_sync_request_watcher()

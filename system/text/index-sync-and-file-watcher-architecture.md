@@ -32,9 +32,9 @@ File Watchers (detect changes)
     +---> Git internals: chokidar on .git file patterns
     |
     v
-IPC Queue (cross-process communication)
-    |   API writes thread_id lines to .thread-sync-queue file
-    |   Sync service polls queue every 5s via recursive setTimeout
+IPC Queues (cross-process communication)
+    |   Thread sync: API writes thread_id to .thread-sync-queue (poll 5s)
+    |   Entity change: sync service writes to .entity-change-queue (poll 2s)
     |
     v
 Index Sync Service (sole SQLite writer)
@@ -42,6 +42,12 @@ Index Sync Service (sole SQLite writer)
     +---> Entity changes: direct from user-base watcher
     +---> Thread changes: reads metadata from disk, extracts fields
     +---> Upserts to embedded-database-index/sqlite.db
+    +---> Writes entity change notifications to IPC queue
+    |
+    v
+Base-API (cache invalidation via entity-change-ipc)
+    +---> Receives entity change notifications from sync service
+    +---> Invalidates tasks cache (replaces direct entity_index callbacks)
 ```
 
 ## File Watcher Strategy
@@ -50,10 +56,12 @@ Four watcher strategies serve different scope and reliability needs:
 
 | Watcher | Library | Scope | Consumer |
 |---------|---------|-------|----------|
-| User-base watcher | @parcel/watcher | user-base/ (recursive, with exclusions) | Entity sync, WebSocket notifications, repo unstaged detection |
+| User-base watcher (sync service) | @parcel/watcher | user-base/ (recursive, with exclusions) | Entity sync to SQLite |
+| User-base watcher (base-api) | @parcel/watcher | user-base/ (recursive, with exclusions) | WebSocket file notifications, repo unstaged detection |
 | Thread watcher | @parcel/watcher | thread/ (recursive) | Thread metadata/timeline changes |
 | Git status watcher | chokidar | ~280 specific .git file patterns | Git index, HEAD, refs changes |
-| Thread sync IPC | polling (setTimeout) | Single queue file | Thread sync request forwarding |
+| Thread sync IPC | polling (5s setTimeout) | .thread-sync-queue file | Thread sync request forwarding |
+| Entity change IPC | polling (2s setTimeout) | .entity-change-queue file | Entity change notification to base-api |
 
 ### Library Selection Rationale
 
@@ -68,8 +76,10 @@ The user-base watcher creates a single @parcel/watcher subscription and routes e
 1. **repository/** events route to `repo_file` handler (git status detection), then stop
 2. Events in excluded directories (thread, .git, node_modules, import-history, embedded-database-index) are dropped
 3. Events in hidden directories (`.` prefix) are dropped
-4. Remaining events route to `file_subscription` (WebSocket notifications)
-5. `.md` files in entity directories additionally route to `entity_index` (SQLite sync)
+4. Remaining events route to `file_subscription` (WebSocket notifications) if provided
+5. `.md` files in entity directories additionally route to `entity_index` (SQLite sync) if provided
+
+Note: base-api no longer passes `entity_index` callbacks to its user-base watcher. Entity change notifications arrive via entity-change-ipc instead. Only the index-sync-service uses entity_index callbacks for direct SQLite sync.
 
 Entity directories: task, tag, guideline, text, workflow, physical-item, physical-location, person, role, identity, scheduled-command, extension.
 
@@ -101,16 +111,31 @@ The API and sync service run in separate PM2 processes. Thread state changes flo
 
 Delete requests use `DELETE:{thread_id}` prefix and take precedence over sync requests for the same thread.
 
+### Queue Overflow Recovery
+
+When the queue file exceeds 1MB, the writer appends an `OVERFLOW:{timestamp}` marker instead of silently dropping requests. On processing, if an overflow marker is detected, the sync service triggers a full thread directory re-scan via `_populate_threads_from_filesystem()` to recover any missed syncs. Overflow events are tracked by metrics.
+
+## Entity Change IPC
+
+Entity change notifications flow from the index-sync-service to base-api via a second IPC queue. This replaces base-api's direct entity_index callbacks on the user-base watcher, eliminating redundant cache invalidation from filesystem events.
+
+1. **Writer (sync service)**: After successful `sync_entity()` or `remove_entity()`, appends `{event_type}:{base_uri}\n` to `embedded-database-index/.entity-change-queue`. IPC writes are skipped during bulk resync (`skip_ipc: true`) to avoid N syscalls per entity.
+2. **Reader (base-api)**: Polls queue file every 2 seconds
+3. **Processing**: Same atomic rename pattern as thread-sync-ipc. Deduplicates by base_uri (latest event_type per URI wins). Dispatches a single batch notification per queue flush (not per entry).
+4. **Consumer**: Each batch triggers a single `invalidate_tasks_cache()` in base-api
+
+Event types: `update`, `delete`. Queue line format: `update:user:task/my-task.md`. Size limit: 1MB.
+
 ## Dual-Process Architecture
 
 Two PM2 processes each start a user-base watcher subscription:
 
-| Process | Consumers | Purpose |
-|---------|-----------|---------|
-| base-api | file_subscription, entity_index (cache invalidation), repo_file | Real-time UI updates |
-| index-sync-service | entity_index (SQLite upsert) | Durable index maintenance |
+| Process | Watcher Consumers | IPC | Purpose |
+|---------|-------------------|-----|---------|
+| base-api | file_subscription, repo_file | Reads entity-change-queue | Real-time UI updates, cache invalidation |
+| index-sync-service | entity_index (SQLite upsert) | Writes entity-change-queue, reads thread-sync-queue | Durable index maintenance |
 
-Both create independent @parcel/watcher subscriptions on the same user-base directory. The index-sync-service only uses entity_index callbacks but receives all events through the shared watcher.
+Both create independent @parcel/watcher subscriptions on the same user-base directory. Base-api no longer receives entity_index callbacks via the watcher -- cache invalidation arrives through entity-change-ipc instead, reducing redundant processing of entity file events in the API process.
 
 ## Key Modules
 
@@ -120,13 +145,48 @@ Both create independent @parcel/watcher subscriptions on the same user-base dire
 | `libs-server/file-subscriptions/parcel-watcher-adapter.mjs` | Shared adapter with default ignore patterns and error callback |
 | `libs-server/file-subscriptions/git-status-watcher.mjs` | Chokidar-based .git internal file watching |
 | `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs` | Polling-based IPC queue for thread sync forwarding |
+| `libs-server/embedded-database-index/sync/entity-change-ipc.mjs` | Polling-based IPC queue for entity change notifications |
+| `libs-server/embedded-database-index/sync/sync-metrics.mjs` | In-process metrics collection with periodic log dump |
+| `libs-server/embedded-database-index/sync/stream-entity-files.mjs` | Async generator for streaming entity population |
 | `server/services/thread-watcher.mjs` | @parcel/watcher for thread directory with reconciliation |
 | `server/services/index-sync-service.mjs` | PM2 service entry point for SQLite sync |
 | `libs-server/embedded-database-index/embedded-index-manager.mjs` | SQLite lifecycle, sync operations, query interface |
 
+## Metrics and Observability
+
+The sync-metrics module provides lightweight in-process metrics collection. All output uses `console.error` because the Bun runtime suppresses `debug()` npm package output in PM2 log files -- only stderr reaches the logs.
+
+**Heartbeat** (every 60 seconds):
+```
+[heartbeat] pid=N uptime_s=N sqlite_ready=bool last_sync_age_s=N cache_size=N
+```
+
+**Metrics dump** (every 5 minutes, counters reset after dump):
+```
+[metrics] entity_syncs=N thread_syncs=N reconciliations=N errors=N avg_entity_sync_ms=N avg_thread_sync_ms=N cache_hits=N cache_misses=N queue_depth=N overflow_events=N uptime_s=N
+```
+
+Instrumented operations: entity sync/delete counts and timing, thread sync/delete counts and timing, timeline cache hits/misses, reconciliation count/timing/file count, FSEvents errors, IPC queue depth/syncs/deletes/timeouts/overflows.
+
+## Periodic WAL Checkpoint
+
+The index-sync-service runs a periodic WAL checkpoint every 10 minutes via `setInterval` to prevent unbounded WAL growth during sustained write periods. The interval is unreffed so it does not prevent process exit.
+
+## Timeline Cache Bounding
+
+The timeline sync cache (`_timeline_sync_cache`) stores timeline extraction results keyed by thread_id to skip re-extraction when only metadata changes. The cache is capped at 5,000 entries -- when the cap is exceeded, the oldest entries are evicted using Map insertion-order iteration. Cache size is reported as a metrics gauge.
+
 ## Recovery and Rebuild
 
 The sync service startup performs incremental sync with automatic fallback: incremental (git diff) -> resync (full scan) -> reset and rebuild (drop and recreate).
+
+### Streaming Population
+
+Both rebuild and resync paths use streaming entity population to reduce peak memory from O(all entities) to O(chunk size). The `stream_entity_file_chunks` async generator walks entity directories with `fs.readdir`, reads and parses each `.md` file, and yields arrays of entities in chunks (default 100). This prevents OOM during schema version upgrades that trigger full rebuilds.
+
+For resync, entities are streamed while collecting `base_uri` strings into a Set for orphan detection. The URI Set (strings only) remains in memory but is much smaller than full parsed entity objects.
+
+Thread population uses `list_thread_ids()` which returns only UUID strings (~36 bytes each), then `process_threads_in_batches()` loads metadata per-batch (100 at a time). The thread ID list is bounded and acceptable.
 
 Manual recovery:
 - `bun cli/rebuild-embedded-index.mjs` -- full index rebuild from filesystem
