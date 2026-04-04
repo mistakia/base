@@ -169,6 +169,7 @@ async function handle_thread_list_request({
   file_ref,
   dir_ref,
   tags,
+  without_tags,
   limit,
   offset,
   requesting_user_key
@@ -208,7 +209,8 @@ async function handle_thread_list_request({
     search,
     file_ref,
     dir_ref,
-    tags
+    tags,
+    without_tags
   })
 
   // Normalize to API format (in fallback mode, filesystem objects lack token
@@ -277,7 +279,8 @@ router.get('/', async (req, res) => {
       dir_ref,
       relates_to,
       relation_type,
-      tags: tags_param
+      tags: tags_param,
+      without_tags: without_tags_param
     } = req.query
     // Parse tags parameter: comma-separated string to array, filter empty strings
     const parsed_tags = tags_param
@@ -285,6 +288,7 @@ router.get('/', async (req, res) => {
       .map((t) => t.trim())
       .filter((t) => t.length > 0)
     const tags = parsed_tags?.length > 0 ? parsed_tags : undefined
+    const without_tags = without_tags_param === 'true'
     const limit = parseInt(req.query.limit) || 50
     const offset = parseInt(req.query.offset) || 0
     const requesting_user_key = req.user?.user_public_key || null
@@ -342,6 +346,7 @@ router.get('/', async (req, res) => {
       file_ref,
       dir_ref,
       tags,
+      without_tags,
       limit,
       offset,
       requesting_user_key

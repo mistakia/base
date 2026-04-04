@@ -81,6 +81,11 @@ export const builder = (yargs) =>
               'Filter by tag base_uri(s), comma-separated (e.g., user:tag/project.md)',
             type: 'string'
           })
+          .option('without-tags', {
+            describe: 'Return only threads without tags',
+            type: 'boolean',
+            default: false
+          })
           .option('relates-to', {
             describe: 'Find threads relating to a target entity (base_uri)',
             type: 'string'
@@ -351,6 +356,7 @@ async function handle_list(argv) {
     if (argv['dir-ref'])
       params.set('dir_ref', resolve_ref_pattern(argv['dir-ref']))
     if (argv.tags) params.set('tags', argv.tags)
+    if (argv['without-tags']) params.set('without_tags', 'true')
     if (argv['relates-to']) params.set('relates_to', argv['relates-to'])
     if (argv['relation-type'])
       params.set('relation_type', argv['relation-type'])

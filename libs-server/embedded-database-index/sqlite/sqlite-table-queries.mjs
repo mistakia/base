@@ -349,7 +349,14 @@ function escape_like_metacharacters(str) {
   return str.replace(/[%_\\]/g, '\\$&')
 }
 
-function build_thread_tag_conditions({ tags }) {
+function build_thread_tag_conditions({ tags, without_tags }) {
+  if (without_tags) {
+    return {
+      sql: 'NOT EXISTS (SELECT 1 FROM thread_tags tt_filter WHERE tt_filter.thread_id = threads.thread_id)',
+      parameters: []
+    }
+  }
+
   if (!tags || tags.length === 0) {
     return { sql: '', parameters: [] }
   }
@@ -397,7 +404,8 @@ export async function query_threads_from_sqlite({
   search,
   file_ref,
   dir_ref,
-  tags
+  tags,
+  without_tags
 }) {
   log('Querying threads from SQLite')
 
@@ -410,7 +418,7 @@ export async function query_threads_from_sqlite({
     dir_ref
   })
 
-  const tag_conditions = build_thread_tag_conditions({ tags })
+  const tag_conditions = build_thread_tag_conditions({ tags, without_tags })
 
   let final_where = where_sql
   if (search_conditions.conditions.length > 0) {
@@ -477,7 +485,8 @@ export async function count_threads_in_sqlite({
   search,
   file_ref,
   dir_ref,
-  tags
+  tags,
+  without_tags
 }) {
   log('Counting threads in SQLite')
 
@@ -489,7 +498,7 @@ export async function count_threads_in_sqlite({
     dir_ref
   })
 
-  const tag_conditions = build_thread_tag_conditions({ tags })
+  const tag_conditions = build_thread_tag_conditions({ tags, without_tags })
 
   let final_where = where_sql
   if (search_conditions.conditions.length > 0) {
@@ -904,25 +913,53 @@ export async function query_tag_statistics_from_sqlite({
 
   const query = include_zero_count
     ? `
+      WITH entity_counts AS (
+        SELECT tag_base_uri, COUNT(*) AS entity_count
+        FROM entity_tags
+        GROUP BY tag_base_uri
+      ),
+      thread_counts AS (
+        SELECT tag_base_uri, COUNT(*) AS thread_count
+        FROM thread_tags
+        GROUP BY tag_base_uri
+      )
       SELECT
         t.base_uri AS tag_base_uri,
         t.title,
-        COUNT(et.entity_base_uri) AS entity_count
+        COALESCE(ec.entity_count, 0) AS entity_count,
+        COALESCE(tc.thread_count, 0) AS thread_count
       FROM entities t
-      LEFT JOIN entity_tags et ON et.tag_base_uri = t.base_uri
+      LEFT JOIN entity_counts ec ON ec.tag_base_uri = t.base_uri
+      LEFT JOIN thread_counts tc ON tc.tag_base_uri = t.base_uri
       WHERE t.type = 'tag' AND (t.archived = 0 OR t.archived IS NULL)
-      GROUP BY t.base_uri, t.title
       ORDER BY entity_count DESC, t.title ASC
     `
     : `
+      WITH entity_counts AS (
+        SELECT tag_base_uri, COUNT(*) AS entity_count
+        FROM entity_tags
+        GROUP BY tag_base_uri
+      ),
+      thread_counts AS (
+        SELECT tag_base_uri, COUNT(*) AS thread_count
+        FROM thread_tags
+        GROUP BY tag_base_uri
+      ),
+      all_tags AS (
+        SELECT tag_base_uri FROM entity_counts
+        UNION
+        SELECT tag_base_uri FROM thread_counts
+      )
       SELECT
-        et.tag_base_uri,
+        a.tag_base_uri,
         t.title,
-        COUNT(*) AS entity_count
-      FROM entity_tags et
-      LEFT JOIN entities t ON t.base_uri = et.tag_base_uri
-      GROUP BY et.tag_base_uri, t.title
-      ORDER BY entity_count DESC, t.title ASC
+        COALESCE(ec.entity_count, 0) AS entity_count,
+        COALESCE(tc.thread_count, 0) AS thread_count
+      FROM all_tags a
+      LEFT JOIN entities t ON t.base_uri = a.tag_base_uri
+      LEFT JOIN entity_counts ec ON ec.tag_base_uri = a.tag_base_uri
+      LEFT JOIN thread_counts tc ON tc.tag_base_uri = a.tag_base_uri
+      ORDER BY entity_count DESC, COALESCE(t.title, a.tag_base_uri) ASC
     `
 
   try {
@@ -931,7 +968,8 @@ export async function query_tag_statistics_from_sqlite({
     const stats = results.map((row) => ({
       tag_base_uri: row.tag_base_uri,
       title: row.title || row.tag_base_uri,
-      entity_count: Number(row.entity_count) || 0
+      entity_count: Number(row.entity_count) || 0,
+      thread_count: Number(row.thread_count) || 0
     }))
 
     log('Found statistics for %d tags', stats.length)

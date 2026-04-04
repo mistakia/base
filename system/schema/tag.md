@@ -50,6 +50,17 @@ Tags commonly relate to:
 - Tasks
 - Workflows
 
+### `parent_tag` Relation
+
+The `parent_tag` relation declares a tag as a subtag (or categorization tag) of a parent domain tag. It is the programmatic discriminator that distinguishes subtags from independent domain tags.
+
+```yaml
+relations:
+  - parent_tag [[user:tag/parent-domain.md]]
+```
+
+Tools such as `tag-health.mjs` use the presence of `parent_tag` to apply a lower entity threshold for categorization tags (5-8 entities) versus domain tags (15 entities). See the Subdomain Tag Lifecycle section in `tag-standards.md` for full creation criteria and lifecycle rules.
+
 ## Proper Noun Representation
 
 Tags can effectively represent proper nouns such as specific projects, products, or entities:

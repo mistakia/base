@@ -41,6 +41,11 @@ export const builder = (yargs) =>
             describe: 'Include tags with zero entities',
             type: 'boolean',
             default: false
+          })
+          .option('json', {
+            describe: 'Output as JSON',
+            type: 'boolean',
+            default: false
           }),
       handle_stats
     )
@@ -145,18 +150,23 @@ async function handle_stats(argv) {
     } else if (stats.length === 0) {
       console.log('No tags found')
     } else {
-      const max_width = Math.max(
+      const entity_width = Math.max(
         ...stats.map((s) => String(s.entity_count).length),
-        5
+        8
+      )
+      const thread_width = Math.max(
+        ...stats.map((s) => String(s.thread_count).length),
+        7
       )
       for (const stat of stats) {
         console.log(
-          `${String(stat.entity_count).padStart(max_width)}\t${stat.tag_base_uri}\t${stat.title}`
+          `${String(stat.entity_count).padStart(entity_width)}\t${String(stat.thread_count).padStart(thread_width)}\t${stat.tag_base_uri}\t${stat.title}`
         )
       }
       const total_entities = stats.reduce((sum, s) => sum + s.entity_count, 0)
+      const total_threads = stats.reduce((sum, s) => sum + s.thread_count, 0)
       console.log(
-        `\nTotal: ${stats.length} tags, ${total_entities} tag assignments`
+        `\nTotal: ${stats.length} tags, ${total_entities} entity assignments, ${total_threads} thread assignments`
       )
     }
   } catch (error) {
