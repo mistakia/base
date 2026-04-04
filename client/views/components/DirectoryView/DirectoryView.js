@@ -34,6 +34,17 @@ import {
 import { RedactedContent } from '@components/primitives/styled'
 import GitRepoInfo from '@components/GitRepoInfo'
 
+const format_item_label = (folders, files) => {
+  const parts = []
+  if (folders > 0) {
+    parts.push(`${folders} folder${folders === 1 ? '' : 's'}`)
+  }
+  if (files > 0) {
+    parts.push(`${files} file${files === 1 ? '' : 's'}`)
+  }
+  return parts.join(' & ')
+}
+
 const DirectoryView = ({ path = '', on_navigate }) => {
   const dispatch = useDispatch()
   const items = useSelector(get_directory_items)
@@ -88,6 +99,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
   }, [items])
 
   const [show_redacted, set_show_redacted] = useState(false)
+  const [show_hidden, set_show_hidden] = useState(true)
 
   const { redacted_count, redacted_folders, redacted_files } = useMemo(() => {
     let folders = 0
@@ -105,25 +117,42 @@ const DirectoryView = ({ path = '', on_navigate }) => {
     }
   }, [sorted_items])
 
-  const redacted_label = useMemo(() => {
-    const parts = []
-    if (redacted_folders > 0) {
-      parts.push(
-        `${redacted_folders} folder${redacted_folders === 1 ? '' : 's'}`
-      )
+  const { hidden_count, hidden_folders, hidden_files } = useMemo(() => {
+    let folders = 0
+    let files = 0
+    for (const item of sorted_items) {
+      if (item.name.startsWith('.')) {
+        if (item.type === 'directory') folders++
+        else files++
+      }
     }
-    if (redacted_files > 0) {
-      parts.push(`${redacted_files} file${redacted_files === 1 ? '' : 's'}`)
+    return {
+      hidden_count: folders + files,
+      hidden_folders: folders,
+      hidden_files: files
     }
-    return parts.join(' & ')
-  }, [redacted_folders, redacted_files])
+  }, [sorted_items])
+
+  const redacted_label = useMemo(
+    () => format_item_label(redacted_folders, redacted_files),
+    [redacted_folders, redacted_files]
+  )
+
+  const hidden_label = useMemo(
+    () => format_item_label(hidden_folders, hidden_files),
+    [hidden_folders, hidden_files]
+  )
 
   const visible_items = useMemo(() => {
-    if (show_redacted || redacted_count === 0) {
-      return sorted_items
+    let result = sorted_items
+    if (!show_redacted && redacted_count > 0) {
+      result = result.filter((item) => !item.is_redacted)
     }
-    return sorted_items.filter((item) => !item.is_redacted)
-  }, [sorted_items, show_redacted, redacted_count])
+    if (!show_hidden && hidden_count > 0) {
+      result = result.filter((item) => !item.name.startsWith('.'))
+    }
+    return result
+  }, [sorted_items, show_redacted, redacted_count, show_hidden, hidden_count])
 
   // Memoize TableContainer styles to prevent unnecessary re-renders
   // Must be before early returns to maintain consistent hook order
@@ -275,7 +304,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '65%',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -339,7 +368,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '80px',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -371,7 +400,7 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '100px',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0
+                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -398,6 +427,64 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                 </TableCell>
               </TableRow>
             ))}
+            {hidden_count > 0 && !show_hidden && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  sx={{
+                    py: 0.75,
+                    px: 2,
+                    borderBottom: redacted_count > 0
+                      ? `1px solid ${COLORS.border_light}`
+                      : 'none',
+                    textAlign: 'center'
+                  }}>
+                  <Button
+                    variant='text'
+                    size='small'
+                    onClick={() => set_show_hidden(true)}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      color: COLORS.text_secondary,
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}>
+                    {`show ${hidden_label} hidden`}
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
+            {show_hidden && hidden_count > 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={3}
+                  sx={{
+                    py: 0.75,
+                    px: 2,
+                    borderBottom: redacted_count > 0
+                      ? `1px solid ${COLORS.border_light}`
+                      : 'none',
+                    textAlign: 'center'
+                  }}>
+                  <Button
+                    variant='text'
+                    size='small'
+                    onClick={() => set_show_hidden(false)}
+                    sx={{
+                      textTransform: 'none',
+                      fontSize: '12px',
+                      color: COLORS.text_secondary,
+                      '&:hover': {
+                        backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                      }
+                    }}>
+                    hide hidden files & folders
+                  </Button>
+                </TableCell>
+              </TableRow>
+            )}
             {redacted_count > 0 && !show_redacted && (
               <TableRow>
                 <TableCell
@@ -414,13 +501,15 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     onClick={() => set_show_redacted(true)}
                     sx={{
                       textTransform: 'none',
-                      fontSize: '12px',
+                      fontSize: '11px',
+                      minHeight: 0,
+                      py: 0.25,
                       color: COLORS.text_secondary,
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'
                       }
                     }}>
-                    {`show ${redacted_label}`}
+                    {`display ${redacted_label} redacted`}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -441,7 +530,9 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     onClick={() => set_show_redacted(false)}
                     sx={{
                       textTransform: 'none',
-                      fontSize: '12px',
+                      fontSize: '11px',
+                      minHeight: 0,
+                      py: 0.25,
                       color: COLORS.text_secondary,
                       '&:hover': {
                         backgroundColor: 'rgba(0, 0, 0, 0.04)'

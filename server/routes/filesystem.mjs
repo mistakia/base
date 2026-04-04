@@ -70,6 +70,18 @@ const create_concurrency_limiter = (max_concurrency) => {
   }
 }
 
+// Files excluded from directory listings (noise, not useful to browse)
+const EXCLUDED_FILES = new Set([
+  '.git',
+  '.DS_Store',
+  '.Spotlight-V100',
+  '.Trashes',
+  '.fseventsd',
+  '.TemporaryItems',
+  'Thumbs.db',
+  'desktop.ini'
+])
+
 // Apply permission checking middleware to all filesystem routes
 router.use(check_filesystem_permission())
 router.use(apply_redaction_interceptor())
@@ -120,8 +132,7 @@ router.get('/directory', async (req, res) => {
     // Collect file paths for batch permission checking
     const file_paths_to_check = []
     for (const file_name of files) {
-      // Skip hidden files and git directories
-      if (file_name.startsWith('.')) {
+      if (EXCLUDED_FILES.has(file_name)) {
         continue
       }
 
@@ -150,9 +161,8 @@ router.get('/directory', async (req, res) => {
       })
     }
 
-    // Filter to non-hidden files
     const visible_files = files.filter(
-      (file_name) => !file_name.startsWith('.')
+      (file_name) => !EXCLUDED_FILES.has(file_name)
     )
 
     // Parallel stat all files
