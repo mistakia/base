@@ -171,6 +171,7 @@ export async function find_entities_relating_to({
 export async function find_threads_relating_to({
   base_uri,
   relation_type = null,
+  thread_state = null,
   limit = 100,
   offset = 0
 }) {
@@ -196,6 +197,11 @@ export async function find_threads_relating_to({
   if (relation_type) {
     where_clauses.push('er.relation_type = ?')
     parameters.push(relation_type)
+  }
+
+  if (thread_state) {
+    where_clauses.push('t.thread_state = ?')
+    parameters.push(thread_state)
   }
 
   parameters.push(limit_int, offset_int)

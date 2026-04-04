@@ -231,6 +231,7 @@ async function handle_thread_list_request({
 async function handle_thread_list_by_relation({
   relates_to,
   relation_type,
+  thread_state,
   limit,
   offset,
   requesting_user_key
@@ -238,6 +239,7 @@ async function handle_thread_list_by_relation({
   const thread_results = await embedded_index_manager.find_threads_relating_to({
     base_uri: relates_to,
     relation_type,
+    thread_state,
     limit,
     offset
   })
@@ -317,6 +319,7 @@ router.get('/', async (req, res) => {
         const result = await handle_thread_list_by_relation({
           relates_to,
           relation_type,
+          thread_state,
           limit,
           offset,
           requesting_user_key

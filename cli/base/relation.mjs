@@ -258,6 +258,14 @@ async function handle_relations(argv, direction) {
       result.reverse = filter_by_source_type(result.reverse, source_type)
     }
 
+    // Recompute counts after client-side filtering so they match the arrays
+    if (result.counts) {
+      result.counts = {
+        forward: result.forward?.length || 0,
+        reverse: result.reverse?.length || 0
+      }
+    }
+
     // Custom formatter that includes source type indicator
     const format_with_source_type = (relation, options) => {
       if (options.verbose) {
