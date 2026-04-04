@@ -69,6 +69,12 @@ const debounced_invalidate_file_path_cache = () => {
   }, 1000)
 }
 
+// PM2's Bun fork container patches console.* but not process.stderr.write,
+// so debug module output is lost. Route debug through console.error instead.
+if (process.env.pm_id !== undefined) {
+  debug.log = console.error.bind(console)
+}
+
 const logger = debug('server')
 debug.enable(process.env.DEBUG || 'server,api')
 

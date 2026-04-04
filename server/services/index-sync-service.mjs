@@ -355,6 +355,12 @@ const is_pm2_execution =
 const is_main_module = is_direct_execution || is_pm2_execution
 
 if (is_main_module) {
+  // PM2's Bun fork container patches console.* but not process.stderr.write,
+  // so debug module output is lost. Route debug through console.error instead.
+  if (is_pm2_execution) {
+    debug.log = console.error.bind(console)
+  }
+
   if (process.env.DEBUG || is_pm2_execution) {
     debug.enable(process.env.DEBUG || 'index-sync*,embedded-index*')
   } else {
