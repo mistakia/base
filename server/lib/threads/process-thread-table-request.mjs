@@ -95,7 +95,9 @@ export function normalize_sqlite_thread(thread, models_data) {
 
     // Additional metadata
     description: thread.description || '',
-    tags: thread.tags || []
+    tags: thread.tags_aggregated
+      ? thread.tags_aggregated.split('||').filter(Boolean)
+      : []
   }
 }
 

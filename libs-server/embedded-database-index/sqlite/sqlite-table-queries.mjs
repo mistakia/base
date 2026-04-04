@@ -429,17 +429,25 @@ export async function query_threads_from_sqlite({
 
   const query = `
     SELECT
-      thread_id, title, short_description, thread_state, created_at, updated_at,
-      message_count, user_message_count, assistant_message_count, tool_call_count,
-      total_input_tokens, total_output_tokens, cache_creation_input_tokens,
-      cache_read_input_tokens, total_tokens, duration_ms, duration_minutes,
-      working_directory, working_directory_path, source_provider,
-      inference_provider, primary_model, user_public_key,
-      latest_event_timestamp, latest_event_type, latest_event_data,
-      file_references, directory_references, archived_at, archive_reason,
-      external_session_id
+      threads.thread_id, threads.title, threads.short_description,
+      threads.thread_state, threads.created_at, threads.updated_at,
+      threads.message_count, threads.user_message_count,
+      threads.assistant_message_count, threads.tool_call_count,
+      threads.total_input_tokens, threads.total_output_tokens,
+      threads.cache_creation_input_tokens, threads.cache_read_input_tokens,
+      threads.total_tokens, threads.duration_ms, threads.duration_minutes,
+      threads.working_directory, threads.working_directory_path,
+      threads.source_provider, threads.inference_provider,
+      threads.primary_model, threads.user_public_key,
+      threads.latest_event_timestamp, threads.latest_event_type,
+      threads.latest_event_data, threads.file_references,
+      threads.directory_references, threads.archived_at,
+      threads.archive_reason, threads.external_session_id,
+      GROUP_CONCAT(tt.tag_base_uri, '||') AS tags_aggregated
     FROM threads
+    LEFT JOIN thread_tags tt ON tt.thread_id = threads.thread_id
     ${final_where}
+    GROUP BY threads.thread_id
     ${order_sql}
     LIMIT ? OFFSET ?
   `
