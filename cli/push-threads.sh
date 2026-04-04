@@ -33,20 +33,22 @@ fi
 
 cd "$THREAD_DIR"
 
-# Safety checks
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
+# Enforce working tree and git dir boundary to prevent cross-submodule
+# contamination. Both must be exported before any git commands run.
+export GIT_WORK_TREE="$THREAD_DIR"
+export GIT_DIR
+GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)" || {
     echo "Not in a git repository" >&2
     exit 1
-fi
+}
 
 # Check for merge conflicts
-if [ -f "$(git rev-parse --git-dir)/MERGE_HEAD" ]; then
+if [ -f "$GIT_DIR/MERGE_HEAD" ]; then
     echo "Merge in progress, cannot push" >&2
     exit 1
 fi
 
 # Check for rebase in progress
-GIT_DIR=$(git rev-parse --git-dir)
 if [ -d "$GIT_DIR/rebase-merge" ] || [ -d "$GIT_DIR/rebase-apply" ]; then
     echo "Rebase in progress, cannot push" >&2
     exit 1
