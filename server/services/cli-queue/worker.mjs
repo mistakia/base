@@ -238,10 +238,12 @@ export const start_cli_queue_worker = () => {
     connection,
     concurrency: WORKER_CONCURRENCY,
     // Stalled job detection - recover jobs from crashed workers.
-    // Scheduled commands can run up to 10 minutes (600s timeout).
-    // lockDuration of 300s with auto-renewal at 150s provides safety margin.
+    // Scheduled commands can have timeouts up to 900s (import-claude-sessions).
+    // lockDuration must exceed the longest job timeout so BullMQ auto-renewal
+    // (at lockDuration/2) fires before stall detection. Previous 300s value
+    // caused false stalls on jobs blocking the event loop for >150s.
     stalledInterval: 30000, // Check for stalled jobs every 30 seconds
-    lockDuration: 300000, // Jobs locked for 5 minutes (covers long CLI commands)
+    lockDuration: 1200000, // Jobs locked for 20 minutes (covers 15-min timeout jobs with margin)
     maxStalledCount: 2 // Allow 2 stalls before failing (handles transient issues)
   })
 

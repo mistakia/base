@@ -41,11 +41,16 @@ fi
 cd "$IMPORT_HISTORY_DIR"
 
 # Enforce working tree and git dir boundary to prevent cross-submodule
-# contamination. Both must be set together before any git commands run.
-# Setting only GIT_WORK_TREE leaves GIT_DIR unset, causing git to search
-# upward and potentially find the parent user-base .git directory. This
-# led to import-history files being staged into base-ios's index (8,494
-# stale entries, Mar 2026).
+# contamination. All three env vars must be set together before any git
+# commands run:
+# - GIT_WORK_TREE: prevents git from searching upward for a repo
+# - GIT_DIR: directs git to the correct gitdir
+# - GIT_INDEX_FILE: overrides any inherited value from a parent hook
+#   (git sets GIT_INDEX_FILE in post-commit hooks; if this script is
+#   called from sync-all.sh which was triggered by a different
+#   submodule's hook, the inherited GIT_INDEX_FILE would point to
+#   the wrong submodule's index, causing cross-contamination)
+unset GIT_INDEX_FILE
 export GIT_WORK_TREE="$IMPORT_HISTORY_DIR"
 export GIT_DIR
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)" || {

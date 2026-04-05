@@ -34,7 +34,10 @@ fi
 cd "$THREAD_DIR"
 
 # Enforce working tree and git dir boundary to prevent cross-submodule
-# contamination. Both must be exported before any git commands run.
+# contamination. All three env vars must be set before any git commands run.
+# GIT_INDEX_FILE must be unset to prevent inheriting a stale value from
+# a parent post-commit hook (git sets it in hook environments).
+unset GIT_INDEX_FILE
 export GIT_WORK_TREE="$THREAD_DIR"
 export GIT_DIR
 GIT_DIR="$(git rev-parse --git-dir 2>/dev/null)" || {
