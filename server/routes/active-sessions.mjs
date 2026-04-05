@@ -1,6 +1,8 @@
+import crypto from 'crypto'
 import express from 'express'
 import debug from 'debug'
 
+import config from '#config'
 import {
   register_active_session,
   update_active_session,
@@ -258,6 +260,26 @@ router.get('/:session_id', async (req, res) => {
  * Register a new active session (called by SessionStart hook)
  */
 router.post('/', async (req, res) => {
+  const expected_key = config.job_tracker?.api_key
+  const auth_header = req.headers.authorization
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
+    req.ip
+  )
+  if (!is_localhost) {
+    if (!expected_key || !auth_header) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
+    const provided_buf = Buffer.from(provided_key)
+    const expected_buf = Buffer.from(expected_key)
+    if (
+      provided_buf.length !== expected_buf.length ||
+      !crypto.timingSafeEqual(provided_buf, expected_buf)
+    ) {
+      return res.status(401).json({ error: 'Invalid API key' })
+    }
+  }
+
   const { log } = req.app.locals
   const { session_id, working_directory, transcript_path, job_id } = req.body
 
@@ -345,6 +367,26 @@ router.post('/', async (req, res) => {
  * Called by UserPromptSubmit, PostToolUse (status=active) and Stop (status=idle) hooks
  */
 router.put('/:session_id', async (req, res) => {
+  const expected_key = config.job_tracker?.api_key
+  const auth_header = req.headers.authorization
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
+    req.ip
+  )
+  if (!is_localhost) {
+    if (!expected_key || !auth_header) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
+    const provided_buf = Buffer.from(provided_key)
+    const expected_buf = Buffer.from(expected_key)
+    if (
+      provided_buf.length !== expected_buf.length ||
+      !crypto.timingSafeEqual(provided_buf, expected_buf)
+    ) {
+      return res.status(401).json({ error: 'Invalid API key' })
+    }
+  }
+
   const { log } = req.app.locals
   const { session_id } = req.params
   const {
@@ -474,6 +516,26 @@ router.put('/:session_id', async (req, res) => {
  * Remove an active session (called by SessionEnd hook)
  */
 router.delete('/:session_id', async (req, res) => {
+  const expected_key = config.job_tracker?.api_key
+  const auth_header = req.headers.authorization
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
+    req.ip
+  )
+  if (!is_localhost) {
+    if (!expected_key || !auth_header) {
+      return res.status(401).json({ error: 'Authentication required' })
+    }
+    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
+    const provided_buf = Buffer.from(provided_key)
+    const expected_buf = Buffer.from(expected_key)
+    if (
+      provided_buf.length !== expected_buf.length ||
+      !crypto.timingSafeEqual(provided_buf, expected_buf)
+    ) {
+      return res.status(401).json({ error: 'Invalid API key' })
+    }
+  }
+
   const { log } = req.app.locals
   const { session_id } = req.params
 

@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import express from 'express'
 import debug from 'debug'
 import config from '#config'
@@ -7,6 +8,7 @@ import {
   load_job,
   load_all_jobs
 } from '#libs-server/jobs/report-job.mjs'
+import { check_global_write_permission } from '#server/middleware/permission/index.mjs'
 
 const log = debug('api:jobs')
 const router = express.Router({ mergeParams: true })
@@ -24,7 +26,12 @@ router.post('/report', async (req, res) => {
   }
 
   const provided_key = auth_header.replace(/^Bearer\s+/i, '')
-  if (provided_key !== expected_key) {
+  const provided_buf = Buffer.from(provided_key)
+  const expected_buf = Buffer.from(expected_key)
+  if (
+    provided_buf.length !== expected_buf.length ||
+    !crypto.timingSafeEqual(provided_buf, expected_buf)
+  ) {
     return res.status(401).json({ error: 'Invalid API key' })
   }
 
@@ -82,6 +89,17 @@ router.post('/report', async (req, res) => {
  * List all tracked jobs
  */
 router.get('/', async (req, res) => {
+  if (!req.user?.user_public_key) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
+  const has_permission = await check_global_write_permission(
+    req.user.user_public_key
+  )
+  if (!has_permission) {
+    return res.status(403).json({ error: 'Permission denied' })
+  }
+
   try {
     const jobs = await load_all_jobs()
     return res.status(200).json(jobs)
@@ -96,6 +114,17 @@ router.get('/', async (req, res) => {
  * Get a specific job by ID
  */
 router.get('/:job_id', async (req, res) => {
+  if (!req.user?.user_public_key) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
+  const has_permission = await check_global_write_permission(
+    req.user.user_public_key
+  )
+  if (!has_permission) {
+    return res.status(403).json({ error: 'Permission denied' })
+  }
+
   try {
     const job = await load_job({ job_id: req.params.job_id })
     if (!job) {

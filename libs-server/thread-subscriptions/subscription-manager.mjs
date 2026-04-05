@@ -8,6 +8,8 @@
 
 import debug from 'debug'
 
+import { check_thread_permission } from '#server/middleware/permission/index.mjs'
+
 const log = debug('thread-subscriptions:manager')
 
 // Map to store connection -> Set<thread_id> mapping
@@ -21,9 +23,30 @@ const thread_id_to_subscribers = new Map()
  * @param {Object} params
  * @param {WebSocket} params.ws - The WebSocket connection
  * @param {string} params.thread_id - The thread ID to subscribe to
+ * @param {string|null} params.user_public_key - User's public key or null for public access
+ * @returns {Promise<boolean>} True if subscription was successful
  */
-export function subscribe_to_thread({ ws, thread_id }) {
-  if (!ws || !thread_id) return
+export async function subscribe_to_thread({
+  ws,
+  thread_id,
+  user_public_key = null
+}) {
+  if (!ws || !thread_id) return false
+
+  // Check read permission before subscribing
+  const permission_result = await check_thread_permission({
+    user_public_key,
+    thread_id
+  })
+  if (!permission_result.read?.allowed) {
+    log(
+      'Subscription denied for thread: %s (user: %s, reason: %s)',
+      thread_id,
+      user_public_key || 'anonymous',
+      permission_result.read?.reason || 'unknown'
+    )
+    return false
+  }
 
   // Add to connection's subscription set
   let connection_threads = thread_subscriptions.get(ws)
@@ -46,6 +69,7 @@ export function subscribe_to_thread({ ws, thread_id }) {
     thread_id,
     subscribers.size
   )
+  return true
 }
 
 /**

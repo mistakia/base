@@ -7,6 +7,7 @@ import {
   query_latest_snapshot,
   query_metric_series
 } from '#libs-server/stats/database.mjs'
+import { check_global_write_permission } from '#server/middleware/permission/index.mjs'
 
 const log = debug('api:stats')
 const router = express.Router({ mergeParams: true })
@@ -17,6 +18,17 @@ const router = express.Router({ mergeParams: true })
  * Returns the most recent full snapshot grouped by category.
  */
 router.get('/latest', async (req, res) => {
+  if (!req.user?.user_public_key) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
+  const has_permission = await check_global_write_permission(
+    req.user.user_public_key
+  )
+  if (!has_permission) {
+    return res.status(403).json({ error: 'Permission denied' })
+  }
+
   try {
     const pool = await get_stats_database_connection({ config })
     const rows = await query_latest_snapshot({ pool })
@@ -49,6 +61,17 @@ router.get('/latest', async (req, res) => {
  * Query params: metric (required), from, to, dimensions (JSON string)
  */
 router.get('/series', async (req, res) => {
+  if (!req.user?.user_public_key) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
+  const has_permission = await check_global_write_permission(
+    req.user.user_public_key
+  )
+  if (!has_permission) {
+    return res.status(403).json({ error: 'Permission denied' })
+  }
+
   try {
     const { metric, from, to, dimensions } = req.query
 

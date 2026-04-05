@@ -23,7 +23,8 @@ export {
   validate_thread_ownership,
   check_user_permission,
   check_user_permission_for_file,
-  check_create_threads_permission
+  check_create_threads_permission,
+  check_global_write_permission
 } from './permission-service.mjs'
 
 // Resource Metadata - for direct metadata access

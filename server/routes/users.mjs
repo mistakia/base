@@ -52,19 +52,12 @@ router.get('/', async (req, res) => {
 const filter_public_user_data = (user) => {
   if (!user) return null
 
-  const {
-    username,
-    user_public_key,
-    created_at,
-    permissions = {}
-    // Remove any other private fields
-  } = user
+  const { username, user_public_key, created_at } = user
 
   return {
     username,
     user_public_key,
-    created_at,
-    permissions
+    created_at
   }
 }
 

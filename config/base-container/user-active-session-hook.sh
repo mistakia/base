@@ -14,19 +14,27 @@ LOCAL_API_URL="${LOCAL_PROTO}://${LOCAL_HOST}:${LOCAL_PORT}/api/active-sessions"
 PROD_API_URL="${BASE_PROD_API_URL:-}"
 
 # Helper function to send request to an endpoint (runs in background)
-# Usage: send_request METHOD URL [DATA]
+# Usage: send_request METHOD URL [DATA] [USE_API_KEY]
 send_request() {
     local method="$1"
     local url="$2"
     local data="$3"
+    local use_api_key="$4"
+
+    local auth_args=()
+    if [ "$use_api_key" = "true" ] && [ -n "$JOB_API_KEY" ]; then
+        auth_args=(-H "Authorization: Bearer $JOB_API_KEY")
+    fi
 
     if [ -n "$data" ]; then
         curl -sk -X "$method" "$url" \
             -H "Content-Type: application/json" \
+            "${auth_args[@]}" \
             -d "$data" \
             --connect-timeout 5 --max-time 5 > /dev/null 2>&1 &
     else
         curl -sk -X "$method" "$url" \
+            "${auth_args[@]}" \
             --connect-timeout 5 --max-time 5 > /dev/null 2>&1 &
     fi
 }
@@ -68,7 +76,7 @@ case "$HOOK_EVENT" in
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
     send_request "POST" "$LOCAL_API_URL" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "POST" "$PROD_SESSION_URL" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "POST" "$PROD_SESSION_URL" "$payload" "true"
     ;;
   UserPromptSubmit|PostToolUse)
     payload="{
@@ -78,7 +86,7 @@ case "$HOOK_EVENT" in
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
     send_request "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
     ;;
   Stop)
     payload="{
@@ -88,11 +96,11 @@ case "$HOOK_EVENT" in
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
     send_request "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
     ;;
   SessionEnd)
     send_request "DELETE" "$LOCAL_API_URL/${SESSION_ID}"
-    [ -n "$PROD_SESSION_URL" ] && send_request "DELETE" "$PROD_SESSION_URL/${SESSION_ID}"
+    [ -n "$PROD_SESSION_URL" ] && send_request "DELETE" "$PROD_SESSION_URL/${SESSION_ID}" "" "true"
     ;;
 esac
 

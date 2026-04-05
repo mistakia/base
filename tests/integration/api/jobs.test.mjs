@@ -3,20 +3,30 @@ import { expect } from 'chai'
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
+import crypto from 'crypto'
 
 import config from '#config'
 import server from '#server'
 import { request } from '#tests/utils/test-request.mjs'
+import {
+  reset_all_tables,
+  authenticate_request
+} from '#tests/utils/index.mjs'
+import create_user from '#libs-server/users/create-user.mjs'
+import user_registry from '#libs-server/users/user-registry.mjs'
 
 describe('API /jobs', function () {
   this.timeout(10000)
 
   let tmp_dir
   let original_job_tracker
+  let admin_user
 
   const TEST_API_KEY = 'test-job-api-key-12345'
 
   before(async () => {
+    await reset_all_tables()
+
     tmp_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'job-tracker-test-'))
 
     original_job_tracker = config.job_tracker
@@ -28,6 +38,13 @@ describe('API /jobs', function () {
       discord_webhook_url: '',
       missed_check_interval_ms: 300000
     }
+
+    admin_user = await create_user({
+      username: `test_admin_${Math.floor(Math.random() * 10000)}`,
+      user_private_key: crypto.randomBytes(32),
+      permissions: { global_write: true }
+    })
+    user_registry._clear_cache()
   })
 
   after(async () => {
@@ -121,8 +138,17 @@ describe('API /jobs', function () {
   })
 
   describe('GET /api/jobs', () => {
-    it('should return list of all jobs', async () => {
+    it('should return 401 without authentication', async () => {
       const res = await request(server).get('/api/jobs')
+
+      expect(res.status).to.equal(401)
+    })
+
+    it('should return list of all jobs for admin user', async () => {
+      const res = await authenticate_request(
+        request(server).get('/api/jobs'),
+        admin_user
+      )
 
       expect(res.status).to.equal(200)
       expect(res.body).to.be.an('array')
@@ -135,8 +161,11 @@ describe('API /jobs', function () {
   })
 
   describe('GET /api/jobs/:job_id', () => {
-    it('should return a specific job', async () => {
-      const res = await request(server).get('/api/jobs/test-my-script')
+    it('should return a specific job for admin user', async () => {
+      const res = await authenticate_request(
+        request(server).get('/api/jobs/test-my-script'),
+        admin_user
+      )
 
       expect(res.status).to.equal(200)
       expect(res.body).to.have.property('job_id', 'test-my-script')
@@ -144,7 +173,10 @@ describe('API /jobs', function () {
     })
 
     it('should return 404 for unknown job', async () => {
-      const res = await request(server).get('/api/jobs/nonexistent-job')
+      const res = await authenticate_request(
+        request(server).get('/api/jobs/nonexistent-job'),
+        admin_user
+      )
 
       expect(res.status).to.equal(404)
     })
@@ -175,8 +207,12 @@ describe('API /jobs', function () {
       expect(job.stats).to.have.property('total_runs', 1)
 
       // Verify via API
-      const res = await request(server)
-        .get('/api/jobs/internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9')
+      const res = await authenticate_request(
+        request(server).get(
+          '/api/jobs/internal-2f70e7fb-3821-41ca-8c3a-ec00a489bad9'
+        ),
+        admin_user
+      )
 
       expect(res.status).to.equal(200)
       expect(res.body).to.have.property('source', 'internal')

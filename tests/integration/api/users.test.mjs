@@ -101,7 +101,7 @@ describe('API /users', () => {
     res.body.should.be.a('object')
     res.body.should.have.property('username')
     res.body.should.have.property('created_at')
-    res.body.should.have.property('permissions')
+    res.body.should.not.have.property('permissions')
 
     res.body.username.should.equal(user_data.username)
   })

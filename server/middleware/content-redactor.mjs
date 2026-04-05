@@ -738,6 +738,31 @@ export const redact_thread_data = (thread) => {
     redacted.external_session_id = DEFAULT_REDACTED_UUID
   }
 
+  // Redact cost, token, model, and count fields
+  if (redacted.total_cost != null) redacted.total_cost = null
+  if (redacted.input_cost != null) redacted.input_cost = null
+  if (redacted.output_cost != null) redacted.output_cost = null
+  if (redacted.currency != null) redacted.currency = DEFAULT_REDACTED_STRING
+  if (redacted.total_tokens != null) redacted.total_tokens = null
+  if (redacted.total_input_tokens != null) redacted.total_input_tokens = null
+  if (redacted.total_output_tokens != null) redacted.total_output_tokens = null
+  if (redacted.cache_creation_input_tokens != null)
+    redacted.cache_creation_input_tokens = null
+  if (redacted.cache_read_input_tokens != null)
+    redacted.cache_read_input_tokens = null
+  if (redacted.message_count != null) redacted.message_count = null
+  if (redacted.user_message_count != null) redacted.user_message_count = null
+  if (redacted.assistant_message_count != null)
+    redacted.assistant_message_count = null
+  if (redacted.tool_call_count != null) redacted.tool_call_count = null
+  if (redacted.source_provider != null)
+    redacted.source_provider = DEFAULT_REDACTED_STRING
+  if (redacted.inference_provider != null)
+    redacted.inference_provider = DEFAULT_REDACTED_STRING
+  if (redacted.primary_model != null)
+    redacted.primary_model = DEFAULT_REDACTED_STRING
+  if (Array.isArray(redacted.models)) redacted.models = []
+
   // Redact thread main request content
   if (redacted.thread_main_request) {
     redacted.thread_main_request = redact_text_content(

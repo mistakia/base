@@ -8,6 +8,7 @@
 import debug from 'debug'
 
 import { normalize_file_path } from '#libs-shared/path-utils.mjs'
+import { check_permission } from '#server/middleware/permission/index.mjs'
 
 const log = debug('file-subscriptions:manager')
 
@@ -22,11 +23,28 @@ const path_to_subscribers = new Map()
  * @param {Object} params
  * @param {WebSocket} params.ws - The WebSocket connection
  * @param {string} params.path - The file path to subscribe to (relative to user base)
+ * @param {string|null} params.user_public_key - User's public key or null for public access
+ * @returns {Promise<boolean>} True if subscription was successful
  */
-export function subscribe_to_file({ ws, path }) {
-  if (!ws || !path) return
+export async function subscribe_to_file({ ws, path, user_public_key = null }) {
+  if (!ws || !path) return false
 
   const normalized_path = normalize_file_path(path)
+
+  // Check read permission before subscribing
+  const permission_result = await check_permission({
+    user_public_key,
+    resource_path: normalized_path
+  })
+  if (!permission_result.read.allowed) {
+    log(
+      'Subscription denied for file: %s (user: %s, reason: %s)',
+      normalized_path,
+      user_public_key || 'anonymous',
+      permission_result.read.reason
+    )
+    return false
+  }
 
   // Add to connection's subscription set
   let connection_paths = file_subscriptions.get(ws)
@@ -49,6 +67,7 @@ export function subscribe_to_file({ ws, path }) {
     normalized_path,
     subscribers.size
   )
+  return true
 }
 
 /**

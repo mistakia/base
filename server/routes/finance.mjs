@@ -16,6 +16,10 @@ const router = express.Router()
  * Forwards to: config.finance.api_url + /api/<remainder>
  */
 router.use(async (req, res) => {
+  if (!req.user?.user_public_key) {
+    return res.status(401).json({ error: 'Authentication required' })
+  }
+
   const finance_config = config.finance || {}
   const api_url = finance_config.api_url
 

@@ -23,7 +23,10 @@ import {
   redact_base_uri,
   DEFAULT_REDACTED_STRING
 } from '#server/middleware/content-redactor.mjs'
-import { filter_entities_by_permission } from '#server/middleware/permission/redact-entity-references.mjs'
+import {
+  filter_entities_by_permission,
+  filter_threads_by_permission
+} from '#server/middleware/permission/redact-entity-references.mjs'
 
 const log = debug('api:entities')
 const router = express.Router({ mergeParams: true })
@@ -227,6 +230,7 @@ router.get('/', async (req, res) => {
  */
 router.get('/threads', async (req, res) => {
   try {
+    const user_public_key = req.user?.user_public_key || null
     const { base_uri, relation_type, limit = 50, offset = 0 } = req.query
 
     if (!base_uri) {
@@ -243,15 +247,21 @@ router.get('/threads', async (req, res) => {
       offset: offset_num
     })
 
+    // Apply permission-based filtering and redaction
+    const filtered_threads = await filter_threads_by_permission({
+      threads,
+      user_public_key
+    })
+
     log(
-      'Entity threads query for %s: %d threads found',
+      'Entity threads query for %s: %d threads found (with permission filtering)',
       base_uri,
-      threads.length
+      filtered_threads.length
     )
 
     res.send({
-      threads,
-      total: threads.length,
+      threads: filtered_threads,
+      total: filtered_threads.length,
       limit: limit_num,
       offset: offset_num
     })

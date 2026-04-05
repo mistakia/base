@@ -59,15 +59,33 @@ wss.on('connection', (ws) => {
   })
 
   // Handle incoming messages
-  ws.on('message', (data) => {
+  ws.on('message', async (data) => {
     try {
       const message = JSON.parse(data.toString())
+
+      const user_public_key = ws.user_public_key || null
 
       switch (message.type) {
         case 'SUBSCRIBE_FILE':
           if (message.payload?.path) {
-            subscribe_to_file({ ws, path: message.payload.path })
-            log('Client subscribed to file: %s', message.payload.path)
+            const allowed = await subscribe_to_file({
+              ws,
+              path: message.payload.path,
+              user_public_key
+            })
+            if (allowed) {
+              log('Client subscribed to file: %s', message.payload.path)
+            } else {
+              ws.send(
+                JSON.stringify({
+                  type: 'SUBSCRIPTION_DENIED',
+                  payload: {
+                    resource_type: 'file',
+                    path: message.payload.path
+                  }
+                })
+              )
+            }
           }
           break
 
@@ -80,8 +98,27 @@ wss.on('connection', (ws) => {
 
         case 'SUBSCRIBE_THREAD':
           if (message.payload?.thread_id) {
-            subscribe_to_thread({ ws, thread_id: message.payload.thread_id })
-            log('Client subscribed to thread: %s', message.payload.thread_id)
+            const allowed = await subscribe_to_thread({
+              ws,
+              thread_id: message.payload.thread_id,
+              user_public_key
+            })
+            if (allowed) {
+              log(
+                'Client subscribed to thread: %s',
+                message.payload.thread_id
+              )
+            } else {
+              ws.send(
+                JSON.stringify({
+                  type: 'SUBSCRIPTION_DENIED',
+                  payload: {
+                    resource_type: 'thread',
+                    thread_id: message.payload.thread_id
+                  }
+                })
+              )
+            }
           }
           break
 

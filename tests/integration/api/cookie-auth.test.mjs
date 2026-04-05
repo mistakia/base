@@ -150,7 +150,7 @@ describe('Cookie-based JWT Authentication', function () {
     expect(res.status).to.equal(200)
     // Should return filtered public data (no full profile fields like created_at with email)
     expect(res.body).to.have.property('username')
-    expect(res.body).to.have.property('permissions')
+    expect(res.body).to.not.have.property('permissions')
   })
 
   it('should prefer Authorization header over cookie when both present', async () => {
@@ -170,7 +170,7 @@ describe('Cookie-based JWT Authentication', function () {
     expect(res.status).to.equal(200)
     // Should return filtered public data only
     expect(res.body).to.have.property('username')
-    expect(res.body).to.have.property('permissions')
+    expect(res.body).to.not.have.property('permissions')
   })
 
   it('should clear the cookie on DELETE /api/users/session', async () => {
