@@ -55,14 +55,15 @@ properties:
           - tsv
           - postgres
           - markdown
-        default: duckdb
+          - sqlite
+        default: sqlite
         description: Storage backend type
       table:
         type: string
         description: Table name for duckdb backend (defaults to table_name)
       database:
         type: string
-        description: File path for duckdb backend (absolute path to .duckdb file)
+        description: File path for duckdb/sqlite backend
       path:
         type: string
         description: File path for tsv backend (relative to user-base)
