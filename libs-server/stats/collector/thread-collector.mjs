@@ -1,15 +1,12 @@
 /**
  * Thread Metrics Collector
  *
- * Collects thread counts by state, total tokens, total cost, and data volume.
+ * Collects thread counts by state and total token usage.
  */
 
 import debug from 'debug'
 
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
-import config from '#config'
-
 const log = debug('stats:collector:thread')
 
 export async function collect_thread_metrics({ snapshot_date }) {
@@ -80,31 +77,6 @@ export async function collect_thread_metrics({ snapshot_date }) {
       unit: 'tokens',
       dimensions: {}
     })
-  }
-
-  // Thread directory size
-  try {
-    const thread_dir = `${config.user_base_directory}/thread`
-    const du_cmd =
-      process.platform === 'darwin'
-        ? `du -sk "${thread_dir}" | cut -f1`
-        : `du -sb "${thread_dir}" | cut -f1`
-    const { stdout } = await execute_shell_command(du_cmd, { timeout: 30000 })
-    const raw_size = parseInt(stdout.trim(), 10)
-    const size_bytes =
-      process.platform === 'darwin' ? raw_size * 1024 : raw_size
-    if (!isNaN(size_bytes)) {
-      metrics.push({
-        snapshot_date,
-        category: 'threads',
-        metric_name: 'thread_data_size',
-        metric_value: size_bytes,
-        unit: 'bytes',
-        dimensions: {}
-      })
-    }
-  } catch (err) {
-    log('Failed to measure thread directory: %s', err.message)
   }
 
   log('Collected %d thread metrics', metrics.length)

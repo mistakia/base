@@ -1,7 +1,7 @@
 /**
  * Task Metrics Collector
  *
- * Collects task counts by status, creation/completion rates, and average completion time.
+ * Collects task counts by status and creation/completion rates.
  */
 
 import debug from 'debug'
@@ -80,31 +80,6 @@ export async function collect_task_metrics({ snapshot_date }) {
     unit: 'count',
     dimensions: {}
   })
-
-  // Average completion days for tasks with both started_at and finished_at
-  const avg_rows = await execute_sqlite_query({
-    query: `
-      SELECT AVG(
-        julianday(json_extract(frontmatter, '$.finished_at')) -
-        julianday(json_extract(frontmatter, '$.started_at'))
-      ) as avg_days
-      FROM entities
-      WHERE type = 'task'
-        AND json_extract(frontmatter, '$.finished_at') IS NOT NULL
-        AND json_extract(frontmatter, '$.started_at') IS NOT NULL
-    `
-  })
-  const avg_days = avg_rows[0]?.avg_days
-  if (avg_days != null && !isNaN(Number(avg_days))) {
-    metrics.push({
-      snapshot_date,
-      category: 'tasks',
-      metric_name: 'avg_completion_days',
-      metric_value: Math.round(Number(avg_days) * 10) / 10,
-      unit: 'days',
-      dimensions: {}
-    })
-  }
 
   log('Collected %d task metrics', metrics.length)
   return metrics
