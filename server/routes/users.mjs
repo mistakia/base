@@ -30,10 +30,14 @@ const COOKIE_OPTIONS = {
 
 const router = express.Router()
 
-// Get all users endpoint
+// Get all users endpoint (requires authentication)
 router.get('/', async (req, res) => {
   const { log } = req.app.locals
   try {
+    if (!req.user) {
+      return res.status(401).send({ error: 'authentication required' })
+    }
+
     const users_array = await user_registry.list_users()
 
     const sorted_users = users_array
@@ -208,6 +212,10 @@ router.delete('/session', (req, res) => {
 router.get('/public_keys/:user_public_key', async (req, res) => {
   const { log } = req.app.locals
   try {
+    if (!req.user) {
+      return res.status(401).send({ error: 'authentication required' })
+    }
+
     const { user_public_key } = req.params
     const user = await user_registry.find_by_public_key(user_public_key)
 
@@ -225,6 +233,10 @@ router.get('/public_keys/:user_public_key', async (req, res) => {
 router.get('/:username', async (req, res) => {
   const { log } = req.app.locals
   try {
+    if (!req.user) {
+      return res.status(401).send({ error: 'authentication required' })
+    }
+
     const { username } = req.params
     const user = await user_registry.find_by_username(username)
 
@@ -232,25 +244,8 @@ router.get('/:username', async (req, res) => {
       return res.status(404).send({ error: 'user not found' })
     }
 
-    // Check if request is authenticated via Authorization header
-    const auth_header = req.headers.authorization
-    let is_authenticated = false
-    let requesting_public_key = null
-
-    if (auth_header) {
-      try {
-        const token = auth_header.replace('Bearer ', '')
-        const decoded = jwt.verify(token, config.jwt.secret)
-        requesting_public_key = decoded.user_public_key
-        is_authenticated = true
-      } catch (err) {
-        // Invalid token, treat as unauthenticated
-        is_authenticated = false
-      }
-    }
-
-    // If authenticated and requesting their own profile, return full data
-    if (is_authenticated && requesting_public_key === user.user_public_key) {
+    // If requesting their own profile, return full data
+    if (req.user.user_public_key === user.user_public_key) {
       res.status(200).send(user)
     } else {
       // Return filtered public data

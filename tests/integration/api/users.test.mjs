@@ -93,9 +93,17 @@ describe('API /users', () => {
     res.body.user_public_key.should.equal(user_data.user_public_key)
   })
 
-  it('should get a user by user_public_key', async () => {
+  it('should reject unauthenticated user lookup by public key', async () => {
     const res = await request(server)
       .get(`/api/users/public_keys/${user_data.user_public_key}`)
+
+    expect(res.status).to.equal(401)
+  })
+
+  it('should get a user by user_public_key when authenticated', async () => {
+    const res = await request(server)
+      .get(`/api/users/public_keys/${user_data.user_public_key}`)
+      .set('Authorization', `Bearer ${auth_token}`)
 
     expect(res.status).to.equal(200)
     res.body.should.be.a('object')
