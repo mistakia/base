@@ -9,6 +9,18 @@ const log = debug('api:jwt-parser')
  * This allows routes to handle both authenticated and unauthenticated requests
  * Checks Authorization header first, falls back to base_token cookie
  */
+/**
+ * Middleware that requires a valid authenticated user on the request.
+ * Returns 401 if req.user is not set (i.e., no valid JWT was provided).
+ * Use after parse_jwt_token() on routes that must not be publicly accessible.
+ */
+export const require_auth = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'authentication required' })
+  }
+  next()
+}
+
 export const parse_jwt_token = () => {
   return async (req, res, next) => {
     const auth_header = req.headers.authorization

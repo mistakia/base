@@ -255,7 +255,7 @@ router.get('/', async (req, res) => {
 
       return res.json({
         content_results: filtered_content,
-        total: filtered_content.length,
+        ...(user_public_key ? { total: filtered_content.length } : {}),
         mode: 'content'
       })
     }
@@ -276,7 +276,7 @@ router.get('/', async (req, res) => {
 
       return res.json({
         semantic_results: filtered_semantic,
-        total: filtered_semantic.length,
+        ...(user_public_key ? { total: filtered_semantic.length } : {}),
         available,
         mode: 'semantic'
       })
@@ -385,7 +385,11 @@ router.get('/', async (req, res) => {
           user_public_key
         )
       )
-      search_results.total = search_results.results.length
+      if (user_public_key) {
+        search_results.total = search_results.results.length
+      } else {
+        delete search_results.total
+      }
     } else {
       for (const type of full_result_types) {
         search_results[type] = apply_exclude_filter(
@@ -395,10 +399,14 @@ router.get('/', async (req, res) => {
           )
         )
       }
-      search_results.total = full_result_types.reduce(
-        (sum, type) => sum + search_results[type].length,
-        0
-      )
+      if (user_public_key) {
+        search_results.total = full_result_types.reduce(
+          (sum, type) => sum + search_results[type].length,
+          0
+        )
+      } else {
+        delete search_results.total
+      }
     }
 
     res.json(search_results)
@@ -469,7 +477,7 @@ router.get('/recent', async (req, res) => {
         modified: file.modified,
         entity_type: file.entity_type
       })),
-      total: filtered_results.length,
+      ...(user_public_key ? { total: filtered_results.length } : {}),
       config: {
         hours: hours || recent_config.hours,
         limit: limit || recent_config.limit

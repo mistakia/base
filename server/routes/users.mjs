@@ -4,6 +4,7 @@ import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import jwt from 'jsonwebtoken'
 
 import config from '#config'
+import { require_auth } from '#server/middleware/jwt-parser.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import {
   load_identity_by_public_key
@@ -31,13 +32,9 @@ const COOKIE_OPTIONS = {
 const router = express.Router()
 
 // Get all users endpoint (requires authentication)
-router.get('/', async (req, res) => {
+router.get('/', require_auth, async (req, res) => {
   const { log } = req.app.locals
   try {
-    if (!req.user) {
-      return res.status(401).send({ error: 'authentication required' })
-    }
-
     const users_array = await user_registry.list_users()
 
     const sorted_users = users_array
@@ -209,13 +206,9 @@ router.delete('/session', (req, res) => {
   res.status(200).send({ success: true })
 })
 
-router.get('/public_keys/:user_public_key', async (req, res) => {
+router.get('/public_keys/:user_public_key', require_auth, async (req, res) => {
   const { log } = req.app.locals
   try {
-    if (!req.user) {
-      return res.status(401).send({ error: 'authentication required' })
-    }
-
     const { user_public_key } = req.params
     const user = await user_registry.find_by_public_key(user_public_key)
 
@@ -230,13 +223,9 @@ router.get('/public_keys/:user_public_key', async (req, res) => {
   }
 })
 
-router.get('/:username', async (req, res) => {
+router.get('/:username', require_auth, async (req, res) => {
   const { log } = req.app.locals
   try {
-    if (!req.user) {
-      return res.status(401).send({ error: 'authentication required' })
-    }
-
     const { username } = req.params
     const user = await user_registry.find_by_username(username)
 

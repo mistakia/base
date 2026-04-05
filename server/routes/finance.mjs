@@ -2,6 +2,7 @@ import express from 'express'
 import debug from 'debug'
 
 import config from '#config'
+import { require_auth } from '#server/middleware/jwt-parser.mjs'
 
 const log = debug('api:finance')
 
@@ -15,11 +16,7 @@ const router = express.Router()
  * Mounted at /api/proxy/finance in the main server.
  * Forwards to: config.finance.api_url + /api/<remainder>
  */
-router.use(async (req, res) => {
-  if (!req.user?.user_public_key) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
+router.use(require_auth, async (req, res) => {
   const finance_config = config.finance || {}
   const api_url = finance_config.api_url
 

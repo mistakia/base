@@ -147,10 +147,8 @@ describe('Cookie-based JWT Authentication', function () {
       .get(`/api/users/${username}`)
       .set('Cookie', 'base_token=invalid.tampered.token')
 
-    expect(res.status).to.equal(200)
-    // Should return filtered public data (no full profile fields like created_at with email)
-    expect(res.body).to.have.property('username')
-    expect(res.body).to.not.have.property('permissions')
+    expect(res.status).to.equal(401)
+    expect(res.body).to.have.property('error', 'authentication required')
   })
 
   it('should prefer Authorization header over cookie when both present', async () => {
@@ -164,13 +162,11 @@ describe('Cookie-based JWT Authentication', function () {
     expect(res.body).to.have.property('username', username)
   })
 
-  it('should proceed without user when no cookie and no header present', async () => {
+  it('should reject when no cookie and no header present', async () => {
     const res = await request(server).get(`/api/users/${username}`)
 
-    expect(res.status).to.equal(200)
-    // Should return filtered public data only
-    expect(res.body).to.have.property('username')
-    expect(res.body).to.not.have.property('permissions')
+    expect(res.status).to.equal(401)
+    expect(res.body).to.have.property('error', 'authentication required')
   })
 
   it('should clear the cookie on DELETE /api/users/session', async () => {

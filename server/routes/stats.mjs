@@ -2,6 +2,7 @@ import express from 'express'
 import debug from 'debug'
 
 import config from '#config'
+import { require_auth } from '#server/middleware/jwt-parser.mjs'
 import {
   get_stats_database_connection,
   query_latest_snapshot,
@@ -17,11 +18,7 @@ const router = express.Router({ mergeParams: true })
  *
  * Returns the most recent full snapshot grouped by category.
  */
-router.get('/latest', async (req, res) => {
-  if (!req.user?.user_public_key) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
+router.get('/latest', require_auth, async (req, res) => {
   const has_permission = await check_global_write_permission(
     req.user.user_public_key
   )
@@ -60,11 +57,7 @@ router.get('/latest', async (req, res) => {
  * Returns a time series for a single metric.
  * Query params: metric (required), from, to, dimensions (JSON string)
  */
-router.get('/series', async (req, res) => {
-  if (!req.user?.user_public_key) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
+router.get('/series', require_auth, async (req, res) => {
   const has_permission = await check_global_write_permission(
     req.user.user_public_key
   )

@@ -3,6 +3,7 @@ import express from 'express'
 import debug from 'debug'
 import config from '#config'
 
+import { require_auth } from '#server/middleware/jwt-parser.mjs'
 import {
   report_job,
   load_job,
@@ -88,11 +89,7 @@ router.post('/report', async (req, res) => {
  * GET /api/jobs
  * List all tracked jobs
  */
-router.get('/', async (req, res) => {
-  if (!req.user?.user_public_key) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
+router.get('/', require_auth, async (req, res) => {
   const has_permission = await check_global_write_permission(
     req.user.user_public_key
   )
@@ -113,11 +110,7 @@ router.get('/', async (req, res) => {
  * GET /api/jobs/:job_id
  * Get a specific job by ID
  */
-router.get('/:job_id', async (req, res) => {
-  if (!req.user?.user_public_key) {
-    return res.status(401).json({ error: 'Authentication required' })
-  }
-
+router.get('/:job_id', require_auth, async (req, res) => {
   const has_permission = await check_global_write_permission(
     req.user.user_public_key
   )

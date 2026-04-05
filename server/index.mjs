@@ -371,25 +371,26 @@ server.on('upgrade', async (request, socket, head) => {
     }
 
     // Parse authentication tokens - JWT only, no spoofable query params
+    // Reject unauthenticated connections to prevent resource existence probing
     try {
       const token = parsed.searchParams.get('token')
-      if (token) {
-        const decoded = await jwt.verify(token, config.jwt.secret)
-        request.user = {
-          user_public_key: decoded.user_public_key,
-          ...decoded
-        }
-        request.is_authenticated = true
-      } else {
-        // Anonymous connection - no authentication
-        request.user = null
-        request.is_authenticated = false
+      if (!token) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+        socket.destroy()
+        return
       }
+
+      const decoded = await jwt.verify(token, config.jwt.secret)
+      request.user = {
+        user_public_key: decoded.user_public_key,
+        ...decoded
+      }
+      request.is_authenticated = true
     } catch (authError) {
       log(`WebSocket auth error: ${authError.message}`)
-      // Don't destroy the socket for invalid tokens, allow connection without auth
-      request.user = null
-      request.is_authenticated = false
+      socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n')
+      socket.destroy()
+      return
     }
 
     // Handle the WebSocket upgrade
