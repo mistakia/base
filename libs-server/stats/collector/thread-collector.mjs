@@ -44,12 +44,13 @@ export async function collect_thread_metrics({ snapshot_date }) {
     dimensions: {}
   })
 
-  // Total tokens and cost
+  // Total tokens
   const token_rows = await execute_sqlite_query({
     query: `
       SELECT
         COALESCE(SUM(CAST(total_tokens AS BIGINT)), 0) as total_tokens,
-        COALESCE(SUM(CAST(total_cost AS DOUBLE)), 0) as total_cost
+        COALESCE(SUM(CAST(total_input_tokens AS BIGINT)), 0) as total_input_tokens,
+        COALESCE(SUM(CAST(total_output_tokens AS BIGINT)), 0) as total_output_tokens
       FROM threads
     `
   })
@@ -66,9 +67,17 @@ export async function collect_thread_metrics({ snapshot_date }) {
     metrics.push({
       snapshot_date,
       category: 'threads',
-      metric_name: 'total_cost_usd',
-      metric_value: Number(token_rows[0].total_cost),
-      unit: 'usd',
+      metric_name: 'total_input_tokens',
+      metric_value: Number(token_rows[0].total_input_tokens),
+      unit: 'tokens',
+      dimensions: {}
+    })
+    metrics.push({
+      snapshot_date,
+      category: 'threads',
+      metric_name: 'total_output_tokens',
+      metric_value: Number(token_rows[0].total_output_tokens),
+      unit: 'tokens',
       dimensions: {}
     })
   }

@@ -18,11 +18,14 @@ export async function collect_schedule_metrics({ snapshot_date }) {
   const schedule_rows = await execute_sqlite_query({
     query: `
       SELECT
-        json_extract(frontmatter, '$.enabled') as enabled,
+        CASE
+          WHEN json_extract(frontmatter, '$.enabled') IN ('true', '1', 1) THEN 'true'
+          ELSE 'false'
+        END as enabled,
         COUNT(*) as cnt
       FROM entities
       WHERE type = 'scheduled-command'
-      GROUP BY enabled
+      GROUP BY 1
     `
   })
 
@@ -30,14 +33,13 @@ export async function collect_schedule_metrics({ snapshot_date }) {
   for (const row of schedule_rows) {
     const count = Number(row.cnt)
     total_schedules += count
-    const is_enabled = row.enabled === 'true' || row.enabled === '1'
     metrics.push({
       snapshot_date,
       category: 'schedules',
       metric_name: 'scheduled_command_count',
       metric_value: count,
       unit: 'count',
-      dimensions: { enabled: String(is_enabled) }
+      dimensions: { enabled: row.enabled }
     })
   }
 
