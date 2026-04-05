@@ -889,14 +889,18 @@ class EmbeddedIndexManager {
       }
 
       // Sync thread relations if present (outside main try-catch to not affect thread sync result)
-      if (
-        result.sqlite_synced &&
-        Array.isArray(metadata?.relations) &&
-        metadata.relations.length > 0
-      ) {
+      // Merge auto-analyzed relations and user-added relations for SQLite
+      const auto_relations = Array.isArray(metadata?.relations)
+        ? metadata.relations
+        : []
+      const user_relations = Array.isArray(metadata?.user_relations)
+        ? metadata.user_relations
+        : []
+      const combined_relations = [...auto_relations, ...user_relations]
+      if (result.sqlite_synced && combined_relations.length > 0) {
         try {
           const relations = extract_relations_from_entity({
-            entity_properties: { relations: metadata.relations }
+            entity_properties: { relations: combined_relations }
           })
           const thread_base_uri = `user:thread/${thread_id}`
           await sync_entity_relations_to_sqlite({

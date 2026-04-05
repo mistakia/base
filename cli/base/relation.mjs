@@ -10,6 +10,8 @@ import { query, api_get } from './lib/data-access.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
+import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
+import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 
 export const command = 'relation <command>'
 export const describe =
@@ -346,17 +348,47 @@ async function handle_add(argv) {
     const { source_uri, relation_type, target_uri } = argv
     const relation_string = format_relation_string(relation_type, target_uri)
 
-    const absolute_path = resolve_base_uri_from_registry(source_uri)
-    const entity_result = await read_entity_from_filesystem({ absolute_path })
-    if (!entity_result.success) {
-      throw new Error(entity_result.error || 'Source entity not found')
+    // Read current relations from thread (JSON) or entity (markdown)
+    let existing_relations
+    let write_fn
+
+    if (source_uri.startsWith('user:thread/')) {
+      const thread_id = source_uri.slice('user:thread/'.length)
+      const { metadata } = await read_thread_data({ thread_id })
+      existing_relations = Array.isArray(metadata?.user_relations)
+        ? [...metadata.user_relations]
+        : []
+      write_fn = async (updated) => {
+        await update_thread_metadata({
+          thread_id,
+          metadata: { user_relations: updated }
+        })
+      }
+    } else {
+      const absolute_path = resolve_base_uri_from_registry(source_uri)
+      const entity_result = await read_entity_from_filesystem({ absolute_path })
+      if (!entity_result.success) {
+        throw new Error(entity_result.error || 'Source entity not found')
+      }
+      const props = entity_result.entity_properties
+      existing_relations = Array.isArray(props.relations)
+        ? [...props.relations]
+        : []
+      write_fn = async (updated) => {
+        await write_entity_to_filesystem({
+          absolute_path,
+          entity_properties: {
+            ...props,
+            relations: updated,
+            updated_at: new Date().toISOString()
+          },
+          entity_type: props.type,
+          entity_content: entity_result.entity_content || ''
+        })
+      }
     }
 
-    const props = entity_result.entity_properties
-    const relations = Array.isArray(props.relations) ? [...props.relations] : []
-
-    // Check for duplicates
-    if (relations.includes(relation_string)) {
+    if (existing_relations.includes(relation_string)) {
       console.log(`Relation already exists: ${relation_string}`)
       flush_and_exit(0)
       return
@@ -369,19 +401,8 @@ async function handle_add(argv) {
       return
     }
 
-    relations.push(relation_string)
-    const merged = {
-      ...props,
-      relations,
-      updated_at: new Date().toISOString()
-    }
-
-    await write_entity_to_filesystem({
-      absolute_path,
-      entity_properties: merged,
-      entity_type: props.type,
-      entity_content: entity_result.entity_content || ''
-    })
+    existing_relations.push(relation_string)
+    await write_fn(existing_relations)
 
     if (argv.json) {
       console.log(
@@ -408,16 +429,47 @@ async function handle_remove(argv) {
     const { source_uri, relation_type, target_uri } = argv
     const relation_string = format_relation_string(relation_type, target_uri)
 
-    const absolute_path = resolve_base_uri_from_registry(source_uri)
-    const entity_result = await read_entity_from_filesystem({ absolute_path })
-    if (!entity_result.success) {
-      throw new Error(entity_result.error || 'Source entity not found')
+    // Read current relations from thread (JSON) or entity (markdown)
+    let existing_relations
+    let write_fn
+
+    if (source_uri.startsWith('user:thread/')) {
+      const thread_id = source_uri.slice('user:thread/'.length)
+      const { metadata } = await read_thread_data({ thread_id })
+      existing_relations = Array.isArray(metadata?.user_relations)
+        ? [...metadata.user_relations]
+        : []
+      write_fn = async (updated) => {
+        await update_thread_metadata({
+          thread_id,
+          metadata: { user_relations: updated }
+        })
+      }
+    } else {
+      const absolute_path = resolve_base_uri_from_registry(source_uri)
+      const entity_result = await read_entity_from_filesystem({ absolute_path })
+      if (!entity_result.success) {
+        throw new Error(entity_result.error || 'Source entity not found')
+      }
+      const props = entity_result.entity_properties
+      existing_relations = Array.isArray(props.relations)
+        ? [...props.relations]
+        : []
+      write_fn = async (updated) => {
+        await write_entity_to_filesystem({
+          absolute_path,
+          entity_properties: {
+            ...props,
+            relations: updated,
+            updated_at: new Date().toISOString()
+          },
+          entity_type: props.type,
+          entity_content: entity_result.entity_content || ''
+        })
+      }
     }
 
-    const props = entity_result.entity_properties
-    const relations = Array.isArray(props.relations) ? [...props.relations] : []
-
-    const index = relations.indexOf(relation_string)
+    const index = existing_relations.indexOf(relation_string)
     if (index === -1) {
       console.error(`Relation not found: ${relation_string}`)
       flush_and_exit(1)
@@ -431,19 +483,8 @@ async function handle_remove(argv) {
       return
     }
 
-    relations.splice(index, 1)
-    const merged = {
-      ...props,
-      relations,
-      updated_at: new Date().toISOString()
-    }
-
-    await write_entity_to_filesystem({
-      absolute_path,
-      entity_properties: merged,
-      entity_type: props.type,
-      entity_content: entity_result.entity_content || ''
-    })
+    existing_relations.splice(index, 1)
+    await write_fn(existing_relations)
 
     if (argv.json) {
       console.log(

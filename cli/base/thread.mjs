@@ -540,9 +540,18 @@ async function handle_status(argv) {
       last_assistant_message
     }
 
-    // Optionally include relations
-    if (argv.relations && thread_data.relations) {
-      status_data.relations = thread_data.relations
+    // Optionally include relations (merge auto-analyzed and user-added)
+    if (argv.relations) {
+      const auto_relations = Array.isArray(thread_data.relations)
+        ? thread_data.relations
+        : []
+      const user_relations = Array.isArray(thread_data.user_relations)
+        ? thread_data.user_relations
+        : []
+      const combined = [...auto_relations, ...user_relations]
+      if (combined.length > 0) {
+        status_data.relations = combined
+      }
     }
 
     // Include tool counts if requested
