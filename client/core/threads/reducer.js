@@ -124,6 +124,7 @@ const DEFAULT_TABLE_COLUMNS = [
   'thread_state',
   'source_provider',
   'title',
+  'tags',
   'working_directory',
   'created_at',
   'updated_at',
@@ -134,7 +135,6 @@ const DEFAULT_TABLE_COLUMNS = [
   'tool_call_count',
   'total_tokens',
   'cost',
-  'tags',
   'external_session_id'
 ]
 

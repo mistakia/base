@@ -569,9 +569,9 @@ export const thread_columns = {
       TABLE_OPERATORS.IS_EMPTY,
       TABLE_OPERATORS.IS_NOT_EMPTY
     ],
-    size: 150,
-    minSize: 80,
-    maxSize: 300
+    size: 380,
+    minSize: 300,
+    maxSize: 500
   },
   user_public_key: {
     column_id: 'user_public_key',
