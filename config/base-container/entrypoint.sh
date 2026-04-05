@@ -170,6 +170,26 @@ for account_dir in /home/node/.claude-*/; do
     echo "Initialized account directory: $account_dir"
 done
 
+# Restore ~/.claude.json from backup if missing.
+# Claude CLI removes this file at session end and backs it up to
+# ~/.claude/backups/. The file bind mount (docker-compose) persists it across
+# container rebuilds, but if it is deleted or corrupted at runtime, restore
+# from the latest backup so sessions can authenticate.
+if [ ! -f "/home/node/.claude.json" ]; then
+    latest_backup=$(run_as_node ls -t /home/node/.claude/backups/.claude.json.backup.* 2>/dev/null | head -1)
+    if [ -n "$latest_backup" ]; then
+        run_as_node cp "$latest_backup" /home/node/.claude.json
+        echo "Restored .claude.json from backup: $latest_backup"
+    else
+        echo "WARNING: .claude.json not found and no backup available -- run 'claude auth login' inside container" >&2
+    fi
+fi
+
+# Verify credentials exist for primary account
+if [ ! -f "/home/node/.claude/.credentials.json" ]; then
+    echo "WARNING: .credentials.json not found -- primary account not authenticated. Run 'claude auth login' inside container." >&2
+fi
+
 # Initialize settings.json from template if not exists
 SETTINGS_TEMPLATE="$USER_BASE_DIRECTORY/config/base-container/settings.container.json"
 SETTINGS_FILE="/home/node/.claude/settings.json"
