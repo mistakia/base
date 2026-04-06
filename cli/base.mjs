@@ -169,7 +169,8 @@ const main = async () => {
 
 // In compiled binaries, isMain() returns false for all modules (they share
 // the same import.meta.url). Detect compiled mode via /$bunfs/ prefix.
-const is_compiled = import.meta.url.includes('/$bunfs/')
+// Bun VFS: /$bunfs/ on Unix, ~BUN on Windows (in file: URL)
+const is_compiled = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('~BUN')
 if (is_compiled || isMain(import.meta.url)) {
   main()
 }

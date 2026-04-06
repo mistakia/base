@@ -16,7 +16,7 @@ import { realpathSync } from 'fs'
 const is_main = (import_meta_url) => {
   // Compiled binary: all modules share the same URL — only the
   // explicit entry-point guard in base.mjs should trigger execution.
-  if (import_meta_url.includes('/$bunfs/')) {
+  if (import_meta_url.includes('/$bunfs/') || import_meta_url.includes('~BUN')) {
     return false
   }
 

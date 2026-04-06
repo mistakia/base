@@ -11,7 +11,8 @@ const log = debug('config:loader')
 // (Bun's virtual filesystem), producing invalid paths on Windows. Detect
 // compiled mode and derive paths from the binary location instead.
 const current_file_path = fileURLToPath(import.meta.url)
-const __bunfs_compiled = current_file_path.includes('/$bunfs/')
+// Bun VFS: /$bunfs/ on Unix, B:\~BUN\ on Windows
+const __bunfs_compiled = current_file_path.includes('/$bunfs/') || current_file_path.includes('\\~BUN\\')
 const current_dir = __bunfs_compiled
   ? dirname(process.argv[0])
   : dirname(current_file_path)

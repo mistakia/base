@@ -28,8 +28,10 @@ import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fe
 // (Bun's virtual filesystem), producing invalid paths on Windows and
 // non-functional paths on all platforms. Prefer SYSTEM_BASE_DIRECTORY when
 // set; otherwise detect compiled mode and derive from the binary location.
+// Bun VFS: /$bunfs/ on Unix, B:\~BUN\ on Windows
 const __bunfs_compiled =
-  fileURLToPath(import.meta.url).includes('/$bunfs/')
+  fileURLToPath(import.meta.url).includes('/$bunfs/') ||
+  fileURLToPath(import.meta.url).includes('\\~BUN\\')
 const __dirname = __bunfs_compiled
   ? path.dirname(process.argv[0])
   : path.dirname(fileURLToPath(import.meta.url))
@@ -670,7 +672,7 @@ export const handler = async (argv) => {
 // Allow direct execution (skip in compiled binaries where all modules
 // share the same import.meta.url and this check would incorrectly match)
 const current_file = fileURLToPath(import.meta.url)
-if (!current_file.includes('/$bunfs/') && process.argv[1] === current_file) {
+if (!current_file.includes('/$bunfs/') && !current_file.includes('\\~BUN\\') && process.argv[1] === current_file) {
   const argv = yargs(hideBin(process.argv))
     .usage('Usage: $0 [options]')
     .option('user-base-directory', {
