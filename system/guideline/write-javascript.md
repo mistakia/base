@@ -11,13 +11,14 @@ globs:
 observations:
   - '[standard] Consistent module imports improve code maintainability'
   - '[quality] Explicit file extensions prevent import resolution issues'
+  - '[architecture] Named alias imports (#) eliminate fragile relative paths'
   - '[architecture] Functional paradigms promote immutability and testability'
   - '[readability] Named parameters improve code clarity and maintainability'
   - '[maintainability] Smaller files are easier to understand and maintain'
 public_read: true
 relations:
   - implements [[sys:system/text/system-design.md]]
-updated_at: '2026-01-05T19:25:18.911Z'
+updated_at: '2026-04-06T12:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:31:44.217Z'
 ---
@@ -27,52 +28,60 @@ visibility_analyzed_at: '2026-02-16T04:31:44.217Z'
 - ES modules MUST include the `.mjs` extension when importing other local modules
 - The `.mjs` extension MUST be explicit in all import statements to prevent module resolution issues
 - When importing from an index file, use the directory path with the index.mjs extension explicitly
-- Use aliased absolute imports for project modules with the appropriate namespace prefix
 - Separate global libraries from project-specific imports with a blank line
 - Use consistent ordering: external libraries first, then project modules
-- Cross-package imports MUST use package aliases (`#libs-server`, `#base/config`, etc.), never `../` to escape the current package boundary
-- Within the same package, `./` and `../` for sibling/parent directory imports are acceptable
-- Examples:
+
+## Import Path Rules
+
+- **Always use `#` named aliases** (Node.js `package.json` `imports` field) when the project defines them. Named aliases are canonical, refactor-safe, and immediately communicate which package a module belongs to.
+- **Never use `../` to traverse up directories.** Parent-relative imports are fragile, obscure the package boundary, and break when files move. If a `#` alias exists for the target, use it.
+- **`./` relative imports within the same directory are acceptable** for sibling modules that share a common concern and are unlikely to be referenced from elsewhere.
+- When a needed alias does not exist, add it to `package.json` `imports` rather than resorting to `../` paths.
+
+### Examples
 
   ```js
-  // Correct - package alias for cross-package imports
+  // Correct - named alias imports
   import create_tag from '#libs-server/tags/create-tag.mjs'
   import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+  import config from '#config'
+  import db from '#db'
 
-  // Correct - relative import within the same package
-  import { function_name } from './module-name.mjs'
-  import function_name from '../sibling-dir/module.mjs'
+  // Correct - same-directory relative import
+  import { helper } from './helper.mjs'
 
-  // Incorrect - relative path crossing package boundary
-  import function_name from '../../libs-server/tags/create-tag.mjs'
-  import reset_all_tables from '../../../tests/utils/reset-all-tables.mjs'
+  // Incorrect - parent-relative import (use # alias instead)
+  import create_tag from '../../libs-server/tags/create-tag.mjs'
+  import config from '../config/index.mjs'
+  import db from '../db/index.mjs'
 
   // Incorrect - missing .mjs extension
   import { function_name } from './module-name'
-  import function_name from '../path/to/module'
+  import function_name from '#libs-server/module'
   ```
 
   ```js
-  // External libraries
+  // Import ordering: external libraries first, then project aliases
   import { expect } from 'chai'
   import express from 'express'
 
-  // Project imports
   import create_tag from '#libs-server/tags/create-tag.mjs'
   import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
   ```
 
 ## Namespaces and Organization
 
-- Use the appropriate namespace prefix for different parts of the application:
+- Use the appropriate namespace prefix for different parts of the application. Each project defines its own aliases in `package.json` `imports`. Common aliases:
   - `#server` - Server components
   - `#libs-server` - Server-side library functions
   - `#libs-shared` - Shared library functions
-  - `#tests` - Test utilities
+  - `#tests` / `#test` - Test utilities
   - `#config` - Configuration modules
+  - `#db` - Database access
   - `#root` - Root-level resources
+  - `#scripts` - Script utilities
 
-See `package.json` for the complete list of namespaces.
+See each project's `package.json` `imports` field for the complete list of available aliases.
 
 ## File Organization
 
