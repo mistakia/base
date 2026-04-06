@@ -216,7 +216,15 @@ jobs:
           base.exe --help
 
           $env:USER_BASE_DIRECTORY = "$HOME\test-user-base"
-          base.exe init --user-base-directory $env:USER_BASE_DIRECTORY --force
+          Write-Host "USER_BASE_DIRECTORY=$env:USER_BASE_DIRECTORY"
+          $output = base.exe init --user-base-directory $env:USER_BASE_DIRECTORY --force 2>&1
+          Write-Host "init output: $output"
+          Write-Host "init exit code: $LASTEXITCODE"
+          if (Test-Path $env:USER_BASE_DIRECTORY) {
+            Get-ChildItem $env:USER_BASE_DIRECTORY -Recurse | Select-Object -First 20
+          } else {
+            Write-Host "USER_BASE_DIRECTORY does not exist"
+          }
 
           if (!(Test-Path "$env:USER_BASE_DIRECTORY\task")) { throw "task dir missing" }
           if (!(Test-Path "$env:USER_BASE_DIRECTORY\config\config.json")) { throw "config missing" }
