@@ -16,6 +16,7 @@
  *   base search "feature request"
  */
 
+console.error('[base] top-level, import.meta.url =', import.meta.url)
 import '../polyfills/node25-slow-buffer.cjs'
 import path from 'path'
 import yargs from 'yargs'
@@ -173,6 +174,7 @@ const main = async () => {
 // the same import.meta.url). Detect compiled mode via /$bunfs/ prefix.
 // Bun VFS: /$bunfs/ on Unix, ~BUN on Windows (in file: URL)
 const is_compiled = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('~BUN')
+console.error('[base] is_compiled =', is_compiled, 'isMain =', isMain(import.meta.url))
 if (is_compiled || isMain(import.meta.url)) {
   main()
 }
