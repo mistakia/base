@@ -95,10 +95,12 @@ const DEGRADED_MODE_COMMANDS = new Set([
 ])
 
 const main = async () => {
+  console.error('[base] main() entered, argv:', process.argv.slice(2).join(' '))
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
     .scriptName('base')
     .usage('Unified Base CLI.\n\nUsage: $0 <command> [options]')
     .middleware(async (argv) => {
+      console.error('[base] middleware, command:', argv._?.[0])
       handle_cli_directory_registration(argv)
 
       // In degraded mode (no USER_BASE_DIRECTORY), only allow commands

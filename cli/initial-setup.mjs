@@ -455,6 +455,7 @@ export const builder = (yargs) =>
     })
 
 export const handler = async (argv) => {
+  console.error('[init] handler entered, argv.userBaseDirectory =', argv.userBaseDirectory)
   const base_path = path.resolve(argv.userBaseDirectory)
 
   // Check prerequisites
