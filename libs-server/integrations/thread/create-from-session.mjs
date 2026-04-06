@@ -2,7 +2,8 @@ import path from 'path'
 import fs from 'fs/promises'
 import { createWriteStream } from 'fs'
 import { homedir } from 'os'
-import { glob } from 'glob'
+import { promisify } from 'util'
+import _glob from 'glob'
 import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
@@ -19,6 +20,7 @@ import {
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
+const glob = promisify(_glob)
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
 

@@ -1,6 +1,7 @@
 import { Worker } from 'bullmq'
 import debug from 'debug'
-import { glob } from 'glob'
+import { promisify } from 'util'
+import _glob from 'glob'
 import config from '#config'
 import {
   get_redis_connection,
@@ -27,6 +28,7 @@ import {
   configure_redis as configure_usage_redis
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 
+const glob = promisify(_glob)
 const log = debug('threads:worker')
 
 // Constants
