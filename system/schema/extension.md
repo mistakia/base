@@ -22,6 +22,13 @@ properties:
     optional: true
     items:
       type: string
+  - name: distributable
+    type: boolean
+    description: >-
+      Whether the extension is packaged and deployed to public hosting for
+      remote installation. Defaults to false. Separate from public_read which
+      controls entity file visibility.
+    optional: true
 public_read: false
 type_name: extension
 updated_at: '2026-02-24T01:51:01.996Z'
@@ -59,6 +66,10 @@ Extensions are discovered by scanning configured directories for subdirectories.
 ## Import Access
 
 Extension code imports libs-server modules via package aliases (#libs-server, #config) -- the same mechanism used by user-base CLI scripts.
+
+## Distribution
+
+The `distributable` property controls whether an extension is packaged into a `dist/` directory and deployed to public hosting for remote installation via `base install`. This is distinct from `public_read`, which controls whether the extension.md entity file itself is visible on the web. An extension can have `public_read: true` (entity metadata is public) without being `distributable` (code and assets are not deployed), or vice versa. Each extension must be explicitly marked `distributable: true` after review before it will be included in deployments.
 
 ## Graceful Degradation
 
