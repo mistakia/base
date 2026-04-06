@@ -22,8 +22,9 @@ function scan_directory(dir, base_path = '') {
   const entries = []
 
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    // Skip hidden files and directories
+    // Skip hidden files/directories and dist output directory
     if (entry.name.startsWith('.')) continue
+    if (entry.name === 'dist') continue
 
     const relative_path = base_path ? `${base_path}/${entry.name}` : entry.name
 
