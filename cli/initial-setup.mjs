@@ -23,8 +23,20 @@ import { hideBin } from 'yargs/helpers'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const BASE_DIR = process.env.SYSTEM_BASE_DIRECTORY || path.resolve(__dirname, '..')
+// In compiled Bun binaries, import.meta.url resolves to /$bunfs/root/...
+// (Bun's virtual filesystem), producing invalid paths on Windows and
+// non-functional paths on all platforms. Prefer SYSTEM_BASE_DIRECTORY when
+// set; otherwise detect compiled mode and derive from the binary location.
+const __bunfs_compiled =
+  fileURLToPath(import.meta.url).includes('/$bunfs/')
+const __dirname = __bunfs_compiled
+  ? path.dirname(process.argv[0])
+  : path.dirname(fileURLToPath(import.meta.url))
+const BASE_DIR =
+  process.env.SYSTEM_BASE_DIRECTORY ||
+  (__bunfs_compiled
+    ? path.dirname(path.dirname(process.argv[0]))
+    : path.resolve(__dirname, '..'))
 const TEMPLATE_CONFIG_PATH = path.join(BASE_DIR, 'config', 'config.json')
 
 // Standard entity type directories for a user-base

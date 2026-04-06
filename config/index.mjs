@@ -7,12 +7,22 @@ import debug from 'debug'
 
 const log = debug('config:loader')
 
+// In compiled Bun binaries, import.meta.url resolves to /$bunfs/root/...
+// (Bun's virtual filesystem), producing invalid paths on Windows. Detect
+// compiled mode and derive paths from the binary location instead.
 const current_file_path = fileURLToPath(import.meta.url)
-const current_dir = dirname(current_file_path)
-const config_dir = join(current_dir)
+const __bunfs_compiled = current_file_path.includes('/$bunfs/')
+const current_dir = __bunfs_compiled
+  ? dirname(process.argv[0])
+  : dirname(current_file_path)
+const config_dir = __bunfs_compiled
+  ? join(dirname(dirname(process.argv[0])), 'config')
+  : join(current_dir)
 
 // Derive system_base_directory from code location (parent of config/)
-const derived_system_base_directory = dirname(config_dir)
+const derived_system_base_directory = __bunfs_compiled
+  ? dirname(dirname(process.argv[0]))
+  : dirname(config_dir)
 
 // Check only the first positional argument for subcommands to avoid
 // false-positives from option values like `--status init`.

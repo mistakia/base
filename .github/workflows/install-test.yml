@@ -77,12 +77,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
+        # Alpine excluded: Bun compiles glibc-linked binaries, incompatible with Alpine's musl libc
         distro:
           - ubuntu:22.04
           - ubuntu:24.04
           - debian:bookworm-slim
           - fedora:39
-          - alpine:3.19
     steps:
       - uses: actions/checkout@v4
 
