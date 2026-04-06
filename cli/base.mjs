@@ -16,7 +16,6 @@
  *   base search "feature request"
  */
 
-console.error('[base] top-level, import.meta.url =', import.meta.url)
 import '../polyfills/node25-slow-buffer.cjs'
 import path from 'path'
 import yargs from 'yargs'
@@ -96,12 +95,10 @@ const DEGRADED_MODE_COMMANDS = new Set([
 ])
 
 const main = async () => {
-  console.error('[base] main() entered, argv:', process.argv.slice(2).join(' '))
   const parser = add_directory_cli_options(yargs(hideBin(process.argv)))
     .scriptName('base')
     .usage('Unified Base CLI.\n\nUsage: $0 <command> [options]')
     .middleware(async (argv) => {
-      console.error('[base] middleware, command:', argv._?.[0])
       handle_cli_directory_registration(argv)
 
       // In degraded mode (no USER_BASE_DIRECTORY), only allow commands
@@ -173,8 +170,8 @@ const main = async () => {
 // In compiled binaries, isMain() returns false for all modules (they share
 // the same import.meta.url). Detect compiled mode via /$bunfs/ prefix.
 // Bun VFS: /$bunfs/ on Unix, ~BUN on Windows (in file: URL)
-const is_compiled = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('~BUN')
-console.error('[base] is_compiled =', is_compiled, 'isMain =', isMain(import.meta.url))
+// Bun VFS: /$bunfs/ on Unix, %7EBUN in URL-encoded file: URL on Windows
+const is_compiled = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('%7EBUN')
 if (is_compiled || isMain(import.meta.url)) {
   main()
 }
