@@ -75,7 +75,9 @@ function build_target(target) {
     '--compile',
     ENTRY,
     `--target=${target}`,
-    `--outfile=${output_path}`
+    `--outfile=${output_path}`,
+    '--external pg',
+    '--external duckdb'
   ].join(' ')
 
   try {
