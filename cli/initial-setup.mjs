@@ -14,6 +14,7 @@
  */
 
 import fs from 'fs'
+import os from 'os'
 import path from 'path'
 import crypto from 'crypto'
 import { execSync } from 'child_process'
@@ -437,12 +438,12 @@ export const builder = (yargs) =>
       description: 'Path to user-base directory',
       default:
         process.env.USER_BASE_DIRECTORY ||
-        path.join(process.env.HOME, 'user-base')
+        path.join(os.homedir(), 'user-base')
     })
     .option('username', {
       type: 'string',
       description: 'Username for the owner identity',
-      default: process.env.USER || 'owner'
+      default: process.env.USER || os.userInfo().username || 'owner'
     })
     .option('force', {
       alias: 'f',
@@ -598,7 +599,7 @@ export const handler = async (argv) => {
   ensure_agents_md(base_path, summary)
 
   // Generate owner identity and set user_public_key in config
-  const username = argv.username || process.env.USER || 'owner'
+  const username = argv.username || process.env.USER || os.userInfo().username || 'owner'
   const identity_result = ensure_owner_identity(base_path, username, summary)
 
   if (argv.json) {
@@ -678,7 +679,7 @@ if (!current_file.includes('/$bunfs/') && process.argv[1] === current_file) {
       description: 'Path to user-base directory',
       default:
         process.env.USER_BASE_DIRECTORY ||
-        path.join(process.env.HOME, 'user-base')
+        path.join(os.homedir(), 'user-base')
     })
     .option('json', {
       type: 'boolean',
