@@ -1,9 +1,12 @@
 import debug from 'debug'
 
-import { create_worktree, remove_worktree } from '../worktree-operations.mjs'
-import { commit_changes } from '../commit-operations.mjs'
-import { branch_exists } from '../branch-operations.mjs'
-import { delete_file } from '../file-operations.mjs'
+import {
+  create_worktree,
+  remove_worktree
+} from '#libs-server/git/worktree-operations.mjs'
+import { commit_changes } from '#libs-server/git/commit-operations.mjs'
+import { branch_exists } from '#libs-server/git/branch-operations.mjs'
+import { delete_file } from '#libs-server/git/file-operations.mjs'
 
 const log = debug('git:delete-file-from-git')
 

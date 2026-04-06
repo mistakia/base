@@ -8,10 +8,7 @@ import crypto from 'crypto'
 import config from '#config'
 import server from '#server'
 import { request } from '#tests/utils/test-request.mjs'
-import {
-  reset_all_tables,
-  authenticate_request
-} from '#tests/utils/index.mjs'
+import { reset_all_tables, authenticate_request } from '#tests/utils/index.mjs'
 import create_user from '#libs-server/users/create-user.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 
@@ -261,9 +258,8 @@ describe('API /jobs', function () {
     })
 
     it('should suppress alerts for high-frequency jobs below threshold', async () => {
-      const { report_job, load_job } = await import(
-        '#libs-server/jobs/report-job.mjs'
-      )
+      const { report_job, load_job } =
+        await import('#libs-server/jobs/report-job.mjs')
 
       const base_params = {
         job_id: 'test-high-freq-suppression',
@@ -293,9 +289,8 @@ describe('API /jobs', function () {
     })
 
     it('should alert on first failure for non-every schedule types', async () => {
-      const { report_job, load_job } = await import(
-        '#libs-server/jobs/report-job.mjs'
-      )
+      const { report_job, load_job } =
+        await import('#libs-server/jobs/report-job.mjs')
 
       // Cron expression -- threshold = 1, alerts on first failure
       // discord_webhook_url is empty so no actual HTTP call, but last_alerted_at
@@ -322,9 +317,8 @@ describe('API /jobs', function () {
     })
 
     it('should alert for high-frequency jobs once threshold is reached', async () => {
-      const { report_job, load_job } = await import(
-        '#libs-server/jobs/report-job.mjs'
-      )
+      const { report_job, load_job } =
+        await import('#libs-server/jobs/report-job.mjs')
 
       const base_params = {
         job_id: 'test-high-freq-threshold-met',

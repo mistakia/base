@@ -1,6 +1,6 @@
 import { entity_exists_in_filesystem } from './entity-exists-in-filesystem.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
-import { create_validator } from '../validation/create-validator.mjs'
+import { create_validator } from '#libs-server/entity/validation/create-validator.mjs'
 
 // Wrapper that takes base_uri and resolves to absolute_path
 async function check_entity_exists_by_base_uri({ base_uri }) {

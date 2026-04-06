@@ -13,7 +13,7 @@ import {
   CHATGPT_NAMESPACE
 } from './chatgpt-config.mjs'
 import { v5 as uuidv5 } from 'uuid'
-import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
+import { calculate_session_counts } from '#libs-server/integrations/thread/session-count-utilities.mjs'
 
 const log = debug('integrations:chatgpt:session-helpers')
 

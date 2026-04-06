@@ -13,13 +13,13 @@ import { stream_entity_file_chunks } from './stream-entity-files.mjs'
 import {
   execute_sqlite_query,
   checkpoint_sqlite
-} from '../sqlite/sqlite-database-client.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import {
   set_index_metadata,
   set_repo_sync_state,
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION
-} from '../sqlite/sqlite-metadata-operations.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-metadata-operations.mjs'
 import {
   discover_repositories,
   get_repository_head_sha

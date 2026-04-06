@@ -20,7 +20,7 @@ import path from 'path'
 import {
   resolve_base_uri,
   get_user_base_directory
-} from '../../base-uri/index.mjs'
+} from '#libs-server/base-uri/index.mjs'
 import { map_field_type_to_sql, parse_filter_expression } from './index.mjs'
 
 const log = debug('database:adapter:duckdb')

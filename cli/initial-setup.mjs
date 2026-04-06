@@ -22,7 +22,10 @@ import { fileURLToPath } from 'url'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
-import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
+import {
+  ensure_raw_url,
+  validate_raw_response
+} from '#libs-server/utils/raw-fetch.mjs'
 
 // In compiled Bun binaries, import.meta.url resolves to /$bunfs/root/...
 // (Bun's virtual filesystem), producing invalid paths on Windows and
@@ -334,7 +337,10 @@ function check_prerequisites() {
 
   // git
   try {
-    const git_version = execSync('git --version', { encoding: 'utf8', timeout: 5000 }).trim()
+    const git_version = execSync('git --version', {
+      encoding: 'utf8',
+      timeout: 5000
+    }).trim()
     results.push({ name: 'git', ok: true, detail: git_version })
   } catch {
     results.push({ name: 'git', ok: false, detail: 'not found' })
@@ -342,7 +348,10 @@ function check_prerequisites() {
 
   // ripgrep (used by search)
   try {
-    const rg_version = execSync('rg --version', { encoding: 'utf8', timeout: 5000 })
+    const rg_version = execSync('rg --version', {
+      encoding: 'utf8',
+      timeout: 5000
+    })
       .split('\n')[0]
       .trim()
     results.push({ name: 'ripgrep', ok: true, detail: rg_version })
@@ -428,7 +437,6 @@ See [CLAUDE.md](./CLAUDE.md) for the canonical project context file.
   }
 }
 
-
 export const command = 'init'
 export const describe = 'Initialize or update a user-base directory structure'
 
@@ -439,8 +447,7 @@ export const builder = (yargs) =>
       type: 'string',
       description: 'Path to user-base directory',
       default:
-        process.env.USER_BASE_DIRECTORY ||
-        path.join(os.homedir(), 'user-base')
+        process.env.USER_BASE_DIRECTORY || path.join(os.homedir(), 'user-base')
     })
     .option('username', {
       type: 'string',
@@ -471,9 +478,17 @@ export const handler = async (argv) => {
 
   if (failed_prereqs.length > 0 && !argv.force) {
     if (argv.json) {
-      console.log(JSON.stringify({ prerequisites: prereqs, error: 'missing prerequisites' }, null, 2))
+      console.log(
+        JSON.stringify(
+          { prerequisites: prereqs, error: 'missing prerequisites' },
+          null,
+          2
+        )
+      )
     } else {
-      console.error('Missing prerequisites. Install them and retry, or use --force to skip.')
+      console.error(
+        'Missing prerequisites. Install them and retry, or use --force to skip.'
+      )
     }
     process.exitCode = 1
     return
@@ -601,7 +616,8 @@ export const handler = async (argv) => {
   ensure_agents_md(base_path, summary)
 
   // Generate owner identity and set user_public_key in config
-  const username = argv.username || process.env.USER || os.userInfo().username || 'owner'
+  const username =
+    argv.username || process.env.USER || os.userInfo().username || 'owner'
   const identity_result = ensure_owner_identity(base_path, username, summary)
 
   if (argv.json) {
@@ -643,7 +659,9 @@ export const handler = async (argv) => {
       console.log(`  Public Key:  ${identity_result.public_key_hex}`)
       console.log(`  Private Key: ${identity_result.private_key_hex}`)
       console.log('')
-      console.log('  IMPORTANT: Save the private key securely. It cannot be recovered.')
+      console.log(
+        '  IMPORTANT: Save the private key securely. It cannot be recovered.'
+      )
       console.log('  The public key has been written to config/config.json.')
     }
 
@@ -656,11 +674,15 @@ export const handler = async (argv) => {
     }
     console.log('')
     console.log('2. Try your first command:')
-    console.log('   base entity create "user:task/hello-world.md" --type task --title "Hello World" --description "My first task"')
+    console.log(
+      '   base entity create "user:task/hello-world.md" --type task --title "Hello World" --description "My first task"'
+    )
     console.log('   base entity list -t task')
     console.log('')
     console.log('3. Connect an AI assistant:')
-    console.log('   Claude Code: run `claude` in this directory (CLAUDE.md provides context)')
+    console.log(
+      '   Claude Code: run `claude` in this directory (CLAUDE.md provides context)'
+    )
     console.log('')
     console.log('4. Explore:')
     console.log('   base --help              # See all commands')
@@ -672,7 +694,11 @@ export const handler = async (argv) => {
 // Allow direct execution (skip in compiled binaries where all modules
 // share the same import.meta.url and this check would incorrectly match)
 const current_file = fileURLToPath(import.meta.url)
-if (!current_file.includes('/$bunfs/') && !current_file.includes('\\~BUN\\') && process.argv[1] === current_file) {
+if (
+  !current_file.includes('/$bunfs/') &&
+  !current_file.includes('\\~BUN\\') &&
+  process.argv[1] === current_file
+) {
   const argv = yargs(hideBin(process.argv))
     .usage('Usage: $0 [options]')
     .option('user-base-directory', {
@@ -680,8 +706,7 @@ if (!current_file.includes('/$bunfs/') && !current_file.includes('\\~BUN\\') && 
       type: 'string',
       description: 'Path to user-base directory',
       default:
-        process.env.USER_BASE_DIRECTORY ||
-        path.join(os.homedir(), 'user-base')
+        process.env.USER_BASE_DIRECTORY || path.join(os.homedir(), 'user-base')
     })
     .option('json', {
       type: 'boolean',

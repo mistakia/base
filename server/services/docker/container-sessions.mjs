@@ -11,7 +11,7 @@ import { Queue } from 'bullmq'
 import debug from 'debug'
 
 import { DOCKER_CONTAINER_NAME } from '#libs-server/docker/execution-mode.mjs'
-import { get_redis_connection } from '../redis/get-connection.mjs'
+import { get_redis_connection } from '#server/services/redis/get-connection.mjs'
 
 const log = debug('docker:container-sessions')
 

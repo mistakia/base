@@ -3,7 +3,7 @@ import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
 
-import { run_migration } from '../../cli/migrate-users-to-entities.mjs'
+import { run_migration } from '#cli/migrate-users-to-entities.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   register_user_base_directory,

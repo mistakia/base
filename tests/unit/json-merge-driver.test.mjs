@@ -2,7 +2,7 @@
 
 import { expect } from 'chai'
 
-import { merge_json } from '../../cli/json-merge-driver.mjs'
+import { merge_json } from '#cli/json-merge-driver.mjs'
 
 describe('json-merge-driver', () => {
   describe('disjoint field changes', () => {

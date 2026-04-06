@@ -3,7 +3,7 @@ import debug from 'debug'
 import { list_entity_files_from_filesystem } from './list-entity-files-from-filesystem.mjs'
 import { load_schema_definitions_from_filesystem } from './load-schema-definitions-from-filesystem.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { validate_entity_from_filesystem } from '../../entity/filesystem/validate-entity-from-filesystem.mjs'
+import { validate_entity_from_filesystem } from '#libs-server/entity/filesystem/validate-entity-from-filesystem.mjs'
 import {
   get_system_base_directory,
   get_user_base_directory

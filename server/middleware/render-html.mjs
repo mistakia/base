@@ -2,8 +2,8 @@ import fs from 'fs/promises'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import debug from 'debug'
-import { extract_meta_data } from '../services/meta-extractor.mjs'
-import { generate_script_tags } from '../services/bundle-injector.mjs'
+import { extract_meta_data } from '#server/services/meta-extractor.mjs'
+import { generate_script_tags } from '#server/services/bundle-injector.mjs'
 import config from '#config'
 
 const log = debug('server:render-html')

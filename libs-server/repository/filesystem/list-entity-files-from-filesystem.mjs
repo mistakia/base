@@ -2,7 +2,7 @@ import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 import { list_markdown_files_in_filesystem } from './list-markdown-files-in-filesystem.mjs'
-import { read_entity_from_filesystem } from '../../entity/filesystem/read-entity-from-filesystem.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import is_main from '#libs-server/utils/is-main.mjs'
 import {
   add_directory_cli_options,

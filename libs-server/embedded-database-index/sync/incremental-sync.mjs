@@ -14,14 +14,14 @@ import debug from 'debug'
 
 import config from '#config'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { checkpoint_sqlite } from '../sqlite/sqlite-database-client.mjs'
+import { checkpoint_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import {
   set_index_metadata,
   INDEX_METADATA_KEYS,
   CURRENT_SCHEMA_VERSION,
   get_repo_sync_state,
   set_repo_sync_state
-} from '../sqlite/sqlite-metadata-operations.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-metadata-operations.mjs'
 import {
   ENTITY_DIRECTORIES,
   filter_entity_files,

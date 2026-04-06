@@ -1,5 +1,5 @@
 import { tag_exists_in_filesystem } from '#libs-server/tag/filesystem/tag-exists-in-filesystem.mjs'
-import { create_validator } from '../validation/create-validator.mjs'
+import { create_validator } from '#libs-server/entity/validation/create-validator.mjs'
 
 const { validate_tags } = create_validator({
   debug_namespace: 'entity:filesystem',

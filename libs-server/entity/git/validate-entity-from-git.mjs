@@ -1,5 +1,5 @@
 import debug from 'debug'
-import { validate_entity_properties } from '../validate-schema.mjs'
+import { validate_entity_properties } from '#libs-server/entity/validate-schema.mjs'
 import { validate_tags_from_git } from './validate-tags-from-git.mjs'
 import { validate_relations_from_git } from './validate-relations-from-git.mjs'
 import { validate_references_from_git } from './validate-references-from-git.mjs'

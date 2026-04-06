@@ -1,4 +1,4 @@
-import { write_entity_to_filesystem } from '../../entity/filesystem/write-entity-to-filesystem.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 
 /**

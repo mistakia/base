@@ -1,6 +1,6 @@
 import debug from 'debug'
-import { branch_exists } from '../branch-operations.mjs'
-import { search_repository } from '../search-operations.mjs'
+import { branch_exists } from '#libs-server/git/branch-operations.mjs'
+import { search_repository } from '#libs-server/git/search-operations.mjs'
 
 const log = debug('libs-server:git:search-files-in-git')
 

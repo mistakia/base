@@ -7,7 +7,7 @@
 
 import debug from 'debug'
 
-import embedded_index_manager from '../embedded-index-manager.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   start_index_file_watcher,
   stop_index_file_watcher,
@@ -106,7 +106,11 @@ export const thread_sync_forwarding_hooks = {
   }
 }
 
-export function start_index_sync_watcher({ on_task_change, on_entity_change, on_entity_delete } = {}) {
+export function start_index_sync_watcher({
+  on_task_change,
+  on_entity_change,
+  on_entity_delete
+} = {}) {
   log('Starting index sync watcher')
 
   start_index_file_watcher({

@@ -1,9 +1,15 @@
 import path from 'path'
 import debug from 'debug'
 
-import { create_worktree, remove_worktree } from '../worktree-operations.mjs'
-import { add_files, commit_changes } from '../commit-operations.mjs'
-import { branch_exists } from '../branch-operations.mjs'
+import {
+  create_worktree,
+  remove_worktree
+} from '#libs-server/git/worktree-operations.mjs'
+import {
+  add_files,
+  commit_changes
+} from '#libs-server/git/commit-operations.mjs'
+import { branch_exists } from '#libs-server/git/branch-operations.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 
 const log = debug('git:write-file-to-git')

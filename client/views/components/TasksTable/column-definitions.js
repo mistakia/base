@@ -11,8 +11,8 @@ import {
   EditableStatusField,
   EditablePriorityField
 } from '@views/components/InlineSelect'
-import TitleCell from '../primitives/cells/TitleCell.js'
-import TagsCell from '../primitives/cells/TagsCell.js'
+import TitleCell from '#client/views/components/primitives/cells/TitleCell.js'
+import TagsCell from '#client/views/components/primitives/cells/TagsCell.js'
 
 const StatusCell = ({ row }) => {
   const task = row.original

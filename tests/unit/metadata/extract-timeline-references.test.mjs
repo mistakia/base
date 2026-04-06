@@ -1,7 +1,7 @@
 /* global describe, it, before, after */
 
 import { expect } from 'chai'
-import setup_test_directories from '../../utils/setup-test-directories.mjs'
+import setup_test_directories from '#tests/utils/setup-test-directories.mjs'
 
 import {
   extract_timeline_references,

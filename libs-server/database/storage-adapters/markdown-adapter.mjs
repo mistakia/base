@@ -10,11 +10,11 @@ import path from 'path'
 import debug from 'debug'
 import { v4 as uuidv4 } from 'uuid'
 
-import config from '../../../config/index.mjs'
+import config from '#config'
 import {
   read_entity_from_filesystem,
   write_entity_to_filesystem
-} from '../../entity/filesystem/index.mjs'
+} from '#libs-server/entity/filesystem/index.mjs'
 import { apply_filter, apply_sort } from './file-adapter-utils.mjs'
 
 const log = debug('database:adapter:markdown')

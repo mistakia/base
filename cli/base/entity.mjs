@@ -7,7 +7,7 @@
 import fs from 'fs/promises'
 import { existsSync } from 'fs'
 import path from 'path'
-import { list_entities } from '../entity-list.mjs'
+import { list_entities } from '#cli/entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
@@ -30,7 +30,7 @@ import {
   process_file,
   find_matching_files,
   get_visibility
-} from '../entity-visibility.mjs'
+} from '#cli/entity-visibility.mjs'
 import { format_document_from_file_content } from '#libs-server/markdown/format-document-from-file-content.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
@@ -823,12 +823,14 @@ async function handle_list(argv) {
       const since_date = parse_time_period_date(period)
       await embedded_index_manager.initialize()
 
-      entities = await embedded_index_manager.query_entities_by_thread_activity({
-        since_date,
-        entity_types: argv.type || null,
-        limit: argv.limit,
-        offset: argv.offset
-      })
+      entities = await embedded_index_manager.query_entities_by_thread_activity(
+        {
+          since_date,
+          entity_types: argv.type || null,
+          limit: argv.limit,
+          offset: argv.offset
+        }
+      )
     } else {
       entities = await query(
         () => fetch_entities_from_api(argv),
@@ -1526,9 +1528,7 @@ async function handle_tree(argv) {
       const direct_fallback = async () => {
         await embedded_index_manager.initialize({ read_only: true })
         const entities = await embedded_index_manager.query_entities({
-          filters: [
-            { column_id: 'tags', operator: 'IN', value: [tag_uri] }
-          ],
+          filters: [{ column_id: 'tags', operator: 'IN', value: [tag_uri] }],
           limit: 1000,
           offset: 0
         })

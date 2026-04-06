@@ -3,8 +3,8 @@ import {
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
 import { format_shorthand_time } from '@views/utils/date-formatting.js'
-import TitleCell from '../primitives/cells/TitleCell.js'
-import TagsCell from '../primitives/cells/TagsCell.js'
+import TitleCell from '#client/views/components/primitives/cells/TitleCell.js'
+import TagsCell from '#client/views/components/primitives/cells/TagsCell.js'
 
 export const physical_item_columns = {
   title: {

@@ -25,7 +25,8 @@
     "#libs-shared/*": "./libs-shared/*",
     "#tests/*": "./tests/*",
     "#cli/*": "./cli/*",
-    "#services/*": "./services/*"
+    "#services/*": "./services/*",
+    "#client/*": "./client/*"
   },
   "scripts": {
     "dev": "concurrently \"bun start\" \"bun start:api\"",

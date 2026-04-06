@@ -40,34 +40,34 @@ visibility_analyzed_at: '2026-02-16T04:31:44.217Z'
 
 ### Examples
 
-  ```js
-  // Correct - named alias imports
-  import create_tag from '#libs-server/tags/create-tag.mjs'
-  import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
-  import config from '#config'
-  import db from '#db'
+```js
+// Correct - named alias imports
+import create_tag from '#libs-server/tags/create-tag.mjs'
+import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+import config from '#config'
+import db from '#db'
 
-  // Correct - same-directory relative import
-  import { helper } from './helper.mjs'
+// Correct - same-directory relative import
+import { helper } from './helper.mjs'
 
-  // Incorrect - parent-relative import (use # alias instead)
-  import create_tag from '../../libs-server/tags/create-tag.mjs'
-  import config from '../config/index.mjs'
-  import db from '../db/index.mjs'
+// Incorrect - parent-relative import (use # alias instead)
+import create_tag from '../../libs-server/tags/create-tag.mjs'
+import config from '../config/index.mjs'
+import db from '../db/index.mjs'
 
-  // Incorrect - missing .mjs extension
-  import { function_name } from './module-name'
-  import function_name from '#libs-server/module'
-  ```
+// Incorrect - missing .mjs extension
+import { function_name } from './module-name'
+import function_name from '#libs-server/module'
+```
 
-  ```js
-  // Import ordering: external libraries first, then project aliases
-  import { expect } from 'chai'
-  import express from 'express'
+```js
+// Import ordering: external libraries first, then project aliases
+import { expect } from 'chai'
+import express from 'express'
 
-  import create_tag from '#libs-server/tags/create-tag.mjs'
-  import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
-  ```
+import create_tag from '#libs-server/tags/create-tag.mjs'
+import { reset_all_tables, create_test_user } from '#tests/utils/index.mjs'
+```
 
 ## Namespaces and Organization
 

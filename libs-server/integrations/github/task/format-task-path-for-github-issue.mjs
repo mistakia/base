@@ -1,5 +1,5 @@
 import path from 'path'
-import { slugify } from '../slugify.mjs'
+import { slugify } from '#libs-server/integrations/github/slugify.mjs'
 
 export const format_entity_directory_for_github_tasks = ({
   user_base_directory

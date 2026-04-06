@@ -2,7 +2,7 @@ import debug from 'debug'
 import path from 'path'
 import os from 'os'
 import { Database } from 'bun:sqlite'
-import { calculate_session_counts } from '../thread/session-count-utilities.mjs'
+import { calculate_session_counts } from '#libs-server/integrations/thread/session-count-utilities.mjs'
 
 const log = debug('integrations:cursor:read-database')
 

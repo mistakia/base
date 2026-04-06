@@ -14,10 +14,14 @@
 import fs from 'fs'
 import path from 'path'
 import config from '#config'
-import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
+import {
+  ensure_raw_url,
+  validate_raw_response
+} from '#libs-server/utils/raw-fetch.mjs'
 
 export const command = 'install <url>'
-export const describe = 'Install content from a URL (extension, workflow, guideline, skill, hook)'
+export const describe =
+  'Install content from a URL (extension, workflow, guideline, skill, hook)'
 
 export const builder = (yargs) =>
   yargs
@@ -70,10 +74,20 @@ function detect_content_type(url) {
   const last_segment = segments[segments.length - 1]
   if (last_segment?.endsWith('.md')) {
     // Could be workflow, guideline, or text
-    return { type: 'workflow', name: last_segment, dir: 'workflow', is_directory: false }
+    return {
+      type: 'workflow',
+      name: last_segment,
+      dir: 'workflow',
+      is_directory: false
+    }
   }
   if (last_segment?.endsWith('.sh')) {
-    return { type: 'hook', name: last_segment, dir: 'hook', is_directory: false }
+    return {
+      type: 'hook',
+      name: last_segment,
+      dir: 'hook',
+      is_directory: false
+    }
   }
   if (last_segment?.endsWith('.mjs') || last_segment?.endsWith('.js')) {
     return { type: 'cli', name: last_segment, dir: 'cli', is_directory: false }
@@ -153,7 +167,9 @@ export const handler = async (argv) => {
   const content_info = detect_content_type(url)
   if (!content_info) {
     console.error(`Cannot determine content type from URL: ${url}`)
-    console.error('URL should contain a path segment like /extension/, /workflow/, /guideline/, etc.')
+    console.error(
+      'URL should contain a path segment like /extension/, /workflow/, /guideline/, etc.'
+    )
     process.exit(1)
   }
 
@@ -182,7 +198,8 @@ export const handler = async (argv) => {
 
       const content = await fetch_single_file(file_url)
       const status = get_file_status(local_path, content)
-      const lines = status !== 'UNCHANGED' ? count_line_changes(local_path, content) : 0
+      const lines =
+        status !== 'UNCHANGED' ? count_line_changes(local_path, content) : 0
 
       files_to_install.push({ file_path, local_path, content, status, lines })
     }
@@ -236,7 +253,8 @@ export const handler = async (argv) => {
     const local_path = path.join(target_dir, filename)
 
     const status = get_file_status(local_path, content)
-    const lines = status !== 'UNCHANGED' ? count_line_changes(local_path, content) : 0
+    const lines =
+      status !== 'UNCHANGED' ? count_line_changes(local_path, content) : 0
 
     const line_info = lines > 0 ? ` (+${lines} lines)` : ''
     console.log(`\n  ${status.padEnd(10)} ${filename}${line_info}`)

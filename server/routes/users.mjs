@@ -6,12 +6,13 @@ import jwt from 'jsonwebtoken'
 import config from '#config'
 import { require_auth } from '#server/middleware/jwt-parser.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
-import {
-  load_identity_by_public_key
-} from '#libs-server/users/identity-loader.mjs'
+import { load_identity_by_public_key } from '#libs-server/users/identity-loader.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
-import { add_files, commit_changes } from '#libs-server/git/commit-operations.mjs'
+import {
+  add_files,
+  commit_changes
+} from '#libs-server/git/commit-operations.mjs'
 import {
   is_nonce_used,
   mark_nonce_used

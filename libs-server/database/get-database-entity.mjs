@@ -11,10 +11,10 @@ import { readdir } from 'fs/promises'
 import {
   execute_sqlite_query,
   is_sqlite_initialized
-} from '../embedded-database-index/sqlite/sqlite-database-client.mjs'
-import { read_entity_from_filesystem } from '../entity/filesystem/index.mjs'
-import { resolve_base_uri } from '../base-uri/base-uri-utilities.mjs'
-import { get_user_base_directory } from '../base-uri/base-directory-registry.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
 const log = debug('database:get-entity')
 

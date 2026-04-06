@@ -15,7 +15,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
-import config from '../../../config/index.mjs'
+import config from '#config'
 import { apply_filter, apply_sort } from './file-adapter-utils.mjs'
 
 const log = debug('database:adapter:tsv')

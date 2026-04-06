@@ -4,7 +4,7 @@
  * Wraps tag listing, statistics, and batch management operations.
  */
 
-import { list_entities } from '../entity-list.mjs'
+import { list_entities } from '#cli/entity-list.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { resolve_tag_shorthand } from '#libs-server/tag/filesystem/resolve-tag-shorthand.mjs'
 import { tag_exists_in_filesystem } from '#libs-server/tag/filesystem/tag-exists-in-filesystem.mjs'

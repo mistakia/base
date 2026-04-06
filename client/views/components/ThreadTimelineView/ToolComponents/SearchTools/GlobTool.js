@@ -6,7 +6,7 @@ import { FindInPage as GlobIcon } from '@mui/icons-material'
 import Button from '@components/primitives/Button'
 import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
-import { get_shared_prefix } from '../../../../../utils/path-utils.js'
+import { get_shared_prefix } from '#client/utils/path-utils.js'
 
 const GlobTool = ({ tool_call_event, tool_result_event }) => {
   const [show_results, set_show_results] = useState(false)

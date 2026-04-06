@@ -14,7 +14,10 @@ import path from 'path'
 import crypto from 'crypto'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
+import {
+  ensure_raw_url,
+  validate_raw_response
+} from '#libs-server/utils/raw-fetch.mjs'
 
 const exec_file_async = promisify(execFile)
 
@@ -96,7 +99,9 @@ function compute_file_hash(file_path) {
 }
 
 async function verify_checksum(file_path, platform, version_tag) {
-  const checksums_url = ensure_raw_url(release_url(version_tag, 'checksums.sha256'))
+  const checksums_url = ensure_raw_url(
+    release_url(version_tag, 'checksums.sha256')
+  )
   try {
     const response = await fetch(checksums_url)
     if (!response.ok) {
@@ -192,9 +197,7 @@ export const handler = async (argv) => {
   const install_dir = get_install_dir()
   const local_version = read_local_version()
 
-  console.log(
-    `Current version: ${local_version?.version || 'unknown'}`
-  )
+  console.log(`Current version: ${local_version?.version || 'unknown'}`)
 
   // Check for updates
   const version_tag = argv.targetVersion

@@ -162,7 +162,11 @@ export async function notify_recovery({ job_id, timestamp }) {
 Consumer code imports from the registry:
 
 ```javascript
-import { get, get_all, has } from '#libs-server/extension/capability-registry.mjs'
+import {
+  get,
+  get_all,
+  has
+} from '#libs-server/extension/capability-registry.mjs'
 
 // Fan-out: notify all channels
 const channels = get_all('notification-channel')

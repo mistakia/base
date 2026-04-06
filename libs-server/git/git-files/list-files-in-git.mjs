@@ -1,6 +1,6 @@
 import debug from 'debug'
-import { branch_exists } from '../branch-operations.mjs'
-import { list_files } from '../file-operations.mjs'
+import { branch_exists } from '#libs-server/git/branch-operations.mjs'
+import { list_files } from '#libs-server/git/file-operations.mjs'
 
 const log = debug('libs-server:git:list-files-in-git')
 

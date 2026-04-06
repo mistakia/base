@@ -6,12 +6,12 @@ import config from '#config'
 import {
   get_redis_connection,
   close_redis_connection
-} from '../redis/get-connection.mjs'
-import { add_cli_job } from '../cli-queue/queue.mjs'
+} from '#server/services/redis/get-connection.mjs'
+import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 import {
   emit_thread_job_failed,
   emit_thread_job_started
-} from '../active-sessions/session-event-emitter.mjs'
+} from '#server/services/active-sessions/session-event-emitter.mjs'
 import {
   create_session_claude_cli,
   get_container_claude_home,
@@ -271,9 +271,8 @@ const sync_session_fallback_by_file = async (job, source_overrides) => {
 
     let session_file
     if (execution_mode === 'container_user' && username) {
-      const { get_user_container_claude_home } = await import(
-        './user-container-manager.mjs'
-      )
+      const { get_user_container_claude_home } =
+        await import('./user-container-manager.mjs')
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
@@ -343,9 +342,8 @@ const sync_session_fallback_by_glob = async (job, source_overrides) => {
 
     let projects_dir
     if (execution_mode === 'container_user' && username) {
-      const { get_user_container_claude_home } = await import(
-        './user-container-manager.mjs'
-      )
+      const { get_user_container_claude_home } =
+        await import('./user-container-manager.mjs')
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)

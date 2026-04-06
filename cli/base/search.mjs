@@ -4,7 +4,7 @@
  * Full-text search via HTTP API with fallback to entity list search.
  */
 
-import { list_entities } from '../entity-list.mjs'
+import { list_entities } from '#cli/entity-list.mjs'
 import { format_entity, output_results, flush_and_exit } from './lib/format.mjs'
 import { query, api_get } from './lib/data-access.mjs'
 

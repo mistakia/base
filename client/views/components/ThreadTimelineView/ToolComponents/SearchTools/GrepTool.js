@@ -5,7 +5,7 @@ import { Search as SearchIcon } from '@mui/icons-material'
 import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 import { build_dual_tone_header } from '@components/ThreadTimelineView/ToolComponents/shared/title-utils.js'
-import { get_shared_prefix } from '../../../../../utils/path-utils.js'
+import { get_shared_prefix } from '#client/utils/path-utils.js'
 
 const GrepTool = ({ tool_call_event, tool_result_event }) => {
   const [show_results, set_show_results] = useState(false)

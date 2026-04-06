@@ -3,7 +3,7 @@ import PropTypes from 'prop-types'
 import { Box, List, ListItem } from '@mui/material'
 
 import { MonospaceText } from '@components/primitives/styled'
-import { ensure_string_result } from '../shared/result-utils'
+import { ensure_string_result } from '#client/views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
 
 import '@styles/checkbox.styl'
 

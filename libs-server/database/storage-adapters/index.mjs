@@ -11,7 +11,7 @@
 
 import debug from 'debug'
 
-import { is_local_host } from '../is-local-host.mjs'
+import { is_local_host } from '#libs-server/database/is-local-host.mjs'
 
 const log = debug('database:storage-adapters')
 
@@ -52,9 +52,8 @@ export async function get_storage_adapter(database_entity) {
   switch (backend) {
     case 'duckdb': {
       if (!is_local) {
-        const { create_duckdb_remote_adapter } = await import(
-          './duckdb-remote.mjs'
-        )
+        const { create_duckdb_remote_adapter } =
+          await import('./duckdb-remote.mjs')
         return create_duckdb_remote_adapter({
           host,
           database_path: storage_config.database,
@@ -88,9 +87,8 @@ export async function get_storage_adapter(database_entity) {
     }
     case 'sqlite': {
       if (!is_local) {
-        const { create_sqlite_remote_adapter } = await import(
-          './sqlite-remote.mjs'
-        )
+        const { create_sqlite_remote_adapter } =
+          await import('./sqlite-remote.mjs')
         return create_sqlite_remote_adapter({
           host,
           database_path: storage_config.database,

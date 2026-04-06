@@ -18,13 +18,13 @@ import {
   query_tag_statistics_from_sqlite,
   query_physical_items_from_entities,
   count_physical_items_from_entities
-} from '../../sqlite/sqlite-table-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-table-queries.mjs'
 
 import {
   find_related_entities,
   find_entities_relating_to,
   find_threads_relating_to
-} from '../../sqlite/sqlite-relation-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-relation-queries.mjs'
 
 import {
   query_git_activity_daily,
@@ -36,14 +36,14 @@ import {
   get_heatmap_daily_count,
   query_entities_by_thread_activity,
   query_tasks_from_entities as query_tasks_for_activity
-} from '../../sqlite/sqlite-activity-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 
 import {
   upsert_embeddings,
   search_similar,
   delete_entity_embeddings,
   get_embedding_hashes
-} from '../../sqlite/sqlite-embedding-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-embedding-queries.mjs'
 
 const sqlite_backend = {
   // Table queries

@@ -6,7 +6,7 @@
 
 import debug from 'debug'
 import { execute_sqlite_query } from './sqlite-database-client.mjs'
-import { derive_category_from_base_uri } from '../../physical-items/list-physical-items-from-filesystem.mjs'
+import { derive_category_from_base_uri } from '#libs-server/physical-items/list-physical-items-from-filesystem.mjs'
 
 const log = debug('embedded-index:sqlite:queries')
 

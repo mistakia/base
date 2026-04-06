@@ -12,7 +12,10 @@
 
 import fs from 'fs'
 import path from 'path'
-import { ensure_raw_url, validate_raw_response } from '#libs-server/utils/raw-fetch.mjs'
+import {
+  ensure_raw_url,
+  validate_raw_response
+} from '#libs-server/utils/raw-fetch.mjs'
 
 export const command = 'outdated'
 export const describe = 'Check for available updates'
@@ -109,9 +112,7 @@ function format_table(components) {
   )
 
   const separator = widths.map((w) => '-'.repeat(w)).join('  ')
-  const header_line = headers
-    .map((h, i) => h.padEnd(widths[i]))
-    .join('  ')
+  const header_line = headers.map((h, i) => h.padEnd(widths[i])).join('  ')
   const body = rows
     .map((r) => r.map((cell, i) => cell.padEnd(widths[i])).join('  '))
     .join('\n')
@@ -176,9 +177,7 @@ export const handler = async (argv) => {
   })
 
   if (argv.json) {
-    console.log(
-      JSON.stringify({ components, has_updates }, null, 2)
-    )
+    console.log(JSON.stringify({ components, has_updates }, null, 2))
   } else {
     console.log(format_table(components))
     console.log('')

@@ -15,8 +15,8 @@ import {
   get_index_metadata,
   set_index_metadata,
   INDEX_METADATA_KEYS
-} from '../sqlite/sqlite-metadata-operations.mjs'
-import { upsert_git_activity_daily_batch } from '../sqlite/sqlite-activity-queries.mjs'
+} from '#libs-server/embedded-database-index/sqlite/sqlite-metadata-operations.mjs'
+import { upsert_git_activity_daily_batch } from '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
 
 const log = debug('embedded-index:sync:git-activity')
 

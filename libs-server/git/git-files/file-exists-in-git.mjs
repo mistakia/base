@@ -1,7 +1,7 @@
 import debug from 'debug'
 
-import { branch_exists } from '../branch-operations.mjs'
-import { read_file_from_ref } from '../file-operations.mjs'
+import { branch_exists } from '#libs-server/git/branch-operations.mjs'
+import { read_file_from_ref } from '#libs-server/git/file-operations.mjs'
 
 const log = debug('libs-server:git:file-exists-in-git')
 
