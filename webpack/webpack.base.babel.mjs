@@ -199,7 +199,9 @@ const base = (options) => ({
       '@pages': path.resolve(__dirname, '../client/views/pages'),
       '@core': path.resolve(__dirname, '../client/core'),
       '@styles': path.resolve(__dirname, '../client/styles'),
-      '@theme': path.resolve(__dirname, '../client/theme')
+      '@theme': path.resolve(__dirname, '../client/theme'),
+      '@config': path.resolve(__dirname, '../config.mjs'),
+      '@libs-shared': path.resolve(__dirname, '../libs-shared')
     },
     fallback: {
       fs: false,
