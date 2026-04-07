@@ -127,7 +127,8 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
   // Scored accounts first (prefer known expiring), then unscored
   const candidates = [...scored_candidates, ...unscored_candidates]
 
-  for (const { account } of candidates) {
+  if (candidates.length > 0) {
+    const { account } = candidates[0]
     const raw_dir =
       execution_mode === 'container' || execution_mode === 'container_user'
         ? account.container_config_dir

@@ -69,12 +69,11 @@ const SheetThreadInput = ({
     if (
       pending_resume &&
       pending_resume.get('status') === 'failed' &&
-      pending_resume.get('prompt') &&
-      !message
+      pending_resume.get('prompt')
     ) {
-      set_message(pending_resume.get('prompt'))
+      set_message((prev_message) => prev_message || pending_resume.get('prompt'))
     }
-  }, [pending_resume]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [pending_resume])
 
   const handle_submit = useCallback(
     (e) => {

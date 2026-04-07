@@ -66,7 +66,7 @@ function* handle_session_updated({ payload }) {
   play_notification_sound()
 }
 
-function* handle_session_ended({ payload }) {
+function handle_session_ended({ payload }) {
   previous_statuses.delete(payload.session_id)
 }
 

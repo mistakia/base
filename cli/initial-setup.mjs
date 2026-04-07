@@ -263,13 +263,11 @@ function ensure_owner_identity(base_path, username, summary) {
   }
 
   // Generate keypair
-  let public_key_hex
-  let private_key_hex
   const private_key_seed = crypto.randomBytes(32)
 
   const public_key = ed25519.publicKey(private_key_seed)
-  public_key_hex = public_key.toString('hex')
-  private_key_hex = private_key_seed.toString('hex')
+  const public_key_hex = public_key.toString('hex')
+  const private_key_hex = private_key_seed.toString('hex')
 
   const now = new Date().toISOString()
   const entity_id = crypto.randomUUID()
