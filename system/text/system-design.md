@@ -76,13 +76,11 @@ There is flexibility to use any indexing or vector database, but the preference 
 The system separates knowledge into two types:
 
 - **System Knowledge Base**
-
   - Located in the `system/` directory of the base project codebase
   - Contains core system definitions, schemas, and documentation
   - Relevant to core system functionality and relevant to all users
 
 - **User Knowledge Base**
-
   - A git repository belonging to a single user
   - Contains user-specific data, content, guidelines, workflows, and configurations
   - Configured via `config.user_base_directory` or runtime registration

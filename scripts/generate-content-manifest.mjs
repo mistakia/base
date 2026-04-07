@@ -45,7 +45,9 @@ function scan_directory(dir, base_path = '') {
 const args = process.argv.slice(2)
 
 if (args.length < 2) {
-  console.error('Usage: generate-content-manifest.mjs <source-dir> <output-dir>')
+  console.error(
+    'Usage: generate-content-manifest.mjs <source-dir> <output-dir>'
+  )
   process.exit(1)
 }
 
@@ -80,4 +82,6 @@ for (const file of files) {
 const manifest_path = path.join(output_dir, 'manifest.json')
 fs.writeFileSync(manifest_path, JSON.stringify(manifest, null, 2) + '\n')
 
-console.log(`Content manifest written to ${manifest_path} (${files.length} files)`)
+console.log(
+  `Content manifest written to ${manifest_path} (${files.length} files)`
+)

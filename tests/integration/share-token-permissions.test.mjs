@@ -25,7 +25,6 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { create_share_token } from '#libs-server/share-token/create-share-token.mjs'
 import { parse_share_token } from '#libs-server/share-token/verify-share-token.mjs'
 
-
 describe('Share Token Integration', () => {
   let owner
   const entity_id = '550e8400-e29b-41d4-a716-446655440000'

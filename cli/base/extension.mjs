@@ -67,11 +67,9 @@ async function handle_build(argv) {
       const source = ext.extension_path
       const output = path.join(ext.extension_path, 'dist')
       try {
-        const result = execFileSync(
-          'bun',
-          [manifest_script, source, output],
-          { encoding: 'utf-8' }
-        ).trim()
+        const result = execFileSync('bun', [manifest_script, source, output], {
+          encoding: 'utf-8'
+        }).trim()
         console.log(result)
         built++
       } catch (err) {
@@ -111,13 +109,8 @@ async function handle_list(argv) {
         if (ext.has_skills) {
           console.log(`    skills: yes`)
         }
-        if (
-          ext.provided_capabilities &&
-          ext.provided_capabilities.length > 0
-        ) {
-          console.log(
-            `    provides: ${ext.provided_capabilities.join(', ')}`
-          )
+        if (ext.provided_capabilities && ext.provided_capabilities.length > 0) {
+          console.log(`    provides: ${ext.provided_capabilities.join(', ')}`)
         }
         console.log()
       }

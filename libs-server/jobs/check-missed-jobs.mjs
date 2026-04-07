@@ -155,7 +155,11 @@ export const check_missed_jobs = async () => {
     )
     for (const result of results) {
       if (result.status === 'rejected') {
-        log('Error alerting missed job %s: %s', job.job_id, result.reason?.message)
+        log(
+          'Error alerting missed job %s: %s',
+          job.job_id,
+          result.reason?.message
+        )
       }
     }
 

@@ -16,12 +16,17 @@ const AUTO_SCROLL_DELAY_MS = 100
 const SMOOTH_SCROLL_COMPLETE_MS = 500
 
 // Entry types that should be collapsible (not always visible)
-const COLLAPSIBLE_ENTRY_TYPES = new Set(['tool_pair', 'task_group', 'orphaned_result'])
+const COLLAPSIBLE_ENTRY_TYPES = new Set([
+  'tool_pair',
+  'task_group',
+  'orphaned_result'
+])
 
 const is_collapsible_entry = (entry) => {
   if (COLLAPSIBLE_ENTRY_TYPES.has(entry.type)) return true
   // Thinking events collapse alongside tool calls
-  if (entry.type === 'regular' && entry.timeline_event?.type === 'thinking') return true
+  if (entry.type === 'regular' && entry.timeline_event?.type === 'thinking')
+    return true
   return false
 }
 

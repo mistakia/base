@@ -94,8 +94,9 @@ describe('API /users', () => {
   })
 
   it('should reject unauthenticated user lookup by public key', async () => {
-    const res = await request(server)
-      .get(`/api/users/public_keys/${user_data.user_public_key}`)
+    const res = await request(server).get(
+      `/api/users/public_keys/${user_data.user_public_key}`
+    )
 
     expect(res.status).to.equal(401)
   })

@@ -128,12 +128,13 @@ router.get('/entities', async (req, res) => {
       `Fetching entities by thread activity since ${since_date.toISOString()} (type: ${entity_type})`
     )
 
-    const entities = await embedded_index_manager.query_entities_by_thread_activity({
-      since_date,
-      entity_types: entity_type,
-      limit,
-      offset
-    })
+    const entities =
+      await embedded_index_manager.query_entities_by_thread_activity({
+        since_date,
+        entity_types: entity_type,
+        limit,
+        offset
+      })
 
     res.json(entities)
   } catch (error) {

@@ -41,7 +41,9 @@ const AgentTool = ({
     })
   }, [timeline, tool_call_event, tool_result_event])
 
-  const message_count = sidechain_events.filter((e) => e.type === 'message').length
+  const message_count = sidechain_events.filter(
+    (e) => e.type === 'message'
+  ).length
 
   const chip_label = `AGENT: ${subagent_type}`
 
@@ -61,9 +63,7 @@ const AgentTool = ({
         <Box
           onClick={() => set_is_expanded((v) => !v)}
           sx={{ cursor: 'pointer', color: 'text.secondary', fontSize: '12px' }}>
-          {is_expanded
-            ? 'hide messages'
-            : `${message_count} messages`}
+          {is_expanded ? 'hide messages' : `${message_count} messages`}
         </Box>
         <UnifiedChip
           variant='mui'

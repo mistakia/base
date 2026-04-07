@@ -10,8 +10,10 @@ import { clear_role_cache } from '#libs-server/users/role-loader.mjs'
 
 const expect = chai.expect
 
-const TEST_USER_KEY = 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
-const ZERO_KEY = '0000000000000000000000000000000000000000000000000000000000000000'
+const TEST_USER_KEY =
+  'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'
+const ZERO_KEY =
+  '0000000000000000000000000000000000000000000000000000000000000000'
 
 describe('Tag-Based Permissions Integration', function () {
   this.timeout(10000)

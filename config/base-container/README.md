@@ -120,12 +120,12 @@ For single-machine setups, the base `docker-compose.yml` is sufficient. For mult
 
 Common differences between Linux and macOS hosts:
 
-| Aspect             | Linux                            | macOS                                             |
-| ------------------ | -------------------------------- | ------------------------------------------------- |
-| Container network  | `host` (localhost reaches host)  | Bridge (`host.docker.internal`)                   |
-| SSH agent          | Not typically needed             | Proxied via socat (auto-configured by entrypoint) |
-| Thread sync        | May skip rsync (`SKIP_THREAD_RSYNC=1`) | Syncs via SSH to other machines              |
-| Machine identifier | `BASE_CONTAINER_MACHINE=<name>`  | `BASE_CONTAINER_MACHINE=<name>`                   |
+| Aspect             | Linux                                  | macOS                                             |
+| ------------------ | -------------------------------------- | ------------------------------------------------- |
+| Container network  | `host` (localhost reaches host)        | Bridge (`host.docker.internal`)                   |
+| SSH agent          | Not typically needed                   | Proxied via socat (auto-configured by entrypoint) |
+| Thread sync        | May skip rsync (`SKIP_THREAD_RSYNC=1`) | Syncs via SSH to other machines                   |
+| Machine identifier | `BASE_CONTAINER_MACHINE=<name>`        | `BASE_CONTAINER_MACHINE=<name>`                   |
 
 ## Container Context for Claude Code
 

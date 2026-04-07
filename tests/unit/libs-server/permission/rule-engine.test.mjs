@@ -24,9 +24,7 @@ describe('rule-engine tag rules', function () {
 
     it('should return null when resource has no tags', () => {
       const result = evaluate_tag_rules({
-        tag_rules: [
-          { action: 'allow', tag: 'user:tag/foo.md' }
-        ],
+        tag_rules: [{ action: 'allow', tag: 'user:tag/foo.md' }],
         resource_path: 'user:thread/abc',
         resource_tags: []
       })
@@ -35,9 +33,7 @@ describe('rule-engine tag rules', function () {
 
     it('should return null when no tags match', () => {
       const result = evaluate_tag_rules({
-        tag_rules: [
-          { action: 'allow', tag: 'user:tag/foo.md' }
-        ],
+        tag_rules: [{ action: 'allow', tag: 'user:tag/foo.md' }],
         resource_path: 'user:thread/abc',
         resource_tags: ['user:tag/bar.md']
       })
@@ -46,9 +42,7 @@ describe('rule-engine tag rules', function () {
 
     it('should match tag and return allow', () => {
       const result = evaluate_tag_rules({
-        tag_rules: [
-          { action: 'allow', tag: 'user:tag/league.md' }
-        ],
+        tag_rules: [{ action: 'allow', tag: 'user:tag/league.md' }],
         resource_path: 'user:thread/abc',
         resource_tags: ['user:tag/league.md']
       })
@@ -60,9 +54,7 @@ describe('rule-engine tag rules', function () {
 
     it('should match tag and return deny', () => {
       const result = evaluate_tag_rules({
-        tag_rules: [
-          { action: 'deny', tag: 'user:tag/sensitive.md' }
-        ],
+        tag_rules: [{ action: 'deny', tag: 'user:tag/sensitive.md' }],
         resource_path: 'user:thread/abc',
         resource_tags: ['user:tag/sensitive.md']
       })
@@ -111,9 +103,7 @@ describe('rule-engine tag rules', function () {
     })
 
     it('should match all resource types when pattern is omitted', () => {
-      const tag_rules = [
-        { action: 'allow', tag: 'user:tag/league.md' }
-      ]
+      const tag_rules = [{ action: 'allow', tag: 'user:tag/league.md' }]
 
       const thread_result = evaluate_tag_rules({
         tag_rules,
@@ -132,9 +122,7 @@ describe('rule-engine tag rules', function () {
 
     it('should use exact tag string matching (no partial matches)', () => {
       const result = evaluate_tag_rules({
-        tag_rules: [
-          { action: 'allow', tag: 'user:tag/league.md' }
-        ],
+        tag_rules: [{ action: 'allow', tag: 'user:tag/league.md' }],
         resource_path: 'user:thread/abc',
         resource_tags: ['user:tag/league-xo-football.md']
       })

@@ -56,12 +56,10 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    ```
 
 2. **Limit processing**
-
    - Take first `max_threads` results
    - Stop if no threads found
 
 3. **Delegate to sub-agents**
-
    - For each thread_id found (up to max_threads):
      - Launch analyze-and-update-thread via Task tool in parallel for all selected threads
      - Pass named arguments: thread_id, mode, dry_run

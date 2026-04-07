@@ -158,7 +158,11 @@ export const evaluate_permission_rules = async ({
  * @param {string[]} params.resource_tags - Array of tag base_uris assigned to the resource
  * @returns {Object|null} Evaluation result with allowed/denied status and matching rule, or null if no rules match
  */
-export const evaluate_tag_rules = ({ tag_rules, resource_path, resource_tags }) => {
+export const evaluate_tag_rules = ({
+  tag_rules,
+  resource_path,
+  resource_tags
+}) => {
   log(
     `Evaluating tag rules for path: ${resource_path}, tags: [${(resource_tags || []).join(', ')}]`
   )
@@ -168,7 +172,11 @@ export const evaluate_tag_rules = ({ tag_rules, resource_path, resource_tags }) 
     return null
   }
 
-  if (!resource_tags || !Array.isArray(resource_tags) || resource_tags.length === 0) {
+  if (
+    !resource_tags ||
+    !Array.isArray(resource_tags) ||
+    resource_tags.length === 0
+  ) {
     log('No resource tags, returning null (fallthrough)')
     return null
   }

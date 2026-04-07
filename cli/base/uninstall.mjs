@@ -27,7 +27,8 @@ export const builder = (yargs) =>
       default: false
     })
     .option('include-data', {
-      describe: 'Also remove user-base data directory (requires double confirmation)',
+      describe:
+        'Also remove user-base data directory (requires double confirmation)',
       type: 'boolean',
       default: false
     })
@@ -184,7 +185,9 @@ export const handler = async (argv) => {
         'Are you sure you want to delete all your data?'
       )
       if (!confirmed) {
-        console.log('Data removal cancelled. Continuing with CLI uninstall only.')
+        console.log(
+          'Data removal cancelled. Continuing with CLI uninstall only.'
+        )
         argv.includeData = false
       }
     }

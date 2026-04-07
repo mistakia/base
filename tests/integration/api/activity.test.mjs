@@ -155,9 +155,7 @@ describe('Activity API', function () {
 
     it('should handle invalid days parameter gracefully', async () => {
       const res = await authenticate_request(
-        request(server)
-          .get('/api/activity/heatmap')
-          .query({ days: 'invalid' }),
+        request(server).get('/api/activity/heatmap').query({ days: 'invalid' }),
         test_user
       )
 

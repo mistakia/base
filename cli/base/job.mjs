@@ -135,9 +135,8 @@ async function handle_get(argv) {
 async function handle_check_missed(argv) {
   let exit_code = 0
   try {
-    const { check_missed_jobs } = await import(
-      '#libs-server/jobs/check-missed-jobs.mjs'
-    )
+    const { check_missed_jobs } =
+      await import('#libs-server/jobs/check-missed-jobs.mjs')
     const missed = await check_missed_jobs()
 
     if (argv.json) {

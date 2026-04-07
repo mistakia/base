@@ -118,7 +118,9 @@ try {
 try {
   const extensions = discover_extensions(get_extension_paths(config))
   await load_extension_providers(extensions)
-  logger(`Extension providers loaded (${extensions.length} extensions discovered)`)
+  logger(
+    `Extension providers loaded (${extensions.length} extensions discovered)`
+  )
 } catch (error) {
   logger(`Failed to load extension providers: ${error.message}`)
 }
@@ -256,7 +258,9 @@ try {
         set_thread_watcher_hooks(thread_sync_forwarding_hooks)
         logger('Thread sync forwarding hooks attached')
       } catch (hook_error) {
-        logger(`Failed to set thread sync forwarding hooks: ${hook_error.message}`)
+        logger(
+          `Failed to set thread sync forwarding hooks: ${hook_error.message}`
+        )
         logger(hook_error)
       }
     }
@@ -305,13 +309,18 @@ try {
       try {
         start_entity_change_watcher({
           on_entity_change: ({ entries }) => {
-            logger('Entity change IPC: %d entries, invalidating cache', entries.length)
+            logger(
+              'Entity change IPC: %d entries, invalidating cache',
+              entries.length
+            )
             invalidate_tasks_cache()
           }
         })
         logger('Entity change IPC watcher started')
       } catch (ipc_error) {
-        logger(`Failed to start entity change IPC watcher: ${ipc_error.message}`)
+        logger(
+          `Failed to start entity change IPC watcher: ${ipc_error.message}`
+        )
       }
     }
 
@@ -386,7 +395,7 @@ const shutdown = async (signal) => {
         } catch (error) {
           logger(`Error stopping entity change IPC watcher: ${error.message}`)
         }
-      })(),
+      })()
     ])
 
     // Phase 2: Cleanup caches and embedded index (sequential - may depend on watchers being stopped)

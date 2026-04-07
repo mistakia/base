@@ -84,7 +84,8 @@ export const generate_compose_config = async ({
     const browser_home_config = (config.user_containers || {}).browser_home
     const host_home = browser_home_config || homedir()
     const browser_config = thread_config.browser
-    const container_python_version = browser_config.container_python_version || '3.11'
+    const container_python_version =
+      browser_config.container_python_version || '3.11'
     const venv_python_version = browser_config.venv_python_version || '3.12'
     environment.CLOAKBROWSER_HOME = host_home
     environment.PYTHONPATH = [

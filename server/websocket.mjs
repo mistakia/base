@@ -104,10 +104,7 @@ wss.on('connection', (ws) => {
               user_public_key
             })
             if (allowed) {
-              log(
-                'Client subscribed to thread: %s',
-                message.payload.thread_id
-              )
+              log('Client subscribed to thread: %s', message.payload.thread_id)
             } else {
               ws.send(
                 JSON.stringify({

@@ -258,7 +258,9 @@ router.get('/', async (req, res) => {
       // Filter to only tags used by a specific entity type or threads
       if (used_by) {
         try {
-          const used_tag_uris = await embedded_index_manager.query_tags({ used_by })
+          const used_tag_uris = await embedded_index_manager.query_tags({
+            used_by
+          })
           tags = tags.filter((tag) => used_tag_uris.has(tag.base_uri))
         } catch (err) {
           log('Failed to filter tags by used_by=%s: %s', used_by, err.message)

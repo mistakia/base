@@ -6,7 +6,10 @@ import debug from 'debug'
 
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
-import { is_warm_session, is_agent_file_path } from './claude-session-helpers.mjs'
+import {
+  is_warm_session,
+  is_agent_file_path
+} from './claude-session-helpers.mjs'
 
 const log = debug('integrations:claude:parse-jsonl')
 const log_debug = debug('integrations:claude:parse-jsonl:debug')

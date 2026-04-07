@@ -112,7 +112,10 @@ export async function query(api_fn, fallback_fn) {
  * @returns {Promise<any>}
  */
 export async function api_get(path, params) {
-  const url_params = params instanceof URLSearchParams ? params : new URLSearchParams(params || {})
+  const url_params =
+    params instanceof URLSearchParams
+      ? params
+      : new URLSearchParams(params || {})
   const qs = url_params.toString()
   const url = `${SERVER_URL}${path}${qs ? `?${qs}` : ''}`
   const response = await authenticated_fetch(url)
@@ -140,4 +143,3 @@ export async function api_mutate(path, method, body) {
   }
   return response.json()
 }
-

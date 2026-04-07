@@ -461,9 +461,15 @@ describe('claude-home-bootstrap', () => {
       // Create skills source directory with test skills
       const skills_dir = join(user_base_directory, '.claude', 'skills')
       await mkdir(join(skills_dir, 'skill-a'), { recursive: true })
-      await writeFile(join(skills_dir, 'skill-a', 'SKILL.md'), '---\nname: skill-a\n---')
+      await writeFile(
+        join(skills_dir, 'skill-a', 'SKILL.md'),
+        '---\nname: skill-a\n---'
+      )
       await mkdir(join(skills_dir, 'skill-b'), { recursive: true })
-      await writeFile(join(skills_dir, 'skill-b', 'SKILL.md'), '---\nname: skill-b\n---')
+      await writeFile(
+        join(skills_dir, 'skill-b', 'SKILL.md'),
+        '---\nname: skill-b\n---'
+      )
       // Skill without SKILL.md
       await mkdir(join(skills_dir, 'skill-empty'), { recursive: true })
 
@@ -478,10 +484,16 @@ describe('claude-home-bootstrap', () => {
         claude_home
       })
 
-      const skill_a = await readFile(join(claude_home, 'skills', 'skill-a', 'SKILL.md'), 'utf-8')
+      const skill_a = await readFile(
+        join(claude_home, 'skills', 'skill-a', 'SKILL.md'),
+        'utf-8'
+      )
       expect(skill_a).to.include('skill-a')
 
-      const skill_b = await readFile(join(claude_home, 'skills', 'skill-b', 'SKILL.md'), 'utf-8')
+      const skill_b = await readFile(
+        join(claude_home, 'skills', 'skill-b', 'SKILL.md'),
+        'utf-8'
+      )
       expect(skill_b).to.include('skill-b')
     })
 
@@ -492,7 +504,9 @@ describe('claude-home-bootstrap', () => {
         claude_home
       })
 
-      const skill_a_exists = await access(join(claude_home, 'skills', 'skill-a', 'SKILL.md'))
+      const skill_a_exists = await access(
+        join(claude_home, 'skills', 'skill-a', 'SKILL.md')
+      )
         .then(() => true)
         .catch(() => false)
       expect(skill_a_exists).to.be.true
@@ -505,12 +519,16 @@ describe('claude-home-bootstrap', () => {
         claude_home
       })
 
-      const skill_a_exists = await access(join(claude_home, 'skills', 'skill-a', 'SKILL.md'))
+      const skill_a_exists = await access(
+        join(claude_home, 'skills', 'skill-a', 'SKILL.md')
+      )
         .then(() => true)
         .catch(() => false)
       expect(skill_a_exists).to.be.true
 
-      const skill_b_exists = await access(join(claude_home, 'skills', 'skill-b', 'SKILL.md'))
+      const skill_b_exists = await access(
+        join(claude_home, 'skills', 'skill-b', 'SKILL.md')
+      )
         .then(() => true)
         .catch(() => false)
       expect(skill_b_exists).to.be.false
@@ -523,7 +541,9 @@ describe('claude-home-bootstrap', () => {
         claude_home
       })
 
-      const dir_exists = await access(join(claude_home, 'skills', 'skill-empty'))
+      const dir_exists = await access(
+        join(claude_home, 'skills', 'skill-empty')
+      )
         .then(() => true)
         .catch(() => false)
       expect(dir_exists).to.be.false

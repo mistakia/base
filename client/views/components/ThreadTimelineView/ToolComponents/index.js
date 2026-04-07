@@ -106,7 +106,10 @@ const getToolComponent = (toolName) => {
   // Handle MCP tools with prefix matching
   if (normalized_name?.startsWith('mcp__')) {
     if (normalized_name.includes('postgres')) return DatabaseTool
-    if (normalized_name.includes('playwright') || normalized_name.includes('browser'))
+    if (
+      normalized_name.includes('playwright') ||
+      normalized_name.includes('browser')
+    )
       return BrowserTool
     return GenericMCPTool
   }

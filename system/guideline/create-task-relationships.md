@@ -225,12 +225,10 @@ relations:
 When determining which relationships to apply to a task, ask these questions:
 
 1. **Hierarchy**: Is this task part of a larger task or composed of smaller tasks?
-
    - If part of larger task → use `subtask_of`
    - If contains smaller tasks → use `parent_of`
 
 2. **Dependencies**: Does this task have ordering requirements with other tasks?
-
    - If cannot start until another task completes → use `blocked_by`
    - If prevents another task from starting → use `blocks`
    - If would be efficient to complete before another → use `precedes`
@@ -238,7 +236,6 @@ When determining which relationships to apply to a task, ask these questions:
    - If conceptually related but no ordering → use `relates_to`
 
 3. **Resources**: What items are needed for this task?
-
    - If requires resources to be available → use `needs_item`
    - If requires active use of tools → use `uses_item`
 

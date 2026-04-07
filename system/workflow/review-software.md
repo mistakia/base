@@ -95,13 +95,11 @@ If no changes found, report "No changes to review" and exit.
 Compile relevant documentation files for compliance checking:
 
 1. **Find CLAUDE.md files**:
-
    - Root CLAUDE.md in the repository
    - CLAUDE.md files in directories containing changed files
    - Parent directory CLAUDE.md files up to repository root
 
 2. **Find relevant guidelines**:
-
    - Match changed file extensions against guideline globs
    - Include referenced guidelines from CLAUDE.md files
 

@@ -67,14 +67,12 @@ Main Repo → (Step 6-11: Verify, merge, push, cleanup)
 ### 0. Pre-flight Setup (Execute from main repository directory)
 
 - **Detect current location first**: You may be starting from either the main repo or a worktree
-
   - Run `git worktree list` to see all worktrees and identify the main repository (first entry)
   - If currently in a worktree, note the worktree path and branch name before navigating to main repo
 
 - Navigate to the main repository directory first
 - Configure git pull behavior to avoid conflicts: `git config pull.rebase false`
 - Detect default branch name: `git symbolic-ref refs/remotes/origin/HEAD | cut -d'/' -f4`
-
   - Store result (typically `main` or `master`)
   - **Note**: Complex bash variable assignment like `VAR=$(...)` may fail in some execution environments. Run commands separately and store results manually if needed.
 

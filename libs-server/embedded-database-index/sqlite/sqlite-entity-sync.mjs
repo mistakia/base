@@ -411,9 +411,8 @@ export async function delete_entity_from_sqlite({ entity_id, base_uri }) {
   try {
     let resolved_base_uri = base_uri
     if (!resolved_base_uri && entity_id) {
-      const { execute_sqlite_query } = await import(
-        './sqlite-database-client.mjs'
-      )
+      const { execute_sqlite_query } =
+        await import('./sqlite-database-client.mjs')
       const results = await execute_sqlite_query({
         query: 'SELECT base_uri FROM entities WHERE entity_id = ?',
         parameters: [entity_id]

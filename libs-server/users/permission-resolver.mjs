@@ -107,9 +107,7 @@ async function resolve_identity_rules({ identity, field }) {
     }
   }
 
-  log(
-    `Resolved ${all_rules.length} total ${field} for ${identity.username}`
-  )
+  log(`Resolved ${all_rules.length} total ${field} for ${identity.username}`)
   return all_rules
 }
 

@@ -81,9 +81,7 @@ export function* load_directory_markdown({ payload }) {
 
   for (const filename of markdown_files) {
     const clean_path = payload?.path?.replace(/\/+$/, '')
-    const markdown_path = clean_path
-      ? `${clean_path}/${filename}`
-      : filename
+    const markdown_path = clean_path ? `${clean_path}/${filename}` : filename
 
     try {
       // Directly use API service instead of saga to avoid state conflicts

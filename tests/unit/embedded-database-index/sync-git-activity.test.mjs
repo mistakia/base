@@ -15,9 +15,8 @@ import { expect } from 'chai'
 describe('sync-git-activity', () => {
   it('should load module successfully with valid config', async () => {
     // Module loading validates config.user_base_directory
-    const module = await import(
-      '#libs-server/embedded-database-index/sync/sync-git-activity.mjs'
-    )
+    const module =
+      await import('#libs-server/embedded-database-index/sync/sync-git-activity.mjs')
     expect(module).to.have.property('sync_git_activity_incremental')
     expect(module).to.have.property('backfill_git_activity_from_scratch')
   })
@@ -25,9 +24,8 @@ describe('sync-git-activity', () => {
 
 describe('sqlite-activity-queries', () => {
   it('should load module successfully', async () => {
-    const module = await import(
-      '#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs'
-    )
+    const module =
+      await import('#libs-server/embedded-database-index/sqlite/sqlite-activity-queries.mjs')
     expect(module).to.have.property('query_git_activity_daily')
     expect(module).to.have.property('upsert_git_activity_daily')
     expect(module).to.have.property('query_thread_activity_aggregated')

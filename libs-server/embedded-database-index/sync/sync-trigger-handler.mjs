@@ -114,7 +114,11 @@ export async function start_sync_trigger_watcher({
   // Clean up any stale trigger file from a previous run
   await delete_file_if_exists(trigger_path)
 
-  log('Starting sync trigger poller for %s (interval: %dms)', trigger_path, POLL_INTERVAL_MS)
+  log(
+    'Starting sync trigger poller for %s (interval: %dms)',
+    trigger_path,
+    POLL_INTERVAL_MS
+  )
 
   let is_processing = false
 

@@ -17,7 +17,10 @@ const is_main = (import_meta_url) => {
   // Compiled binary: all modules share the same URL — only the
   // explicit entry-point guard in base.mjs should trigger execution.
   // Bun VFS: /$bunfs/ on Unix, %7EBUN in URL-encoded file: URL on Windows
-  if (import_meta_url.includes('/$bunfs/') || import_meta_url.includes('%7EBUN')) {
+  if (
+    import_meta_url.includes('/$bunfs/') ||
+    import_meta_url.includes('%7EBUN')
+  ) {
     return false
   }
 

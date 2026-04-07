@@ -60,13 +60,11 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    - Receive metadata suggestions from the analysis
 
 2. **Review Suggestions**
-
    - Verify title is concise and under 100 characters
    - Ensure short_description is under 200 characters
    - Check that suggestions follow thread review guideline
 
 3. **Apply Updates** (if not dry_run)
-
    - Use the update-thread.mjs CLI tool to apply metadata changes
    - Command format:
      ```bash

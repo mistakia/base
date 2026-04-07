@@ -91,9 +91,8 @@ async function handle_rebuild_heatmap() {
       },
       async () => {
         console.log('API unavailable, using direct DuckDB access')
-        const { rebuild_activity_heatmap } = await import(
-          '#server/services/cache-warmer.mjs'
-        )
+        const { rebuild_activity_heatmap } =
+          await import('#server/services/cache-warmer.mjs')
         await embedded_index_manager.initialize()
         try {
           await rebuild_activity_heatmap()
@@ -123,12 +122,13 @@ async function handle_entities(argv) {
     const since_date = parse_time_period_date(period)
     await embedded_index_manager.initialize()
 
-    const entities = await embedded_index_manager.query_entities_by_thread_activity({
-      since_date,
-      entity_types: argv.type || null,
-      limit: argv.limit,
-      offset: argv.offset
-    })
+    const entities =
+      await embedded_index_manager.query_entities_by_thread_activity({
+        since_date,
+        entity_types: argv.type || null,
+        limit: argv.limit,
+        offset: argv.offset
+      })
 
     if (!entities || entities.length === 0) {
       if (argv.json) {

@@ -157,9 +157,7 @@ export const ensure_user_container_running = async ({
       'settings.json'
     )
     if (!existsSync(settings_path)) {
-      log(
-        `settings.json missing for ${username}, re-bootstrapping claude-home`
-      )
+      log(`settings.json missing for ${username}, re-bootstrapping claude-home`)
       await bootstrap_claude_home({
         username,
         thread_config,

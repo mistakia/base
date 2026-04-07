@@ -113,7 +113,9 @@ export class PermissionContext {
   async get_user_rules() {
     return this._get_cached_rules('_user_rules', async () => {
       if (!this.user_public_key || this.user_public_key === 'public') return []
-      const rules = await user_registry.get_user_rules({ public_key: this.user_public_key })
+      const rules = await user_registry.get_user_rules({
+        public_key: this.user_public_key
+      })
       log(`Loaded ${rules.length} rules for user ${this.user_public_key}`)
       return rules
     })
@@ -130,15 +132,21 @@ export class PermissionContext {
   async get_user_tag_rules() {
     return this._get_cached_rules('_user_tag_rules', async () => {
       if (!this.user_public_key || this.user_public_key === 'public') return []
-      const tag_rules = await user_registry.get_user_tag_rules({ public_key: this.user_public_key })
-      log(`Loaded ${tag_rules.length} tag rules for user ${this.user_public_key}`)
+      const tag_rules = await user_registry.get_user_tag_rules({
+        public_key: this.user_public_key
+      })
+      log(
+        `Loaded ${tag_rules.length} tag rules for user ${this.user_public_key}`
+      )
       return tag_rules
     })
   }
 
   async get_public_tag_rules() {
     return this._get_cached_rules('_public_tag_rules', async () => {
-      const tag_rules = await user_registry.get_user_tag_rules({ public_key: 'public' })
+      const tag_rules = await user_registry.get_user_tag_rules({
+        public_key: 'public'
+      })
       log(`Loaded ${tag_rules.length} public tag rules`)
       return tag_rules
     })

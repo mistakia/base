@@ -54,14 +54,14 @@ Base-API (cache invalidation via entity-change-ipc)
 
 Four watcher strategies serve different scope and reliability needs:
 
-| Watcher | Library | Scope | Consumer |
-|---------|---------|-------|----------|
-| User-base watcher (sync service) | @parcel/watcher | user-base/ (recursive, with exclusions) | Entity sync to SQLite |
-| User-base watcher (base-api) | @parcel/watcher | user-base/ (recursive, with exclusions) | WebSocket file notifications, repo unstaged detection |
-| Thread watcher | @parcel/watcher | thread/ (recursive) | Thread metadata/timeline changes |
-| Git status watcher | chokidar | ~280 specific .git file patterns | Git index, HEAD, refs changes |
-| Thread sync IPC | polling (5s setTimeout) | .thread-sync-queue file | Thread sync request forwarding |
-| Entity change IPC | polling (2s setTimeout) | .entity-change-queue file | Entity change notification to base-api |
+| Watcher                          | Library                 | Scope                                   | Consumer                                              |
+| -------------------------------- | ----------------------- | --------------------------------------- | ----------------------------------------------------- |
+| User-base watcher (sync service) | @parcel/watcher         | user-base/ (recursive, with exclusions) | Entity sync to SQLite                                 |
+| User-base watcher (base-api)     | @parcel/watcher         | user-base/ (recursive, with exclusions) | WebSocket file notifications, repo unstaged detection |
+| Thread watcher                   | @parcel/watcher         | thread/ (recursive)                     | Thread metadata/timeline changes                      |
+| Git status watcher               | chokidar                | ~280 specific .git file patterns        | Git index, HEAD, refs changes                         |
+| Thread sync IPC                  | polling (5s setTimeout) | .thread-sync-queue file                 | Thread sync request forwarding                        |
+| Entity change IPC                | polling (2s setTimeout) | .entity-change-queue file               | Entity change notification to base-api                |
 
 ### Library Selection Rationale
 
@@ -130,38 +130,40 @@ Event types: `update`, `delete`. Queue line format: `update:user:task/my-task.md
 
 Two PM2 processes each start a user-base watcher subscription:
 
-| Process | Watcher Consumers | IPC | Purpose |
-|---------|-------------------|-----|---------|
-| base-api | file_subscription, repo_file | Reads entity-change-queue | Real-time UI updates, cache invalidation |
-| index-sync-service | entity_index (SQLite upsert) | Writes entity-change-queue, reads thread-sync-queue | Durable index maintenance |
+| Process            | Watcher Consumers            | IPC                                                 | Purpose                                  |
+| ------------------ | ---------------------------- | --------------------------------------------------- | ---------------------------------------- |
+| base-api           | file_subscription, repo_file | Reads entity-change-queue                           | Real-time UI updates, cache invalidation |
+| index-sync-service | entity_index (SQLite upsert) | Writes entity-change-queue, reads thread-sync-queue | Durable index maintenance                |
 
 Both create independent @parcel/watcher subscriptions on the same user-base directory. Base-api no longer receives entity_index callbacks via the watcher -- cache invalidation arrives through entity-change-ipc instead, reducing redundant processing of entity file events in the API process.
 
 ## Key Modules
 
-| Module | Role |
-|--------|------|
-| `libs-server/file-subscriptions/user-base-watcher.mjs` | Consolidated @parcel/watcher with event routing and reconciliation |
-| `libs-server/file-subscriptions/parcel-watcher-adapter.mjs` | Shared adapter with default ignore patterns and error callback |
-| `libs-server/file-subscriptions/git-status-watcher.mjs` | Chokidar-based .git internal file watching |
-| `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs` | Polling-based IPC queue for thread sync forwarding |
-| `libs-server/embedded-database-index/sync/entity-change-ipc.mjs` | Polling-based IPC queue for entity change notifications |
-| `libs-server/embedded-database-index/sync/sync-metrics.mjs` | In-process metrics collection with periodic log dump |
-| `libs-server/embedded-database-index/sync/stream-entity-files.mjs` | Async generator for streaming entity population |
-| `server/services/thread-watcher.mjs` | @parcel/watcher for thread directory with reconciliation |
-| `server/services/index-sync-service.mjs` | PM2 service entry point for SQLite sync |
-| `libs-server/embedded-database-index/embedded-index-manager.mjs` | SQLite lifecycle, sync operations, query interface |
+| Module                                                             | Role                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------ |
+| `libs-server/file-subscriptions/user-base-watcher.mjs`             | Consolidated @parcel/watcher with event routing and reconciliation |
+| `libs-server/file-subscriptions/parcel-watcher-adapter.mjs`        | Shared adapter with default ignore patterns and error callback     |
+| `libs-server/file-subscriptions/git-status-watcher.mjs`            | Chokidar-based .git internal file watching                         |
+| `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs`     | Polling-based IPC queue for thread sync forwarding                 |
+| `libs-server/embedded-database-index/sync/entity-change-ipc.mjs`   | Polling-based IPC queue for entity change notifications            |
+| `libs-server/embedded-database-index/sync/sync-metrics.mjs`        | In-process metrics collection with periodic log dump               |
+| `libs-server/embedded-database-index/sync/stream-entity-files.mjs` | Async generator for streaming entity population                    |
+| `server/services/thread-watcher.mjs`                               | @parcel/watcher for thread directory with reconciliation           |
+| `server/services/index-sync-service.mjs`                           | PM2 service entry point for SQLite sync                            |
+| `libs-server/embedded-database-index/embedded-index-manager.mjs`   | SQLite lifecycle, sync operations, query interface                 |
 
 ## Metrics and Observability
 
 The sync-metrics module provides lightweight in-process metrics collection. All output uses `console.error` because the Bun runtime suppresses `debug()` npm package output in PM2 log files -- only stderr reaches the logs.
 
 **Heartbeat** (every 60 seconds):
+
 ```
 [heartbeat] pid=N uptime_s=N sqlite_ready=bool last_sync_age_s=N cache_size=N
 ```
 
 **Metrics dump** (every 5 minutes, counters reset after dump):
+
 ```
 [metrics] entity_syncs=N thread_syncs=N reconciliations=N errors=N avg_entity_sync_ms=N avg_thread_sync_ms=N cache_hits=N cache_misses=N queue_depth=N overflow_events=N uptime_s=N
 ```
@@ -189,5 +191,6 @@ For resync, entities are streamed while collecting `base_uri` strings into a Set
 Thread population uses `list_thread_ids()` which returns only UUID strings (~36 bytes each), then `process_threads_in_batches()` loads metadata per-batch (100 at a time). The thread ID list is bounded and acceptable.
 
 Manual recovery:
+
 - `bun cli/rebuild-embedded-index.mjs` -- full index rebuild from filesystem
 - `pm2 restart index-sync-service` -- drains pending queue on startup

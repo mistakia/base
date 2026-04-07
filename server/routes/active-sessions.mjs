@@ -262,9 +262,7 @@ router.get('/:session_id', async (req, res) => {
 router.post('/', async (req, res) => {
   const expected_key = config.job_tracker?.api_key
   const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
-    req.ip
-  )
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
   if (!is_localhost) {
     if (!expected_key || !auth_header) {
       return res.status(401).json({ error: 'Authentication required' })
@@ -369,9 +367,7 @@ router.post('/', async (req, res) => {
 router.put('/:session_id', async (req, res) => {
   const expected_key = config.job_tracker?.api_key
   const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
-    req.ip
-  )
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
   if (!is_localhost) {
     if (!expected_key || !auth_header) {
       return res.status(401).json({ error: 'Authentication required' })
@@ -423,7 +419,9 @@ router.put('/:session_id', async (req, res) => {
         session_id,
         status
       )
-      return res.status(200).json({ success: true, session_id, tombstoned: true })
+      return res
+        .status(200)
+        .json({ success: true, session_id, tombstoned: true })
     }
 
     // If no thread_id yet, try to find one
@@ -518,9 +516,7 @@ router.put('/:session_id', async (req, res) => {
 router.delete('/:session_id', async (req, res) => {
   const expected_key = config.job_tracker?.api_key
   const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
-    req.ip
-  )
+  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
   if (!is_localhost) {
     if (!expected_key || !auth_header) {
       return res.status(401).json({ error: 'Authentication required' })

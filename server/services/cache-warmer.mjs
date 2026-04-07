@@ -119,7 +119,9 @@ async function warm_activity_cache() {
       log('Cold start detected, performing full computation')
       const heatmap_data = await compute_fresh_days(days)
       if (!embedded_index_manager.read_only) {
-        await embedded_index_manager.upsert_heatmap_daily_batch({ entries: heatmap_data.data })
+        await embedded_index_manager.upsert_heatmap_daily_batch({
+          entries: heatmap_data.data
+        })
       }
       cache.activity_heatmap = {
         data: heatmap_data,
@@ -183,7 +185,9 @@ async function warm_activity_cache() {
 
     // Persist fresh days (skip in read-only mode)
     if (!embedded_index_manager.read_only) {
-      await embedded_index_manager.upsert_heatmap_daily_batch({ entries: all_fresh })
+      await embedded_index_manager.upsert_heatmap_daily_batch({
+        entries: all_fresh
+      })
     }
 
     // Merge: frozen days as base, fresh days overwrite matching dates

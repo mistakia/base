@@ -59,9 +59,7 @@ export const use_file_system_data = ({
   useEffect(() => {
     if (use_router_path && location) {
       const path =
-        location.pathname === '/'
-          ? ''
-          : location.pathname.replace(/\/+$/, '')
+        location.pathname === '/' ? '' : location.pathname.replace(/\/+$/, '')
       if (path !== current_path) {
         navigate_to_path(path)
       }

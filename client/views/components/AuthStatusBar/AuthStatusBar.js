@@ -3,10 +3,7 @@ import PropTypes from 'prop-types'
 import { connect } from 'react-redux'
 import Ed25519 from 'nanocurrency-web/dist/lib/ed25519'
 import { app_actions } from '@core/app/actions'
-import {
-  get_authentication_state,
-  get_app
-} from '@core/app/selectors'
+import { get_authentication_state, get_app } from '@core/app/selectors'
 import { format_public_key } from '@views/utils/format-public-key'
 
 import './AuthStatusBar.styl'

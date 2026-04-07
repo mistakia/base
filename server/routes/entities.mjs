@@ -333,13 +333,14 @@ router.get('/relations', async (req, res) => {
 
     // Fetch reverse relations (sources -> this entity)
     if (direction === 'reverse' || direction === 'both') {
-      const raw_reverse = await embedded_index_manager.find_entities_relating_to({
-        base_uri,
-        relation_type: relation_type || null,
-        entity_type: entity_type || null,
-        limit: limit_num,
-        offset: offset_num
-      })
+      const raw_reverse =
+        await embedded_index_manager.find_entities_relating_to({
+          base_uri,
+          relation_type: relation_type || null,
+          entity_type: entity_type || null,
+          limit: limit_num,
+          offset: offset_num
+        })
 
       // Apply permission-based redaction
       reverse_relations = await redact_relations_by_permission({

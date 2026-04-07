@@ -246,7 +246,6 @@ Branch to deploy: $ARGUMENTS (if provided, otherwise current branch)
    - Follow all workflow steps for staging deployment
 
 2. Apply deployment standards from: [[sys:system/guideline/deployment-standards.md]]
-
    - Ensure proper testing before deployment
    - Follow rollback procedures if issues occur
    - Document deployment status and outcomes

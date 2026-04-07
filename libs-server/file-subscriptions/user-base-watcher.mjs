@@ -267,14 +267,22 @@ async function reconcile_entity_directories({
  * Schedule a debounced reconciliation scan for entity directories.
  * Coalesces rapid FSEvents error bursts into a single scan.
  */
-function schedule_reconciliation({ user_base_directory, entity_index, metrics }) {
+function schedule_reconciliation({
+  user_base_directory,
+  entity_index,
+  metrics
+}) {
   if (reconciliation_timer) {
     clearTimeout(reconciliation_timer)
   }
 
   reconciliation_timer = setTimeout(() => {
     reconciliation_timer = null
-    reconcile_entity_directories({ user_base_directory, entity_index, metrics }).catch((error) => {
+    reconcile_entity_directories({
+      user_base_directory,
+      entity_index,
+      metrics
+    }).catch((error) => {
       log('Reconciliation scan failed: %s', error.message)
     })
   }, RECONCILIATION_DEBOUNCE_MS)

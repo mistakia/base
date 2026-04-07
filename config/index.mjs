@@ -12,7 +12,9 @@ const log = debug('config:loader')
 // compiled mode and derive paths from the binary location instead.
 const current_file_path = fileURLToPath(import.meta.url)
 // Bun VFS: /$bunfs/ on Unix, B:\~BUN\ on Windows
-const __bunfs_compiled = current_file_path.includes('/$bunfs/') || current_file_path.includes('\\~BUN\\')
+const __bunfs_compiled =
+  current_file_path.includes('/$bunfs/') ||
+  current_file_path.includes('\\~BUN\\')
 const current_dir = __bunfs_compiled
   ? dirname(process.argv[0])
   : dirname(current_file_path)
@@ -89,7 +91,9 @@ function get_encryption_key() {
   const hex_regex = /^[0-9A-Fa-f]{64}$/
   if (raw_key.length === 32) return Buffer.from(raw_key)
   if (hex_regex.test(raw_key)) return Buffer.from(raw_key, 'hex')
-  log('WARNING: CONFIG_ENCRYPTION_KEY has invalid length (expected 32 bytes or 64 hex chars)')
+  log(
+    'WARNING: CONFIG_ENCRYPTION_KEY has invalid length (expected 32 bytes or 64 hex chars)'
+  )
   return null
 }
 

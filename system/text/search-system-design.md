@@ -59,7 +59,6 @@ Threads present a unique challenge: metadata is stored in individual JSON files 
 - **No artificial limits**: All threads are searched (~60-80ms for thousands of files). Results are sorted by `updated_at` after matching.
 
 - **Field-specific matching**: A PCRE2 regex pattern matches only values within designated JSON keys:
-
   - `title`, `short_description`, `thread_id`
   - `workflow_base_uri`, `working_directory`, `git_branch`
 

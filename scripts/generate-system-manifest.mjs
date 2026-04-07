@@ -54,7 +54,9 @@ if (output_index !== -1 && args[output_index + 1]) {
   const output_path = args[output_index + 1]
   fs.mkdirSync(path.dirname(output_path), { recursive: true })
   fs.writeFileSync(output_path, JSON.stringify(manifest, null, 2) + '\n')
-  console.log(`System manifest written to ${output_path} (${files.length} files)`)
+  console.log(
+    `System manifest written to ${output_path} (${files.length} files)`
+  )
 } else {
   console.log(JSON.stringify(manifest, null, 2))
 }

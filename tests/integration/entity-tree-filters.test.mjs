@@ -381,9 +381,8 @@ describe('Entity Tree Filter Integration', function () {
 
   describe('--project mode (entity_tags query)', () => {
     it('should find entities by tag', async () => {
-      const { execute_sqlite_query } = await import(
-        '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
-      )
+      const { execute_sqlite_query } =
+        await import('#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs')
       const result = await execute_sqlite_query({
         query:
           'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ? ORDER BY entity_base_uri',
@@ -397,9 +396,8 @@ describe('Entity Tree Filter Integration', function () {
     })
 
     it('should return empty for non-existent tag', async () => {
-      const { execute_sqlite_query } = await import(
-        '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
-      )
+      const { execute_sqlite_query } =
+        await import('#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs')
       const result = await execute_sqlite_query({
         query: 'SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?',
         parameters: ['user:tag/nonexistent.md']

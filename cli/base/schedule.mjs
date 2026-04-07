@@ -168,9 +168,8 @@ async function handle_list(argv) {
     let job_map = null
     if (argv.jobs) {
       try {
-        const { load_all_jobs } = await import(
-          '#libs-server/jobs/report-job.mjs'
-        )
+        const { load_all_jobs } =
+          await import('#libs-server/jobs/report-job.mjs')
         const jobs = await load_all_jobs()
         job_map = new Map(jobs.map((j) => [j.job_id, j]))
       } catch (error) {

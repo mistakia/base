@@ -17,9 +17,7 @@ const OLLAMA_BASE_URL =
   config.ollama?.base_url ||
   'http://127.0.0.1:11434'
 const BINARY_PATH =
-  process.env.OPENCODE_BINARY_PATH ||
-  config.opencode?.binary_path ||
-  'opencode'
+  process.env.OPENCODE_BINARY_PATH || config.opencode?.binary_path || 'opencode'
 
 // Use direct ollama API by default (faster, more reliable)
 const USE_DIRECT_OLLAMA = config.opencode?.use_direct !== false

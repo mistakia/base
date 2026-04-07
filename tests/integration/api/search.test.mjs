@@ -161,9 +161,7 @@ describe('Search API', function () {
     describe('full mode', () => {
       it('should return results in full mode', async () => {
         const res = await authenticate_request(
-          request(server)
-            .get('/api/search')
-            .query({ q: 'test', mode: 'full' }),
+          request(server).get('/api/search').query({ q: 'test', mode: 'full' }),
           test_user
         )
 
@@ -365,9 +363,7 @@ describe('Search API', function () {
 
     it('should return 400 for invalid hours parameter', async () => {
       const res = await authenticate_request(
-        request(server)
-          .get('/api/search/recent')
-          .query({ hours: 'invalid' }),
+        request(server).get('/api/search/recent').query({ hours: 'invalid' }),
         test_user
       )
 

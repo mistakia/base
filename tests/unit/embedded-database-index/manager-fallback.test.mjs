@@ -179,7 +179,9 @@ describe('Embedded Index Manager Fallback', function () {
         }
       }
 
-      const params = { filters: [{ column_id: 'thread_state', value: 'active' }] }
+      const params = {
+        filters: [{ column_id: 'thread_state', value: 'active' }]
+      }
       await manager.query_threads(params)
 
       expect(backend_params).to.deep.equal(params)

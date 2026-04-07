@@ -110,8 +110,8 @@ const GenericMCPTool = ({ tool_call_event, tool_result_event }) => {
     const has_params = Object.keys(params).length > 0
     const has_result = Boolean(
       tool_result_event &&
-        tool_result_event.content &&
-        'result' in tool_result_event.content
+      tool_result_event.content &&
+      'result' in tool_result_event.content
     )
     return has_params || has_result
   })()

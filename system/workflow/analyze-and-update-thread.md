@@ -58,7 +58,6 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
 2. **Analyze timeline based on mode**
 
    **Mode selection:**
-
    - `initial`: Extract only the first user message for quick analysis
    - `full`: Use comprehensive timeline analysis with size-based strategies
 
@@ -129,20 +128,17 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    **Mode-specific generation strategies:**
 
    **Initial mode** (user message only):
-
    - Extract action verbs and key nouns from user message
    - Focus on original intent and request
    - Generate concise titles based on user's stated goal
    - Examples: "Fix login bug", "Add user dashboard", "Optimize database queries"
 
    **Full mode** (comprehensive analysis):
-
    - Use existing complex analysis patterns
    - Consider actual execution outcomes and tool usage
    - Generate titles based on what was accomplished vs. requested
 
    **Title generation guidelines:**
-
    - Action-oriented, under 100 characters
    - Format: "[Primary Action] [Target/Subject]"
    - **Initial mode**: Base on user's original request
@@ -150,7 +146,6 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    - Examples: "Implement user authentication", "Debug database connection", "Refactor component architecture"
 
    **Description generation guidelines:**
-
    - 1-2 sentences, under 200 characters
    - **Initial mode**: Summarize user's original request
    - **Full mode**: Summarize purpose and outcome based on timeline shape
@@ -160,13 +155,11 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    **Analysis-to-metadata mapping:**
 
    **Initial mode:**
-
    - Extract key action words from user message
    - Focus on the "what" the user wanted to accomplish
    - Simple, direct titles based on request
 
    **Full mode:**
-
    - **High Edit/Write activity**: "Implement/Create/Build" titles
    - **High Read/Bash activity**: "Debug/Analyze/Investigate" titles
    - **High MultiEdit activity**: "Refactor/Update/Modify" titles
@@ -176,12 +169,10 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
 4. **Token efficiency considerations**
 
    **Mode-specific token usage:**
-
    - **Initial mode**: ~100-500 tokens (single user message)
    - **Full mode**: Variable based on file size and strategy
 
    **Processing limits by strategy:**
-
    - **Initial**: Single message extraction, <500 tokens
    - **Full**: Process if <2,500 tokens (~10KB)
    - **Recent**: Limit to 50 events max (~12,500 tokens)
@@ -189,7 +180,6 @@ For thread extraction commands, see [[sys:system/workflow/read-thread.md]].
    - **Summary**: Statistical overview only, <1,000 tokens
 
    **Fallback handling:**
-
    - **Initial mode**: No fallback needed (always lightweight)
    - **Full mode**: If selected strategy exceeds token limits, step down to next approach
    - Always have summary as final fallback for full mode

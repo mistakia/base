@@ -5,7 +5,11 @@
  * Tries HTTP API first, falls back to direct DuckDB database access.
  */
 
-import { format_relation, output_results, flush_and_exit } from './lib/format.mjs'
+import {
+  format_relation,
+  output_results,
+  flush_and_exit
+} from './lib/format.mjs'
 import { query, api_get } from './lib/data-access.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
@@ -202,9 +206,7 @@ async function fetch_relations_direct({
   offset
 }) {
   const embedded_index_manager = (
-    await import(
-      '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-    )
+    await import('#libs-server/embedded-database-index/embedded-index-manager.mjs')
   ).default
 
   await embedded_index_manager.initialize()
@@ -221,12 +223,14 @@ async function fetch_relations_direct({
 
   try {
     if (direction === 'forward' || direction === 'both') {
-      result.forward = await embedded_index_manager.find_related_entities(query_params)
+      result.forward =
+        await embedded_index_manager.find_related_entities(query_params)
       result.counts.forward = result.forward.length
     }
 
     if (direction === 'reverse' || direction === 'both') {
-      result.reverse = await embedded_index_manager.find_entities_relating_to(query_params)
+      result.reverse =
+        await embedded_index_manager.find_entities_relating_to(query_params)
       result.counts.reverse = result.reverse.length
     }
   } finally {

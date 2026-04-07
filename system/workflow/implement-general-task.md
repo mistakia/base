@@ -37,13 +37,11 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
 ## Setup Phase
 
 1. **Locate Implementation Plan**
-
    - Find the implementation plan in the task file or text entity
    - Confirm the plan includes specific actions and tasks
    - Note the location and format of the implementation plan
 
 2. **Update Plan Status**
-
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
    - The `started_at` timestamp is automatically set when status changes to "In Progress"
 
@@ -56,14 +54,12 @@ Before starting, read [[sys:system/guideline/review-task.md]] for task-by-task r
 ## Execution Phase
 
 4. **Work on First Task Only**
-
    - Select the first uncompleted task from the implementation plan
    - Make the required changes for that task only
    - Follow any specific guidelines referenced in the task
    - Mark the task as "Completed" in the implementation plan using checkbox format: `- [x]`
 
 5. **Update Implementation Plan**
-
    - Update the implementation plan with task completion progress
    - If during implementation you discover the plan needs changes (drift detected):
      - STOP implementation immediately

@@ -65,7 +65,6 @@ visibility_analyzed_at: '2026-02-16T04:31:13.394Z'
 ### Core Implementation
 
 - [ ] **[Action or deliverable to complete]**
-
   - Description: [Clear description of what needs to be done]
   - Purpose: [Why this action is needed]
   - Details:

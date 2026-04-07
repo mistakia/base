@@ -71,7 +71,9 @@ const load_extensions = async (parser) => {
   try {
     await load_extension_providers(extensions)
   } catch (error) {
-    console.error(`Warning: Failed to load extension providers: ${error.message}`)
+    console.error(
+      `Warning: Failed to load extension providers: ${error.message}`
+    )
   }
 
   // Register extension CLI commands
@@ -91,7 +93,12 @@ const load_extensions = async (parser) => {
 // Commands that work without a configured user-base directory.
 // All other commands require USER_BASE_DIRECTORY to be set.
 const DEGRADED_MODE_COMMANDS = new Set([
-  'init', 'update', 'install', 'uninstall', 'outdated', 'setup'
+  'init',
+  'update',
+  'install',
+  'uninstall',
+  'outdated',
+  'setup'
 ])
 
 const main = async () => {
@@ -171,7 +178,8 @@ const main = async () => {
 // the same import.meta.url). Detect compiled mode via /$bunfs/ prefix.
 // Bun VFS: /$bunfs/ on Unix, ~BUN on Windows (in file: URL)
 // Bun VFS: /$bunfs/ on Unix, %7EBUN in URL-encoded file: URL on Windows
-const is_compiled = import.meta.url.includes('/$bunfs/') || import.meta.url.includes('%7EBUN')
+const is_compiled =
+  import.meta.url.includes('/$bunfs/') || import.meta.url.includes('%7EBUN')
 if (is_compiled || isMain(import.meta.url)) {
   main()
 }

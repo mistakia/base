@@ -376,7 +376,10 @@ export const provision_skills = async ({
   claude_home
 }) => {
   const skills_config = thread_config.skills
-  if (!skills_config || (Array.isArray(skills_config) && skills_config.length === 0)) {
+  if (
+    !skills_config ||
+    (Array.isArray(skills_config) && skills_config.length === 0)
+  ) {
     log('No skills configured, skipping provisioning')
     return
   }
@@ -393,7 +396,9 @@ export const provision_skills = async ({
   // Accept both string "*" and array ["*"] (YAML `- '*'` produces the latter)
   const is_wildcard =
     skills_config === '*' ||
-    (Array.isArray(skills_config) && skills_config.length === 1 && skills_config[0] === '*')
+    (Array.isArray(skills_config) &&
+      skills_config.length === 1 &&
+      skills_config[0] === '*')
 
   let skill_names
   if (is_wildcard) {

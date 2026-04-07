@@ -186,7 +186,10 @@ export class FileBasedQueueProcessor {
     }
 
     if (this.poll_active) {
-      this.poll_timeout = setTimeout(() => this.poll_loop(), this.poll_interval_ms)
+      this.poll_timeout = setTimeout(
+        () => this.poll_loop(),
+        this.poll_interval_ms
+      )
     }
   }
 
@@ -200,7 +203,9 @@ export class FileBasedQueueProcessor {
     }
 
     this.log(`Starting ${this.name}`)
-    this.log(`Polling: ${this.queue_file_path} every ${this.poll_interval_ms}ms`)
+    this.log(
+      `Polling: ${this.queue_file_path} every ${this.poll_interval_ms}ms`
+    )
 
     this.poll_active = true
 

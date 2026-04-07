@@ -21,12 +21,14 @@ This guide walks through installing and configuring the Base system from scratch
 Base is a human-in-the-loop LLM system built on file primitives. All data is stored as markdown files with YAML frontmatter, tracked in git. There is no required database.
 
 **Core concepts:**
+
 - **Entities**: typed markdown files (task, workflow, guideline, text, tag, etc.) with schemas and relations forming a knowledge graph
 - **Two-layer architecture**: the base repo provides the generic engine; a separate user-base directory provides user-specific config, data, workflows, and extensions
 - **Threads**: standardized session format for any agent runner (Claude Code, Cursor, ChatGPT, etc.)
 - **Extensions**: convention-based CLI subcommands and agent skills in the user-base directory
 
 **Content map:**
+
 - `system/text/system-design.md` -- architecture and design principles
 - `system/text/knowledge-base-schema.md` -- entity types and data models
 - `system/text/extension-system.md` -- CLI extensions and agent skills
@@ -95,6 +97,7 @@ base init --user-base-directory ~/user-base
 **Success**: output lists 18 created directories and 23 created files including `CLAUDE.md`, `AGENTS.md`, `config/config.json`, and `.gitignore`.
 
 This creates the user-base directory structure:
+
 ```
 ~/user-base/
   task/           # Task entities
@@ -248,6 +251,7 @@ Any agent that reads `CLAUDE.md` or `AGENTS.md` from the project root will get c
 ### `base: command not found`
 
 If installed via curl, ensure `~/.base/bin` is on your PATH:
+
 ```bash
 export PATH="$HOME/.base/bin:$PATH"
 ```
@@ -277,6 +281,7 @@ If Redis is not running, you will see connection error warnings in PM2 service l
 Check logs: `pm2 logs <service-name> --lines 50 --nostream`
 
 Common causes:
+
 - `USER_BASE_DIRECTORY` not set in the PM2 environment
 - Missing `config/config.json` in user-base directory
 - Port already in use (default 8080)

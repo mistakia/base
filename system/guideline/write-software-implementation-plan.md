@@ -62,7 +62,6 @@ visibility_analyzed_at: '2026-02-16T04:31:56.658Z'
 ### Core Implementation
 
 - [ ] **[File path to create or modify]**
-
   - File: `[full/path/to/file]`
   - Purpose: [Why this change is needed]
   - Changes:

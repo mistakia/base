@@ -51,13 +51,11 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 ## Phase 1: Setup
 
 1. **Locate Implementation Plan**
-
    - Find the implementation plan in the task file or text entity
    - Confirm the plan includes specific file changes and tasks
    - Note the location and format of the implementation plan
 
 2. **Update Plan Status**
-
    - If the implementation plan status is not already "In Progress", update it to "In Progress"
    - The `started_at` timestamp is automatically set when status changes to "In Progress"
 
@@ -88,7 +86,6 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
 ## Phase 2: Implementation (Single Task Focus)
 
 4. **Execute Current Task**
-
    - Select the first uncompleted task from the implementation plan
    - Read and follow [[sys:system/guideline/write-software.md]] for variable naming and DRY principles
    - Read and follow [[sys:system/guideline/write-javascript.md]] for JavaScript-specific practices (ES modules, function parameters, etc.)
@@ -96,7 +93,6 @@ Before starting, read [[sys:system/guideline/implement-software-task.md]] and [[
    - Mark the task as "Completed" in the implementation plan using checkbox format: `- [x]`
 
 5. **Handle Implementation Plan Changes**
-
    - If during implementation you discover the plan needs changes (drift detected):
      - STOP implementation immediately
      - Present the proposed changes and reasoning for review

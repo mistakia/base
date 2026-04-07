@@ -90,9 +90,12 @@ function* handle_post_user_session_fulfilled({ payload }) {
 function* update_user_preference({ payload }) {
   const { key, value } = payload
   try {
-    yield call(dispatch_fetch, api.put_user_preferences({
-      preferences: { [key]: value }
-    }))
+    yield call(
+      dispatch_fetch,
+      api.put_user_preferences({
+        preferences: { [key]: value }
+      })
+    )
   } catch (err) {
     console.warn('Failed to update preference:', err.message)
   }

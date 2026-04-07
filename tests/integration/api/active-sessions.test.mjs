@@ -83,8 +83,9 @@ describe('API /active-sessions', function () {
       })
 
       // Then retrieve it
-      const res = await request(server)
-        .get(`/api/active-sessions/${test_session_id}`)
+      const res = await request(server).get(
+        `/api/active-sessions/${test_session_id}`
+      )
 
       expect(res.status).to.equal(200)
       res.body.should.be.an('object')
@@ -92,8 +93,9 @@ describe('API /active-sessions', function () {
     })
 
     it('should return 404 for non-existent session', async () => {
-      const res = await request(server)
-        .get('/api/active-sessions/non-existent-session-id')
+      const res = await request(server).get(
+        '/api/active-sessions/non-existent-session-id'
+      )
 
       expect(res.status).to.equal(404)
       res.body.should.have.property('error')
@@ -158,15 +160,17 @@ describe('API /active-sessions', function () {
       })
 
       // Then delete it
-      const res = await request(server)
-        .delete(`/api/active-sessions/${test_session_id}`)
+      const res = await request(server).delete(
+        `/api/active-sessions/${test_session_id}`
+      )
 
       expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)
 
       // Verify it's gone
-      const get_res = await request(server)
-        .get(`/api/active-sessions/${test_session_id}`)
+      const get_res = await request(server).get(
+        `/api/active-sessions/${test_session_id}`
+      )
 
       expect(get_res.status).to.equal(404)
     })
@@ -174,8 +178,9 @@ describe('API /active-sessions', function () {
     it('should return success even for non-existent session (idempotent)', async () => {
       // DELETE is idempotent - returns success even if session doesn't exist
       // This is important for hook-based systems where cleanup may be called multiple times
-      const res = await request(server)
-        .delete('/api/active-sessions/non-existent-session-id')
+      const res = await request(server).delete(
+        '/api/active-sessions/non-existent-session-id'
+      )
 
       expect(res.status).to.equal(200)
       res.body.should.have.property('success', true)

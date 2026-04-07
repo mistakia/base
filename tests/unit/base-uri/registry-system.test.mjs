@@ -157,9 +157,8 @@ This workflow tests the registry system.`
       )
 
       // Import the function dynamically to avoid import issues
-      const { read_workflow_from_filesystem } = await import(
-        '#libs-server/workflow/filesystem/read-workflow-from-filesystem.mjs'
-      )
+      const { read_workflow_from_filesystem } =
+        await import('#libs-server/workflow/filesystem/read-workflow-from-filesystem.mjs')
 
       // Test with URI format - should use registry if available
       const result = await read_workflow_from_filesystem({

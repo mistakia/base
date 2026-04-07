@@ -304,7 +304,9 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '65%',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0 &&
+                      hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -368,7 +370,9 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '80px',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0 &&
+                      hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -400,7 +404,9 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                     px: 2,
                     width: '100px',
                     borderBottom:
-                      index === visible_items.length - 1 && redacted_count === 0 && hidden_count === 0
+                      index === visible_items.length - 1 &&
+                      redacted_count === 0 &&
+                      hidden_count === 0
                         ? 'none'
                         : `1px solid ${COLORS.border_light}`,
                     overflow: 'hidden',
@@ -434,9 +440,10 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   sx={{
                     py: 0.75,
                     px: 2,
-                    borderBottom: redacted_count > 0
-                      ? `1px solid ${COLORS.border_light}`
-                      : 'none',
+                    borderBottom:
+                      redacted_count > 0
+                        ? `1px solid ${COLORS.border_light}`
+                        : 'none',
                     textAlign: 'center'
                   }}>
                   <Button
@@ -463,9 +470,10 @@ const DirectoryView = ({ path = '', on_navigate }) => {
                   sx={{
                     py: 0.75,
                     px: 2,
-                    borderBottom: redacted_count > 0
-                      ? `1px solid ${COLORS.border_light}`
-                      : 'none',
+                    borderBottom:
+                      redacted_count > 0
+                        ? `1px solid ${COLORS.border_light}`
+                        : 'none',
                     textAlign: 'center'
                   }}>
                   <Button

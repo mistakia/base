@@ -863,10 +863,7 @@ class EmbeddedIndexManager {
             this._timeline_sync_cache.delete(oldest_key)
           }
           if (this._metrics) {
-            this._metrics.gauge(
-              'cache_size',
-              this._timeline_sync_cache.size
-            )
+            this._metrics.gauge('cache_size', this._timeline_sync_cache.size)
           }
         }
 

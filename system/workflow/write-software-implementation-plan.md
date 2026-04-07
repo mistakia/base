@@ -40,14 +40,12 @@ Create structured implementation plans by understanding requirements, analyzing 
      - Find relevant configuration and documentation
      - Locate similar implementations or related functionality
 2. **Gather information from the user**:
-
    - Ask clarifying questions about requirements
    - Understand the problem being solved
    - Clarify any ambiguous instructions
    - Confirm understanding of expected outcomes
 
 3. **Create initial plan outline**:
-
    - Write only the following sections:
      - **Overview**: High-level goals and expected outcomes
      - **Background**: Summary of research findings
@@ -63,7 +61,6 @@ Create structured implementation plans by understanding requirements, analyzing 
 ## Phase 2: Design
 
 5. **Only after user confirms Phase 1**:
-
    - Create the **Design** section:
      - Describe the high-level approach
      - Outline proposed file organization
@@ -81,7 +78,6 @@ Create structured implementation plans by understanding requirements, analyzing 
 ## Phase 3: Task Planning
 
 7. **Only after user confirms Phase 2**:
-
    - Create detailed tasks:
      - List all files that need changes
      - Describe specific modifications required
@@ -89,13 +85,11 @@ Create structured implementation plans by understanding requirements, analyzing 
      - Order tasks for logical implementation
 
 8. **Follow the guideline**:
-
    - Read and Use the template from [[sys:system/guideline/write-software-implementation-plan.md]]
    - Ensure all sections are complete
    - Review for clarity and completeness
 
 9. **Final review**:
-
    - Present the complete plan to the user
    - Make any final adjustments based on feedback
 

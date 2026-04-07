@@ -236,7 +236,9 @@ describe('Claude Account Rotation', function () {
       const far_from_reset = {
         seven_day: {
           utilization: 40,
-          resets_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+          resets_at: new Date(
+            Date.now() + 5 * 24 * 60 * 60 * 1000
+          ).toISOString()
         }
       }
 
@@ -247,7 +249,8 @@ describe('Claude Account Rotation', function () {
 
     it('should return null when seven_day data is missing', () => {
       expect(compute_account_score({})).to.be.null
-      expect(compute_account_score({ five_hour: { utilization: 50 } })).to.be.null
+      expect(compute_account_score({ five_hour: { utilization: 50 } })).to.be
+        .null
       expect(compute_account_score(null)).to.be.null
     })
 

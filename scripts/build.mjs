@@ -37,8 +37,7 @@ function parse_args() {
   const args = process.argv.slice(2)
   const build_all = args.includes('--all')
   const target_index = args.indexOf('--target')
-  const specific_target =
-    target_index !== -1 ? args[target_index + 1] : null
+  const specific_target = target_index !== -1 ? args[target_index + 1] : null
 
   if (specific_target) {
     const full_target = specific_target.startsWith('bun-')
@@ -46,7 +45,9 @@ function parse_args() {
       : `bun-${specific_target}`
     if (!TARGETS.includes(full_target)) {
       console.error(`Unknown target: ${specific_target}`)
-      console.error(`Valid targets: ${TARGETS.map((t) => t.replace('bun-', '')).join(', ')}`)
+      console.error(
+        `Valid targets: ${TARGETS.map((t) => t.replace('bun-', '')).join(', ')}`
+      )
       process.exit(1)
     }
     return [full_target]
@@ -132,14 +133,18 @@ function generate_version_json(build_results) {
 fs.mkdirSync(DIST_DIR, { recursive: true })
 
 const targets = parse_args()
-console.log(`Building for targets: ${targets.map((t) => t.replace('bun-', '')).join(', ')}\n`)
+console.log(
+  `Building for targets: ${targets.map((t) => t.replace('bun-', '')).join(', ')}\n`
+)
 
 const results = targets.map(build_target)
 const successful = results.filter(Boolean)
 
 if (successful.length > 0) {
   const version_info = generate_version_json(successful)
-  console.log(`\nBuild complete: ${successful.length}/${targets.length} targets`)
+  console.log(
+    `\nBuild complete: ${successful.length}/${targets.length} targets`
+  )
   console.log(`Version: ${version_info.version}`)
 } else {
   console.error('\nAll builds failed')

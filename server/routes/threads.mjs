@@ -979,9 +979,8 @@ router.post('/sync-user-session', async (req, res) => {
     // Translate container-internal path to host path
     // Container path: /home/node/.claude/projects/...
     // Host path: <user_data_dir>/<username>/claude-home/projects/...
-    const { get_user_container_claude_home } = await import(
-      '#libs-server/threads/user-container-manager.mjs'
-    )
+    const { get_user_container_claude_home } =
+      await import('#libs-server/threads/user-container-manager.mjs')
     const container_prefix = '/home/node/.claude'
     if (!transcript_path.startsWith(container_prefix)) {
       return res.status(400).json({
@@ -1009,9 +1008,8 @@ router.post('/sync-user-session', async (req, res) => {
       `sync-user-session: importing ${host_path} for ${username} (${hook_event_name})`
     )
 
-    const { create_threads_from_session_provider } = await import(
-      '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
-    )
+    const { create_threads_from_session_provider } =
+      await import('#libs-server/integrations/thread/create-threads-from-session-provider.mjs')
     const result = await create_threads_from_session_provider({
       provider_name: 'claude',
       allow_updates: true,

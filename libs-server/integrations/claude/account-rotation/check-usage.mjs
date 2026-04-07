@@ -134,7 +134,12 @@ export const mark_account_auth_failed = async (namespace) => {
   try {
     const redis = get_redis()
     const key = `${REDIS_AUTH_FAILED_PREFIX}${namespace}`
-    await redis.set(key, new Date().toISOString(), 'EX', AUTH_FAILED_TTL_SECONDS)
+    await redis.set(
+      key,
+      new Date().toISOString(),
+      'EX',
+      AUTH_FAILED_TTL_SECONDS
+    )
     log(
       'Marked %s as auth_failed (TTL: %ds)',
       namespace,
@@ -173,7 +178,11 @@ export const clear_account_auth_failed = async (namespace) => {
     await redis.del(`${REDIS_AUTH_FAILED_PREFIX}${namespace}`)
     log('Cleared auth_failed marker for %s', namespace)
   } catch (error) {
-    log('Failed to clear auth_failed marker for %s: %s', namespace, error.message)
+    log(
+      'Failed to clear auth_failed marker for %s: %s',
+      namespace,
+      error.message
+    )
   }
 }
 

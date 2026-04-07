@@ -216,14 +216,8 @@ describe('discover_extensions', () => {
       path.join(ext_dir, 'provide', 'valid-cap.mjs'),
       'export function run() {}\n'
     )
-    fs.writeFileSync(
-      path.join(ext_dir, 'provide', 'README.md'),
-      '# Docs\n'
-    )
-    fs.writeFileSync(
-      path.join(ext_dir, 'provide', 'notes.txt'),
-      'notes\n'
-    )
+    fs.writeFileSync(path.join(ext_dir, 'provide', 'README.md'), '# Docs\n')
+    fs.writeFileSync(path.join(ext_dir, 'provide', 'notes.txt'), 'notes\n')
 
     const result = discover_extensions([temp_dir])
     expect(result[0].provided_capabilities).to.deep.equal(['valid-cap'])

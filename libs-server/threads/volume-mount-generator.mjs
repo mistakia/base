@@ -109,7 +109,8 @@ export const generate_volume_mounts = async ({
   // CloakBrowser runtime mounts (when browser.enabled is true)
   if (thread_config.browser?.enabled) {
     const user_containers_config = config.user_containers || {}
-    const host_home = browser_home_override || user_containers_config.browser_home || homedir()
+    const host_home =
+      browser_home_override || user_containers_config.browser_home || homedir()
     const browser_mounts = [
       { host: join(host_home, '.local/share/cloakbrowser-venv'), mode: 'ro' },
       { host: join(host_home, '.cloakbrowser'), mode: 'ro' },

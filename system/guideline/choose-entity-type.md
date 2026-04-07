@@ -40,29 +40,24 @@ visibility_analyzed_at: '2026-02-16T04:25:55.599Z'
   - Key properties: globs
   - Note: Guidelines will be used in prompts to guide system behavior
 - `text`: SHOULD be used for general textual content without specialized requirements
-
   - Example: "Project overview", "Meeting notes", "Research findings"
   - Has minimal additional properties beyond the base schema
 
 - `physical_item`: SHOULD be used for any tangible item in the physical world
-
   - Example: "Dell XPS Laptop", "Conference room table", "Whiteboard markers"
   - Key properties: manufacturer, model_number, storage_location
 
 - `digital_item`: SHOULD be used when you want **notes or content** about a file, not just tracking
-
   - Example: Analysis of a PDF report, documentation about a software tool, notes on a video
   - Key properties: file_uri, file_cid, file_mime_type
   - Note: For file **inventory/tracking** without prose content, use the `database/files.md` database instead
   - The `file_uri` property links to a record in the files database for metadata lookup
 
 - `person`: SHOULD be used for information about individuals
-
   - Example: "Jane Doe", "John Smith"
   - Key properties: contact_information, role, organization
 
 - `organization`: SHOULD be used for information about companies or groups
-
   - Example: "Acme Corporation", "Engineering Team", "Open Source Community"
   - Key properties: website, industry, size
 

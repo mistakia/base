@@ -180,40 +180,33 @@ Tag rules provide category-level access control based on resource tags, compleme
 Read permissions are checked in this order (first match wins):
 
 1. **Ownership Check**
-
    - If `user_public_key === resource.owner_public_key` → ALLOW
    - Reason: "User is owner of the resource"
 
 2. **Share Token** (if provided)
-
    - Verify token against resource entity_id
    - If valid → ALLOW
 
 3. **User-Specific Path Rules** (authenticated users only)
-
    - Load user's rules from identity and roles
    - Evaluate rules using rule engine (picomatch patterns)
    - If match found → use rule's action (allow/deny)
 
 4. **User-Specific Tag Rules** (authenticated users only)
-
    - Load user's tag_rules from identity and roles
    - Evaluate tag rules against resource tags
    - If match found → use rule's action (allow/deny)
 
 5. **Explicit public_read Setting**
-
    - If `public_read === true` → ALLOW ("Resource has public_read explicitly enabled")
    - If `public_read === false` → DENY ("Resource has public_read explicitly disabled")
 
 6. **Public User Path Rules** (fallback)
-
    - Load rules for the "public" user entry
    - Evaluate rules using rule engine
    - If match found → use rule's action
 
 7. **Public User Tag Rules** (fallback)
-
    - Load tag_rules for the "public" user entry
    - Evaluate tag rules against resource tags
    - If match found → use rule's action
@@ -225,17 +218,14 @@ Read permissions are checked in this order (first match wins):
 Write permissions are more restrictive:
 
 1. **Authentication Required**
-
    - If no `user_public_key` or user is "public" → DENY
    - Reason: "Write access requires authentication"
 
 2. **Ownership Check**
-
    - If `user_public_key === resource.owner_public_key` → ALLOW
    - Reason: "User is owner of the resource"
 
 3. **Global Write Check**
-
    - If user has `global_write: true` → ALLOW
    - Reason: "User has global write permission"
 
@@ -1109,9 +1099,9 @@ tag_rules:
 
 **Optional Fields:**
 
-| Field        | Type  | Description                                |
-| ------------ | ----- | ------------------------------------------ |
-| `tag_rules`  | array | Array of tag-based permission rule objects |
+| Field       | Type  | Description                                |
+| ----------- | ----- | ------------------------------------------ |
+| `tag_rules` | array | Array of tag-based permission rule objects |
 
 **Rule Object Structure:**
 
@@ -1123,12 +1113,12 @@ tag_rules:
 
 **Tag Rule Object Structure:**
 
-| Field     | Type   | Required | Description                                  |
-| --------- | ------ | -------- | -------------------------------------------- |
-| `action`  | string | Yes      | `allow` or `deny`                            |
-| `tag`     | string | Yes      | Base URI of tag entity (exact match)         |
-| `pattern` | string | No       | Resource path glob to scope the rule         |
-| `reason`  | string | No       | Human-readable reason                        |
+| Field     | Type   | Required | Description                          |
+| --------- | ------ | -------- | ------------------------------------ |
+| `action`  | string | Yes      | `allow` or `deny`                    |
+| `tag`     | string | Yes      | Base URI of tag entity (exact match) |
+| `pattern` | string | No       | Resource path glob to scope the rule |
+| `reason`  | string | No       | Human-readable reason                |
 
 **Common Roles:**
 

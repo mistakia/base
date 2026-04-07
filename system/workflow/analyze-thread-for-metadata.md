@@ -83,7 +83,6 @@ Thread structure:
    - Extract current title and description if present
 
 2. **Process Timeline Efficiently**
-
    - Apply timeline_config.strategy:
      - **recent**: Load last N events (default 50)
      - **time_window**: Load events within specified date range
@@ -103,14 +102,12 @@ Thread structure:
      ```
 
 3. **Analyze Thread Purpose**
-
    - Identify primary actions and outcomes from timeline
    - Look for patterns in tool usage and file operations
    - Determine if thread completed its objectives
    - Note any errors or abandoned states
 
 4. **Generate Metadata Suggestions**
-
    - **Title**: Create action-oriented, specific title
      - Format: "[Action] [Object/Target] [Context if needed]"
      - Examples:
@@ -123,14 +120,12 @@ Thread structure:
      - Any notable decisions or blockers
 
 5. **Validate Suggestions**
-
    - Ensure title is under 100 characters
    - Verify description provides meaningful context
    - Check that suggestions follow thread review guideline
    - Compare with existing metadata to ensure improvement
 
 6. **Suggest Tags**
-
    - Delegate to suggest-thread-tags workflow using Task tool
    - Provide thread_id and analysis preferences
    - Collect tag recommendations for inclusion in metadata suggestions

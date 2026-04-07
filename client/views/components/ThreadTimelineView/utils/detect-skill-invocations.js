@@ -15,7 +15,9 @@ export const get_content_string = (content) => {
       .map((item) =>
         typeof item === 'string'
           ? item
-          : (item && typeof item === 'object' ? item.text || item.content || '' : '')
+          : item && typeof item === 'object'
+            ? item.text || item.content || ''
+            : ''
       )
       .join('\n')
   }
@@ -45,7 +47,8 @@ export const detect_skill_invocations = (timeline_events) => {
       event.type !== 'message' ||
       event.role !== 'user' ||
       !event.metadata?.is_meta
-    ) continue
+    )
+      continue
 
     const expansion_content = get_content_string(event.content)
     const skill_path = parse_content_tag(expansion_content, SKILL_PATH_PATTERN)
@@ -74,11 +77,17 @@ export const detect_skill_invocations = (timeline_events) => {
       extract_command_name_from_path(skill_path)
     if (!command_name) continue
 
-    const command_args = parse_content_tag(command_content, COMMAND_ARGS_PATTERN)
+    const command_args = parse_content_tag(
+      command_content,
+      COMMAND_ARGS_PATTERN
+    )
 
     // Determine user_text: for tagged commands, use command_args;
     // for untagged (inline) commands, use the full user message content
-    const has_command_tags = !!parse_content_tag(command_content, COMMAND_NAME_PATTERN)
+    const has_command_tags = !!parse_content_tag(
+      command_content,
+      COMMAND_NAME_PATTERN
+    )
     const user_text = has_command_tags ? command_args : command_content
 
     const skill_item = {
@@ -91,10 +100,7 @@ export const detect_skill_invocations = (timeline_events) => {
 
     // Check if this pair can merge with the previous skill group (same command message)
     const last_group = skill_groups[skill_groups.length - 1]
-    if (
-      last_group &&
-      last_group.indices.includes(command_index)
-    ) {
+    if (last_group && last_group.indices.includes(command_index)) {
       last_group.skills.push(skill_item)
       last_group.indices.push(i)
     } else {

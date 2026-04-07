@@ -289,9 +289,7 @@ export const update_active_session = async ({
   )
 
   if (result === null) {
-    log(
-      `Skipped upsert for deleted session: ${session_id} (tombstone present)`
-    )
+    log(`Skipped upsert for deleted session: ${session_id} (tombstone present)`)
     return null
   }
 

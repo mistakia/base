@@ -94,8 +94,16 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
       const five_hour = cached.five_hour?.utilization ?? 0
       const seven_day = cached.seven_day?.utilization ?? 0
       if (five_hour >= threshold || seven_day >= threshold) {
-        log('Account %s over threshold (5h: %d%%, 7d: %d%%), skipping', account.namespace, five_hour, seven_day)
-        exhausted_details.push({ namespace: account.namespace, reason: 'over_threshold' })
+        log(
+          'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
+          account.namespace,
+          five_hour,
+          seven_day
+        )
+        exhausted_details.push({
+          namespace: account.namespace,
+          reason: 'over_threshold'
+        })
         continue
       }
     }

@@ -60,5 +60,6 @@ export const app_actions = {
 // API actions
 export const post_user_session_request_actions =
   create_api_actions('POST_USER_SESSION')
-export const put_user_preferences_request_actions =
-  create_api_actions('PUT_USER_PREFERENCES')
+export const put_user_preferences_request_actions = create_api_actions(
+  'PUT_USER_PREFERENCES'
+)

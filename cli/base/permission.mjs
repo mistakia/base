@@ -99,7 +99,9 @@ async function handle_check(argv) {
       )
     } else {
       const status = result.allowed ? 'ALLOWED' : 'DENIED'
-      console.log(`Permission Check (user path + tag rules only, excludes public_read and public rules):`)
+      console.log(
+        `Permission Check (user path + tag rules only, excludes public_read and public rules):`
+      )
       console.log(`  User: ${argv.username}`)
       console.log(`  Resource: ${argv.resource}`)
       console.log(`  Result: ${status}`)

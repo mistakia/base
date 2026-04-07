@@ -62,7 +62,8 @@ export function normalize_sqlite_thread(thread, models_data) {
     source_provider: thread.source_provider || null,
     inference_provider: thread.inference_provider,
     primary_model: thread.primary_model,
-    models: thread.models || (thread.primary_model ? [thread.primary_model] : []),
+    models:
+      thread.models || (thread.primary_model ? [thread.primary_model] : []),
 
     // Working directory
     working_directory: thread.working_directory,

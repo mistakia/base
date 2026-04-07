@@ -74,7 +74,10 @@ export async function write_entity_change_notification({
         await fs.mkdir(path.dirname(queue_path), { recursive: true })
         await fs.appendFile(queue_path, line, 'utf-8')
       } catch (retry_error) {
-        log('Failed to write entity change after mkdir: %s', retry_error.message)
+        log(
+          'Failed to write entity change after mkdir: %s',
+          retry_error.message
+        )
       }
     } else {
       log('Failed to write entity change: %s', error.message)
@@ -263,5 +266,4 @@ export function stop_entity_change_watcher() {
     clearTimeout(poll_timeout)
     poll_timeout = null
   }
-
 }

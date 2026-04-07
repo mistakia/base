@@ -234,7 +234,6 @@ Where `<project>` is the parent directory of the findings entity, `<target-name>
 ### 6.3 If All Findings Resolved (Finalize)
 
 1. If a worktree was created, present the branch for merge:
-
    - Log the worktree path and branch name
    - Suggest running `/merge-worktree` or manual merge
 

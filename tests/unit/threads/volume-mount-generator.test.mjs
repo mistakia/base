@@ -199,10 +199,16 @@ describe('volume-mount-generator', () => {
     it('should add browser mounts when browser.enabled is true', async () => {
       // Create mock browser paths in a tmp location
       const browser_tmp = await mkdtemp(join(tmpdir(), 'browser-mount-test-'))
-      await mkdir(join(browser_tmp, '.local/share/cloakbrowser-venv'), { recursive: true })
+      await mkdir(join(browser_tmp, '.local/share/cloakbrowser-venv'), {
+        recursive: true
+      })
       await mkdir(join(browser_tmp, '.cloakbrowser'), { recursive: true })
-      await mkdir(join(browser_tmp, '.cloakbrowser-profiles'), { recursive: true })
-      await mkdir(join(browser_tmp, '.local/state/cloak-browser'), { recursive: true })
+      await mkdir(join(browser_tmp, '.cloakbrowser-profiles'), {
+        recursive: true
+      })
+      await mkdir(join(browser_tmp, '.local/state/cloak-browser'), {
+        recursive: true
+      })
 
       const thread_config = {
         mounts: [],
@@ -220,13 +226,19 @@ describe('volume-mount-generator', () => {
       })
 
       // claude-home + 4 browser mounts
-      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      const browser_mounts = mounts.filter(
+        (m) => m.includes('cloakbrowser') || m.includes('cloak-browser')
+      )
       expect(browser_mounts).to.have.lengthOf(4)
 
-      const venv_mount = browser_mounts.find((m) => m.includes('cloakbrowser-venv'))
+      const venv_mount = browser_mounts.find((m) =>
+        m.includes('cloakbrowser-venv')
+      )
       expect(venv_mount).to.include(':ro')
 
-      const profiles_mount = browser_mounts.find((m) => m.includes('cloakbrowser-profiles'))
+      const profiles_mount = browser_mounts.find((m) =>
+        m.includes('cloakbrowser-profiles')
+      )
       expect(profiles_mount).to.include(':cached')
     })
 
@@ -242,7 +254,9 @@ describe('volume-mount-generator', () => {
         accounts_config: null
       })
 
-      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      const browser_mounts = mounts.filter(
+        (m) => m.includes('cloakbrowser') || m.includes('cloak-browser')
+      )
       expect(browser_mounts).to.have.lengthOf(0)
     })
 
@@ -262,7 +276,9 @@ describe('volume-mount-generator', () => {
         browser_home_override: '/nonexistent/path'
       })
 
-      const browser_mounts = mounts.filter((m) => m.includes('cloakbrowser') || m.includes('cloak-browser'))
+      const browser_mounts = mounts.filter(
+        (m) => m.includes('cloakbrowser') || m.includes('cloak-browser')
+      )
       expect(browser_mounts).to.have.lengthOf(0)
     })
   })

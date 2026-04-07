@@ -300,9 +300,8 @@ export function chunk_markdown_content({ content, title, description }) {
 async function run_background_sync({ user_base_directory }) {
   log('Starting background embedding sync')
 
-  const { ENTITY_DIRECTORIES } = await import(
-    '#libs-server/embedded-database-index/sync/index-sync-filters.mjs'
-  )
+  const { ENTITY_DIRECTORIES } =
+    await import('#libs-server/embedded-database-index/sync/index-sync-filters.mjs')
 
   const entity_files = []
 

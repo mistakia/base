@@ -61,13 +61,11 @@ base entity move tag/old-name.md tag/new-name.md --dry-run
 ## Entity Tagging Review
 
 1. **Identify Untagged Entities**
-
    - Scan task, workflow, guideline, and text directories for entities without tags
    - Prioritize entities that would benefit from tag-based organization
    - Determine appropriate tags for untagged entities
 
 2. **Verify Tag Application**
-
    - Review entities to ensure tags accurately reflect their domain/project
    - Identify entities with incorrect or outdated tag assignments
    - Plan migrations for entities needing tag updates
@@ -80,7 +78,6 @@ base entity move tag/old-name.md tag/new-name.md --dry-run
 ## Tag Clarity Review
 
 4. **Assess Tag Clarity**
-
    - Review each tag's description and scope definition
    - Identify tags with unclear or vague purpose
    - Update tag descriptions to improve clarity
@@ -91,7 +88,6 @@ base entity move tag/old-name.md tag/new-name.md --dry-run
 5. **Identify Removal Candidates**
 
    Tag removal is exceptional and applies only to:
-
    - **Mistaken creation**: Tags that should never have existed (too granular, unclear purpose)
    - **Duplicate tags**: Two tags created for the exact same concept (e.g., `home-lab` and `homelab`)
    - **Superseded domains**: Technology/project completely replaced (not just completed)
@@ -105,7 +101,6 @@ base entity move tag/old-name.md tag/new-name.md --dry-run
 ## Validation
 
 7. **Validate Changes**
-
    - Verify all entity tag references are correct
    - Check for broken references or orphaned tag assignments
 

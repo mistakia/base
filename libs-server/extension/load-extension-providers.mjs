@@ -55,7 +55,9 @@ export async function load_extension_providers(extensions) {
       try {
         const module = await import(provide_path)
         register(capability_name, ext.name, module)
-        log(`Registered provider "${ext.name}" for capability "${capability_name}"`)
+        log(
+          `Registered provider "${ext.name}" for capability "${capability_name}"`
+        )
       } catch (error) {
         log(
           `Warning: failed to load provider "${capability_name}" from extension "${ext.name}": ${error.message}`
