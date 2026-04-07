@@ -39,6 +39,6 @@ if is_container; then
     exec claude -p --dangerously-skip-permissions -- "$@"
 else
     # On host: execute via docker exec (non-interactive)
-    exec docker exec -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" \
+    exec docker exec -u node -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" \
         claude -p --dangerously-skip-permissions -- "$@"
 fi

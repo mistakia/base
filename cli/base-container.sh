@@ -224,7 +224,7 @@ case "${1:-}" in
         compose_cmd up -d base-container
         ;;
     shell)
-        docker exec -it base-container bash
+        docker exec -u node -it base-container bash
         ;;
     build)
         echo "Building container image ($MACHINE)..."
@@ -236,11 +236,11 @@ case "${1:-}" in
         ;;
     claude)
         shift
-        docker exec -it base-container claude-container "$@"
+        docker exec -u node -it base-container claude-container "$@"
         ;;
     opencode)
         shift
-        docker exec -it base-container opencode "$@"
+        docker exec -u node -it base-container opencode "$@"
         ;;
     *)
         usage
