@@ -17,8 +17,8 @@ const log = debug('threads:queue')
 // Configuration constants with defaults
 const QUEUE_CONFIG = {
   name: 'thread-creation',
-  retry_attempts: config.threads?.queue?.retry_attempts || 1,
-  retry_delay_ms: (config.threads?.queue?.retry_delay_seconds || 30) * 1000,
+  retry_attempts: config.threads?.queue?.retry_attempts ?? 1,
+  retry_delay_ms: (config.threads?.queue?.retry_delay_seconds ?? 30) * 1000,
   completed_job_age_seconds: 3600, // 1 hour
   completed_job_count: 100,
   failed_job_age_seconds: 86400 // 24 hours
