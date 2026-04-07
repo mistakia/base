@@ -42,38 +42,40 @@ const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes surv
 const EXHAUSTED_DELAY_DEFAULT_MS = 300000 // 5 minutes default delay when all accounts exhausted
 const EXHAUSTED_KEY_PREFIX = 'claude:exhausted:'
 
-// Authentication error patterns in Claude CLI stderr output
-const AUTH_ERROR_PATTERNS = [
-  'authentication_error',
-  'authentication_failed',
-  'Invalid API Key',
-  'invalid x-api-key',
-  'Your API key does not have access',
-  'OAuth token expired',
-  'oauth_error'
-]
+// Authentication error patterns observed in Claude CLI stderr output.
+// Only add patterns confirmed to appear in actual Claude CLI stderr.
+const AUTH_ERROR_PATTERNS = ['authentication_error', 'authentication_failed']
+const AUTH_FAILED_KEY_PREFIX = 'claude:auth_failed:'
 
 /**
  * Detect authentication errors from Claude CLI error output.
- * Returns true if the error message contains any known auth error pattern.
+ * Only matches errors that include the "Claude CLI exited with code" prefix
+ * to avoid false positives from unrelated errors (Redis auth, HTTP 401, etc.).
  */
-const is_auth_error = (error_message) => {
+const is_cli_auth_error = (error_message) => {
   if (!error_message) return false
+  if (!error_message.startsWith('Claude CLI exited with code')) return false
   const lower = error_message.toLowerCase()
-  return AUTH_ERROR_PATTERNS.some((pattern) => lower.includes(pattern.toLowerCase()))
+  return AUTH_ERROR_PATTERNS.some((pattern) => lower.includes(pattern))
 }
 
 // Module state
 let thread_worker = null
 
 /**
- * Get delay in ms until the earliest exhausted account marker expires.
+ * Get delay in ms until the earliest unavailable account marker expires.
+ * Scans both exhausted and auth_failed keys so that auth-only failures
+ * do not fall back to the short 5-minute default.
  * Falls back to EXHAUSTED_DELAY_DEFAULT_MS if TTLs cannot be read.
  */
-const get_exhausted_delay_ms = async () => {
+const get_unavailable_delay_ms = async () => {
   try {
     const redis = get_redis_connection()
-    const keys = await redis.keys(`${EXHAUSTED_KEY_PREFIX}*`)
+    const [exhausted_keys, auth_failed_keys] = await Promise.all([
+      redis.keys(`${EXHAUSTED_KEY_PREFIX}*`),
+      redis.keys(`${AUTH_FAILED_KEY_PREFIX}*`)
+    ])
+    const keys = [...exhausted_keys, ...auth_failed_keys]
     if (keys.length === 0) return EXHAUSTED_DELAY_DEFAULT_MS
 
     let min_ttl_ms = Infinity
@@ -192,7 +194,7 @@ const process_thread_creation_job = async (job) => {
       if (account_error.name === 'AllAccountsExhaustedError') {
         // Delay job until earliest exhausted marker expires instead of
         // consuming a retry attempt (markers may have TTLs of hours)
-        const delay_ms = await get_exhausted_delay_ms()
+        const delay_ms = await get_unavailable_delay_ms()
         log(`Job ${job.id}: all accounts exhausted, delaying %dms`, delay_ms)
         await job.moveToDelayed(Date.now() + delay_ms, job.token)
         // Return without result -- job will be re-processed after delay
@@ -220,16 +222,8 @@ const process_thread_creation_job = async (job) => {
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
 
-    // On non-zero exit with a selected account, check for auth errors
-    // first (they need distinct handling), then fall back to usage API check
-    if (result.exit_code !== 0 && selected_account) {
-      // Non-zero exit codes don't carry stderr in the result, so auth
-      // errors from successful-but-failed runs can't be detected here.
-      // Auth detection primarily happens in the catch block below where
-      // the error message includes stderr content.
-      await check_and_mark_if_exhausted(job.id, selected_account)
-    }
-
+    // create_session_claude_cli rejects on non-zero exit (stderr in error
+    // message), so this path only runs on exit_code 0.
     return {
       success: true,
       session_directory: result.session_directory,
@@ -243,7 +237,7 @@ const process_thread_creation_job = async (job) => {
       // Check for authentication errors in stderr output first --
       // these need a distinct marker since they require manual re-auth
       // and should not be confused with rate-limit exhaustion
-      if (is_auth_error(error.message)) {
+      if (is_cli_auth_error(error.message)) {
         log(
           `Job ${job.id}: authentication error detected for account %s`,
           selected_account.namespace
