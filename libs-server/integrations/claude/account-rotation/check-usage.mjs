@@ -8,6 +8,8 @@ const log = debug('claude:usage')
 
 const REDIS_KEY_PREFIX = 'claude:usage:'
 const REDIS_EXHAUSTED_PREFIX = 'claude:exhausted:'
+const REDIS_AUTH_FAILED_PREFIX = 'claude:auth_failed:'
+const AUTH_FAILED_TTL_SECONDS = 86400 // 24 hours -- requires manual re-auth
 
 let _get_redis_connection = null
 
@@ -118,6 +120,60 @@ export const is_account_exhausted = async (namespace) => {
   } catch (error) {
     log('Exhausted check error for %s: %s', namespace, error.message)
     return false
+  }
+}
+
+/**
+ * Mark an account as having an authentication failure in Redis.
+ * Uses a long TTL (24h) because auth failures require manual intervention
+ * (re-authenticating and redeploying credentials).
+ *
+ * @param {string} namespace - Account namespace
+ */
+export const mark_account_auth_failed = async (namespace) => {
+  try {
+    const redis = get_redis()
+    const key = `${REDIS_AUTH_FAILED_PREFIX}${namespace}`
+    await redis.set(key, new Date().toISOString(), 'EX', AUTH_FAILED_TTL_SECONDS)
+    log(
+      'Marked %s as auth_failed (TTL: %ds)',
+      namespace,
+      AUTH_FAILED_TTL_SECONDS
+    )
+  } catch (error) {
+    log('Failed to mark %s as auth_failed: %s', namespace, error.message)
+  }
+}
+
+/**
+ * Check if an account is marked as having an authentication failure
+ *
+ * @param {string} namespace - Account namespace
+ * @returns {boolean} True if account has auth failure marker
+ */
+export const is_account_auth_failed = async (namespace) => {
+  try {
+    const redis = get_redis()
+    const result = await redis.get(`${REDIS_AUTH_FAILED_PREFIX}${namespace}`)
+    return result !== null
+  } catch (error) {
+    log('Auth failed check error for %s: %s', namespace, error.message)
+    return false
+  }
+}
+
+/**
+ * Clear auth failure marker for an account
+ *
+ * @param {string} namespace - Account namespace
+ */
+export const clear_account_auth_failed = async (namespace) => {
+  try {
+    const redis = get_redis()
+    await redis.del(`${REDIS_AUTH_FAILED_PREFIX}${namespace}`)
+    log('Cleared auth_failed marker for %s', namespace)
+  } catch (error) {
+    log('Failed to clear auth_failed marker for %s: %s', namespace, error.message)
   }
 }
 

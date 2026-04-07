@@ -8,6 +8,8 @@ import {
   compute_account_score,
   get_cached_usage,
   is_account_exhausted,
+  is_account_auth_failed,
+  mark_account_auth_failed,
   mark_account_exhausted
 } from './check-usage.mjs'
 
@@ -27,8 +29,9 @@ export class AllAccountsExhaustedError extends Error {
   }
 }
 
-// Rate-limit Discord notifications (max 1 per hour)
+// Rate-limit Discord notifications (max 1 per hour per type)
 let last_exhaustion_notification = 0
+let last_auth_failure_notification = 0
 const NOTIFICATION_COOLDOWN_MS = 3600000
 
 /**
@@ -62,6 +65,16 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
   const unscored_candidates = []
 
   for (const account of accounts) {
+    const auth_failed = await is_account_auth_failed(account.namespace)
+    if (auth_failed) {
+      log('Account %s marked as auth_failed, skipping', account.namespace)
+      exhausted_details.push({
+        namespace: account.namespace,
+        reason: 'auth_failed'
+      })
+      continue
+    }
+
     const exhausted = await is_account_exhausted(account.namespace)
     if (exhausted) {
       log('Account %s marked as exhausted, skipping', account.namespace)
@@ -207,41 +220,34 @@ export const handle_rate_limit_failure = async ({
 }
 
 /**
- * Send Discord notification when all accounts are exhausted (rate-limited)
+ * Handle an authentication failure for an account.
+ * Marks the account with a distinct auth_failed status and sends a Discord
+ * notification since auth failures require manual re-authentication.
+ *
+ * @param {Object} params
+ * @param {string} params.namespace - Account namespace
  */
-const notify_all_exhausted = async (accounts) => {
-  const now = Date.now()
-  if (now - last_exhaustion_notification < NOTIFICATION_COOLDOWN_MS) {
-    log('Skipping exhaustion notification (cooldown)')
-    return
-  }
+export const handle_auth_failure = async ({ namespace }) => {
+  log('Handling auth failure for %s', namespace)
+  await mark_account_auth_failed(namespace)
+  await notify_auth_failure(namespace)
+}
 
+/**
+ * Send a Discord embed notification via webhook
+ */
+const send_discord_embed = async ({ title, description, color, fields }) => {
   const discord_webhook_url = config.job_tracker?.discord_webhook_url
   if (!discord_webhook_url) {
     return
   }
 
-  last_exhaustion_notification = now
-
-  const fields = accounts.map((a) => ({
-    name: a.namespace,
-    value: 'Exhausted',
-    inline: true
-  }))
-
-  fields.push({
-    name: 'Server',
-    value: os.hostname(),
-    inline: true
-  })
-
   const payload = {
     embeds: [
       {
-        title: 'All Claude Accounts Exhausted',
-        description:
-          'No accounts available for queue sessions. Jobs will be retried with backoff.',
-        color: 15548997, // Red
+        title,
+        description,
+        color,
         fields,
         timestamp: new Date().toISOString()
       }
@@ -257,9 +263,64 @@ const notify_all_exhausted = async (accounts) => {
     })
 
     if (!response.ok) {
-      log('Discord notification failed: %d', response.status)
+      log('Discord notification failed (%s): %d', title, response.status)
     }
   } catch (error) {
-    log('Discord notification error: %s', error.message)
+    log('Discord notification error (%s): %s', title, error.message)
   }
+}
+
+/**
+ * Send Discord notification when an account has an authentication failure
+ */
+const notify_auth_failure = async (namespace) => {
+  const now = Date.now()
+  if (now - last_auth_failure_notification < NOTIFICATION_COOLDOWN_MS) {
+    log('Skipping auth failure notification (cooldown)')
+    return
+  }
+  last_auth_failure_notification = now
+
+  await send_discord_embed({
+    title: 'Claude Account Authentication Failed',
+    description: `Account \`${namespace}\` has an expired or invalid OAuth token. Manual re-authentication required.`,
+    color: 15105570, // Orange
+    fields: [
+      { name: 'Account', value: namespace, inline: true },
+      { name: 'Server', value: os.hostname(), inline: true },
+      {
+        name: 'Action Required',
+        value:
+          'Re-authenticate on MacBook, extract credentials from Keychain, and redeploy to container.',
+        inline: false
+      }
+    ]
+  })
+}
+
+/**
+ * Send Discord notification when all accounts are exhausted (rate-limited)
+ */
+const notify_all_exhausted = async (accounts) => {
+  const now = Date.now()
+  if (now - last_exhaustion_notification < NOTIFICATION_COOLDOWN_MS) {
+    log('Skipping exhaustion notification (cooldown)')
+    return
+  }
+  last_exhaustion_notification = now
+
+  const fields = accounts.map((a) => ({
+    name: a.namespace,
+    value: 'Exhausted',
+    inline: true
+  }))
+  fields.push({ name: 'Server', value: os.hostname(), inline: true })
+
+  await send_discord_embed({
+    title: 'All Claude Accounts Exhausted',
+    description:
+      'No accounts available for queue sessions. Jobs will be retried with backoff.',
+    color: 15548997, // Red
+    fields
+  })
 }
