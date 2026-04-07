@@ -21,7 +21,8 @@ import { translate_to_container_path } from '#libs-server/docker/execution-mode.
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 import {
   select_account,
-  handle_rate_limit_failure
+  handle_rate_limit_failure,
+  handle_auth_failure
 } from '#libs-server/integrations/claude/account-rotation/index.mjs'
 import {
   check_account_usage,
@@ -40,6 +41,27 @@ const LOCK_EXTEND_INTERVAL_MS = 300000 // Extend lock every 5 minutes
 const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes survive crashes)
 const EXHAUSTED_DELAY_DEFAULT_MS = 300000 // 5 minutes default delay when all accounts exhausted
 const EXHAUSTED_KEY_PREFIX = 'claude:exhausted:'
+
+// Authentication error patterns in Claude CLI stderr output
+const AUTH_ERROR_PATTERNS = [
+  'authentication_error',
+  'authentication_failed',
+  'Invalid API Key',
+  'invalid x-api-key',
+  'Your API key does not have access',
+  'OAuth token expired',
+  'oauth_error'
+]
+
+/**
+ * Detect authentication errors from Claude CLI error output.
+ * Returns true if the error message contains any known auth error pattern.
+ */
+const is_auth_error = (error_message) => {
+  if (!error_message) return false
+  const lower = error_message.toLowerCase()
+  return AUTH_ERROR_PATTERNS.some((pattern) => lower.includes(pattern.toLowerCase()))
+}
 
 // Module state
 let thread_worker = null
@@ -198,11 +220,13 @@ const process_thread_creation_job = async (job) => {
 
     log(`Job ${job.id}: completed (exit code ${result.exit_code})`)
 
-    // On non-zero exit with a selected account, check if the account is
-    // rate-limited by querying the usage API. Only mark exhausted if
-    // utilization confirms a rate limit (avoids false positives from
-    // git errors, timeouts, etc.)
+    // On non-zero exit with a selected account, check for auth errors
+    // first (they need distinct handling), then fall back to usage API check
     if (result.exit_code !== 0 && selected_account) {
+      // Non-zero exit codes don't carry stderr in the result, so auth
+      // errors from successful-but-failed runs can't be detected here.
+      // Auth detection primarily happens in the catch block below where
+      // the error message includes stderr content.
       await check_and_mark_if_exhausted(job.id, selected_account)
     }
 
@@ -215,10 +239,23 @@ const process_thread_creation_job = async (job) => {
       account_namespace: selected_account?.namespace || null
     }
   } catch (error) {
-    // On failure with a selected account, check usage API to determine
-    // if this was a rate-limit failure vs a generic error
     if (selected_account) {
-      await check_and_mark_if_exhausted(job.id, selected_account)
+      // Check for authentication errors in stderr output first --
+      // these need a distinct marker since they require manual re-auth
+      // and should not be confused with rate-limit exhaustion
+      if (is_auth_error(error.message)) {
+        log(
+          `Job ${job.id}: authentication error detected for account %s`,
+          selected_account.namespace
+        )
+        await handle_auth_failure({
+          namespace: selected_account.namespace
+        })
+      } else {
+        // Not an auth error -- check usage API to determine if this
+        // was a rate-limit failure vs a generic error
+        await check_and_mark_if_exhausted(job.id, selected_account)
+      }
     }
 
     log(`Job ${job.id}: failed -`, error.message)

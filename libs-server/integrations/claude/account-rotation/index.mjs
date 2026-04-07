@@ -5,11 +5,15 @@ export {
   mark_account_exhausted,
   is_account_exhausted,
   clear_account_exhausted,
+  mark_account_auth_failed,
+  is_account_auth_failed,
+  clear_account_auth_failed,
   compute_account_score
 } from './check-usage.mjs'
 
 export {
   select_account,
   handle_rate_limit_failure,
+  handle_auth_failure,
   AllAccountsExhaustedError
 } from './select-account.mjs'

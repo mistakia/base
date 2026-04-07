@@ -8,6 +8,8 @@ import {
   compute_account_score,
   get_cached_usage,
   is_account_exhausted,
+  is_account_auth_failed,
+  mark_account_auth_failed,
   mark_account_exhausted
 } from './check-usage.mjs'
 
@@ -62,6 +64,16 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
   const unscored_candidates = []
 
   for (const account of accounts) {
+    const auth_failed = await is_account_auth_failed(account.namespace)
+    if (auth_failed) {
+      log('Account %s marked as auth_failed, skipping', account.namespace)
+      exhausted_details.push({
+        namespace: account.namespace,
+        reason: 'auth_failed'
+      })
+      continue
+    }
+
     const exhausted = await is_account_exhausted(account.namespace)
     if (exhausted) {
       log('Account %s marked as exhausted, skipping', account.namespace)
@@ -204,6 +216,74 @@ export const handle_rate_limit_failure = async ({
   }
 
   await mark_account_exhausted(namespace, resets_at)
+}
+
+/**
+ * Handle an authentication failure for an account.
+ * Marks the account with a distinct auth_failed status and sends a Discord
+ * notification since auth failures require manual re-authentication.
+ *
+ * @param {Object} params
+ * @param {string} params.namespace - Account namespace
+ */
+export const handle_auth_failure = async ({ namespace }) => {
+  log('Handling auth failure for %s', namespace)
+  await mark_account_auth_failed(namespace)
+  await notify_auth_failure(namespace)
+}
+
+/**
+ * Send Discord notification when an account has an authentication failure
+ */
+const notify_auth_failure = async (namespace) => {
+  const discord_webhook_url = config.job_tracker?.discord_webhook_url
+  if (!discord_webhook_url) {
+    return
+  }
+
+  const payload = {
+    embeds: [
+      {
+        title: 'Claude Account Authentication Failed',
+        description: `Account \`${namespace}\` has an expired or invalid OAuth token. Manual re-authentication required.`,
+        color: 15105570, // Orange
+        fields: [
+          {
+            name: 'Account',
+            value: namespace,
+            inline: true
+          },
+          {
+            name: 'Server',
+            value: os.hostname(),
+            inline: true
+          },
+          {
+            name: 'Action Required',
+            value:
+              'Re-authenticate on MacBook, extract credentials from Keychain, and redeploy to container.',
+            inline: false
+          }
+        ],
+        timestamp: new Date().toISOString()
+      }
+    ]
+  }
+
+  try {
+    const response = await fetch(discord_webhook_url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(10000)
+    })
+
+    if (!response.ok) {
+      log('Discord auth failure notification failed: %d', response.status)
+    }
+  } catch (error) {
+    log('Discord auth failure notification error: %s', error.message)
+  }
 }
 
 /**
