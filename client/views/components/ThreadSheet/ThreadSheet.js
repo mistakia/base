@@ -71,7 +71,9 @@ const SheetThreadInput = ({
       pending_resume.get('status') === 'failed' &&
       pending_resume.get('prompt')
     ) {
-      set_message((prev_message) => prev_message || pending_resume.get('prompt'))
+      set_message(
+        (prev_message) => prev_message || pending_resume.get('prompt')
+      )
     }
   }, [pending_resume])
 

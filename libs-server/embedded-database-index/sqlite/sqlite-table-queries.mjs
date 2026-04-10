@@ -409,7 +409,10 @@ export async function query_threads_from_sqlite({
 }) {
   log('Querying threads from SQLite')
 
-  const { where_sql, parameters } = build_sqlite_where_clause({ filters })
+  const { where_sql, parameters } = build_sqlite_where_clause({
+    filters,
+    frontmatter_columns: { thread_id: 'threads.thread_id' }
+  })
   const order_sql = build_sqlite_order_clause({ sort })
 
   const search_conditions = build_thread_search_conditions({
