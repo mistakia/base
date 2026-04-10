@@ -65,8 +65,12 @@ export const generate_compose_config = async ({
   }
 
   // Add API connection env vars if available
-  if (process.env.BASE_API_PROTO) {
-    environment.BASE_API_PROTO = process.env.BASE_API_PROTO
+  // Derive protocol from SSL_ENABLED when BASE_API_PROTO is not explicit
+  const api_proto =
+    process.env.BASE_API_PROTO ||
+    (process.env.SSL_ENABLED === 'true' ? 'https' : null)
+  if (api_proto) {
+    environment.BASE_API_PROTO = api_proto
   }
   if (process.env.BASE_API_PORT || config.server_port) {
     environment.BASE_API_PORT = String(
