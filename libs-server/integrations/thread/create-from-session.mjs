@@ -564,7 +564,7 @@ function build_source_from_existing(existing_metadata, normalized_session) {
   }
 }
 
-const update_thread_metadata = async (
+export const update_thread_metadata = async (
   thread_dir,
   normalized_session,
   { source_overrides = null } = {}

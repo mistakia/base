@@ -286,7 +286,7 @@ export const create_threads_from_session_provider = async ({
  * Process a single session through the complete workflow
  * @private
  */
-const process_single_session = async ({
+export const process_single_session = async ({
   raw_session,
   session_provider,
   user_public_key,
