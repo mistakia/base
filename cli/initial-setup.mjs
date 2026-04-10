@@ -613,6 +613,23 @@ export const handler = async (argv) => {
   ensure_claude_md(base_path, summary)
   ensure_agents_md(base_path, summary)
 
+  // Verify base directory was created before proceeding
+  if (!fs.existsSync(base_path)) {
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          { error: 'failed to create user-base directory' },
+          null,
+          2
+        )
+      )
+    } else {
+      console.error(`Failed to create user-base directory: ${base_path}`)
+    }
+    process.exitCode = 1
+    return
+  }
+
   // Generate owner identity and set user_public_key in config
   const username =
     argv.username || process.env.USER || os.userInfo().username || 'owner'
