@@ -63,16 +63,11 @@ const ThreadTimelineView = () => {
   const timeline_to_display =
     selected_thread_data && selected_thread_data.get('timeline')
   const metadata = selected_thread_data
+  const has_timeline_entries =
+    Array.isArray(timeline_to_display) && timeline_to_display.length > 0
 
-  if (!timeline_to_display || timeline_to_display.length === 0) {
-    return (
-      <Box sx={{ p: 3 }}>
-        <span>No timeline data available</span>
-      </Box>
-    )
-  }
-
-  // Extract working directory for link processing
+  // Extract working directory for link processing. Safe to call with an
+  // empty/unavailable metadata -- extractor returns defaults.
   const working_directory = extract_working_directory(metadata)
 
   // Keyboard shortcut handler for toggling file browser (Cmd/Ctrl+B)
@@ -89,16 +84,28 @@ const ThreadTimelineView = () => {
     return () => document.removeEventListener('keydown', handle_keydown)
   }, [])
 
+  if (!selected_thread_data) {
+    return (
+      <Box sx={{ p: 3 }}>
+        <span>No thread data available</span>
+      </Box>
+    )
+  }
+
   const toggle_file_browser = () => {
     set_is_file_browser_visible((prev) => !prev)
   }
 
-  const left_content = (
+  const left_content = has_timeline_entries ? (
     <TimelineList
       timeline={timeline_to_display}
       working_directory={working_directory.path}
       active_session={active_session}
     />
+  ) : (
+    <Box sx={{ p: 3 }}>
+      <span>No timeline data available</span>
+    </Box>
   )
 
   const right_content = (
