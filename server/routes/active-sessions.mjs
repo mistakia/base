@@ -183,11 +183,21 @@ router.get('/', async (req, res) => {
     // a job_id indicating in-progress thread creation) and archived threads.
     // Sessions from other machines whose thread data hasn't synced yet are
     // excluded rather than shown as redacted.
-    const active_thread_sessions = enriched_sessions.filter(
-      (session) =>
-        session.thread_state !== 'archived' &&
-        (session.thread_id || session.job_id)
-    )
+    //
+    // For authenticated requests, also filter out sessions whose thread is
+    // owned by a different user. Unauthenticated (public) callers retain the
+    // prior behavior and rely on permission-based redaction below.
+    const active_thread_sessions = enriched_sessions.filter((session) => {
+      if (session.thread_state === 'archived') return false
+      if (!session.thread_id && !session.job_id) return false
+
+      if (user_public_key && session.thread_id) {
+        const owner = session._thread_metadata?.user_public_key || null
+        if (owner && owner !== user_public_key) return false
+      }
+
+      return true
+    })
 
     // Apply permission-based redaction to each session, passing pre-loaded
     // metadata to avoid duplicate disk reads in check_thread_permission
