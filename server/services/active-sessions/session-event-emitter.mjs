@@ -2,7 +2,10 @@ import debug from 'debug'
 import { WebSocket } from 'ws'
 
 import wss from '#server/websocket.mjs'
-import { check_thread_permission_for_user } from '#server/middleware/permission/index.mjs'
+import {
+  check_thread_permission_for_user,
+  load_thread_metadata
+} from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 
 const log = debug('active-sessions:events')
@@ -38,6 +41,21 @@ const emit_session_event = async ({ event_type, payload }) => {
     const session = payload.session
     const thread_id = session?.thread_id
 
+    // Load thread owner once for ownership-based filtering. Authenticated
+    // clients only receive events for sessions whose thread they own;
+    // permission-based redaction below still guards edge cases.
+    let thread_owner_public_key = null
+    if (thread_id) {
+      try {
+        const thread_metadata = await load_thread_metadata({ thread_id })
+        thread_owner_public_key = thread_metadata?.owner_public_key || null
+      } catch (metadata_error) {
+        log(
+          `Failed to load thread metadata for ${thread_id}: ${metadata_error.message}`
+        )
+      }
+    }
+
     let sent_count = 0
 
     for (const client of wss.clients) {
@@ -57,6 +75,18 @@ const emit_session_event = async ({ event_type, payload }) => {
       // a job_id indicating in-progress thread creation). These are from
       // other machines whose thread data hasn't synced yet.
       if (session && !thread_id && !session.job_id) {
+        continue
+      }
+
+      // Ownership filter: only deliver thread-backed session events to the
+      // thread owner. If the thread metadata could not be loaded, fall back
+      // to the permission check below rather than silently dropping.
+      if (
+        session &&
+        thread_id &&
+        thread_owner_public_key &&
+        thread_owner_public_key !== client.user_public_key
+      ) {
         continue
       }
 
