@@ -61,6 +61,18 @@ if [ "$CONTAINER_MODE" = "user" ]; then
         echo "ERROR: .credentials.json not found in claude-home -- user container cannot authenticate" >&2
     fi
 
+    # Fix credential file ownership (bind mounts and credential refreshes can
+    # leave files owned by root, making them unreadable by the node user)
+    if [ "$(id -u)" = "0" ]; then
+        for cred_file in /home/node/.claude/.credentials.json /home/node/.claude-*/.credentials.json; do
+            [ -f "$cred_file" ] || continue
+            if [ "$(stat -c '%u' "$cred_file" 2>/dev/null)" != "$(id -u node)" ]; then
+                chown node:node "$cred_file"
+                echo "Fixed credential ownership: $cred_file"
+            fi
+        done
+    fi
+
     # Verify settings.json exists
     if [ ! -f "/home/node/.claude/settings.json" ]; then
         echo "WARNING: settings.json not found in claude-home -- bootstrapper may not have run" >&2
@@ -188,6 +200,18 @@ fi
 # Verify credentials exist for primary account
 if [ ! -f "/home/node/.claude/.credentials.json" ]; then
     echo "WARNING: .credentials.json not found -- primary account not authenticated. Run 'claude auth login' inside container." >&2
+fi
+
+# Fix credential file ownership (bind mounts and credential refreshes can
+# leave files owned by root, making them unreadable by the node user)
+if [ "$(id -u)" = "0" ]; then
+    for cred_file in /home/node/.claude/.credentials.json /home/node/.claude-*/.credentials.json; do
+        [ -f "$cred_file" ] || continue
+        if [ "$(stat -c '%u' "$cred_file" 2>/dev/null)" != "$(id -u node)" ]; then
+            chown node:node "$cred_file"
+            echo "Fixed credential ownership: $cred_file"
+        fi
+    done
 fi
 
 # Initialize settings.json from template if not exists

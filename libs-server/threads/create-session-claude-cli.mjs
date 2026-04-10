@@ -700,12 +700,12 @@ export const create_session_claude_cli = async ({
   })
 
   // Common spawn options
-  // - stdio: stdin/stdout ignored (CLI writes output to .claude/ directory),
-  //   stderr piped to capture error diagnostics on non-zero exit
+  // - stdio: stdin ignored, stdout/stderr piped to capture diagnostics on
+  //   non-zero exit (CLI writes primary output to .claude/ directory)
   // - detached: true ensures the process survives if the parent (base-api) is killed
   const base_spawn_options = {
     shell: false,
-    stdio: ['ignore', 'ignore', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe'],
     detached: true
   }
 
@@ -788,10 +788,21 @@ export const create_session_claude_cli = async ({
     // Spawn Claude CLI process
     const child = spawn(spawn_command, spawn_args, spawn_options)
 
-    // Collect stderr for diagnostics (capped to prevent unbounded memory use)
+    // Collect stdout/stderr for diagnostics (capped to prevent unbounded memory use)
     const MAX_STDERR_BYTES = 8192
+    const MAX_STDOUT_BYTES = 8192
     const stderr_chunks = []
     let stderr_bytes = 0
+    const stdout_chunks = []
+    let stdout_bytes = 0
+    if (child.stdout) {
+      child.stdout.on('data', (chunk) => {
+        if (stdout_bytes < MAX_STDOUT_BYTES) {
+          stdout_chunks.push(chunk)
+          stdout_bytes += chunk.length
+        }
+      })
+    }
     if (child.stderr) {
       child.stderr.on('data', (chunk) => {
         if (stderr_bytes < MAX_STDERR_BYTES) {
@@ -820,7 +831,15 @@ export const create_session_claude_cli = async ({
         .slice(0, MAX_STDERR_BYTES)
         .trim()
 
+      const stdout_output = Buffer.concat(stdout_chunks)
+        .toString('utf8')
+        .slice(0, MAX_STDOUT_BYTES)
+        .trim()
+
       log(`Process closed: exit_code=${code}, signal=${signal || 'none'}`)
+      if (stdout_output) {
+        log(`Process stdout: ${stdout_output}`)
+      }
       if (stderr_output) {
         log(`Process stderr: ${stderr_output}`)
       }
@@ -836,9 +855,12 @@ export const create_session_claude_cli = async ({
       } else {
         const signal_info = signal ? ` (signal: ${signal})` : ''
         const stderr_info = stderr_output
-          ? `: ${stderr_output.slice(0, 500)}`
+          ? `\nstderr: ${stderr_output.slice(0, 500)}`
           : ''
-        const error_message = `Claude CLI exited with code ${code}${signal_info}${stderr_info}`
+        const stdout_info = stdout_output
+          ? `\nstdout: ${stdout_output.slice(0, 500)}`
+          : ''
+        const error_message = `Claude CLI exited with code ${code}${signal_info}${stderr_info}${stdout_info}`
         log(`Error: ${error_message}`)
         guarded_reject(new Error(error_message))
       }
