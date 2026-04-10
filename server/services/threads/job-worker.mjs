@@ -1,3 +1,6 @@
+import { join } from 'path'
+import { access } from 'fs/promises'
+import { homedir } from 'os'
 import { Worker } from 'bullmq'
 import debug from 'debug'
 import { glob } from 'glob'
@@ -16,6 +19,7 @@ import {
   get_container_claude_home,
   derive_projects_dir_name
 } from '#libs-server/threads/create-session-claude-cli.mjs'
+import { get_user_container_claude_home } from '#libs-server/threads/user-container-manager.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 import {
@@ -295,13 +299,8 @@ const sync_session_fallback_by_file = async (job, source_overrides) => {
   const { session_id, working_directory, execution_mode, username } = job.data
 
   try {
-    const { join } = await import('path')
-    const { access } = await import('fs/promises')
-
     let session_file
     if (execution_mode === 'container_user' && username) {
-      const { get_user_container_claude_home } =
-        await import('./user-container-manager.mjs')
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
@@ -322,7 +321,6 @@ const sync_session_fallback_by_file = async (job, source_overrides) => {
         `${session_id}.jsonl`
       )
     } else {
-      const { homedir } = await import('os')
       const projects_dir_name = derive_projects_dir_name(working_directory)
       session_file = join(
         homedir(),
@@ -367,12 +365,8 @@ const sync_session_fallback_by_glob = async (job, source_overrides) => {
   const { working_directory, execution_mode, username } = job.data
 
   try {
-    const { join } = await import('path')
-
     let projects_dir
     if (execution_mode === 'container_user' && username) {
-      const { get_user_container_claude_home } =
-        await import('./user-container-manager.mjs')
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
@@ -391,7 +385,6 @@ const sync_session_fallback_by_glob = async (job, source_overrides) => {
         projects_dir_name
       )
     } else {
-      const { homedir } = await import('os')
       const projects_dir_name = derive_projects_dir_name(working_directory)
       projects_dir = join(homedir(), '.claude', 'projects', projects_dir_name)
     }
