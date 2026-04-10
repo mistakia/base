@@ -197,6 +197,9 @@ api.use('/api/physical-items', read_limiter, routes.physical_items)
 // Stats snapshots and time series
 api.use('/api/stats', read_limiter, routes.stats)
 
+// Location reports from mobile clients
+api.use('/api/location', write_limiter, routes.location)
+
 // Share link resolution - read-only, public-facing
 api.use('/s', read_limiter, routes.share)
 
