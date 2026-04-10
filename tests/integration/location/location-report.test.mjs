@@ -1,20 +1,23 @@
+import path from 'path'
+
 import { expect } from 'chai'
 import { request } from '#tests/utils/test-request.mjs'
-import server from '#server'
+import server, { mount_extension_routes } from '#server'
 import config from '#config'
 import {
   reset_all_tables,
   create_test_user,
   authenticate_request
 } from '#tests/utils/index.mjs'
+import { resolve_user_extension_path } from '#tests/utils/resolve-user-extension-path.mjs'
 import {
   get_stats_database_connection,
   close_stats_pool
 } from '#libs-server/stats/database.mjs'
 import {
-  ensure_locations_table,
-  reset_locations_table_initialization
-} from '#libs-server/stats/locations-table.mjs'
+  register,
+  _reset
+} from '#libs-server/extension/capability-registry.mjs'
 
 const has_stats_db = Boolean(config.stats_database?.connection_string)
 
@@ -23,12 +26,34 @@ describe('API /location', function () {
 
   let test_user
   let pool
+  let ensure_locations_table
+  let reset_locations_table_initialization
 
   before(async function () {
     if (!has_stats_db) {
       this.skip()
       return
     }
+    const extension_dir = resolve_user_extension_path('location-tracking')
+    if (!extension_dir) {
+      this.skip()
+      return
+    }
+
+    const http_route_module = await import(
+      path.join(extension_dir, 'provide', 'http-route.mjs')
+    )
+    const table_module = await import(
+      path.join(extension_dir, 'lib', 'locations-table.mjs')
+    )
+    ensure_locations_table = table_module.ensure_locations_table
+    reset_locations_table_initialization =
+      table_module.reset_locations_table_initialization
+
+    _reset()
+    register('http-route', 'location-tracking', http_route_module)
+    mount_extension_routes()
+
     await reset_all_tables()
     test_user = await create_test_user()
     pool = await get_stats_database_connection({ config })
@@ -48,6 +73,7 @@ describe('API /location', function () {
     }
     await close_stats_pool()
     await reset_all_tables()
+    _reset()
   })
 
   function make_record(overrides = {}) {
@@ -132,8 +158,9 @@ describe('API /location', function () {
     it('rejects batches larger than 500 records', async () => {
       const records = Array.from({ length: 501 }, (_, i) =>
         make_record({
-          recorded_at: new Date(Date.parse('2026-04-10T12:00:00Z') + i * 1000)
-            .toISOString(),
+          recorded_at: new Date(
+            Date.parse('2026-04-10T12:00:00Z') + i * 1000
+          ).toISOString(),
           latitude: 38.9 + i * 0.0001
         })
       )

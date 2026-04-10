@@ -50,6 +50,18 @@ export function get_all(capability_name) {
 }
 
 /**
+ * Get all provider entries (module + extension_name) for a capability.
+ *
+ * @param {string} capability_name
+ * @returns {Array<{extension_name: string, module: object}>}
+ */
+export function get_all_with_metadata(capability_name) {
+  const entries = providers.get(capability_name)
+  if (!entries) return []
+  return entries.map((e) => ({ extension_name: e.extension_name, module: e.module }))
+}
+
+/**
  * Check whether any provider is registered for a capability.
  *
  * @param {string} capability_name

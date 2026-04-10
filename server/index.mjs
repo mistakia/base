@@ -28,11 +28,13 @@ import {
   create_write_limiter,
   create_read_limiter
 } from '#server/middleware/rate-limiter.mjs'
+import { get_all_with_metadata } from '#libs-server/extension/capability-registry.mjs'
 
 const IS_DEV = process.env.NODE_ENV === 'development'
 const defaults = {}
 const options = extend(defaults, config)
 const log = debug('api')
+const extension_log = debug('api:extensions')
 const api = express()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 
@@ -197,11 +199,75 @@ api.use('/api/physical-items', read_limiter, routes.physical_items)
 // Stats snapshots and time series
 api.use('/api/stats', read_limiter, routes.stats)
 
-// Location reports from mobile clients
-api.use('/api/location', write_limiter, routes.location)
-
 // Share link resolution - read-only, public-facing
 api.use('/s', read_limiter, routes.share)
+
+// Extension routes placeholder - populated by mount_extension_routes() after
+// load_extension_providers() runs. Registered here so extension routes fall
+// between built-in routes and the error handler / SPA fallback.
+const extension_router = express.Router()
+api.use(extension_router)
+
+export function mount_extension_routes() {
+  // Reset router layers so repeated calls (e.g. in tests) are idempotent.
+  extension_router.stack = []
+
+  const entries = get_all_with_metadata('http-route')
+  if (entries.length === 0) {
+    return { mounted: 0, providers: 0 }
+  }
+
+  const limiters = {
+    auth: create_auth_limiter(),
+    search: create_search_limiter(),
+    write: create_write_limiter(),
+    read: create_read_limiter()
+  }
+
+  let mounted = 0
+  for (const { extension_name, module: provider } of entries) {
+    const route_list = Array.isArray(provider.routes) ? provider.routes : []
+    for (const descriptor of route_list) {
+      const { mount_path, rate_limit_tier, router } = descriptor || {}
+      if (typeof mount_path !== 'string' || !mount_path.startsWith('/api/')) {
+        extension_log(
+          'Extension %s route mount_path %o does not start with /api/, skipping',
+          extension_name,
+          mount_path
+        )
+        continue
+      }
+      if (!router) {
+        extension_log(
+          'Extension %s route %s missing router, skipping',
+          extension_name,
+          mount_path
+        )
+        continue
+      }
+      const tier = rate_limit_tier || 'read'
+      const limiter = limiters[tier]
+      if (!limiter) {
+        extension_log(
+          'Extension %s route %s has invalid rate_limit_tier %o, skipping',
+          extension_name,
+          mount_path,
+          rate_limit_tier
+        )
+        continue
+      }
+      extension_router.use(mount_path, limiter, router)
+      extension_log(
+        'Mounted extension route: extension=%s mount_path=%s tier=%s',
+        extension_name,
+        mount_path,
+        tier
+      )
+      mounted += 1
+    }
+  }
+  return { mounted, providers: entries.length }
+}
 
 // General error handler
 api.use((err, req, res, next) => {

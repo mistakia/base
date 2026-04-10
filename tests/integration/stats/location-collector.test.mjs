@@ -1,14 +1,12 @@
+import path from 'path'
+
 import { expect } from 'chai'
 import config from '#config'
 import {
   get_stats_database_connection,
   close_stats_pool
 } from '#libs-server/stats/database.mjs'
-import {
-  ensure_locations_table,
-  reset_locations_table_initialization
-} from '#libs-server/stats/locations-table.mjs'
-import { collect_location_metrics } from '#libs-server/stats/collector/location-collector.mjs'
+import { resolve_user_extension_path } from '#tests/utils/resolve-user-extension-path.mjs'
 
 const has_stats_db = Boolean(config.stats_database?.connection_string)
 
@@ -16,14 +14,35 @@ describe('Stats collector: location', function () {
   this.timeout(15000)
 
   const snapshot_date = '2026-04-09'
-  const test_user_key = 'collector_test_user_key_0000000000000000000000000000000000000000'
+  const test_user_key =
+    'collector_test_user_key_0000000000000000000000000000000000000000'
   let pool
+  let collect_location_metrics
+  let ensure_locations_table
+  let reset_locations_table_initialization
 
   before(async function () {
     if (!has_stats_db) {
       this.skip()
       return
     }
+    const extension_dir = resolve_user_extension_path('location-tracking')
+    if (!extension_dir) {
+      this.skip()
+      return
+    }
+
+    const collector_module = await import(
+      path.join(extension_dir, 'lib', 'location-collector.mjs')
+    )
+    const table_module = await import(
+      path.join(extension_dir, 'lib', 'locations-table.mjs')
+    )
+    collect_location_metrics = collector_module.collect_location_metrics
+    ensure_locations_table = table_module.ensure_locations_table
+    reset_locations_table_initialization =
+      table_module.reset_locations_table_initialization
+
     pool = await get_stats_database_connection({ config })
     reset_locations_table_initialization()
     await ensure_locations_table({ pool })
@@ -34,13 +53,20 @@ describe('Stats collector: location', function () {
 
   after(async function () {
     if (!has_stats_db) return
-    await pool.query(`DELETE FROM locations WHERE user_public_key = $1`, [
-      test_user_key
-    ])
+    if (pool) {
+      await pool.query(`DELETE FROM locations WHERE user_public_key = $1`, [
+        test_user_key
+      ])
+    }
     await close_stats_pool()
   })
 
-  async function insert_record({ latitude, longitude, recorded_at, metadata = {} }) {
+  async function insert_record({
+    latitude,
+    longitude,
+    recorded_at,
+    metadata = {}
+  }) {
     await pool.query(
       `INSERT INTO locations
          (user_public_key, latitude, longitude, recorded_at, source, metadata)
@@ -102,8 +128,12 @@ describe('Stats collector: location', function () {
       config,
       pool
     })
-    const distance = metrics.find((m) => m.metric_name === 'distance_traveled_km')
-    const hours = metrics.find((m) => m.metric_name === 'location_tracking_hours')
+    const distance = metrics.find(
+      (m) => m.metric_name === 'distance_traveled_km'
+    )
+    const hours = metrics.find(
+      (m) => m.metric_name === 'location_tracking_hours'
+    )
     expect(distance.metric_value).to.be.closeTo(1.11, 0.1)
     expect(hours.metric_value).to.be.closeTo(5 / 60, 0.01)
   })
@@ -145,10 +175,13 @@ describe('Stats collector: location', function () {
       pool
     })
     const report_count = metrics.find(
-      (m) => m.metric_name === 'location_report_count' &&
+      (m) =>
+        m.metric_name === 'location_report_count' &&
         Object.keys(m.dimensions).length === 0
     )
-    const distance = metrics.find((m) => m.metric_name === 'distance_traveled_km')
+    const distance = metrics.find(
+      (m) => m.metric_name === 'distance_traveled_km'
+    )
     expect(report_count.metric_value).to.equal(0)
     expect(distance.metric_value).to.equal(0)
   })

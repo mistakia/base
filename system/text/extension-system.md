@@ -202,6 +202,72 @@ Multiple extensions can provide the same capability. Registration order follows 
 @property {function({job_id: string, timestamp: string}): Promise<string|null>} notify_recovery - Optional. Send recovery notice. Returns message_id or null.
 ```
 
+### http-route Contract
+
+Extensions can mount Express routers on the core API server by providing an `http-route` capability. The provider file is `provide/http-route.mjs`.
+
+```
+@typedef {Object} HttpRouteProvider
+@property {HttpRouteDescriptor[]} routes - Required. Array of route descriptors.
+
+@typedef {Object} HttpRouteDescriptor
+@property {string} mount_path - Required. Express mount path. Must start with "/api/".
+@property {('auth'|'search'|'write'|'read')} [rate_limit_tier='read'] - Rate limit tier. Defaults to "read".
+@property {import('express').Router} router - Required. Express Router instance.
+```
+
+#### Rate Limit Tiers
+
+| Tier     | Requests per minute | Intended use                       |
+| -------- | ------------------- | ---------------------------------- |
+| `auth`   | 10                  | Login, token issuance              |
+| `search` | 30                  | Query-heavy search endpoints       |
+| `write`  | 60                  | POST, PUT, DELETE, PATCH endpoints |
+| `read`   | 1000                | GET endpoints (default)            |
+
+Rate limiter instances are created fresh per call to `mount_extension_routes()`, so extension routes have independent counters from built-in routes.
+
+#### Auth Surface
+
+Extension routes inherit the globally-mounted JWT parser middleware. When a valid JWT token is present (via `Authorization: Bearer ...` header or cookie), `req.user` is populated with `user_public_key` and decoded claims, and `req.is_authenticated` is true. Authentication is non-blocking -- routes that require authentication must check `req.user` and return 401 themselves. This matches the behavior of all built-in routes.
+
+#### Mount Order
+
+Extension routes are registered in the middleware stack after all built-in routes (`/api/users`, `/api/search`, `/api/threads`, ..., `/s`) and before the error handler and SPA fallback. The `extension_router` placeholder is installed during `server/index.mjs` module evaluation; actual route descriptors are attached by `mount_extension_routes()` after `load_extension_providers()` completes, before `server.listen()`. All extension routes are resolved before the server accepts any connections.
+
+#### Multi-Provider Behavior
+
+Multiple extensions may provide `http-route`. All providers are mounted in discovery order (user extensions before system extensions). Two providers may register the same `mount_path` -- Express mounts both routers at the same path and dispatches in registration order, so the first matching route wins per HTTP method and sub-path. No deduplication is performed. For collision avoidance, extension authors should use distinct mount paths. The `debug('api:extensions')` namespace logs every mounted descriptor including extension name, mount path, and rate limit tier.
+
+Descriptors whose `mount_path` does not start with `/api/` are skipped with a debug warning to avoid colliding with SPA routes and static file serving.
+
+#### Example Provider
+
+```javascript
+// extension/my-feature/provide/http-route.mjs
+import express from 'express'
+
+const router = express.Router()
+
+router.get('/status', (req, res) => {
+  res.json({ ok: true, user: req.user?.user_public_key || null })
+})
+
+router.post('/record', (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'unauthorized' })
+  // handle write
+  res.json({ accepted: true })
+})
+
+export const routes = [
+  {
+    mount_path: '/api/my-feature',
+    rate_limit_tier: 'write',
+    router
+  }
+]
+```
+
 ### Example: Extension with Capability Provider
 
 ```

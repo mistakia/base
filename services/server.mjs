@@ -2,7 +2,7 @@ import '../polyfills/node25-slow-buffer.cjs'
 import debug from 'debug'
 import path from 'path'
 
-import server from '#server/index.mjs'
+import server, { mount_extension_routes } from '#server/index.mjs'
 import config from '#config'
 import {
   start_thread_watcher,
@@ -123,6 +123,15 @@ try {
   )
 } catch (error) {
   logger(`Failed to load extension providers: ${error.message}`)
+}
+
+try {
+  const result = mount_extension_routes()
+  logger(
+    `Extension routes mounted (${result.mounted} routes from ${result.providers} providers)`
+  )
+} catch (error) {
+  logger(`Failed to mount extension routes: ${error.message}`)
 }
 
 try {
