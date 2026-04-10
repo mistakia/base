@@ -470,7 +470,8 @@ export const update_existing_thread = async (
       thread_id,
       thread_dir,
       raw_session_data,
-      user_base_directory = get_user_base_directory()
+      user_base_directory = get_user_base_directory(),
+      source_overrides = null
     } = options
 
     log_debug(
@@ -501,7 +502,8 @@ export const update_existing_thread = async (
     // Update thread metadata
     const metadata_changed = await update_thread_metadata(
       thread_dir,
-      normalized_session
+      normalized_session,
+      { source_overrides }
     )
 
     // Build/update timeline with merge support
@@ -564,7 +566,11 @@ function build_source_from_existing(existing_metadata, normalized_session) {
   }
 }
 
-const update_thread_metadata = async (thread_dir, normalized_session) => {
+const update_thread_metadata = async (
+  thread_dir,
+  normalized_session,
+  { source_overrides = null } = {}
+) => {
   try {
     const metadata_path = path.join(thread_dir, 'metadata.json')
 
@@ -572,6 +578,25 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
     const existing_metadata = JSON.parse(
       await fs.readFile(metadata_path, 'utf-8')
     )
+
+    // Never downgrade a container_user thread. Once the container-aware
+    // import path has stamped a thread with execution_mode='container_user',
+    // no subsequent import may rewrite those fields, even if the new import
+    // supplies its own source_overrides (e.g. sync_session_fallback running
+    // from the owner's process with execution_mode='host').
+    const existing_execution_mode =
+      existing_metadata.source?.execution_mode || null
+    const effective_source_overrides =
+      existing_execution_mode === 'container_user' ? null : source_overrides
+    if (
+      existing_execution_mode === 'container_user' &&
+      source_overrides &&
+      source_overrides.execution_mode !== 'container_user'
+    ) {
+      log(
+        `Refusing to overwrite container_user attribution on ${thread_dir} (incoming execution_mode=${source_overrides.execution_mode})`
+      )
+    }
 
     // Calculate updated counts from normalized session
     const counts = calculate_session_counts(normalized_session.messages || [])
@@ -591,7 +616,12 @@ const update_thread_metadata = async (thread_dir, normalized_session) => {
         provider_metadata: {
           ...normalized_session.metadata,
           plan_slug: normalized_session.metadata?.plan_slug || null
-        }
+        },
+        // Apply source overrides last so explicit container attribution
+        // from the calling import path wins, but fall back to existing
+        // values when no overrides are supplied. Overrides are suppressed
+        // when they would downgrade a container_user thread.
+        ...(effective_source_overrides || {})
       },
       // Add detailed counts for Claude sessions
       ...(normalized_session.session_provider === 'claude' && {

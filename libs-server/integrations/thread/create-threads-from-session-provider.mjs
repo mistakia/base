@@ -7,6 +7,8 @@
  */
 
 import debug from 'debug'
+import fs from 'fs/promises'
+import path from 'path'
 
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import config from '#config'
@@ -30,6 +32,40 @@ const log = debug('integrations:thread:create-from-session-provider')
 const log_debug = debug(
   'integrations:thread:create-from-session-provider:debug'
 )
+
+/**
+ * Look up the most recent metadata.json for a thread from git HEAD, used as a
+ * fallback when the on-disk file is briefly missing (e.g. mid-write, stash
+ * race in sync-all.sh). Returns null on any failure.
+ */
+const read_previous_metadata_from_git = async (thread_dir) => {
+  try {
+    const { spawn } = await import('child_process')
+    const thread_submodule_dir = path.dirname(thread_dir)
+    const relative = path.basename(thread_dir) + '/metadata.json'
+    return await new Promise((resolve) => {
+      const proc = spawn('git', ['show', `HEAD:${relative}`], {
+        cwd: thread_submodule_dir,
+        stdio: ['ignore', 'pipe', 'ignore']
+      })
+      let out = ''
+      proc.stdout.on('data', (chunk) => {
+        out += chunk
+      })
+      proc.on('close', (code) => {
+        if (code !== 0) return resolve(null)
+        try {
+          resolve(JSON.parse(out))
+        } catch {
+          resolve(null)
+        }
+      })
+      proc.on('error', () => resolve(null))
+    })
+  } catch {
+    return null
+  }
+}
 
 /**
  * Calculate success rate for thread operations
@@ -275,7 +311,8 @@ const process_single_session = async ({
         session_provider,
         thread_id,
         thread_dir,
-        session_id
+        session_id,
+        source_overrides
       })
     } else {
       return {
@@ -286,6 +323,37 @@ const process_single_session = async ({
           reason: 'thread_already_exists'
         }
       }
+    }
+  }
+
+  // Race guard: thread_dir physically exists but metadata.json is (briefly)
+  // missing -- e.g. a concurrent writer is rewriting metadata.json or a
+  // safety stash in sync-all.sh captured it mid-window. Creating a fresh
+  // thread here would clobber existing attribution. Skip and let the next
+  // import cycle handle it once the file is back.
+  try {
+    const stats = await fs.stat(thread_dir)
+    if (stats.isDirectory()) {
+      const previous_metadata = await read_previous_metadata_from_git(
+        thread_dir
+      )
+      if (previous_metadata?.source?.execution_mode === 'container_user') {
+        log(
+          `Thread dir ${thread_dir} exists without metadata.json but prior git state shows container_user attribution; refusing to recreate`
+        )
+        return {
+          status: 'skipped',
+          data: {
+            session_id,
+            thread_id,
+            reason: 'thread_dir_exists_metadata_missing'
+          }
+        }
+      }
+    }
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error
     }
   }
 
@@ -362,7 +430,8 @@ const update_existing_session_thread = async ({
   session_provider,
   thread_id,
   thread_dir,
-  session_id
+  session_id,
+  source_overrides = null
 }) => {
   // Normalize session just-in-time
   let normalized_session = session_provider.normalize_session(raw_session)
@@ -371,7 +440,8 @@ const update_existing_session_thread = async ({
   const update_result = await update_existing_thread(normalized_session, {
     thread_id,
     thread_dir,
-    raw_session_data: raw_session
+    raw_session_data: raw_session,
+    source_overrides
   })
 
   // Release large objects to help GC
