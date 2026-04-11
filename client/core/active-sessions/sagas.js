@@ -97,6 +97,24 @@ export function* reconnect_recovery() {
 }
 
 //= ====================================
+//  PERIODIC POLLING
+//= ====================================
+
+// Poll active sessions every 60 seconds to catch missed WebSocket events.
+// The GET_ACTIVE_SESSIONS_FULFILLED reducer already drops stale sessions
+// not returned by the API, so this acts as a self-healing fallback.
+const POLL_INTERVAL_MS = 60 * 1000
+
+export function* poll_active_sessions() {
+  while (true) {
+    yield delay(POLL_INTERVAL_MS)
+    yield put({
+      type: active_sessions_action_types.LOAD_ACTIVE_SESSIONS
+    })
+  }
+}
+
+//= ====================================
 //  WATCHERS
 //= ====================================
 
@@ -125,5 +143,6 @@ export function* watch_websocket_reconnected() {
 export const active_sessions_sagas = [
   fork(watch_load_active_sessions),
   fork(watch_session_ended),
-  fork(watch_websocket_reconnected)
+  fork(watch_websocket_reconnected),
+  fork(poll_active_sessions)
 ]
