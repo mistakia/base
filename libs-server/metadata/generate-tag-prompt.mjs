@@ -11,11 +11,108 @@ const log = debug('metadata:tag-prompt')
 
 // Bump this when the prompt template or analysis logic changes.
 // Threads analyzed with an older version become re-eligible for analysis.
-const PROMPT_VERSION = 2
+// v3 (2026-04-11): add RANKING_RULES + BOUNDARY_EXEMPLARS, switch output to
+// the {primary, secondary, rationale} structured shape.
+const PROMPT_VERSION = 3
 
 const TAG_CONSTRAINTS = {
   MAX_TAGS: 3
 }
+
+// Primary-vs-secondary ranking rules. These exist because model survey
+// (gemma4:26b, devstral-small-2:24b, qwen3.5moe, nemotron-3-super:120b at
+// 2026-04-11) found 100% retrieval but a ~67% ceiling on primary selection:
+// the correct tag was in the top 3 in every miss, but models ranked an
+// activity or domain tag ahead of the system/project tag where the work
+// actually landed. These heuristics are pulled directly from the miss set.
+const RANKING_RULES = `## Primary vs Secondary
+
+The \`primary\` tag is where the actual work output lands or where the change
+is persisted, not the domain the content is about. The \`secondary\` tags are
+supporting categories (activity type, domain, cross-cutting concerns).
+
+Apply these ranking heuristics in order:
+
+1. If the thread references a data system, project, or tool (parcels,
+   finance, league, record, homelab, base) as the thing being modified,
+   that system tag is primary. The activity tag (search, calibration,
+   refactor, audit, debug) is secondary. Example: a thread about
+   calibrating a land-search scoring model with parcel geometry data has
+   \`parcels-system\` as primary and \`land-search\` as secondary, because
+   the scoring change ships inside the parcels system.
+
+2. If a thread spans multiple projects, the project whose repository,
+   entity, or file receives the commit, edit, or new file is primary.
+   The other projects are secondary. Example: a thread about writing
+   a league-xo-football analysis script that lives under the base
+   \`cli/\` directory has \`base-project\` as primary and
+   \`league-xo-football\` as secondary, because the file lands in base.
+
+3. If no system/project anchors the work (pure research, pure planning,
+   general refactor with no project home), pick the closest domain tag
+   as primary and omit secondary, or return an empty secondary list.`
+
+// Synthesized boundary exemplars. Each is a tight before/after showing the
+// correct primary on a boundary pair that all four surveyed models got wrong.
+// Content is synthesized, NOT copied from benchmark cases, to avoid test-set
+// leakage. These exemplars target the five miss clusters identified during
+// the 2026-04-11 model survey.
+const BOUNDARY_EXEMPLARS = `## Worked Examples (Boundary Disambiguation)
+
+Example A -- parcels-system vs land-search
+Input: "Recalibrate the parcel scoring heuristic to weight slope under 8%
+more heavily. Update the parcels DB materialized view and re-rank the top
+100 candidates."
+Output:
+{
+  "primary": "user:tag/parcels-system.md",
+  "secondary": ["user:tag/land-search.md"],
+  "rationale": "The scoring change ships inside the parcels system (DB view + rerank); land-search is the downstream activity consuming it."
+}
+
+Example B -- record-project vs homelab
+Input: "Recover the TM2030 tracks from the failing NAS spindle; rebuild
+the rekordbox library index and cross-check against the record-project
+master catalog."
+Output:
+{
+  "primary": "user:tag/record-project.md",
+  "secondary": ["user:tag/homelab.md"],
+  "rationale": "Work persists in the record catalog; NAS recovery is the incidental homelab operation enabling it."
+}
+
+Example C -- base-project vs league-xo-football
+Input: "Add a cli/league/build-week-snapshot.mjs script under base that
+queries the xo.football API and writes weekly snapshot JSON to
+data/league/snapshots/. Used by league downstream."
+Output:
+{
+  "primary": "user:tag/base-project.md",
+  "secondary": ["user:tag/league-xo-football.md"],
+  "rationale": "The new file lives in the base repo cli/ tree; league-xo-football is the downstream consumer of the snapshot output."
+}
+
+Example D -- home-design-and-management vs food / personal-information
+Input: "Research and document countertop material choices (quartz vs
+soapstone vs butcher block) for the kitchen renovation; capture maintenance
+and food-safety tradeoffs."
+Output:
+{
+  "primary": "user:tag/home-design-and-management.md",
+  "secondary": ["user:tag/food.md"],
+  "rationale": "The decision artifact is a home-renovation material choice; food-safety is one evaluation axis, not the subject of the work."
+}
+
+Example E -- nano-cryptocurrency vs crypto-management / software-task
+Input: "Fix the Nano RPC import bug in the wallet-sync script that drops
+transactions whose amount underflows the raw-to-Nano conversion at
+decimals > 6."
+Output:
+{
+  "primary": "user:tag/nano-cryptocurrency.md",
+  "secondary": ["user:tag/software-task.md"],
+  "rationale": "The bug is inside Nano-specific RPC logic; the generic software-task nature is the activity type, not the subject."
+}`
 
 // Ollama `format` schema for structured tag classification output.
 // `secondary` has no minItems so edge-case inputs can produce an empty list
@@ -149,7 +246,7 @@ export function generate_tag_analysis_prompt({
     .filter(Boolean)
     .join('\n')
 
-  return `Analyze this session and assign appropriate tags from the available taxonomy.
+  return `Classify this thread against the tag taxonomy below. Pick one primary tag and up to two secondary tags.
 
 ## Thread Information
 ${thread_context ? thread_context + '\n' : ''}
@@ -162,26 +259,28 @@ ${user_message}
 
 ${formatted_tags}
 
+${RANKING_RULES}
+
+${BOUNDARY_EXEMPLARS}
+
 ## Instructions
 
-1. Analyze the thread content to understand what work is being done
-2. Select 0-${TAG_CONSTRAINTS.MAX_TAGS} tags that accurately categorize this thread
-3. Only assign tags you are confident about -- when in doubt, omit
-4. Consider:
-   - What project or domain does this relate to?
-   - What type of work is being done?
-   - Check each tag's Scope and Decision Rule sections for guidance on boundaries between similar tags
+1. Read the thread content and identify the work output -- what file, entity, repository, or system receives the change.
+2. Pick the one tag whose scope best owns that work output. That is the primary.
+3. Pick up to ${TAG_CONSTRAINTS.MAX_TAGS - 1} secondary tags for supporting categories (activity type, cross-cutting domain, downstream consumer). Omit secondary entirely if nothing else clearly applies.
+4. Apply the ranking heuristics above when two tags compete for primary.
+5. Check each tag's Scope and Decision Rule sections before assigning.
+6. Only assign tags you are confident about. When in doubt about a secondary, omit it.
 
 ## Response Format
 
-Return a JSON object with:
-- "tags": Array of base_uri strings for selected tags (empty array if no tags match)
-- "reasoning": Brief explanation of why each tag was selected
+Return a single JSON object:
 
 \`\`\`json
 {
-  "tags": ["user:tag/example-tag.md"],
-  "reasoning": "Brief explanation"
+  "primary": "user:tag/example-tag.md",
+  "secondary": ["user:tag/another-tag.md"],
+  "rationale": "Under 200 chars. Name the work output and which tag owns it."
 }
 \`\`\``
 }
