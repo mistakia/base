@@ -275,4 +275,13 @@ if (process.env.SERVER_HOST) {
   config.server_host = process.env.SERVER_HOST
 }
 
+// User public key fallback from environment variable.
+// In user containers, config/ is not mounted (NEVER_MOUNT_DIRS) so the
+// user-base overlay never loads. The compose generator sets USER_PUBLIC_KEY
+// in the container environment; use it when the config value is empty.
+if (!config.user_public_key && process.env.USER_PUBLIC_KEY) {
+  config.user_public_key = process.env.USER_PUBLIC_KEY
+  log('Set user_public_key from USER_PUBLIC_KEY environment variable')
+}
+
 export default config

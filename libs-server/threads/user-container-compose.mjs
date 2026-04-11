@@ -1,4 +1,5 @@
 import { join } from 'path'
+import { existsSync } from 'fs'
 import { mkdir, writeFile } from 'fs/promises'
 import debug from 'debug'
 import YAML from 'yaml'
@@ -103,6 +104,15 @@ export const generate_compose_config = async ({
   const resource_limits = user_containers_config.resource_limits || {}
   const memory = resource_limits.memory || '2g'
   const cpus = resource_limits.cpus || '1.0'
+
+  // Mount CLAUDE.md read-only so Claude Code loads project instructions.
+  // Single-file bind mount; silently skipped if the file doesn't exist.
+  const claude_md_host = join(user_base_directory, 'CLAUDE.md')
+  if (existsSync(claude_md_host)) {
+    volume_mounts.push(
+      `${claude_md_host}:${container_user_base_path}/CLAUDE.md:ro`
+    )
+  }
 
   // Mount the base submodule read-only so entrypoint.sh can find cli/base.mjs
   // and system guidelines/workflows. The node_modules named volume overlays
