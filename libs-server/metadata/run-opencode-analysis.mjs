@@ -11,7 +11,7 @@ const log = debug('metadata:opencode')
 const DEFAULT_MODEL = config.opencode?.default_model || 'ollama/qwen2.5:72b'
 const TIMEOUT_MS = config.opencode?.timeout_ms || 120000
 const OLLAMA_NUM_CTX = config.ollama?.num_ctx || 16384
-const OLLAMA_KEEP_ALIVE = config.ollama?.keep_alive || '1m'
+const OLLAMA_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE || config.ollama?.keep_alive || '1m'
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL ||
   config.ollama?.base_url ||
@@ -71,6 +71,7 @@ async function call_ollama_direct({
         model: model_name,
         prompt,
         stream: false,
+        think: false,
         options: { num_ctx: OLLAMA_NUM_CTX },
         keep_alive: OLLAMA_KEEP_ALIVE,
         ...(format && { format })
