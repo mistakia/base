@@ -124,10 +124,24 @@ export const generate_compose_config = async ({
   const node_modules_target = `${container_user_base_path}/repository/active/base/node_modules`
   volume_mounts.push(`base-node-modules:${node_modules_target}`)
 
+  // Check for per-user Dockerfile override
+  const user_dockerfile = join(user_base_directory, 'config/container', username, 'Dockerfile')
+  const has_user_dockerfile = existsSync(user_dockerfile)
+  if (has_user_dockerfile) {
+    log(`Using per-user Dockerfile for ${username}: ${user_dockerfile}`)
+  }
+
   // Build compose service definition
   const service = {
     container_name,
-    image: 'base-container:latest',
+    ...(has_user_dockerfile
+      ? {
+          build: {
+            context: join(user_base_directory, 'repository/active/base/config/base-container'),
+            dockerfile: user_dockerfile
+          }
+        }
+      : { image: 'base-container:latest' }),
     restart: 'unless-stopped',
     init: true,
     environment,
