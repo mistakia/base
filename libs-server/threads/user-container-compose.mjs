@@ -104,9 +104,13 @@ export const generate_compose_config = async ({
   const memory = resource_limits.memory || '2g'
   const cpus = resource_limits.cpus || '1.0'
 
-  // Add base-node-modules named volume so the container gets Linux-native
-  // binaries (same volume the admin container uses). Without this, the
-  // entrypoint cannot find node_modules/.bin and base CLI is unavailable.
+  // Mount the base submodule read-only so entrypoint.sh can find cli/base.mjs
+  // and system guidelines/workflows. The node_modules named volume overlays
+  // the submodule's node_modules directory with Linux-native binaries.
+  const base_submodule_host = join(user_base_directory, 'repository/active/base')
+  const base_submodule_target = `${container_user_base_path}/repository/active/base`
+  volume_mounts.push(`${base_submodule_host}:${base_submodule_target}:ro`)
+
   const node_modules_target = `${container_user_base_path}/repository/active/base/node_modules`
   volume_mounts.push(`base-node-modules:${node_modules_target}`)
 
