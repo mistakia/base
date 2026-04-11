@@ -1,0 +1,49 @@
+@import '@styles/variables'
+
+.toggle
+  display: inline-flex
+  align-items: center
+  gap: $space_sm
+  cursor: pointer
+  user-select: none
+
+.toggle__input
+  position: absolute
+  opacity: 0
+  pointer-events: none
+
+.toggle__track
+  position: relative
+  width: 24px
+  height: 14px
+  border: 1px solid $color_border
+  border-radius: 0
+  background: $color_surface_secondary
+  transition: background $transition_fast, border-color $transition_fast
+  flex-shrink: 0
+
+.toggle__thumb
+  position: absolute
+  top: 1px
+  left: 1px
+  width: 10px
+  height: 10px
+  border-radius: 0
+  background: $color_text_secondary
+  transition: transform $transition_fast, background $transition_fast
+
+.toggle--checked
+  .toggle__track
+    background: $color_text
+    border-color: $color_text
+
+  .toggle__thumb
+    background: $color_white
+    transform: translateX(10px)
+
+.toggle__input:focus-visible ~ .toggle__track
+  box-shadow: $shadow_focus_subtle
+
+.toggle__label
+  font-size: $font_size_sm
+  font-family: $font_family_mono

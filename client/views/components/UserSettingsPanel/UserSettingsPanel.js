@@ -1,6 +1,7 @@
 import React from 'react'
 import PropTypes from 'prop-types'
 
+import Toggle from '@components/primitives/Toggle/Toggle'
 import { format_public_key } from '@views/utils/format-public-key'
 
 import './UserSettingsPanel.styl'
@@ -14,10 +15,10 @@ const UserSettingsPanel = ({
   current_user,
   user_public_key
 }) => {
-  const handle_notification_toggle = () => {
+  const handle_set_notification_sound = (next_value) => {
     set_user_preference({
       key: 'notification_sound_enabled',
-      value: !notification_sound_enabled
+      value: next_value
     })
   }
 
@@ -39,11 +40,11 @@ const UserSettingsPanel = ({
       <div className={container_class}>
         <div className='user-settings-panel__panel'>
           <div className='user-settings-panel__header'>
-            <span className='user-settings-panel__title'>Settings</span>
+            <span className='user-settings-panel__title'>SETTINGS</span>
             <button
               className='user-settings-panel__close'
               onClick={close_user_settings}>
-              &times;
+              [x]
             </button>
           </div>
 
@@ -52,14 +53,14 @@ const UserSettingsPanel = ({
               <div className='user-settings-panel__section-title'>
                 Notifications
               </div>
-              <label className='user-settings-panel__row'>
-                <input
-                  type='checkbox'
+              <div className='user-settings-panel__row'>
+                <Toggle
                   checked={notification_sound_enabled}
-                  onChange={handle_notification_toggle}
+                  on_change={handle_set_notification_sound}
+                  label='Play sound when a session finishes working'
+                  id='notification-sound-toggle'
                 />
-                <span>Play sound when a session finishes working</span>
-              </label>
+              </div>
             </div>
 
             <div className='user-settings-panel__section'>

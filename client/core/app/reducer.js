@@ -40,7 +40,8 @@ export function app_reducer(state = initial_state(), { payload, type }) {
         session_error: null
       })
 
-    case app_actions.POST_USER_SESSION_FULFILLED:
+    case app_actions.POST_USER_SESSION_FULFILLED: {
+      const existing_preferences = state.get('user_preferences')
       return state.merge({
         is_establishing_session: false,
         user_token: payload.data.token,
@@ -51,10 +52,14 @@ export function app_reducer(state = initial_state(), { payload, type }) {
             }
           : null,
         user_permissions: payload.data.permissions || null,
-        user_preferences: payload.data.preferences || null,
+        user_preferences:
+          existing_preferences !== null
+            ? existing_preferences
+            : payload.data.preferences || null,
         config: payload.data.config || null,
         session_error: null
       })
+    }
 
     case app_actions.POST_USER_SESSION_FAILED:
       return state.merge({

@@ -45,6 +45,7 @@ $settings_panel_width = 360px
   border-left: 1px solid $color_border_light
   display: flex
   flex-direction: column
+  font-family: $font_family_mono
 
   @media (max-width: 768px)
     border-left: none
@@ -57,24 +58,21 @@ $settings_panel_width = 360px
   justify-content: space-between
   padding: $space_sm $space_base
   border-bottom: 1px solid $color_border_light
-  min-height: 44px
 
 .user-settings-panel__title
-  font-size: $font_size_sm
+  font-size: $font_size_xs
   font-weight: $font_weight_semibold
-  color: $color_text
+  color: $color_text_secondary
+  letter-spacing: 0.5px
 
 .user-settings-panel__close
   flex-shrink: 0
   background: none
   border: none
   cursor: pointer
-  width: 28px
-  height: 28px
-  display: flex
-  align-items: center
-  justify-content: center
-  font-size: 18px
+  padding: 0
+  font-family: $font_family_mono
+  font-size: $font_size_xs
   color: $color_text_tertiary
   transition: color $transition_fast
 
@@ -97,7 +95,7 @@ $settings_panel_width = 360px
   font-weight: $font_weight_semibold
   color: $color_text_secondary
   text-transform: uppercase
-  letter-spacing: 0.04em
+  letter-spacing: 0.5px
   margin-bottom: $space_sm
 
 .user-settings-panel__row
@@ -107,12 +105,6 @@ $settings_panel_width = 360px
   padding: $space_xs 0
   font-size: $font_size_sm
   color: $color_text
-
-  input[type="checkbox"]
-    cursor: pointer
-
-  label&
-    cursor: pointer
 
 .user-settings-panel__label
   color: $color_text_secondary
@@ -128,12 +120,14 @@ $settings_panel_width = 360px
 .user-settings-panel__sign-out
   background: none
   border: 1px solid $color_border
-  border-radius: $radius_base
+  border-radius: 0
   padding: $space_xs $space_base
   font-size: $font_size_sm
   font-family: $font_family_mono
   color: $color_text_secondary
   cursor: pointer
+  text-transform: uppercase
+  letter-spacing: 0.5px
   transition: color $transition_fast, border-color $transition_fast
 
   &:hover

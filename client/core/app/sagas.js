@@ -89,13 +89,18 @@ function* handle_post_user_session_fulfilled({ payload }) {
 
 function* update_user_preference({ payload }) {
   const { key, value } = payload
+  const app = yield select(get_app)
+  const token = app.get('user_token')
+  const options = api.put_user_preferences({ preferences: { [key]: value } })
   try {
-    yield call(
-      dispatch_fetch,
-      api.put_user_preferences({
-        preferences: { [key]: value }
-      })
-    )
+    yield call(dispatch_fetch, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...options.headers,
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
   } catch (err) {
     console.warn('Failed to update preference:', err.message)
   }
@@ -104,7 +109,16 @@ function* update_user_preference({ payload }) {
 export function* clear_auth() {
   // Clear server-side cookie before clearing local storage
   try {
-    yield call(dispatch_fetch, api.delete_user_session())
+    const app = yield select(get_app)
+    const token = app.get('user_token')
+    const options = api.delete_user_session()
+    yield call(dispatch_fetch, {
+      ...options,
+      credentials: 'include',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {})
+      }
+    })
   } catch (err) {
     console.warn('Failed to clear server session:', err.message)
   }
