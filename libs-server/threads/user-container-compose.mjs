@@ -140,7 +140,10 @@ export const generate_compose_config = async ({
       [container_name]: service
     },
     volumes: {
-      'base-node-modules': { external: true }
+      'base-node-modules': {
+        name: 'base-container_base-node-modules',
+        external: true
+      }
     }
   }
 
