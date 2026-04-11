@@ -604,6 +604,11 @@ const main = async () => {
               describe: 'Import sessions from date (YYYY-MM-DD)',
               type: 'string'
             })
+            .option('from-days', {
+              describe:
+                'Import sessions from N days ago (alternative to --from-date, avoids shell substitution)',
+              type: 'number'
+            })
             .option('to-date', {
               describe: 'Import sessions to date (YYYY-MM-DD)',
               type: 'string'
@@ -634,6 +639,19 @@ const main = async () => {
               default: false
             })
             .check((argv) => {
+              if (argv.fromDate && argv.fromDays !== undefined) {
+                throw new Error(
+                  '--from-date and --from-days are mutually exclusive'
+                )
+              }
+
+              // Compute fromDate from fromDays if provided
+              if (argv.fromDays !== undefined) {
+                const d = new Date()
+                d.setDate(d.getDate() - argv.fromDays)
+                argv.fromDate = d.toISOString().slice(0, 10)
+              }
+
               // Validate date format if provided
               if (argv.fromDate) {
                 const date = new Date(argv.fromDate)
