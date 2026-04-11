@@ -126,14 +126,16 @@ export function active_sessions_reducer(
         matched_pending
       })
 
-      // Seq gate: if we already have this session at a higher event_seq,
-      // discard this STARTED (an out-of-order late STARTED arriving after
-      // a newer UPDATE would otherwise overwrite fields).
+      // Seq gate: if we already have this session at a higher-or-equal
+      // event_seq, discard this STARTED (an out-of-order late STARTED
+      // arriving after a newer UPDATE would otherwise overwrite fields).
+      // Only gates when the stored record has a positive seq, so sessions
+      // tracked before the seq field existed still accept a STARTED.
       const existing_for_seq = state.getIn(['sessions', session.session_id])
       if (existing_for_seq) {
         const existing_seq = existing_for_seq.get('event_seq') || 0
         const incoming_seq = session.event_seq || 0
-        if (existing_seq >= incoming_seq) {
+        if (existing_seq > 0 && existing_seq >= incoming_seq) {
           return state
         }
       }
@@ -179,14 +181,16 @@ export function active_sessions_reducer(
 
       // Seq gate: discard out-of-order UPDATED events that would regress
       // state. Compares against the currently stored session in either
-      // the active sessions map or the ended_sessions map.
+      // the active sessions map or the ended_sessions map. An incoming
+      // event without event_seq (coerced to 0) is treated as stale
+      // against any stored positive seq, mirroring the STARTED gate.
       const stored_active = state.getIn(['sessions', session.session_id])
       const stored_ended = state.getIn(['ended_sessions', session.session_id])
       const stored = stored_active || stored_ended
       if (stored) {
         const stored_seq = stored.get('event_seq') || 0
         const incoming_seq = session.event_seq || 0
-        if (incoming_seq && incoming_seq <= stored_seq) {
+        if (stored_seq > 0 && incoming_seq <= stored_seq) {
           return state
         }
       }

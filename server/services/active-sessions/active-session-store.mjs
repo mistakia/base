@@ -102,7 +102,12 @@ const TOMBSTONE_TTL_SECONDS = 10
  * @param {string} params.session_id - Claude session ID
  * @param {string} params.working_directory - Working directory for the session
  * @param {string} params.transcript_path - Path to Claude transcript file
- * @returns {Promise<Object>} Registered session record
+ * @param {string} [params.job_id] - BullMQ job ID for client correlation
+ * @param {boolean} [params.resume=false] - When true, clears any deletion
+ *   tombstone and re-registers (Claude Code SessionStart source=resume).
+ *   When false (default) and a tombstone exists, registration is refused.
+ * @returns {Promise<Object|null>} Registered session record, or null when
+ *   a tombstone blocks re-registration (non-resume caller).
  */
 export const register_active_session = async ({
   session_id,
