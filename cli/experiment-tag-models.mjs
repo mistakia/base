@@ -31,7 +31,8 @@ import {
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
-  parse_tag_analysis_response
+  parse_tag_analysis_response,
+  TAG_OUTPUT_SCHEMA
 } from '#libs-server/metadata/generate-tag-prompt.mjs'
 import {
   extract_first_user_message,
@@ -308,7 +309,11 @@ async function run_benchmark() {
     // Run each model on this case
     for (const model of models) {
       try {
-        const model_result = await run_model_prompt({ prompt, model })
+        const model_result = await run_model_prompt({
+          prompt,
+          model,
+          format: TAG_OUTPUT_SCHEMA
+        })
         const response_text = extract_model_response(model_result.output)
         const parse_result = parse_tag_analysis_response(
           response_text,
