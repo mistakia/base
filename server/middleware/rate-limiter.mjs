@@ -33,7 +33,7 @@ export function create_auth_limiter() {
     max: 10, // 10 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => IS_TEST,
+    skip: (req) => IS_TEST || req.user,
     message: {
       error: 'Too many authentication requests',
       message: 'Please try again after a minute'
@@ -52,7 +52,7 @@ export function create_write_limiter() {
     max: 60, // 60 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => IS_TEST,
+    skip: (req) => IS_TEST || req.user,
     message: {
       error: 'Too many write requests',
       message: 'Please slow down your requests'
@@ -72,7 +72,7 @@ export function create_read_limiter() {
     max: 1000, // 1000 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => IS_TEST,
+    skip: (req) => IS_TEST || req.user,
     message: {
       error: 'Too many read requests',
       message: 'Please slow down your requests'
@@ -92,7 +92,7 @@ export function create_search_limiter() {
     max: 30, // 30 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: () => IS_TEST,
+    skip: (req) => IS_TEST || req.user,
     message: {
       error: 'Too many search requests',
       message: 'Please slow down your search queries'
