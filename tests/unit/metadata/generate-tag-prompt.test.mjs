@@ -16,9 +16,8 @@ describe('generate-tag-prompt', () => {
       expect(TAG_CONSTRAINTS.MAX_TAGS).to.be.greaterThan(0)
     })
 
-    it('should have MIN_CONFIDENCE defined', () => {
-      expect(TAG_CONSTRAINTS.MIN_CONFIDENCE).to.be.a('number')
-      expect(TAG_CONSTRAINTS.MIN_CONFIDENCE).to.be.within(0, 1)
+    it('should not have MIN_CONFIDENCE (removed -- replaced with plain-language selectivity in prompt)', () => {
+      expect(TAG_CONSTRAINTS.MIN_CONFIDENCE).to.be.undefined
     })
   })
 

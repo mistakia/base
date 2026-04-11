@@ -121,6 +121,10 @@
       "default": { "max_concurrent": 10 }
     }
   },
+  "metadata_queue": {
+    "queue_file_path": "/tmp/claude-pending-metadata-analysis.queue",
+    "processed_file_path": "/tmp/claude-metadata-processed.log"
+  },
   "job_tracker": {
     "enabled": false,
     "path": "",

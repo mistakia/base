@@ -88,41 +88,51 @@ async function run_backfill() {
   }
   console.log('')
 
-  // List threads that need tag analysis
+  // List threads that need tag analysis using pagination
   log('Fetching threads...')
 
-  // Get a larger set initially to filter (2x to account for skipped threads)
-  const all_threads = await list_threads({
-    thread_state,
-    created_since,
-    limit: limit * 2
-  })
+  const PAGE_SIZE = 100
+  const threads = []
+  let offset = 0
+  let exhausted = false
 
-  log(`Found ${all_threads.length} total threads`)
+  while (threads.length < limit && !exhausted) {
+    const page = await list_threads({
+      thread_state,
+      created_since,
+      limit: PAGE_SIZE,
+      offset
+    })
 
-  // Filter to threads needing tag analysis
-  const threads_to_process = all_threads.filter((thread) => {
-    // Skip if user set tags manually
-    if (thread.tags_user_set === true) {
-      return false
+    if (page.length === 0) {
+      exhausted = true
+      break
     }
 
-    // Skip if already analyzed (unless force)
-    if (!force && thread.tags_analyzed_at) {
-      return false
+    for (const thread of page) {
+      if (threads.length >= limit) break
+
+      // Skip if user set tags manually
+      if (thread.tags_user_set === true) continue
+
+      // Skip if already analyzed (unless force)
+      if (!force && thread.tags_analyzed_at) continue
+
+      threads.push(thread)
     }
 
-    return true
-  })
+    offset += page.length
 
-  // Apply limit
-  const threads = threads_to_process.slice(0, limit)
+    if (page.length < PAGE_SIZE) {
+      exhausted = true
+    }
+  }
+
+  log(`Scanned ${offset} threads, found ${threads.length} needing analysis`)
 
   console.log(`Threads to process: ${threads.length}`)
-  if (threads_to_process.length > limit) {
-    console.log(
-      `(${threads_to_process.length - limit} additional threads available)`
-    )
+  if (!exhausted) {
+    console.log(`(more unanalyzed threads may exist beyond scanned range)`)
   }
   console.log('')
 

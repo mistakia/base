@@ -1,3 +1,4 @@
+import path from 'path'
 import debug from 'debug'
 
 import {
@@ -6,16 +7,35 @@ import {
 } from '#libs-server/queue/file-based-queue-processor.mjs'
 import { analyze_thread_for_metadata } from '#libs-server/metadata/analyze-thread.mjs'
 import { analyze_thread_for_tags } from '#libs-server/metadata/analyze-thread-tags.mjs'
+import config from '#config'
 
 /**
  * Queue processor for thread metadata analysis
  *
  * Watches a queue file for thread IDs to process and runs metadata
  * analysis using OpenCode with local Ollama models.
+ *
+ * Queue paths are configurable via config.metadata_queue. Relative paths
+ * are resolved against user_base_directory.
  */
 
-const QUEUE_FILE_PATH = '/tmp/claude-pending-metadata-analysis.queue'
-const PROCESSED_FILE_PATH = '/tmp/claude-metadata-processed.log'
+const resolve_queue_path = (configured_path, fallback) => {
+  if (!configured_path) return fallback
+  if (path.isAbsolute(configured_path)) return configured_path
+  if (config.user_base_directory) {
+    return path.join(config.user_base_directory, configured_path)
+  }
+  return fallback
+}
+
+const QUEUE_FILE_PATH = resolve_queue_path(
+  config.metadata_queue?.queue_file_path,
+  '/tmp/claude-pending-metadata-analysis.queue'
+)
+const PROCESSED_FILE_PATH = resolve_queue_path(
+  config.metadata_queue?.processed_file_path,
+  '/tmp/claude-metadata-processed.log'
+)
 
 const log = debug('metadata:queue')
 
@@ -88,13 +108,19 @@ const process_thread = async (thread_id) => {
   return result
 }
 
+// Dead letter path: same directory as queue file
+const DEAD_LETTER_PATH = QUEUE_FILE_PATH.replace(/\.queue$/, '.dead-letter.log')
+
 // Create processor instance
 const processor = new FileBasedQueueProcessor({
   name: 'metadata queue processor',
   debug_namespace: 'metadata:queue',
   queue_file_path: QUEUE_FILE_PATH,
   processed_file_path: PROCESSED_FILE_PATH,
-  process_item: process_thread
+  process_item: process_thread,
+  max_retries: 3,
+  retry_base_delay_ms: 30000,
+  dead_letter_path: DEAD_LETTER_PATH
 })
 
 /**

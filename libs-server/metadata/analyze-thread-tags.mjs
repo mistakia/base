@@ -8,9 +8,11 @@ import {
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
-  parse_tag_analysis_response
+  parse_tag_analysis_response,
+  compute_taxonomy_hash,
+  PROMPT_VERSION
 } from './generate-tag-prompt.mjs'
-import { extract_first_user_message } from './analyze-thread.mjs'
+import { extract_user_messages } from './analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
@@ -94,34 +96,7 @@ export const analyze_thread_for_tags = async ({
     }
   }
 
-  // Check if already analyzed (unless force is set)
-  if (!force && thread.tags_analyzed_at) {
-    log(`Thread ${thread_id} already analyzed at ${thread.tags_analyzed_at}`)
-    return {
-      thread_id,
-      status: 'skipped',
-      reason: 'already_analyzed',
-      analyzed_at: thread.tags_analyzed_at,
-      current_tags: thread.tags || []
-    }
-  }
-
-  // Read timeline
-  const timeline = await read_thread_timeline(thread.context_dir)
-
-  // Extract first user message
-  const user_message = extract_first_user_message(timeline)
-
-  if (!user_message) {
-    log(`No user message found in thread ${thread_id}`)
-    return {
-      thread_id,
-      status: 'skipped',
-      reason: 'no_user_message'
-    }
-  }
-
-  // Load available tags
+  // Load available tags (needed for both version check and analysis)
   const available_tags = await load_tags_with_content({ user_public_key })
 
   if (available_tags.length === 0) {
@@ -130,6 +105,47 @@ export const analyze_thread_for_tags = async ({
       thread_id,
       status: 'skipped',
       reason: 'no_tags_available'
+    }
+  }
+
+  // Compute current taxonomy hash for version comparison
+  const current_taxonomy_hash = compute_taxonomy_hash(available_tags)
+
+  // Check if already analyzed (unless force is set)
+  // Threads analyzed with an older prompt or taxonomy version are re-eligible
+  if (!force && thread.tags_analyzed_at) {
+    const version_match =
+      thread.tags_prompt_version === PROMPT_VERSION &&
+      thread.tags_taxonomy_hash === current_taxonomy_hash
+
+    if (version_match) {
+      log(`Thread ${thread_id} already analyzed at ${thread.tags_analyzed_at}`)
+      return {
+        thread_id,
+        status: 'skipped',
+        reason: 'already_analyzed',
+        analyzed_at: thread.tags_analyzed_at,
+        current_tags: thread.tags || []
+      }
+    }
+
+    log(
+      `Thread ${thread_id} re-eligible: prompt v${thread.tags_prompt_version || '?'}->${PROMPT_VERSION}, taxonomy ${thread.tags_taxonomy_hash || '?'}->${current_taxonomy_hash}`
+    )
+  }
+
+  // Read timeline
+  const timeline = await read_thread_timeline(thread.context_dir)
+
+  // Extract user messages (up to 3, within 12K char budget)
+  const user_message = extract_user_messages(timeline)
+
+  if (!user_message) {
+    log(`No user message found in thread ${thread_id}`)
+    return {
+      thread_id,
+      status: 'skipped',
+      reason: 'no_user_message'
     }
   }
 
@@ -177,7 +193,10 @@ export const analyze_thread_for_tags = async ({
   // Build update object
   const updates = {
     tags: parse_result.tags,
-    tags_analyzed_at: new Date().toISOString()
+    tags_analyzed_at: new Date().toISOString(),
+    tags_prompt_version: PROMPT_VERSION,
+    tags_taxonomy_hash: current_taxonomy_hash,
+    ...(parse_result.reasoning && { tags_reasoning: parse_result.reasoning })
   }
 
   // Apply update if not dry run

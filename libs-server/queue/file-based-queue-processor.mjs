@@ -21,6 +21,9 @@ export class FileBasedQueueProcessor {
    * @param {Function} [config.format_log_details] - Optional function to format details for processed log
    * @param {number} [config.poll_interval_ms=2000] - Poll interval for checking queue file
    * @param {number} [config.item_delay_ms=500] - Delay between processing items
+   * @param {number} [config.max_retries=3] - Maximum retry attempts for failed items
+   * @param {number} [config.retry_base_delay_ms=30000] - Base delay for exponential backoff (30s)
+   * @param {string} [config.dead_letter_path] - Path for dead-letter log (items that exhausted retries)
    */
   constructor(config) {
     this.name = config.name
@@ -32,6 +35,14 @@ export class FileBasedQueueProcessor {
 
     this.poll_interval_ms = config.poll_interval_ms || 2000
     this.item_delay_ms = config.item_delay_ms || 500
+    this.max_retries = config.max_retries ?? 3
+    this.retry_base_delay_ms = config.retry_base_delay_ms || 30000
+    this.dead_letter_path = config.dead_letter_path || null
+
+    // retry_counts tracks how many times each item has been retried
+    // retry_eligible_at tracks when an item becomes eligible for retry (backoff)
+    this.retry_counts = new Map()
+    this.retry_eligible_at = new Map()
 
     this.poll_active = false
     this.poll_timeout = null
@@ -101,6 +112,24 @@ export class FileBasedQueueProcessor {
   }
 
   /**
+   * Log an item to the dead-letter file after exhausting retries
+   * @param {string} item - Item that failed permanently
+   * @param {string} error - Error description
+   */
+  async log_dead_letter(item, error) {
+    if (!this.dead_letter_path) return
+
+    const timestamp = new Date().toISOString()
+    const entry = `${timestamp}\t${item}\t${error}\n`
+
+    try {
+      await fs.appendFile(this.dead_letter_path, entry, 'utf-8')
+    } catch (err) {
+      this.log(`Failed to write dead letter: ${err.message}`)
+    }
+  }
+
+  /**
    * Check if the queue file exists
    * @returns {Promise<boolean>}
    */
@@ -131,10 +160,26 @@ export class FileBasedQueueProcessor {
         return
       }
 
-      this.log(`Processing ${queue.length} items from queue`)
+      // Filter to items eligible for processing (respecting backoff)
+      const now = Date.now()
+      const eligible = queue.filter((item) => {
+        const eligible_at = this.retry_eligible_at.get(item)
+        return !eligible_at || now >= eligible_at
+      })
+      const deferred = queue.filter((item) => !eligible.includes(item))
 
-      for (let i = 0; i < queue.length; i++) {
-        const item = queue[i]
+      if (eligible.length === 0) {
+        return
+      }
+
+      this.log(
+        `Processing ${eligible.length} items from queue${deferred.length ? ` (${deferred.length} deferred for backoff)` : ''}`
+      )
+
+      const requeue_items = [...deferred]
+
+      for (let i = 0; i < eligible.length; i++) {
+        const item = eligible[i]
         let result
 
         try {
@@ -149,19 +194,51 @@ export class FileBasedQueueProcessor {
           }
         }
 
+        const is_error =
+          result?.status === 'error' || result?.status === 'failed'
+        const is_partial = result?.status === 'partial'
+
+        if (is_error || is_partial) {
+          const retry_count = (this.retry_counts.get(item) || 0) + 1
+
+          if (retry_count <= this.max_retries) {
+            const delay = this.retry_base_delay_ms * Math.pow(2, retry_count - 1)
+            this.retry_counts.set(item, retry_count)
+            this.retry_eligible_at.set(item, Date.now() + delay)
+            requeue_items.push(item)
+            this.log(
+              `Re-queuing ${item} for retry ${retry_count}/${this.max_retries} (backoff ${delay}ms)`
+            )
+          } else {
+            this.retry_counts.delete(item)
+            this.retry_eligible_at.delete(item)
+            await this.log_dead_letter(
+              item,
+              result?.error || 'max retries exceeded'
+            )
+            this.log(
+              `Item ${item} exhausted ${this.max_retries} retries, moved to dead letter`
+            )
+          }
+        } else {
+          // Success -- clean up retry state
+          this.retry_counts.delete(item)
+          this.retry_eligible_at.delete(item)
+        }
+
         // Log the result
         await this.log_processed(item, result?.status || 'unknown', result)
 
         // Brief delay between processing items
-        if (i < queue.length - 1) {
+        if (i < eligible.length - 1) {
           await new Promise((resolve) =>
             setTimeout(resolve, this.item_delay_ms)
           )
         }
       }
 
-      // Clear the queue in a single write operation after all items are processed
-      await this.write_queue_file([])
+      // Write back deferred + re-queued items, or clear if none
+      await this.write_queue_file(requeue_items)
 
       this.log('Queue processing complete')
     } catch (error) {

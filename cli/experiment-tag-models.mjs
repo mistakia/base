@@ -33,7 +33,10 @@ import {
   generate_tag_analysis_prompt,
   parse_tag_analysis_response
 } from '#libs-server/metadata/generate-tag-prompt.mjs'
-import { extract_first_user_message } from '#libs-server/metadata/analyze-thread.mjs'
+import {
+  extract_first_user_message,
+  extract_user_messages
+} from '#libs-server/metadata/analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
 import config from '#config'
@@ -110,15 +113,15 @@ async function run_experiment() {
     default_value: []
   })
 
-  // Extract first user message
-  const user_message = extract_first_user_message(timeline)
+  // Extract user messages (multi-message with truncation)
+  const user_message = extract_user_messages(timeline)
 
   if (!user_message) {
     console.error('No user message found in thread')
     process.exit(1)
   }
 
-  console.log('First user message:')
+  console.log('User messages:')
   console.log('---')
   console.log(
     user_message.length > 500
@@ -283,7 +286,7 @@ async function run_benchmark() {
         timeline_path: timeline_path_full,
         default_value: []
       })
-      user_message = extract_first_user_message(timeline)
+      user_message = extract_user_messages(timeline)
 
       if (!user_message) {
         process.stderr.write(`  Skipping: no user message found\n`)

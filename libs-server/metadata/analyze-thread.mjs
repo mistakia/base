@@ -78,6 +78,63 @@ export const extract_first_user_message = (timeline) => {
 }
 
 /**
+ * Extract multiple substantive user messages from a thread timeline
+ *
+ * Returns concatenated content from the first N non-warmup user messages,
+ * within a character budget. This provides better context than a single
+ * message for multi-topic sessions.
+ *
+ * @param {Array} timeline - Thread timeline array
+ * @param {Object} [options]
+ * @param {number} [options.max_count=3] - Maximum number of messages to extract
+ * @param {number} [options.max_chars=12000] - Maximum total characters
+ * @returns {string|null} Concatenated user messages or null
+ */
+export const extract_user_messages = (
+  timeline,
+  { max_count = 3, max_chars = 12000 } = {}
+) => {
+  if (!Array.isArray(timeline) || timeline.length === 0) {
+    return null
+  }
+
+  const user_messages = timeline.filter(
+    (entry) => entry.type === 'message' && entry.role === 'user'
+  )
+
+  const extracted = []
+  let total_chars = 0
+
+  for (const message of user_messages) {
+    if (extracted.length >= max_count) break
+    if (total_chars >= max_chars) break
+
+    let content = message.content
+    if (Array.isArray(content)) {
+      content = content
+        .filter((block) => typeof block === 'string' || block?.type === 'text')
+        .map((block) => (typeof block === 'string' ? block : block.text))
+        .join('')
+    }
+    content = typeof content === 'string' ? content.trim() : null
+    if (!content) continue
+
+    const is_warmup = ANALYSIS_CONFIG.WARMUP_PATTERNS.some((pattern) =>
+      pattern.test(content)
+    )
+    if (is_warmup) continue
+
+    const remaining = max_chars - total_chars
+    const truncated =
+      content.length > remaining ? content.substring(0, remaining) : content
+    extracted.push(truncated)
+    total_chars += truncated.length
+  }
+
+  return extracted.length > 0 ? extracted.join('\n\n---\n\n') : null
+}
+
+/**
  * Read timeline from thread directory
  *
  * @param {string} thread_dir - Path to thread directory

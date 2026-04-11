@@ -358,11 +358,12 @@ bun cli/rebuild-embedded-index.mjs
 bun cli/analyze-thread-metadata.mjs <thread-id> --dry-run
 
 # Queue threads for batch metadata analysis (processed by metadata-queue-processor)
-echo "<thread-id>" >> /tmp/claude-pending-metadata-analysis.queue
+# Queue path is configurable via config.metadata_queue (default: /tmp/)
+echo "<thread-id>" >> "$USER_BASE_DIRECTORY/data/queue/pending-metadata-analysis.queue"
 
 # Monitor metadata queue processing
-cat /tmp/claude-pending-metadata-analysis.queue   # View pending
-cat /tmp/claude-metadata-processed.log            # View processed
+cat "$USER_BASE_DIRECTORY/data/queue/pending-metadata-analysis.queue"   # View pending
+cat "$USER_BASE_DIRECTORY/data/queue/metadata-processed.log"            # View processed
 
 # Analyze thread relations (entity references from timeline)
 bun cli/analyze-thread-relations.mjs --thread-id <uuid>

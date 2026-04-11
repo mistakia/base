@@ -1,3 +1,4 @@
+import { createHash } from 'crypto'
 import debug from 'debug'
 import { list_tags_from_filesystem } from '#libs-server/tag/filesystem/list-tags-from-filesystem.mjs'
 import { read_tag_from_filesystem } from '#libs-server/tag/filesystem/read-tag-from-filesystem.mjs'
@@ -8,9 +9,12 @@ const log = debug('metadata:tag-prompt')
 // Constants
 // ============================================================================
 
+// Bump this when the prompt template or analysis logic changes.
+// Threads analyzed with an older version become re-eligible for analysis.
+const PROMPT_VERSION = 2
+
 const TAG_CONSTRAINTS = {
-  MAX_TAGS: 3,
-  MIN_CONFIDENCE: 0.7
+  MAX_TAGS: 3
 }
 
 // ============================================================================
@@ -62,6 +66,24 @@ export async function load_tags_with_content({ user_public_key }) {
 }
 
 /**
+ * Compute a content-based hash of the tag taxonomy.
+ * Changes when tags are added, removed, or their content changes.
+ * Does not change on git operations that only update mtimes.
+ *
+ * @param {Array} tags - Array of tag objects with base_uri, description, content
+ * @returns {string} Short hex hash (first 12 chars of SHA-256)
+ */
+export function compute_taxonomy_hash(tags) {
+  const sorted_entries = tags
+    .map((t) => `${t.base_uri}|${t.description || ''}|${t.content || ''}`)
+    .sort()
+
+  const hash = createHash('sha256')
+  hash.update(sorted_entries.join('\n'))
+  return hash.digest('hex').substring(0, 12)
+}
+
+/**
  * Format tags for inclusion in the prompt
  *
  * @param {Array} tags - Array of tag objects with content
@@ -110,11 +132,11 @@ export function generate_tag_analysis_prompt({
     .filter(Boolean)
     .join('\n')
 
-  return `Analyze this coding session and assign appropriate tags from the available taxonomy.
+  return `Analyze this session and assign appropriate tags from the available taxonomy.
 
 ## Thread Information
 ${thread_context ? thread_context + '\n' : ''}
-First user message:
+User messages:
 """
 ${user_message}
 """
@@ -127,11 +149,11 @@ ${formatted_tags}
 
 1. Analyze the thread content to understand what work is being done
 2. Select 0-${TAG_CONSTRAINTS.MAX_TAGS} tags that accurately categorize this thread
-3. Only assign tags where confidence is high (>70%)
+3. Only assign tags you are confident about -- when in doubt, omit
 4. Consider:
-   - What project/codebase is being worked on?
-   - What domain does this relate to?
-   - Is this a software task?
+   - What project or domain does this relate to?
+   - What type of work is being done?
+   - Check each tag's Scope and Decision Rule sections for guidance on boundaries between similar tags
 
 ## Response Format
 
@@ -233,4 +255,4 @@ export function parse_tag_analysis_response(response_text, available_tags) {
   }
 }
 
-export { TAG_CONSTRAINTS }
+export { TAG_CONSTRAINTS, PROMPT_VERSION }
