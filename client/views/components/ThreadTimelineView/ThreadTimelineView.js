@@ -27,6 +27,7 @@ const ThreadTimelineView = () => {
   const thread_error = threads_state.get('thread_error')
   const [is_file_browser_visible, set_is_file_browser_visible] = useState(false)
   const is_mobile = useMediaQuery('(max-width: 991px)')
+  const is_mobile_breadcrumb = useMediaQuery('(max-width: 768px)')
 
   // Extract thread ID from path like /thread/abc123
   const thread_id = current_path.startsWith('/thread/')
@@ -142,7 +143,9 @@ const ThreadTimelineView = () => {
 
   return (
     <Box sx={{ maxWidth: '1100px', margin: '0 auto' }}>
-      <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
+      {!is_mobile_breadcrumb && (
+        <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
+      )}
       <TwoColumnLayout
         left_content={left_content}
         right_content={right_content}

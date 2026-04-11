@@ -1,5 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useMediaQuery } from '@mui/material'
 import { COLORS } from '@theme/colors.js'
 
 import DirectoryView from '@components/DirectoryView/index.js'
@@ -9,6 +10,7 @@ import { use_file_system_data } from '@views/hooks/useFileSystemData.js'
 
 const FileSystemBrowser = () => {
   const navigate = useNavigate()
+  const is_mobile = useMediaQuery('(max-width: 768px)')
   const { current_path, is_directory, loading, error } = use_file_system_data({
     use_router_path: true
   })
@@ -43,7 +45,9 @@ const FileSystemBrowser = () => {
         maxWidth: '100%',
         width: '100%'
       }}>
-      <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
+      {!is_mobile && (
+        <PathBreadcrumb path={current_path} on_navigate={handle_navigate} />
+      )}
       {is_directory ? (
         <DirectoryView path={current_path} on_navigate={handle_navigate} />
       ) : (
