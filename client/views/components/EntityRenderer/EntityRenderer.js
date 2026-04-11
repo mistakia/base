@@ -209,7 +209,7 @@ const EntityRenderer = ({
           right_content={right_content}
           left_column_width={8}
           right_column_width={4}
-          container_padding={3}
+          container_padding={0}
           sticky_right={true}
         />
         {is_tag_entity && (
