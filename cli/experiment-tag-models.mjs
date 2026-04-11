@@ -318,9 +318,14 @@ async function run_benchmark() {
         const predicted_tags = parse_result.success ? parse_result.tags : []
         const predicted_primary = predicted_tags[0] || null
 
-        // Check primary tag match
+        const acceptable_primaries = bench_case.expected_primary_tags
+          ? bench_case.expected_primary_tags
+          : bench_case.expected_primary_tag
+            ? [bench_case.expected_primary_tag]
+            : []
         const primary_match =
-          predicted_primary === bench_case.expected_primary_tag
+          predicted_primary !== null &&
+          acceptable_primaries.includes(predicted_primary)
         if (primary_match) model_results[model].primary_matches++
 
         // Check secondary tag overlap
@@ -340,7 +345,7 @@ async function run_benchmark() {
           thread_id: bench_case.thread_id,
           primary_match,
           predicted_tags,
-          expected_primary: bench_case.expected_primary_tag,
+          expected_primary: acceptable_primaries,
           expected_secondary,
           duration_ms: opencode_result.duration_ms
         })
@@ -409,9 +414,8 @@ async function run_benchmark() {
         console.log(`\n${model} - Mismatches:`)
         for (const miss of misses) {
           const expected = miss.expected_primary
-            .split('/')
-            .pop()
-            .replace('.md', '')
+            .map((t) => t.split('/').pop().replace('.md', ''))
+            .join('|')
           const got = miss.predicted_tags[0]
             ? miss.predicted_tags[0].split('/').pop().replace('.md', '')
             : '(none)'
