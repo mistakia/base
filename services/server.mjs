@@ -39,6 +39,11 @@ import {
   stop_user_base_watcher
 } from '#libs-server/file-subscriptions/user-base-watcher.mjs'
 import {
+  start_session_reaper,
+  stop_session_reaper
+} from '#server/services/active-sessions/session-reaper.mjs'
+import { close_session_store } from '#server/services/active-sessions/active-session-store.mjs'
+import {
   start_entity_change_watcher,
   stop_entity_change_watcher
 } from '#libs-server/embedded-database-index/sync/entity-change-ipc.mjs'
@@ -241,6 +246,14 @@ try {
       logger('Git status watcher disabled by config')
     }
 
+    // Start active-session reaper: removes sessions whose hook heartbeats
+    // have stopped and emits ENDED events (defense against missed SessionEnd).
+    try {
+      start_session_reaper()
+    } catch (reaper_error) {
+      logger(`Failed to start session reaper: ${reaper_error.message}`)
+    }
+
     // Initialize job worker for thread creation queue
     try {
       await start_worker()
@@ -403,6 +416,17 @@ const shutdown = async (signal) => {
           logger('Entity change IPC watcher stopped')
         } catch (error) {
           logger(`Error stopping entity change IPC watcher: ${error.message}`)
+        }
+      })(),
+      (async () => {
+        try {
+          stop_session_reaper()
+          await close_session_store()
+          logger('Active session reaper and store stopped')
+        } catch (error) {
+          logger(
+            `Error stopping active session reaper/store: ${error.message}`
+          )
         }
       })()
     ])

@@ -14,9 +14,17 @@ describe('API /active-sessions', function () {
   // Allow longer timeout for Redis operations
   this.timeout(10000)
 
-  const test_session_id = 'test-api-session-' + Date.now()
+  // Fresh session id per test so tombstones from afterEach cleanup don't
+  // block subsequent tests' registrations.
+  let test_session_id
+  let test_counter = 0
   const test_working_directory = '/tmp/test-project'
   const test_transcript_path = '/tmp/.claude/projects/test/session.jsonl'
+
+  beforeEach(() => {
+    test_counter += 1
+    test_session_id = `test-api-session-${Date.now()}-${test_counter}`
+  })
 
   afterEach(async () => {
     // Clean up test session after each test

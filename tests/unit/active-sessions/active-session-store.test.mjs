@@ -15,9 +15,17 @@ describe('active-session-store', function () {
   // Allow longer timeout for Redis operations
   this.timeout(10000)
 
-  const test_session_id = 'test-session-' + Date.now()
+  // Fresh session id per test so the 10s deletion tombstone from one test's
+  // afterEach cleanup does not block the next test's registration.
+  let test_session_id
+  let test_counter = 0
   const test_working_directory = '/tmp/test-project'
   const test_transcript_path = '/tmp/.claude/projects/test/session.jsonl'
+
+  beforeEach(() => {
+    test_counter += 1
+    test_session_id = `test-session-${Date.now()}-${test_counter}`
+  })
 
   afterEach(async () => {
     // Clean up test session after each test
@@ -318,7 +326,29 @@ describe('active-session-store', function () {
       expect(result).to.be.null
     })
 
-    it('should allow updates after re-registration clears tombstone (resume case)', async () => {
+    it('should block re-registration while tombstone exists (default)', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      await remove_active_session(test_session_id)
+
+      // Default (non-resume) re-register must be refused by tombstone.
+      const blocked = await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      expect(blocked).to.be.null
+
+      const session = await get_active_session(test_session_id)
+      expect(session).to.be.null
+    })
+
+    it('should allow updates after resume re-registration clears tombstone', async () => {
       // Simulate: session runs -> ends -> resumes with same session_id
       await register_active_session({
         session_id: test_session_id,
@@ -328,12 +358,15 @@ describe('active-session-store', function () {
 
       await remove_active_session(test_session_id)
 
-      // Resume: re-register with same session_id (should clear tombstone)
-      await register_active_session({
+      // Resume: explicit resume=true clears tombstone and re-registers
+      const resumed = await register_active_session({
         session_id: test_session_id,
         working_directory: test_working_directory,
-        transcript_path: test_transcript_path
+        transcript_path: test_transcript_path,
+        resume: true
       })
+
+      expect(resumed).to.be.an('object')
 
       // Subsequent PUT should work (tombstone was cleared by register)
       const updated = await update_active_session({
@@ -388,6 +421,59 @@ describe('active-session-store', function () {
     it('should return null for non-existent thread', async () => {
       const session = await get_active_session_for_thread('non-existent-thread')
       expect(session).to.be.null
+    })
+  })
+
+  describe('event_seq', () => {
+    it('should initialize event_seq to 1 on new registration', async () => {
+      const session = await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+      expect(session.event_seq).to.equal(1)
+    })
+
+    it('should monotonically increment event_seq on updates', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      const first = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+      const second = await update_active_session({
+        session_id: test_session_id,
+        status: 'active'
+      })
+      const third = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+
+      expect(first.event_seq).to.be.a('number')
+      expect(second.event_seq).to.be.greaterThan(first.event_seq)
+      expect(third.event_seq).to.be.greaterThan(second.event_seq)
+    })
+
+    it('should return a higher event_seq from get_and_remove than the last update', async () => {
+      await register_active_session({
+        session_id: test_session_id,
+        working_directory: test_working_directory,
+        transcript_path: test_transcript_path
+      })
+
+      const updated = await update_active_session({
+        session_id: test_session_id,
+        status: 'idle'
+      })
+
+      const removed = await get_and_remove_active_session(test_session_id)
+      expect(removed).to.be.an('object')
+      expect(removed.event_seq).to.be.greaterThan(updated.event_seq)
     })
   })
 })

@@ -289,7 +289,13 @@ router.post('/', async (req, res) => {
   }
 
   const { log } = req.app.locals
-  const { session_id, working_directory, transcript_path, job_id } = req.body
+  const {
+    session_id,
+    working_directory,
+    transcript_path,
+    job_id,
+    hook_source
+  } = req.body
 
   if (!session_id) {
     return res.status(400).json({
@@ -300,19 +306,37 @@ router.post('/', async (req, res) => {
 
   try {
     log_lifecycle(
-      'POST session_started session_id=%s job_id=%s working_directory=%s',
+      'POST session_started session_id=%s job_id=%s hook_source=%s working_directory=%s',
       session_id,
       job_id || 'none',
+      hook_source || 'none',
       working_directory
     )
+
+    // Treat Claude Code SessionStart source=resume as an intentional resume
+    // so the tombstone guard is cleared rather than blocking registration.
+    const resume = hook_source === 'resume'
 
     // Register the session
     const session = await register_active_session({
       session_id,
       working_directory,
       transcript_path,
-      job_id
+      job_id,
+      resume
     })
+
+    // Tombstone guard: session was recently deleted, refuse to re-create.
+    // Mirrors the PUT handler's tombstoned response.
+    if (!session) {
+      log_lifecycle(
+        'POST session_tombstoned session_id=%s (late arrival after DELETE)',
+        session_id
+      )
+      return res
+        .status(200)
+        .json({ success: true, session_id, tombstoned: true })
+    }
 
     // Try to find an associated thread
     const thread_id = await find_thread_for_session({

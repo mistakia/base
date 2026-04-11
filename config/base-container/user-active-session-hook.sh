@@ -13,29 +13,32 @@ LOCAL_PORT="${BASE_API_PORT:-8080}"
 LOCAL_API_URL="${LOCAL_PROTO}://${LOCAL_HOST}:${LOCAL_PORT}/api/active-sessions"
 PROD_API_URL="${BASE_PROD_API_URL:-}"
 
-# Helper function to send request to an endpoint (runs in background)
-# Usage: send_request METHOD URL [DATA] [USE_API_KEY]
+# Helper function to send request to an endpoint.
+# Usage: send_request MODE METHOD URL [DATA] [USE_API_KEY]
+# MODE is "sync" for foreground (enforces POST-before-DELETE ordering for
+# SessionStart/SessionEnd on the local API) or "bg" for background.
 send_request() {
-    local method="$1"
-    local url="$2"
-    local data="$3"
-    local use_api_key="$4"
+    local mode="$1"
+    local method="$2"
+    local url="$3"
+    local data="$4"
+    local use_api_key="$5"
 
     local auth_args=()
     if [ "$use_api_key" = "true" ] && [ -n "$JOB_API_KEY" ]; then
         auth_args=(-H "Authorization: Bearer $JOB_API_KEY")
     fi
 
+    local curl_args=(-sk -X "$method" "$url" "${auth_args[@]}"
+                     --connect-timeout 5 --max-time 5)
     if [ -n "$data" ]; then
-        curl -sk -X "$method" "$url" \
-            -H "Content-Type: application/json" \
-            "${auth_args[@]}" \
-            -d "$data" \
-            --connect-timeout 5 --max-time 5 > /dev/null 2>&1 &
+        curl_args+=(-H "Content-Type: application/json" -d "$data")
+    fi
+
+    if [ "$mode" = "sync" ]; then
+        curl "${curl_args[@]}" > /dev/null 2>&1
     else
-        curl -sk -X "$method" "$url" \
-            "${auth_args[@]}" \
-            --connect-timeout 5 --max-time 5 > /dev/null 2>&1 &
+        curl "${curl_args[@]}" > /dev/null 2>&1 &
     fi
 }
 
@@ -47,6 +50,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // empty')
+HOOK_SOURCE=$(echo "$INPUT" | jq -r '.source // empty')
 
 # Extract jsonl_session_id from transcript_path filename
 JSONL_SESSION_ID=""
@@ -72,11 +76,12 @@ case "$HOOK_EVENT" in
         \"session_id\": \"${SESSION_ID}\",
         \"jsonl_session_id\": \"${JSONL_SESSION_ID}\",
         ${job_id_field}
+        \"hook_source\": \"${HOOK_SOURCE}\",
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
-    send_request "POST" "$LOCAL_API_URL" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "POST" "$PROD_SESSION_URL" "$payload" "true"
+    send_request "sync" "POST" "$LOCAL_API_URL" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "bg" "POST" "$PROD_SESSION_URL" "$payload" "true"
     ;;
   UserPromptSubmit|PostToolUse)
     payload="{
@@ -85,8 +90,8 @@ case "$HOOK_EVENT" in
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
-    send_request "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
+    send_request "bg" "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "bg" "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
     ;;
   Stop)
     payload="{
@@ -95,12 +100,12 @@ case "$HOOK_EVENT" in
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
-    send_request "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
-    [ -n "$PROD_SESSION_URL" ] && send_request "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
+    send_request "bg" "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
+    [ -n "$PROD_SESSION_URL" ] && send_request "bg" "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
     ;;
   SessionEnd)
-    send_request "DELETE" "$LOCAL_API_URL/${SESSION_ID}"
-    [ -n "$PROD_SESSION_URL" ] && send_request "DELETE" "$PROD_SESSION_URL/${SESSION_ID}" "" "true"
+    send_request "sync" "DELETE" "$LOCAL_API_URL/${SESSION_ID}"
+    [ -n "$PROD_SESSION_URL" ] && send_request "bg" "DELETE" "$PROD_SESSION_URL/${SESSION_ID}" "" "true"
     ;;
 esac
 

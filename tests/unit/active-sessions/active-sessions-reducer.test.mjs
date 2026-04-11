@@ -59,6 +59,12 @@ function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_STARTED: {
       const { session } = payload
+      const existing_for_seq = state.getIn(['sessions', session.session_id])
+      if (existing_for_seq) {
+        const existing_seq = existing_for_seq.get('event_seq') || 0
+        const incoming_seq = session.event_seq || 0
+        if (existing_seq > 0 && existing_seq >= incoming_seq) return state
+      }
       if (session.job_id && state.hasIn(['pending_sessions', session.job_id])) {
         return state
           .setIn(['sessions', session.session_id], Map(session))
@@ -69,6 +75,12 @@ function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
+      const stored = state.getIn(['sessions', session.session_id])
+      if (stored) {
+        const stored_seq = stored.get('event_seq') || 0
+        const incoming_seq = session.event_seq || 0
+        if (stored_seq > 0 && incoming_seq <= stored_seq) return state
+      }
       return state.setIn(['sessions', session.session_id], Map(session))
     }
 
@@ -329,6 +341,93 @@ describe('active-sessions-reducer', function () {
       const session = state.getIn(['pending_sessions', 'job-789'])
       expect(session.get('status')).to.equal('failed')
       expect(session.get('error_message')).to.equal('CLI process crashed')
+    })
+  })
+
+  describe('event_seq gating', () => {
+    const make_session = (overrides = {}) => ({
+      session_id: 'sess-seq',
+      status: 'active',
+      working_directory: '/tmp/seq',
+      event_seq: 1,
+      ...overrides
+    })
+
+    it('discards UPDATED with lower event_seq than stored', () => {
+      let state = active_sessions_reducer(undefined, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: make_session({ event_seq: 5, status: 'active' }) }
+      })
+
+      state = active_sessions_reducer(state, {
+        type: active_sessions_action_types.ACTIVE_SESSION_UPDATED,
+        payload: { session: make_session({ event_seq: 3, status: 'idle' }) }
+      })
+
+      expect(state.getIn(['sessions', 'sess-seq', 'status'])).to.equal('active')
+      expect(state.getIn(['sessions', 'sess-seq', 'event_seq'])).to.equal(5)
+    })
+
+    it('applies UPDATED with higher event_seq', () => {
+      let state = active_sessions_reducer(undefined, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: make_session({ event_seq: 2, status: 'active' }) }
+      })
+
+      state = active_sessions_reducer(state, {
+        type: active_sessions_action_types.ACTIVE_SESSION_UPDATED,
+        payload: { session: make_session({ event_seq: 4, status: 'idle' }) }
+      })
+
+      expect(state.getIn(['sessions', 'sess-seq', 'status'])).to.equal('idle')
+      expect(state.getIn(['sessions', 'sess-seq', 'event_seq'])).to.equal(4)
+    })
+
+    it('discards STARTED when an existing session has equal or higher event_seq', () => {
+      let state = active_sessions_reducer(undefined, {
+        type: active_sessions_action_types.ACTIVE_SESSION_UPDATED,
+        payload: { session: make_session({ event_seq: 7, status: 'idle' }) }
+      })
+
+      state = active_sessions_reducer(state, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: make_session({ event_seq: 2, status: 'active' }) }
+      })
+
+      expect(state.getIn(['sessions', 'sess-seq', 'status'])).to.equal('idle')
+      expect(state.getIn(['sessions', 'sess-seq', 'event_seq'])).to.equal(7)
+    })
+
+    it('discards UPDATED with no event_seq when stored has a positive seq', () => {
+      let state = active_sessions_reducer(undefined, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: make_session({ event_seq: 4, status: 'active' }) }
+      })
+
+      const { event_seq: _drop, ...no_seq } = make_session({ status: 'idle' })
+      state = active_sessions_reducer(state, {
+        type: active_sessions_action_types.ACTIVE_SESSION_UPDATED,
+        payload: { session: no_seq }
+      })
+
+      expect(state.getIn(['sessions', 'sess-seq', 'status'])).to.equal('active')
+      expect(state.getIn(['sessions', 'sess-seq', 'event_seq'])).to.equal(4)
+    })
+
+    it('accepts STARTED when stored has no event_seq (pre-seq rollout)', () => {
+      const { event_seq: _drop, ...no_seq } = make_session({ status: 'idle' })
+      let state = active_sessions_reducer(undefined, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: no_seq }
+      })
+
+      state = active_sessions_reducer(state, {
+        type: active_sessions_action_types.ACTIVE_SESSION_STARTED,
+        payload: { session: make_session({ event_seq: 1, status: 'active' }) }
+      })
+
+      expect(state.getIn(['sessions', 'sess-seq', 'status'])).to.equal('active')
+      expect(state.getIn(['sessions', 'sess-seq', 'event_seq'])).to.equal(1)
     })
   })
 })
