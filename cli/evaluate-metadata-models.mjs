@@ -19,7 +19,7 @@ import {
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
-import { run_opencode } from '#libs-server/metadata/run-opencode-analysis.mjs'
+import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
 import {
   parse_metadata_response,
   generate_analysis_prompt
@@ -89,7 +89,7 @@ async function score_with_judge({
   })
 
   try {
-    const result = await run_opencode({
+    const result = await run_model_prompt({
       prompt,
       model: judge_model,
       timeout_ms: 60000
@@ -144,7 +144,7 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
 
     try {
       const start = Date.now()
-      const opencode_result = await run_opencode({
+      const model_result = await run_model_prompt({
         prompt,
         model,
         timeout_ms: 120000
@@ -152,7 +152,7 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
       const latency = Date.now() - start
       latencies.push(latency)
 
-      const response_text = opencode_result.output || ''
+      const response_text = model_result.output || ''
       const metadata = parse_metadata_response(response_text)
 
       const generated = {

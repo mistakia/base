@@ -2,9 +2,9 @@ import path from 'path'
 import debug from 'debug'
 
 import {
-  run_opencode,
+  run_model_prompt,
   extract_model_response
-} from './run-opencode-analysis.mjs'
+} from './run-model-prompt.mjs'
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
@@ -158,9 +158,9 @@ export const analyze_thread_for_tags = async ({
   })
 
   // Run analysis
-  let opencode_result
+  let model_result
   try {
-    opencode_result = await run_opencode({
+    model_result = await run_model_prompt({
       prompt,
       model
     })
@@ -174,7 +174,7 @@ export const analyze_thread_for_tags = async ({
   }
 
   // Extract and parse response
-  const response_text = extract_model_response(opencode_result.output)
+  const response_text = extract_model_response(model_result.output)
   const parse_result = parse_tag_analysis_response(
     response_text,
     available_tags
@@ -221,7 +221,7 @@ export const analyze_thread_for_tags = async ({
   return {
     thread_id,
     status: dry_run ? 'dry_run' : 'updated',
-    duration_ms: opencode_result.duration_ms,
+    duration_ms: model_result.duration_ms,
     previous_tags: thread.tags || [],
     updates,
     reasoning: parse_result.reasoning,

@@ -2,9 +2,9 @@ import path from 'path'
 import debug from 'debug'
 
 import {
-  run_opencode,
+  run_model_prompt,
   extract_model_response
-} from './run-opencode-analysis.mjs'
+} from './run-model-prompt.mjs'
 import {
   parse_metadata_response,
   generate_analysis_prompt
@@ -216,9 +216,9 @@ export const analyze_thread_for_metadata = async ({
   const prompt = generate_analysis_prompt({ user_message })
 
   // Run OpenCode analysis
-  let opencode_result
+  let model_result
   try {
-    opencode_result = await run_opencode({
+    model_result = await run_model_prompt({
       prompt,
       model
     })
@@ -232,7 +232,7 @@ export const analyze_thread_for_metadata = async ({
   }
 
   // Extract model response
-  const response_text = extract_model_response(opencode_result.output)
+  const response_text = extract_model_response(model_result.output)
 
   // Parse metadata from response
   const metadata = parse_metadata_response(response_text)
@@ -289,7 +289,7 @@ export const analyze_thread_for_metadata = async ({
   return {
     thread_id,
     status: dry_run ? 'dry_run' : 'updated',
-    duration_ms: opencode_result.duration_ms,
+    duration_ms: model_result.duration_ms,
     current: {
       title: thread.title,
       short_description: thread.short_description

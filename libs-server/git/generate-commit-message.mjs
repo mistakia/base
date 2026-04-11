@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { run_opencode } from '#libs-server/metadata/run-opencode-analysis.mjs'
+import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
 
@@ -59,7 +59,7 @@ ${diff_content}
 Respond ONLY with a JSON object: {"message": "your commit message here"}`
 
   log('Calling Ollama for commit message generation')
-  const { output } = await run_opencode({ prompt })
+  const { output } = await run_model_prompt({ prompt })
 
   const parsed = extract_json_from_response(output)
   if (!parsed?.message) {

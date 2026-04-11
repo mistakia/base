@@ -25,9 +25,9 @@ import path from 'path'
 import debug from 'debug'
 
 import {
-  run_opencode,
+  run_model_prompt,
   extract_model_response
-} from '#libs-server/metadata/run-opencode-analysis.mjs'
+} from '#libs-server/metadata/run-model-prompt.mjs'
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
@@ -164,14 +164,14 @@ async function run_experiment() {
     }
 
     try {
-      const opencode_result = await run_opencode({
+      const model_result = await run_model_prompt({
         prompt,
         model
       })
 
-      result.duration_ms = opencode_result.duration_ms
+      result.duration_ms = model_result.duration_ms
 
-      const response_text = extract_model_response(opencode_result.output)
+      const response_text = extract_model_response(model_result.output)
       result.raw_response = response_text
 
       const parse_result = parse_tag_analysis_response(
@@ -308,8 +308,8 @@ async function run_benchmark() {
     // Run each model on this case
     for (const model of models) {
       try {
-        const opencode_result = await run_opencode({ prompt, model })
-        const response_text = extract_model_response(opencode_result.output)
+        const model_result = await run_model_prompt({ prompt, model })
+        const response_text = extract_model_response(model_result.output)
         const parse_result = parse_tag_analysis_response(
           response_text,
           available_tags
@@ -340,18 +340,18 @@ async function run_benchmark() {
               : 0
         model_results[model].secondary_overlaps.push(overlap)
 
-        model_results[model].latencies.push(opencode_result.duration_ms)
+        model_results[model].latencies.push(model_result.duration_ms)
         model_results[model].case_results.push({
           thread_id: bench_case.thread_id,
           primary_match,
           predicted_tags,
           expected_primary: acceptable_primaries,
           expected_secondary,
-          duration_ms: opencode_result.duration_ms
+          duration_ms: model_result.duration_ms
         })
 
         process.stderr.write(
-          `  ${model}: ${primary_match ? 'OK' : 'MISS'} [${predicted_tags.map((t) => t.split('/').pop().replace('.md', '')).join(', ')}] (${opencode_result.duration_ms}ms)\n`
+          `  ${model}: ${primary_match ? 'OK' : 'MISS'} [${predicted_tags.map((t) => t.split('/').pop().replace('.md', '')).join(', ')}] (${model_result.duration_ms}ms)\n`
         )
       } catch (error) {
         model_results[model].errors++
