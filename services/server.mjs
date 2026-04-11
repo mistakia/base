@@ -424,9 +424,7 @@ const shutdown = async (signal) => {
           await close_session_store()
           logger('Active session reaper and store stopped')
         } catch (error) {
-          logger(
-            `Error stopping active session reaper/store: ${error.message}`
-          )
+          logger(`Error stopping active session reaper/store: ${error.message}`)
         }
       })()
     ])

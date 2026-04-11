@@ -334,9 +334,8 @@ export const process_single_session = async ({
   try {
     const stats = await fs.stat(thread_dir)
     if (stats.isDirectory()) {
-      const previous_metadata = await read_previous_metadata_from_git(
-        thread_dir
-      )
+      const previous_metadata =
+        await read_previous_metadata_from_git(thread_dir)
       if (previous_metadata?.source?.execution_mode === 'container_user') {
         log(
           `Thread dir ${thread_dir} exists without metadata.json but prior git state shows container_user attribution; refusing to recreate`

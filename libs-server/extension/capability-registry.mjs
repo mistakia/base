@@ -58,7 +58,10 @@ export function get_all(capability_name) {
 export function get_all_with_metadata(capability_name) {
   const entries = providers.get(capability_name)
   if (!entries) return []
-  return entries.map((e) => ({ extension_name: e.extension_name, module: e.module }))
+  return entries.map((e) => ({
+    extension_name: e.extension_name,
+    module: e.module
+  }))
 }
 
 /**

@@ -117,7 +117,10 @@ export const generate_compose_config = async ({
   // Mount the base submodule read-only so entrypoint.sh can find cli/base.mjs
   // and system guidelines/workflows. The node_modules named volume overlays
   // the submodule's node_modules directory with Linux-native binaries.
-  const base_submodule_host = join(user_base_directory, 'repository/active/base')
+  const base_submodule_host = join(
+    user_base_directory,
+    'repository/active/base'
+  )
   const base_submodule_target = `${container_user_base_path}/repository/active/base`
   volume_mounts.push(`${base_submodule_host}:${base_submodule_target}:ro`)
 
@@ -125,7 +128,12 @@ export const generate_compose_config = async ({
   volume_mounts.push(`base-node-modules:${node_modules_target}`)
 
   // Check for per-user Dockerfile override
-  const user_dockerfile = join(user_base_directory, 'config/container', username, 'Dockerfile')
+  const user_dockerfile = join(
+    user_base_directory,
+    'config/container',
+    username,
+    'Dockerfile'
+  )
   const has_user_dockerfile = existsSync(user_dockerfile)
   if (has_user_dockerfile) {
     log(`Using per-user Dockerfile for ${username}: ${user_dockerfile}`)
@@ -137,7 +145,10 @@ export const generate_compose_config = async ({
     ...(has_user_dockerfile
       ? {
           build: {
-            context: join(user_base_directory, 'repository/active/base/config/base-container'),
+            context: join(
+              user_base_directory,
+              'repository/active/base/config/base-container'
+            ),
             dockerfile: user_dockerfile
           }
         }

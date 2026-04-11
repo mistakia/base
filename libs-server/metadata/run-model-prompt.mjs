@@ -43,4 +43,7 @@ export const run_model_prompt = async ({
   return run_opencode_cli({ prompt, model, timeout_ms, mode })
 }
 
-export { extract_model_response, strip_ansi_codes } from './opencode-cli-client.mjs'
+export {
+  extract_model_response,
+  strip_ansi_codes
+} from './opencode-cli-client.mjs'

@@ -202,7 +202,8 @@ export class FileBasedQueueProcessor {
           const retry_count = (this.retry_counts.get(item) || 0) + 1
 
           if (retry_count <= this.max_retries) {
-            const delay = this.retry_base_delay_ms * Math.pow(2, retry_count - 1)
+            const delay =
+              this.retry_base_delay_ms * Math.pow(2, retry_count - 1)
             this.retry_counts.set(item, retry_count)
             this.retry_eligible_at.set(item, Date.now() + delay)
             requeue_items.push(item)
