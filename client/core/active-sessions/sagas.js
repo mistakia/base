@@ -100,10 +100,12 @@ export function* reconnect_recovery() {
 //  PERIODIC POLLING
 //= ====================================
 
-// Poll active sessions every 60 seconds to catch missed WebSocket events.
+// Poll active sessions every 15 seconds to catch missed WebSocket events.
 // The GET_ACTIVE_SESSIONS_FULFILLED reducer already drops stale sessions
-// not returned by the API, so this acts as a self-healing fallback.
-const POLL_INTERVAL_MS = 60 * 1000
+// not returned by the API, so this acts as a self-healing fallback. 15s
+// keeps worst-case stale session visibility under ~15s without adding
+// meaningful load (one Redis SCAN+MGET per poll).
+const POLL_INTERVAL_MS = 15 * 1000
 
 export function* poll_active_sessions() {
   while (true) {

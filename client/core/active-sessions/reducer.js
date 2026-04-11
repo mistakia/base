@@ -56,7 +56,15 @@ export function active_sessions_reducer(
           const existing = existing_sessions.get(session.session_id)
           if (existing) {
             // Merge server data onto existing, preserving client-side fields
-            // like prompt_snippet that the server doesn't know about
+            // like prompt_snippet that the server doesn't know about. If the
+            // existing record has a higher event_seq (because a newer WS
+            // event arrived ahead of this poll response), keep it to avoid
+            // regressing state.
+            const existing_seq = existing.get('event_seq') || 0
+            const incoming_seq = session.event_seq || 0
+            if (existing_seq > incoming_seq) {
+              return [session.session_id, existing]
+            }
             return [session.session_id, existing.merge(session)]
           }
           return [session.session_id, Map(session)]
@@ -118,6 +126,18 @@ export function active_sessions_reducer(
         matched_pending
       })
 
+      // Seq gate: if we already have this session at a higher event_seq,
+      // discard this STARTED (an out-of-order late STARTED arriving after
+      // a newer UPDATE would otherwise overwrite fields).
+      const existing_for_seq = state.getIn(['sessions', session.session_id])
+      if (existing_for_seq) {
+        const existing_seq = existing_for_seq.get('event_seq') || 0
+        const incoming_seq = session.event_seq || 0
+        if (existing_seq >= incoming_seq) {
+          return state
+        }
+      }
+
       // If session has a job_id matching a pending session, merge and remove from pending
       if (session.job_id && state.hasIn(['pending_sessions', session.job_id])) {
         const pending = state.getIn(['pending_sessions', session.job_id])
@@ -156,6 +176,21 @@ export function active_sessions_reducer(
 
     case active_sessions_action_types.ACTIVE_SESSION_UPDATED: {
       const { session } = payload
+
+      // Seq gate: discard out-of-order UPDATED events that would regress
+      // state. Compares against the currently stored session in either
+      // the active sessions map or the ended_sessions map.
+      const stored_active = state.getIn(['sessions', session.session_id])
+      const stored_ended = state.getIn(['ended_sessions', session.session_id])
+      const stored = stored_active || stored_ended
+      if (stored) {
+        const stored_seq = stored.get('event_seq') || 0
+        const incoming_seq = session.event_seq || 0
+        if (incoming_seq && incoming_seq <= stored_seq) {
+          return state
+        }
+      }
+
       const existing_thread = state.getIn([
         'sessions',
         session.session_id,

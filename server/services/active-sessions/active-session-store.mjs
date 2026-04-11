@@ -108,16 +108,28 @@ export const register_active_session = async ({
   session_id,
   working_directory,
   transcript_path,
-  job_id
+  job_id,
+  resume = false
 }) => {
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
   const tombstone_key = build_tombstone_key(session_id)
 
-  // Clear any tombstone from a previous session end. This handles the
-  // resume case: same session_id re-registers after SessionEnd deleted it.
-  // Without this, subsequent PUT updates would be blocked by the stale tombstone.
-  await redis.del(tombstone_key)
+  // Tombstone-aware registration: if the session was just deleted, refuse to
+  // re-register unless the caller explicitly signals a resume. This blocks the
+  // POST-after-DELETE race for short sessions where the SessionStart POST
+  // lands after the SessionEnd DELETE, which would otherwise create an
+  // orphaned session with no subsequent ENDED event.
+  const tombstone_exists = await redis.exists(tombstone_key)
+  if (tombstone_exists) {
+    if (!resume) {
+      log(`Skipped registration for tombstoned session: ${session_id}`)
+      return null
+    }
+    // Resume: same session_id intentionally re-registering. Clear the
+    // tombstone so subsequent updates are not blocked.
+    await redis.del(tombstone_key)
+  }
 
   const now = new Date().toISOString()
 
@@ -136,7 +148,8 @@ export const register_active_session = async ({
       transcript_path,
       job_id: job_id || existing.job_id || null,
       started_at: now,
-      last_activity_at: now
+      last_activity_at: now,
+      event_seq: (existing.event_seq || 0) + 1
     }
     log(`Re-registered active session (resume): ${session_id}`)
   } else {
@@ -151,7 +164,8 @@ export const register_active_session = async ({
       job_id: job_id || null,
       created_at: now,
       started_at: now,
-      last_activity_at: now
+      last_activity_at: now,
+      event_seq: 1
     }
     log(`Registered active session: ${session_id}`)
   }
@@ -214,7 +228,8 @@ else
     session_id = session_id,
     status = 'active',
     created_at = now,
-    started_at = now
+    started_at = now,
+    event_seq = 0
   }
 end
 
@@ -225,6 +240,7 @@ for k, v in pairs(updates) do
 end
 
 session.last_activity_at = now
+session.event_seq = (session.event_seq or 0) + 1
 
 local result = cjson.encode(session)
 redis.call('SETEX', key, ttl, result)
@@ -398,6 +414,10 @@ export const get_and_remove_active_session = async (session_id) => {
 
   if (data) {
     const session = JSON.parse(data)
+    // Bump event_seq so the ENDED event carries a sequence higher than the
+    // last stored UPDATE. This lets the client reducer discard any stale
+    // UPDATED events that arrive after ENDED.
+    session.event_seq = (session.event_seq || 0) + 1
     log(`Got and removed active session: ${session_id}`)
     return session
   }
