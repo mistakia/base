@@ -104,6 +104,12 @@ export const generate_compose_config = async ({
   const memory = resource_limits.memory || '2g'
   const cpus = resource_limits.cpus || '1.0'
 
+  // Add base-node-modules named volume so the container gets Linux-native
+  // binaries (same volume the admin container uses). Without this, the
+  // entrypoint cannot find node_modules/.bin and base CLI is unavailable.
+  const node_modules_target = `${container_user_base_path}/repository/active/base/node_modules`
+  volume_mounts.push(`base-node-modules:${node_modules_target}`)
+
   // Build compose service definition
   const service = {
     container_name,
@@ -128,6 +134,9 @@ export const generate_compose_config = async ({
   const compose = {
     services: {
       [container_name]: service
+    },
+    volumes: {
+      'base-node-modules': { external: true }
     }
   }
 
