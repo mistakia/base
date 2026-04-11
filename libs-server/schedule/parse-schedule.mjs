@@ -30,7 +30,7 @@ export const parse_schedule = ({
           created_at
         })
       case 'at':
-        return parse_at_timestamp({ schedule })
+        return parse_at_timestamp({ schedule, last_triggered_at })
       case 'every':
         return parse_every_interval({ schedule, last_triggered_at, created_at })
       default:
@@ -76,9 +76,10 @@ const parse_cron_expression = ({
  * Parse ISO timestamp for one-shot execution
  * @param {Object} params
  * @param {string} params.schedule - ISO 8601 timestamp
- * @returns {string|null} ISO timestamp or null if in the past
+ * @param {string} [params.last_triggered_at] - Last trigger timestamp
+ * @returns {string|null} ISO timestamp or null if already triggered
  */
-const parse_at_timestamp = ({ schedule }) => {
+const parse_at_timestamp = ({ schedule, last_triggered_at }) => {
   const trigger_time = new Date(schedule)
 
   if (isNaN(trigger_time.getTime())) {
@@ -86,7 +87,12 @@ const parse_at_timestamp = ({ schedule }) => {
     return null
   }
 
-  // Return the timestamp even if in the past - let the processor decide
+  // One-shot: if already triggered, do not schedule again
+  if (last_triggered_at) {
+    log(`At schedule already triggered at ${last_triggered_at}, skipping`)
+    return null
+  }
+
   log(`At schedule: ${trigger_time.toISOString()}`)
   return trigger_time.toISOString()
 }
