@@ -17,6 +17,23 @@ const TAG_CONSTRAINTS = {
   MAX_TAGS: 3
 }
 
+// Ollama `format` schema for structured tag classification output.
+// `secondary` has no minItems so edge-case inputs can produce an empty list
+// without violating the schema. `rationale` is capped to keep output bounded.
+const TAG_OUTPUT_SCHEMA = {
+  type: 'object',
+  properties: {
+    primary: { type: 'string' },
+    secondary: {
+      type: 'array',
+      items: { type: 'string' },
+      maxItems: 2
+    },
+    rationale: { type: 'string', maxLength: 200 }
+  },
+  required: ['primary']
+}
+
 // ============================================================================
 // Tag Loading
 // ============================================================================
@@ -222,8 +239,18 @@ export function parse_tag_analysis_response(response_text, available_tags) {
     }
   }
 
-  // Extract and validate tags
-  let tags = json.tags || []
+  // Accept either the structured v3 shape ({primary, secondary, rationale})
+  // or the legacy v2 shape ({tags, reasoning}). The structured shape is what
+  // Ollama returns when called with TAG_OUTPUT_SCHEMA; the legacy shape is
+  // what free-text v2 prompts and the OpenCode path produce.
+  let tags
+  const reasoning = json.reasoning || json.rationale || null
+  if (typeof json.primary === 'string') {
+    const secondary = Array.isArray(json.secondary) ? json.secondary : []
+    tags = [json.primary, ...secondary]
+  } else {
+    tags = json.tags || []
+  }
 
   if (!Array.isArray(tags)) {
     tags = []
@@ -251,8 +278,8 @@ export function parse_tag_analysis_response(response_text, available_tags) {
   return {
     success: true,
     tags: final_tags,
-    reasoning: json.reasoning || null
+    reasoning
   }
 }
 
-export { TAG_CONSTRAINTS, PROMPT_VERSION }
+export { TAG_CONSTRAINTS, PROMPT_VERSION, TAG_OUTPUT_SCHEMA }

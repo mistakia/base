@@ -10,7 +10,8 @@ import {
   generate_tag_analysis_prompt,
   parse_tag_analysis_response,
   compute_taxonomy_hash,
-  PROMPT_VERSION
+  PROMPT_VERSION,
+  TAG_OUTPUT_SCHEMA
 } from './generate-tag-prompt.mjs'
 import { extract_user_messages } from './analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
@@ -162,7 +163,8 @@ export const analyze_thread_for_tags = async ({
   try {
     model_result = await run_model_prompt({
       prompt,
-      model
+      model,
+      format: TAG_OUTPUT_SCHEMA
     })
   } catch (error) {
     log(`Analysis failed for thread ${thread_id}: ${error.message}`)
