@@ -38,14 +38,14 @@ const get_normal_styles = {
       }
     }
   },
-  '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 4 },
+  '& h1': { fontSize: '1.25rem', fontWeight: 600, mb: 2, mt: 5 },
   '& h2': {
     fontSize: '1.125rem',
     fontWeight: 600,
     mb: 2,
-    mt: 4
+    mt: 5
   },
-  '& h3': { fontSize: '1rem', fontWeight: 600, mb: 1, mt: 2 },
+  '& h3': { fontSize: '1rem', fontWeight: 600, mb: 1, mt: 3 },
   '& h4': {
     fontSize: '0.95rem',
     fontWeight: 600,
@@ -54,7 +54,7 @@ const get_normal_styles = {
   },
   '& h5': { fontSize: '0.9rem', fontWeight: 600, mb: 1, mt: 2 },
   '& h6': { fontSize: '0.85rem', fontWeight: 600, mb: 1, mt: 2 },
-  '& p': { mb: 3, lineHeight: 1.4 },
+  '& p': { mb: 3, lineHeight: 1.55 },
   '& ul, & ol': { mb: 3, pl: 3 },
   '& ul ul': { m: 1, pl: 3 },
   '& ul': { listStyle: 'none' },
@@ -63,9 +63,9 @@ const get_normal_styles = {
     content: '"- "',
     position: 'absolute',
     left: '-1.2em',
-    color: 'var(--color-text-tertiary)'
+    color: 'var(--color-text-secondary)'
   },
-  '& li': { mb: 0.5, lineHeight: 1.4 },
+  '& li': { mb: 0.5, lineHeight: 1.55 },
   '& pre': {
     backgroundColor: COLORS.code_bg,
     p: '0 16px',
@@ -116,11 +116,11 @@ const get_normal_styles = {
     padding: '9px 20px',
     margin: '1.25em 0',
     fontSize: '0.8rem',
-    fontWeight: 300,
-    lineHeight: 1.4,
-    color: 'var(--color-text-secondary)',
-    backgroundColor: 'var(--color-surface)',
-    border: '1px solid var(--color-border-light)',
+    fontWeight: 400,
+    lineHeight: 1.5,
+    color: 'var(--color-text)',
+    backgroundColor: COLORS.code_bg,
+    border: `1px solid ${COLORS.code_border}`,
     borderRadius: 'var(--radius-sm)',
     '& p:first-of-type': {
       marginTop: '0'
@@ -139,8 +139,6 @@ const get_normal_styles = {
     borderBottom: '1px dotted var(--color-primary)',
     cursor: 'pointer',
     transition: 'color 0.2s, border-bottom-color 0.2s',
-    display: 'inline-block',
-    lineHeight: '1.2',
     wordBreak: 'break-all'
   },
   '& a:hover': {
@@ -149,9 +147,8 @@ const get_normal_styles = {
   },
   '& hr': {
     border: 'none',
-    borderTop: '1px solid var(--color-text-disabled)',
-    margin: '1em 0',
-    opacity: 0.7
+    borderTop: '1px solid var(--color-border-light)',
+    margin: '2em 0'
   },
   '& .table-container': {
     overflowX: 'auto',
@@ -163,13 +160,13 @@ const get_normal_styles = {
     borderCollapse: 'collapse',
     backgroundColor: COLORS.surface,
     fontFamily: 'var(--font-family-mono)',
-    fontSize: '0.875rem',
+    fontSize: '0.8125rem',
     width: '100%',
     minWidth: 'max-content'
   },
   '& th, & td': {
     border: `1px solid ${COLORS.breadcrumb_light}`,
-    padding: '6px 12px',
+    padding: '5px 10px',
     textAlign: 'left',
     whiteSpace: 'nowrap'
   },
