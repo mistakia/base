@@ -107,12 +107,20 @@ function update_content_references({
   }
 
   const escaped_old_uri = escape_regex_string(old_base_uri)
-  const pattern = new RegExp(`\\[\\[${escaped_old_uri}\\]\\]`, 'g')
 
-  const matches = entity_content.match(pattern)
-  const update_count = matches ? matches.length : 0
+  // Single pass: match [[base_uri]] wiki-links or bare base_uri strings.
+  // Alternation is left-biased so the wiki-link variant matches first when
+  // brackets are present, and the callback preserves bracket context.
+  const pattern = new RegExp(
+    `\\[\\[${escaped_old_uri}\\]\\]|${escaped_old_uri}`,
+    'g'
+  )
 
-  const updated_content = entity_content.replace(pattern, `[[${new_base_uri}]]`)
+  let update_count = 0
+  const updated_content = entity_content.replace(pattern, (match) => {
+    update_count++
+    return match.startsWith('[[') ? `[[${new_base_uri}]]` : new_base_uri
+  })
 
   return { updated_content, update_count }
 }

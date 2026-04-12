@@ -58,15 +58,35 @@ const tokenize = (text) =>
     .split(' ')
     .filter((t) => t.length > 0)
 
-const compute_keyword_recall = (title, expected_keywords) => {
+const normalize_keyword = (text) =>
+  (text || '')
+    .toLowerCase()
+    .replace(/[-_]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const compute_keyword_recall = (title, expected_keywords, keyword_aliases) => {
   if (!Array.isArray(expected_keywords) || expected_keywords.length === 0) {
     return { recall: null, matched: [], missed: [] }
   }
-  const haystack = (title || '').toLowerCase()
+  const haystack_raw = (title || '').toLowerCase()
+  const haystack_normalized = normalize_keyword(title)
   const matched = []
   const missed = []
   for (const kw of expected_keywords) {
-    if (haystack.includes(kw.toLowerCase())) {
+    const kw_lower = kw.toLowerCase()
+    const kw_normalized = normalize_keyword(kw)
+    const aliases = (keyword_aliases && keyword_aliases[kw]) || []
+
+    const found =
+      haystack_raw.includes(kw_lower) ||
+      haystack_normalized.includes(kw_normalized) ||
+      aliases.some((alias) => {
+        const a = alias.toLowerCase()
+        return haystack_raw.includes(a) || haystack_normalized.includes(normalize_keyword(alias))
+      })
+
+    if (found) {
       matched.push(kw)
     } else {
       missed.push(kw)
@@ -103,11 +123,11 @@ const compute_rouge1_f1 = (generated, expected) => {
   return (2 * precision * recall) / (precision + recall)
 }
 
-const score_case = ({ generated_title, expected_title, expected_keywords }) => {
+const score_case = ({ generated_title, expected_title, expected_keywords, keyword_aliases }) => {
   const length_ok = Boolean(
     generated_title && generated_title.length > 0 && generated_title.length <= MAX_TITLE_LENGTH
   )
-  const keyword = compute_keyword_recall(generated_title, expected_keywords)
+  const keyword = compute_keyword_recall(generated_title, expected_keywords, keyword_aliases)
   const rouge1_f1 = compute_rouge1_f1(generated_title, expected_title)
   const keyword_recall = keyword.recall ?? 0
   const composite = 0.6 * keyword_recall + 0.4 * rouge1_f1
@@ -177,7 +197,8 @@ const evaluate_model = async ({ model, cases, verbose }) => {
     const scores = score_case({
       generated_title,
       expected_title: test_case.expected_title,
-      expected_keywords: test_case.expected_keywords
+      expected_keywords: test_case.expected_keywords,
+      keyword_aliases: test_case.expected_keywords_aliases
     })
 
     const result = {
