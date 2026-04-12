@@ -232,9 +232,12 @@ UserPromptSubmit hook fires
 PostToolUse hook fires
   |
   +--> 1. active-session-hook.sh (background, fire-and-forget)
-  |     PUT /api/active-sessions/<session_id>
+  |     PUT /api/threads/:thread_id/session-status (when THREAD_ID set)
+  |       body: { session_status: "active" }
+  |       -> WS: THREAD_UPDATED (emitted directly)
+  |     OR PUT /api/active-sessions/<session_id> (legacy, when THREAD_ID not set)
   |       body: { status: "active", job_id, working_directory, transcript_path }
-  |       -> WS: ACTIVE_SESSION_UPDATED (same as above, thread_id may or may not be set)
+  |       -> WS: ACTIVE_SESSION_UPDATED
   |
   +--> 2. sync-claude-session.sh (throttled: 2s when THREAD_ID set, 30s otherwise; lock-guarded)
         |
@@ -387,7 +390,7 @@ The legacy event payloads remain unchanged from the original format. Clients imp
 
 ### THREAD_UPDATED
 
-Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified (e.g., after metadata analysis generates a title, or after each UserPromptSubmit/SessionEnd sync updates the thread).
+Same payload structure as THREAD_CREATED, plus `session_status` and `prompt_snippet` fields when present. Emitted when metadata.json is modified -- this includes session state transitions (via the `PUT /api/threads/:thread_id/session-status` endpoint, which emits directly for immediate feedback), metadata analysis title generation, and sync pipeline updates (UserPromptSubmit/SessionEnd). In the thread-first architecture, this is the primary event for tracking session lifecycle state.
 
 ### THREAD_TIMELINE_ENTRY_ADDED
 
@@ -421,8 +424,8 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 ```
 
 **Emitted**: When the BullMQ job fails (harness crash, timeout, etc.).
-**Broadcast**: Sent to all authenticated WebSocket clients without permission filtering (since there is no thread to check permissions against). Clients match by `job_id` to correlate with pending sessions.
-**thread_id**: Null for new session jobs (no thread exists yet). Non-null for resumed session jobs where the thread already exists. Clients use this to update thread-specific pending resume state.
+**Broadcast**: Sent to all authenticated WebSocket clients without permission filtering (since there is no thread to check permissions against). Clients match by `job_id` to correlate with the thread.
+**thread_id**: In the thread-first architecture, always non-null for web-client sessions (the thread exists from submission time). The job worker also updates `session_status` to `'failed'` in the thread metadata. Null only for legacy jobs without a pre-created thread.
 
 ### THREAD_JOB_STARTED
 
