@@ -28,3 +28,8 @@ export {
   resolve_base_uri_from_registry,
   get_git_info_from_registry
 } from './registry-utilities.mjs'
+
+export {
+  DIRECTORY_TYPE_MAP,
+  get_expected_type_for_path
+} from './path-type-map.mjs'

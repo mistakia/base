@@ -9,7 +9,8 @@ import { list_markdown_files_in_filesystem } from '#libs-server/repository/files
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   add_directory_cli_options,
-  handle_cli_directory_registration
+  handle_cli_directory_registration,
+  get_expected_type_for_path
 } from '#libs-server/base-uri/index.mjs'
 
 const log = debug('validate-filesystem-markdown')
@@ -72,6 +73,21 @@ const validate_filesystem = async ({
       error: read_result.error,
       error_code: read_result.error_code
     })
+  }
+
+  // Detect path-type mismatches between file location and declared entity type
+  for (const file of result.files) {
+    const declared_type = file.entity_properties && file.entity_properties.type
+    if (!declared_type) continue
+    const expected_type = get_expected_type_for_path({
+      absolute_path: file.absolute_path
+    })
+    if (expected_type && expected_type !== declared_type) {
+      file.errors = file.errors || []
+      file.errors.push(
+        `Path-type mismatch: file is in "${expected_type}/" but declared type is "${declared_type}"`
+      )
+    }
   }
 
   // In strict mode, promote warnings to errors before output

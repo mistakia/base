@@ -38,7 +38,8 @@ import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write
 import {
   resolve_base_uri_from_registry,
   is_valid_base_uri,
-  create_base_uri_from_path
+  create_base_uri_from_path,
+  get_expected_type_for_path
 } from '#libs-server/base-uri/index.mjs'
 import config from '#config'
 import { sync_task_to_github } from '#libs-server/integrations/github/sync-task-to-github.mjs'
@@ -446,6 +447,12 @@ export const builder = (yargs) =>
             describe: 'Additional properties as JSON string',
             type: 'string'
           })
+          .option('force', {
+            alias: 'f',
+            describe: 'Override path-type consistency check',
+            type: 'boolean',
+            default: false
+          })
           .option('dry-run', {
             alias: 'n',
             describe: 'Preview without writing',
@@ -519,6 +526,13 @@ async function handle_create(argv) {
       }
     }
 
+    if (extra_properties.type !== undefined) {
+      console.error(
+        'Warning: "type" in --properties is ignored; use --type flag instead'
+      )
+      delete extra_properties.type
+    }
+
     const entity_properties = {
       title,
       ...extra_properties,
@@ -531,6 +545,14 @@ async function handle_create(argv) {
     }
 
     const absolute_path = resolve_base_uri_from_registry(base_uri)
+
+    const expected_type = get_expected_type_for_path({ absolute_path })
+    if (expected_type && expected_type !== entity_type && !argv.force) {
+      const first_segment = expected_type
+      throw new Error(
+        `Type mismatch: file at ${first_segment}/ expects type "${expected_type}" but got "${entity_type}". Use --force to override.`
+      )
+    }
 
     if (existsSync(absolute_path) && !argv.force) {
       throw new Error(
@@ -667,6 +689,20 @@ async function handle_convert(argv) {
       } catch {
         throw new Error(`Invalid JSON for --properties: ${argv.properties}`)
       }
+    }
+
+    if (extra_properties.type !== undefined) {
+      console.error(
+        'Warning: "type" in --properties is ignored; use --type flag instead'
+      )
+      delete extra_properties.type
+    }
+
+    const expected_type = get_expected_type_for_path({ absolute_path })
+    if (expected_type && expected_type !== entity_type && !argv.force) {
+      throw new Error(
+        `Type mismatch: file at ${expected_type}/ expects type "${expected_type}" but got "${entity_type}". Use --force to override.`
+      )
     }
 
     // Check if already a valid entity with no flags provided
@@ -1217,6 +1253,13 @@ async function handle_update(argv) {
       } catch {
         throw new Error(`Invalid JSON for --properties: ${argv.properties}`)
       }
+    }
+
+    if (extra_properties.type !== undefined) {
+      console.error(
+        'Warning: "type" in --properties is ignored; entity type cannot be changed via update'
+      )
+      delete extra_properties.type
     }
 
     // Parse --tags comma-separated string into array
