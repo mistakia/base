@@ -86,7 +86,10 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
         session_file: options.session_file,
         from_date: config.from_date,
         to_date: config.to_date
-      }
+      },
+      ...(options.known_thread_id
+        ? { known_thread_id: options.known_thread_id }
+        : {})
     })
 
     const sessions_processed =

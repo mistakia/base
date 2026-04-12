@@ -632,6 +632,11 @@ const main = async () => {
               type: 'boolean',
               default: false
             })
+            .option('known-thread-id', {
+              describe:
+                'Pre-created thread ID to update instead of creating a new thread (thread-first flow)',
+              type: 'string'
+            })
             .option('verbose', {
               alias: 'v',
               describe: 'Verbose output',
@@ -725,7 +730,8 @@ const main = async () => {
             max_conversations: argv.maxConversations,
             dry_run: argv.dryRun,
             allow_updates: argv.allowUpdates,
-            verbose: argv.verbose
+            verbose: argv.verbose,
+            known_thread_id: argv.knownThreadId
           })
 
           // Use appropriate output format based on verbose flag

@@ -382,6 +382,42 @@ export const process_single_session = async ({
     }
   }
 
+  // Secondary dedup: check if a pre-created thread (thread-first flow) already
+  // claims this session_id via source.session_id. The deterministic ID lookup
+  // above only finds threads whose ID was derived from the session_id hash; it
+  // misses pre-created threads that were later linked to this session by the
+  // SessionStart hook.
+  try {
+    const { find_thread_for_session } = await import(
+      '#libs-server/active-sessions/session-thread-matcher.mjs'
+    )
+    const existing_thread_id = await find_thread_for_session({ session_id })
+    if (existing_thread_id) {
+      const { get_thread_base_directory } = await import(
+        '#libs-server/threads/threads-constants.mjs'
+      )
+      const existing_thread_dir = path.join(
+        get_thread_base_directory({ user_base_directory }),
+        existing_thread_id
+      )
+      log(
+        `Found pre-created thread ${existing_thread_id} for session ${session_id} via session matcher`
+      )
+      return await update_existing_session_thread({
+        raw_session,
+        session_provider,
+        thread_id: existing_thread_id,
+        thread_dir: existing_thread_dir,
+        session_id,
+        source_overrides
+      })
+    }
+  } catch (matcher_error) {
+    log(
+      `Session matcher lookup failed for ${session_id}: ${matcher_error.message}`
+    )
+  }
+
   // Create new thread
   return await create_new_session_thread({
     raw_session,
