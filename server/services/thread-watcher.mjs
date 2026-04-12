@@ -417,7 +417,7 @@ const handle_metadata_added = async (file_path) => {
     !metadata.title_prompt_version &&
     metadata.thread_state !== 'archived'
   ) {
-    fs.appendFile(METADATA_QUEUE_FILE_PATH, thread_id + '\n').catch((err) => {
+    await fs.appendFile(METADATA_QUEUE_FILE_PATH, thread_id + '\n').catch((err) => {
       log(`Failed to queue thread ${thread_id} for metadata analysis: ${err.message}`)
     })
   }
@@ -455,7 +455,7 @@ const handle_metadata_changed = async (file_path) => {
     !metadata.title_prompt_version &&
     metadata.thread_state !== 'archived'
   ) {
-    fs.appendFile(METADATA_QUEUE_FILE_PATH, metadata.thread_id + '\n').catch((err) => {
+    await fs.appendFile(METADATA_QUEUE_FILE_PATH, metadata.thread_id + '\n').catch((err) => {
       log(`Failed to queue thread ${metadata.thread_id} for metadata analysis: ${err.message}`)
     })
   }
