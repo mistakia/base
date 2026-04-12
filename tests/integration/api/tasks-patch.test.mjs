@@ -1,4 +1,6 @@
 /* global describe it before beforeEach afterEach */
+import fs from 'fs'
+import path from 'path'
 import chai, { expect } from 'chai'
 
 import server from '#server'
@@ -11,6 +13,9 @@ import {
 import create_test_task from '#tests/utils/create-test-task.mjs'
 import reset_all_tables from '#tests/utils/reset-all-tables.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/index.mjs'
 
 chai.should()
 
@@ -329,6 +334,79 @@ describe('API /tasks PATCH', () => {
 
       expect(res.status).to.equal(404)
       res.body.should.have.property('error')
+    })
+  })
+
+  describe('non-task entity type preservation', () => {
+    let guideline_base_uri
+
+    beforeEach(async () => {
+      guideline_base_uri = 'user:guideline/test-guideline-patch.md'
+      const absolute_path = resolve_base_uri(guideline_base_uri)
+      fs.mkdirSync(path.dirname(absolute_path), { recursive: true })
+
+      await write_entity_to_filesystem({
+        absolute_path,
+        entity_properties: {
+          title: 'Test Guideline for PATCH',
+          description: 'A guideline for testing PATCH type preservation',
+          base_uri: guideline_base_uri,
+          user_public_key: owner_user.user_public_key,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        entity_type: 'guideline',
+        entity_content: 'Guideline content here.'
+      })
+    })
+
+    it('should preserve entity type when updating relations on a guideline', async () => {
+      const res = await request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: guideline_base_uri,
+          properties: {
+            relations: ['relates [[user:task/test-task-for-patch.md]]']
+          }
+        })
+
+      expect(res.status).to.equal(200)
+
+      const absolute_path = resolve_base_uri(guideline_base_uri)
+      const entity_result = await read_entity_from_filesystem({
+        absolute_path
+      })
+
+      expect(entity_result.success).to.be.true
+      expect(entity_result.entity_properties.type).to.equal('guideline')
+      expect(entity_result.entity_properties).to.not.have.property('status')
+      expect(entity_result.entity_properties).to.not.have.property('priority')
+    })
+
+    it('should preserve entity type when updating description on a guideline', async () => {
+      const res = await request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: guideline_base_uri,
+          properties: { description: 'Updated guideline description' }
+        })
+
+      expect(res.status).to.equal(200)
+
+      const absolute_path = resolve_base_uri(guideline_base_uri)
+      const entity_result = await read_entity_from_filesystem({
+        absolute_path
+      })
+
+      expect(entity_result.success).to.be.true
+      expect(entity_result.entity_properties.type).to.equal('guideline')
+      expect(entity_result.entity_properties.description).to.equal(
+        'Updated guideline description'
+      )
+      expect(entity_result.entity_properties).to.not.have.property('status')
+      expect(entity_result.entity_properties).to.not.have.property('priority')
     })
   })
 })

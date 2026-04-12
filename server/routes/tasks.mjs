@@ -8,9 +8,10 @@ import {
 import { parse_array_param } from '#server/utils/query-params.mjs'
 import {
   list_tasks_from_filesystem,
-  read_task_from_filesystem,
-  write_task_to_filesystem
+  read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
+import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { process_task_table_request } from '#server/lib/tasks/process-task-table-request.mjs'
 import { apply_tag_redaction_to_tasks } from '#server/lib/tasks/tag-visibility.mjs'
@@ -612,11 +613,11 @@ router.patch('/', async (req, res) => {
       }
     }
 
-    // Read existing task
-    const task = await read_task_from_filesystem({ base_uri })
+    // Read existing entity (not task-specific, to preserve non-task types)
+    const entity = await read_task_from_filesystem({ base_uri })
 
-    if (!task.success) {
-      return res.status(404).json({ error: task.error || 'Task not found' })
+    if (!entity.success) {
+      return res.status(404).json({ error: entity.error || 'Entity not found' })
     }
 
     // Check write permission
@@ -629,45 +630,44 @@ router.patch('/', async (req, res) => {
       return res.status(403).json({ error: 'Permission denied' })
     }
 
+    const entity_type = entity.entity_properties.type
+    const is_task = entity_type === 'task'
+
     // Merge properties and write back
     const now = new Date().toISOString()
     const merged_properties = {
-      ...task.entity_properties,
+      ...entity.entity_properties,
       ...update_properties,
       updated_at: now
     }
 
-    // Auto-set started_at when transitioning to a work-in-progress status
-    if (
-      update_properties.status &&
-      (update_properties.status === TASK_STATUS.STARTED ||
-        update_properties.status === TASK_STATUS.IN_PROGRESS) &&
-      !merged_properties.started_at
-    ) {
-      merged_properties.started_at = now
+    // Auto-set timestamps only for task entities
+    if (is_task && update_properties.status) {
+      if (
+        (update_properties.status === TASK_STATUS.STARTED ||
+          update_properties.status === TASK_STATUS.IN_PROGRESS) &&
+        !merged_properties.started_at
+      ) {
+        merged_properties.started_at = now
+      }
+      if (
+        (update_properties.status === TASK_STATUS.COMPLETED ||
+          update_properties.status === TASK_STATUS.ABANDONED) &&
+        !merged_properties.finished_at
+      ) {
+        merged_properties.finished_at = now
+      }
     }
 
-    // Auto-set finished_at when transitioning to a terminal status
-    if (
-      update_properties.status &&
-      (update_properties.status === TASK_STATUS.COMPLETED ||
-        update_properties.status === TASK_STATUS.ABANDONED) &&
-      !merged_properties.finished_at
-    ) {
-      merged_properties.finished_at = now
-    }
-
-    const write_result = await write_task_to_filesystem({
-      base_uri,
-      task_properties: merged_properties,
-      task_content: task.entity_content || ''
+    const absolute_path = resolve_base_uri_from_registry(base_uri)
+    await write_entity_to_filesystem({
+      absolute_path,
+      entity_properties: merged_properties,
+      entity_type,
+      entity_content: entity.entity_content || ''
     })
 
-    if (!write_result.success) {
-      return res.status(500).json({ error: write_result.error })
-    }
-
-    log(`Task ${base_uri} updated: ${JSON.stringify(update_properties)}`)
+    log(`Entity ${base_uri} updated: ${JSON.stringify(update_properties)}`)
 
     res.status(200).json({
       success: true,
@@ -677,6 +677,7 @@ router.patch('/', async (req, res) => {
 
     // Sync status/priority changes to GitHub project fields (best-effort, after response)
     if (
+      is_task &&
       !req.body.no_sync &&
       (update_properties.status || update_properties.priority)
     ) {
@@ -686,7 +687,7 @@ router.patch('/', async (req, res) => {
           status: update_properties.status,
           priority: update_properties.priority
         },
-        previous_status: task.entity_properties.status
+        previous_status: entity.entity_properties.status
       }).catch((err) =>
         log('GitHub sync failed for %s: %s', base_uri, err.message)
       )
