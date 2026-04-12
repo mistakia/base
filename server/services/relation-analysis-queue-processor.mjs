@@ -1,20 +1,40 @@
+import path from 'path'
 import debug from 'debug'
 
+import config from '#config'
 import {
   FileBasedQueueProcessor,
   is_standalone_execution
 } from '#libs-server/queue/file-based-queue-processor.mjs'
-import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
+import {
+  analyze_thread_relations,
+  RELATION_ANALYSIS_CONFIG
+} from '#libs-server/metadata/analyze-thread-relations.mjs'
 
 /**
  * Queue processor for thread relation analysis
  *
  * Watches a queue file for thread IDs to process and runs relation
  * analysis to extract entity references from thread timelines.
+ *
+ * Queue and processed-log paths come from `config.metadata_queue` and
+ * mirror the resolution logic used by `metadata-queue-processor.mjs`.
  */
 
-const QUEUE_FILE_PATH = '/tmp/claude-pending-relation-analysis.queue'
-const PROCESSED_FILE_PATH = '/tmp/claude-relation-analysis-processed.log'
+const resolve_queue_path = (configured_path, fallback) => {
+  if (!configured_path) return fallback
+  if (path.isAbsolute(configured_path)) return configured_path
+  if (config.user_base_directory) {
+    return path.join(config.user_base_directory, configured_path)
+  }
+  return fallback
+}
+
+const QUEUE_FILE_PATH = RELATION_ANALYSIS_CONFIG.QUEUE_FILE_PATH
+const PROCESSED_FILE_PATH = resolve_queue_path(
+  config.metadata_queue?.relation_processed_file_path,
+  '/tmp/claude-relation-analysis-processed.log'
+)
 
 /**
  * Process a single thread for relation analysis

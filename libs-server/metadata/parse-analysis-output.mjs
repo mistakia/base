@@ -135,42 +135,4 @@ export const parse_metadata_response = (response_text) => {
   }
 }
 
-/**
- * Generate the analysis prompt for a thread
- *
- * @param {Object} params
- * @param {string} params.user_message - First user message from the thread
- * @returns {string} Prompt for the model
- */
-export const generate_analysis_prompt = ({ user_message }) => {
-  return `Generate metadata for this coding session request.
-
-"""
-${user_message}
-"""
-
-CRITICAL rules for globally unique titles:
-- EXTRACT specific entities: player names, URLs, dates, week numbers, thread IDs, file paths
-- For workflow invocations: include the unique parameters (thread_id short hash, player name, week number)
-- NEVER use generic titles like "Execute workflow", "Analyze thread", "Run analysis"
-- Include disambiguating context that makes this instance unique
-
-Examples:
-- "@workflow/analyze-and-update-thread.md thread_id: 9d82cecf-34c3-5ad6" → "Update metadata for thread 9d82cecf"
-- "@workflow/find-market-selections.md player: Trey McBride, week: 9" → "Find Trey McBride market selections Week 9"
-- "debug data view https://xo.football/u/cb3031028178" → "Debug data view cb303102 duplicate rows"
-- "profile Theodore Johnson with/without Malik Nabers" → "Profile Theodore Johnson usage without Malik Nabers"
-
-JSON response:
-- "title": Under 100 chars with specific identifiers
-- "short_description": 1-2 sentences under 200 chars
-
-\`\`\`json
-{
-  "title": "...",
-  "short_description": "..."
-}
-\`\`\``
-}
-
 export default parse_metadata_response

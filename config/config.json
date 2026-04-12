@@ -21,7 +21,9 @@
   },
   "jwt": {
     "secret": "",
-    "algorithms": ["HS256"]
+    "algorithms": [
+      "HS256"
+    ]
   },
   "claude_session_import_service": {
     "storage_server": {
@@ -118,12 +120,16 @@
   },
   "cli_queue": {
     "tag_limits": {
-      "default": { "max_concurrent": 10 }
+      "default": {
+        "max_concurrent": 10
+      }
     }
   },
   "metadata_queue": {
     "queue_file_path": "/tmp/claude-pending-metadata-analysis.queue",
-    "processed_file_path": "/tmp/claude-metadata-processed.log"
+    "processed_file_path": "/tmp/claude-metadata-processed.log",
+    "relation_queue_file_path": "/tmp/claude-pending-relation-analysis.queue",
+    "relation_processed_file_path": "/tmp/claude-relation-analysis-processed.log"
   },
   "job_tracker": {
     "enabled": false,
@@ -139,6 +145,10 @@
     "enabled": false,
     "static_dir": ""
   },
+  "auto_commit_user_base": {
+    "enabled": false,
+    "stale_threshold_minutes": 15
+  },
   "user_containers": {
     "enabled": false,
     "data_directory": "/tmp/user-containers",
@@ -148,9 +158,23 @@
       "memory": "2g",
       "cpus": "1.0"
     },
-    "never_mount": ["config/", "identity/", "role/", "import-history/", ".git/"],
+    "never_mount": [
+      "config/",
+      "identity/",
+      "role/",
+      "import-history/",
+      ".git/"
+    ],
     "container_ready_timeout_ms": 60000,
-    "default_deny_bash_patterns": ["curl *", "wget *", "nc *", "ssh *", "sudo *", "docker *", "rm -rf *"],
+    "default_deny_bash_patterns": [
+      "curl *",
+      "wget *",
+      "nc *",
+      "ssh *",
+      "sudo *",
+      "docker *",
+      "rm -rf *"
+    ],
     "browser_home": ""
   }
 }

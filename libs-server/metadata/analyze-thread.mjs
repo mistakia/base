@@ -5,10 +5,13 @@ import {
   run_model_prompt,
   extract_model_response
 } from './run-model-prompt.mjs'
+import { parse_metadata_response } from './parse-analysis-output.mjs'
 import {
-  parse_metadata_response,
-  generate_analysis_prompt
-} from './parse-analysis-output.mjs'
+  generate_title_prompt,
+  TITLE_PROMPT_VERSION,
+  TITLE_OUTPUT_SCHEMA,
+  TITLE_GENERATION_MODEL
+} from './generate-title-prompt.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
@@ -181,11 +184,15 @@ export const analyze_thread_for_metadata = async ({
   // Get thread data
   const thread = await get_thread({ thread_id })
 
-  // Check if metadata already exists
-  // Skip only if BOTH title AND short_description exist
-  // If title is missing, we need to regenerate it even if short_description exists
-  if (thread.title && thread.short_description) {
-    log(`Thread ${thread_id} already has metadata, skipping`)
+  // Check if metadata already exists AND was produced by the current prompt
+  // version. Threads analyzed with an older prompt version become re-eligible
+  // for regeneration, mirroring the tag-classification version-gate pattern.
+  if (
+    thread.title &&
+    thread.short_description &&
+    thread.title_prompt_version === TITLE_PROMPT_VERSION
+  ) {
+    log(`Thread ${thread_id} already has metadata at v${TITLE_PROMPT_VERSION}, skipping`)
     return {
       thread_id,
       status: 'skipped',
@@ -197,11 +204,19 @@ export const analyze_thread_for_metadata = async ({
     }
   }
 
+  if (thread.title && thread.short_description) {
+    log(
+      `Thread ${thread_id} re-eligible: prompt v${thread.title_prompt_version || '?'}->${TITLE_PROMPT_VERSION}`
+    )
+  }
+
   // Read timeline
   const timeline = await read_thread_timeline(thread.context_dir)
 
-  // Extract first user message
-  const user_message = extract_first_user_message(timeline)
+  // Extract user messages (up to 3, within 12K char budget). Multi-message
+  // context produces stronger titles on multi-turn sessions where the first
+  // message is terse but later messages reveal the actual work.
+  const user_message = extract_user_messages(timeline)
 
   if (!user_message) {
     log(`No user message found in thread ${thread_id}`)
@@ -213,14 +228,17 @@ export const analyze_thread_for_metadata = async ({
   }
 
   // Generate analysis prompt
-  const prompt = generate_analysis_prompt({ user_message })
+  const prompt = generate_title_prompt({ user_message })
 
-  // Run OpenCode analysis
+  // Run OpenCode analysis with Ollama-structured JSON output to eliminate
+  // free-text parse failures. The `format` param is ignored on the OpenCode
+  // code path.
   let model_result
   try {
     model_result = await run_model_prompt({
       prompt,
-      model
+      model: model || TITLE_GENERATION_MODEL,
+      format: TITLE_OUTPUT_SCHEMA
     })
   } catch (error) {
     log(`OpenCode failed for thread ${thread_id}: ${error.message}`)
@@ -249,13 +267,17 @@ export const analyze_thread_for_metadata = async ({
 
   // Build update object
   // Always update title with AI-generated version (overwrites default from first prompt)
-  // Only update short_description if not already set
+  // Update short_description on every run so version-gated regeneration can
+  // refresh stale descriptions, not just backfill missing ones.
   const updates = {}
   if (metadata.title) {
     updates.title = metadata.title
   }
-  if (metadata.short_description && !thread.short_description) {
+  if (metadata.short_description) {
     updates.short_description = metadata.short_description
+  }
+  if (metadata.title || metadata.short_description) {
+    updates.title_prompt_version = TITLE_PROMPT_VERSION
   }
 
   if (Object.keys(updates).length === 0) {

@@ -30,9 +30,27 @@ export const TOOL_ACCESS_TYPES = {
   Write: 'modify',
   NotebookEdit: 'modify',
 
+  // Delegation. Agent tool calls a subagent with a free-form prompt; entity
+  // references inside the prompt are extracted via the wikilink scanner.
+  Agent: 'reference',
+
+  // MCP task management tools
+  TaskCreate: 'create',
+  TaskUpdate: 'modify',
+
   // Create operations (legacy MCP tool, kept for historical thread compatibility)
   mcp__base__entity_create: 'create'
 }
+
+/**
+ * Tool names whose base_uri identity comes from tool_parameters.base_uri
+ * (MCP-style create/modify tools) rather than file_path or path.
+ */
+const BASE_URI_PARAMETER_TOOLS = new Set([
+  'mcp__base__entity_create',
+  'TaskCreate',
+  'TaskUpdate'
+])
 
 /**
  * Maps bash commands to their access types
@@ -49,6 +67,8 @@ const BASH_COMMAND_ACCESS_TYPES = {
   cp: { src: 'read', dst: 'create' },
   mv: { src: 'delete', dst: 'create' }
 }
+
+const SCRIPT_EXTENSIONS = ['.mjs', '.js', '.cjs', '.ts', '.tsx', '.py', '.sh']
 
 // ============================================================================
 // Tool Call Extraction
@@ -72,14 +92,52 @@ export function extract_from_tool_calls({ timeline }) {
 
     if (!access_type) continue
 
-    // Handle mcp__base__entity_create specially (uses base_uri directly)
-    if (tool_name === 'mcp__base__entity_create' && tool_parameters?.base_uri) {
-      references.push({
-        base_uri: tool_parameters.base_uri,
-        access_type,
-        confidence: 'high',
-        source: 'tool_call'
-      })
+    // Handle MCP-style tools that identify entities directly by base_uri.
+    if (BASE_URI_PARAMETER_TOOLS.has(tool_name)) {
+      const base_uri =
+        tool_parameters?.base_uri || tool_parameters?.task_uri || null
+      if (base_uri) {
+        references.push({
+          base_uri,
+          access_type,
+          confidence: 'high',
+          source: 'tool_call'
+        })
+      }
+      continue
+    }
+
+    // Handle Agent tool: extract wikilinks and @path mentions from the prompt
+    // parameter. The Agent tool itself doesn't touch files directly, but its
+    // prompt typically names the entities the subagent will investigate.
+    if (tool_name === 'Agent') {
+      const prompt_text =
+        typeof tool_parameters?.prompt === 'string'
+          ? tool_parameters.prompt
+          : null
+      if (prompt_text) {
+        const wikilinks = extract_entity_references({
+          entity_content: prompt_text
+        })
+        for (const ref of wikilinks) {
+          references.push({
+            base_uri: ref.base_uri,
+            access_type: 'reference',
+            confidence: 'medium',
+            source: 'tool_call_agent'
+          })
+        }
+        const at_path_regex = /@([^\s]+\.\w+)/g
+        let match
+        while ((match = at_path_regex.exec(prompt_text)) !== null) {
+          references.push({
+            path: match[1],
+            access_type: 'reference',
+            confidence: 'low',
+            source: 'tool_call_agent'
+          })
+        }
+      }
       continue
     }
 
@@ -194,6 +252,38 @@ function parse_bash_command(command) {
     if (tokens.length < 2) continue
 
     const cmd = tokens[0]
+
+    // `bun script.mjs` / `node script.mjs` / `python3 script.py` etc.
+    // The script path is the first non-flag token with a script extension,
+    // treated as a read (we are executing its code).
+    if (cmd === 'bun' || cmd === 'node' || cmd === 'python' || cmd === 'python3') {
+      for (let i = 1; i < tokens.length; i++) {
+        const token = tokens[i]
+        if (token.startsWith('-')) continue
+        if (SCRIPT_EXTENSIONS.some((ext) => token.endsWith(ext))) {
+          results.push({ path: token, access_type: 'read' })
+          break
+        }
+      }
+      continue
+    }
+
+    // `git add <files>` or `git checkout <files>`. These touch file paths but
+    // are not currently mapped by BASH_COMMAND_ACCESS_TYPES. Treat add as
+    // modify (content entering the index) and checkout as read (content
+    // coming out of an object).
+    if (cmd === 'git' && (tokens[1] === 'add' || tokens[1] === 'checkout')) {
+      const access_type = tokens[1] === 'add' ? 'modify' : 'read'
+      for (let i = 2; i < tokens.length; i++) {
+        const token = tokens[i]
+        if (token.startsWith('-')) continue
+        if (token === '--') continue
+        if (!token.includes('/') && !token.includes('.')) continue
+        results.push({ path: token, access_type })
+      }
+      continue
+    }
+
     const access_info = BASH_COMMAND_ACCESS_TYPES[cmd]
 
     if (!access_info) continue
@@ -493,47 +583,6 @@ export function deduplicate_references({ references }) {
 // ============================================================================
 
 /**
- * Deduplicate file references by base_uri
- * @param {Object} params
- * @param {Array} params.references - Array of file references with base_uri
- * @returns {Array} Deduplicated array of file references
- */
-function deduplicate_file_references({ references }) {
-  const access_priority = {
-    create: 4,
-    modify: 3,
-    delete: 3,
-    read: 2,
-    reference: 1
-  }
-  const by_uri = new Map()
-
-  for (const ref of references) {
-    if (!ref.base_uri) continue
-
-    const existing = by_uri.get(ref.base_uri)
-    if (!existing) {
-      by_uri.set(ref.base_uri, { ...ref })
-      continue
-    }
-
-    // Merge: keep higher priority access type and higher confidence
-    const existing_priority = access_priority[existing.access_type] || 0
-    const new_priority = access_priority[ref.access_type] || 0
-
-    if (new_priority > existing_priority) {
-      existing.access_type = ref.access_type
-    }
-
-    if (ref.confidence === 'high' && existing.confidence !== 'high') {
-      existing.confidence = 'high'
-    }
-  }
-
-  return Array.from(by_uri.values())
-}
-
-/**
  * Extract all entity references from a thread timeline
  * @param {Object} params
  * @param {Array} params.timeline - Thread timeline entries
@@ -595,10 +644,10 @@ export function extract_timeline_references_separated({ timeline }) {
   const entity_references = deduplicate_references({
     references: separated.entity_references
   })
-  const file_references = deduplicate_file_references({
+  const file_references = deduplicate_references({
     references: separated.file_references
   })
-  const directory_references = deduplicate_file_references({
+  const directory_references = deduplicate_references({
     references: separated.directory_references
   })
 

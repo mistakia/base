@@ -143,7 +143,22 @@ export class FileBasedQueueProcessor {
   }
 
   /**
-   * Process all items in the queue
+   * Append items to the queue file without overwriting concurrent appends.
+   * @param {string[]} items - Items to append
+   */
+  async append_to_queue_file(items) {
+    if (items.length === 0) return
+    const content = items.join('\n') + '\n'
+    await fs.appendFile(this.queue_file_path, content, 'utf-8')
+  }
+
+  /**
+   * Process all items in the queue.
+   *
+   * Uses an atomic rename to a `.processing` sidecar file so that concurrent
+   * appends to the main queue file by other processes (e.g. hooks) are not
+   * clobbered by the processor's write-back cycle. Deferred/failed items are
+   * appended back to the main queue after processing completes.
    */
   async process_queue() {
     if (this.is_processing) {
@@ -152,11 +167,45 @@ export class FileBasedQueueProcessor {
     }
 
     this.is_processing = true
+    const processing_path = `${this.queue_file_path}.processing`
 
     try {
-      const queue = await this.read_queue_file()
+      // Crash recovery: merge any leftover .processing file back into the
+      // main queue so its items get another chance.
+      try {
+        const leftover = await fs.readFile(processing_path, 'utf-8')
+        if (leftover.length > 0) {
+          await fs.appendFile(this.queue_file_path, leftover, 'utf-8')
+          this.log('Recovered orphaned .processing file from previous run')
+        }
+        await fs.unlink(processing_path)
+      } catch (err) {
+        if (err.code !== 'ENOENT') throw err
+      }
+
+      // Atomically claim the current queue contents.
+      try {
+        await fs.rename(this.queue_file_path, processing_path)
+      } catch (err) {
+        if (err.code === 'ENOENT') {
+          return
+        }
+        throw err
+      }
+
+      // Read claimed contents and deduplicate.
+      const content = await fs.readFile(processing_path, 'utf-8')
+      const queue = [
+        ...new Set(
+          content
+            .split('\n')
+            .map((line) => line.trim())
+            .filter((line) => line.length > 0)
+        )
+      ]
 
       if (queue.length === 0) {
+        await fs.unlink(processing_path)
         return
       }
 
@@ -169,6 +218,8 @@ export class FileBasedQueueProcessor {
       const deferred = queue.filter((item) => !eligible.includes(item))
 
       if (eligible.length === 0) {
+        await this.append_to_queue_file(deferred)
+        await fs.unlink(processing_path)
         return
       }
 
@@ -238,8 +289,10 @@ export class FileBasedQueueProcessor {
         }
       }
 
-      // Write back deferred + re-queued items, or clear if none
-      await this.write_queue_file(requeue_items)
+      // Append deferred + re-queued items back to the main queue, preserving
+      // any concurrent appends that arrived during processing.
+      await this.append_to_queue_file(requeue_items)
+      await fs.unlink(processing_path)
 
       this.log('Queue processing complete')
     } catch (error) {

@@ -5,8 +5,10 @@
  */
 
 import fs from 'fs/promises'
+import path from 'path'
 import debug from 'debug'
 
+import config from '#config'
 import {
   RELATION_ACCESSES,
   RELATION_MODIFIES,
@@ -24,8 +26,26 @@ const log = debug('metadata:analyze-relations')
 // Constants
 // ============================================================================
 
+/**
+ * Resolve a queue path from config. Absolute paths are used as-is; relative
+ * paths are joined against `config.user_base_directory`. Falls back to the
+ * legacy `/tmp/` location when no config is present (e.g. fresh checkout).
+ */
+const resolve_relation_queue_path = () => {
+  const configured = config.metadata_queue?.relation_queue_file_path
+  const fallback = '/tmp/claude-pending-relation-analysis.queue'
+  if (!configured) return fallback
+  if (path.isAbsolute(configured)) return configured
+  if (config.user_base_directory) {
+    return path.join(config.user_base_directory, configured)
+  }
+  return fallback
+}
+
 export const RELATION_ANALYSIS_CONFIG = {
-  QUEUE_FILE_PATH: '/tmp/claude-pending-relation-analysis.queue'
+  get QUEUE_FILE_PATH() {
+    return resolve_relation_queue_path()
+  }
 }
 
 /**

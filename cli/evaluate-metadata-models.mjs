@@ -20,10 +20,8 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
-import {
-  parse_metadata_response,
-  generate_analysis_prompt
-} from '#libs-server/metadata/parse-analysis-output.mjs'
+import { parse_metadata_response } from '#libs-server/metadata/parse-analysis-output.mjs'
+import { generate_title_prompt } from '#libs-server/metadata/generate-title-prompt.mjs'
 
 const log = debug('cli:evaluate-metadata-models')
 
@@ -138,7 +136,7 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
 
   for (let i = 0; i < cases.length; i++) {
     const test_case = cases[i]
-    const prompt = generate_analysis_prompt({
+    const prompt = generate_title_prompt({
       user_message: test_case.first_user_message
     })
 
