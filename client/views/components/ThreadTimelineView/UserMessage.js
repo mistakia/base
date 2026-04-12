@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react'
 import PropTypes from 'prop-types'
+import IconButton from '@mui/material/IconButton'
+import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
+import CheckIcon from '@mui/icons-material/Check'
 
 import '@styles/chip.styl'
 import './UserMessage.styl'
@@ -9,6 +12,8 @@ import {
   clean_trailing_backslashes,
   process_message_content
 } from './utils/message-processing.js'
+import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
+import { COLORS } from '@theme/colors.js'
 
 const parse_command_from_content = ({ content_string }) => {
   if (!content_string) return null
@@ -75,6 +80,7 @@ const parse_command_from_content = ({ content_string }) => {
 const UserMessage = ({ message, working_directory = null }) => {
   const [is_user_message_expanded, set_is_user_message_expanded] =
     useState(false)
+  const { copied_value, copy_to_clipboard } = use_copy_to_clipboard()
   const on_toggle = useCallback((e) => {
     e.stopPropagation()
     set_is_user_message_expanded((v) => !v)
@@ -102,9 +108,28 @@ const UserMessage = ({ message, working_directory = null }) => {
       ? content.substring(0, 400) + '...'
       : content
 
+  const is_copied = copied_value === message.content
+  const handle_copy = (e) => {
+    e.stopPropagation()
+    copy_to_clipboard(message.content)
+  }
+
   return (
     <div className='user-message'>
       <div className='user-message__header'>
+        <IconButton
+          size='small'
+          onClick={handle_copy}
+          title='Copy to clipboard'
+          sx={{ padding: '2px' }}>
+          {is_copied ? (
+            <CheckIcon sx={{ fontSize: '14px', color: COLORS.success }} />
+          ) : (
+            <ContentCopyOutlinedIcon
+              sx={{ fontSize: '14px', opacity: 0.6, '&:hover': { opacity: 1 } }}
+            />
+          )}
+        </IconButton>
         {should_truncate && (
           <ExpandToggle
             is_expanded={is_user_message_expanded}
