@@ -24,7 +24,7 @@ const TIME_PERIODS = {
   '1m': { label: '1m', hours: 720 }
 }
 
-const HomeSessionsPanel = ({ threads, load_threads }) => {
+const HomeSessionsPanel = ({ threads, session_created_at, load_threads }) => {
   const dispatch = useDispatch()
   const active_session_count = useSelector(get_active_sessions_count)
   const can_create_threads = useSelector(get_can_create_threads)
@@ -32,6 +32,13 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
   const user_public_key = app.get('user_public_key')
   const [collapsed, set_collapsed] = useState(true)
   const [selected_period, set_selected_period] = useState('3d')
+
+  // Auto-expand when a new session is created
+  useEffect(() => {
+    if (session_created_at) {
+      set_collapsed(false)
+    }
+  }, [session_created_at])
 
   useEffect(() => {
     dispatch(active_sessions_actions.load_active_sessions())
@@ -147,6 +154,7 @@ const HomeSessionsPanel = ({ threads, load_threads }) => {
 
 HomeSessionsPanel.propTypes = {
   threads: ImmutablePropTypes.list,
+  session_created_at: PropTypes.number,
   load_threads: PropTypes.func
 }
 

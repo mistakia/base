@@ -312,6 +312,10 @@ const ThreadsState = new Record({
     data: null
   }),
 
+  // Timestamp of most recent CREATE_THREAD_SESSION_FULFILLED, used by
+  // FloatingSessionsPanel to auto-open when a session is created
+  session_created_at: null,
+
   // Table views management
   thread_table_views: new Map({
     default: DEFAULT_THREAD_TABLE_VIEW,
@@ -646,6 +650,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       })
       let new_state = add_thread_to_all_views(state, optimistic_thread)
       new_state = add_thread_to_basic_list(new_state, optimistic_thread)
+      new_state = new_state.set('session_created_at', Date.now())
       return new_state
     }
 

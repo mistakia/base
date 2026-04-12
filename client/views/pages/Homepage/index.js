@@ -12,6 +12,7 @@ const map_state_to_props = createSelector(
   [get_threads_state, get_tasks_state, get_directory_state],
   (threads_state, tasks_state, directory_state) => ({
     threads: threads_state.get('threads'),
+    session_created_at: threads_state.get('session_created_at'),
     is_loading_threads: threads_state.get('is_loading_threads'),
     tasks: tasks_state.get('tasks'),
     tag_visibility: tasks_state.get('tag_visibility'),

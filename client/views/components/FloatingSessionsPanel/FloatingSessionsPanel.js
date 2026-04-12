@@ -30,9 +30,19 @@ const FloatingSessionsPanel = () => {
   const threads_state = useSelector(get_threads_state)
   const threads = threads_state.get('threads')
 
+  const session_created_at = threads_state.get('session_created_at')
+
   const [panel_mode, set_panel_mode] = useState(PANEL_MODE.COLLAPSED)
   const [is_dismissed, set_is_dismissed] = useState(false)
   const [show_all_users, set_show_all_users] = useState(false)
+
+  // Auto-open panel when a new session is created
+  useEffect(() => {
+    if (session_created_at) {
+      set_is_dismissed(false)
+      set_panel_mode(PANEL_MODE.LIST)
+    }
+  }, [session_created_at])
 
   // Load active sessions and threads on mount
   useEffect(() => {

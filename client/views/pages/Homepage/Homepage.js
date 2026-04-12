@@ -19,6 +19,7 @@ import './Homepage.styl'
 
 const Homepage = ({
   threads,
+  session_created_at,
   is_loading_threads,
   load_threads,
   tasks,
@@ -67,6 +68,7 @@ const Homepage = ({
                 <TaskStatusBar />
                 <HomeSessionsPanel
                   threads={threads}
+                  session_created_at={session_created_at}
                   is_loading_threads={is_loading_threads}
                   load_threads={load_threads}
                 />
@@ -94,6 +96,7 @@ const Homepage = ({
 
 Homepage.propTypes = {
   threads: ImmutablePropTypes.list.isRequired,
+  session_created_at: PropTypes.number,
   is_loading_threads: PropTypes.bool.isRequired,
   load_threads: PropTypes.func.isRequired,
   tasks: ImmutablePropTypes.list.isRequired,
