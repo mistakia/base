@@ -607,8 +607,6 @@ export const update_thread_metadata = async (
 
     const updated_metadata = {
       ...existing_metadata,
-      // Clear session_status on sync (session has ended or is being imported)
-      session_status: null,
       message_count: counts.message_count,
       tool_call_count: counts.tool_call_count,
       source: {

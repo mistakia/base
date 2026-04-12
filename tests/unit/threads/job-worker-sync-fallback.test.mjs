@@ -26,7 +26,11 @@ describe('job-worker sync_session_fallback', function () {
       const source_overrides = { execution_mode: 'host' }
 
       // Should not throw - errors are caught internally
-      await sync_session_fallback_by_file(job, source_overrides)
+      await sync_session_fallback_by_file({
+        job,
+        source_overrides,
+        session_id: job.data.session_id
+      })
     })
   })
 

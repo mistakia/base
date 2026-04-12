@@ -26,9 +26,10 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import crypto from 'crypto'
 import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
-import { readFile, writeFile } from 'fs/promises'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { emit_thread_updated } from '#server/services/threads/event-emitter.mjs'
+import require_hook_auth from '#server/middleware/hook-auth.mjs'
+import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
@@ -771,31 +772,10 @@ router.post('/create-session', async (req, res) => {
 
 // Lightweight session status update endpoint
 // Used by hook scripts to report session lifecycle transitions
-router.put('/:thread_id/session-status', async (req, res) => {
+router.put('/:thread_id/session-status', require_hook_auth, async (req, res) => {
   try {
     const { session_status, session_id } = req.body
     const { thread_id } = req.params
-
-    // Auth: localhost or API key (same pattern as active-sessions routes)
-    const expected_key = config.job_tracker?.api_key
-    const auth_header = req.headers.authorization
-    const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(
-      req.ip
-    )
-    if (!is_localhost) {
-      if (!expected_key || !auth_header) {
-        return res.status(401).json({ error: 'Authentication required' })
-      }
-      const provided_key = auth_header.replace(/^Bearer\s+/i, '')
-      const provided_buf = Buffer.from(provided_key)
-      const expected_buf = Buffer.from(expected_key)
-      if (
-        provided_buf.length !== expected_buf.length ||
-        !crypto.timingSafeEqual(provided_buf, expected_buf)
-      ) {
-        return res.status(401).json({ error: 'Invalid API key' })
-      }
-    }
 
     if (!session_status) {
       return res
@@ -817,35 +797,38 @@ router.put('/:thread_id/session-status', async (req, res) => {
         .json({ error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}` })
     }
 
-    // Read current metadata, apply targeted field merge, write back
-    const user_base_directory = get_user_base_directory()
-    const thread_base_directory = get_thread_base_directory({
-      user_base_directory
-    })
-    const metadata_path = `${thread_base_directory}/${thread_id}/metadata.json`
-
-    let metadata
-    try {
-      const raw = await readFile(metadata_path, 'utf-8')
-      metadata = JSON.parse(raw)
-    } catch (error) {
-      return res.status(404).json({ error: 'Thread not found' })
-    }
-
-    // Targeted field merge: only update session_status and source
-    metadata.session_status = session_status
-    metadata.updated_at = new Date().toISOString()
+    // Build patches for targeted field merge
+    const patches = { session_status }
 
     // Set source on SessionStart when session_id is provided
-    if (session_id && !metadata.source?.session_id) {
-      metadata.source = {
-        ...(metadata.source || {}),
-        provider: 'claude',
-        session_id
+    if (session_id) {
+      const { readFile } = await import('fs/promises')
+      const user_base_directory = get_user_base_directory()
+      const thread_base_directory = get_thread_base_directory({
+        user_base_directory
+      })
+      const metadata_path = `${thread_base_directory}/${thread_id}/metadata.json`
+      try {
+        const raw = await readFile(metadata_path, 'utf-8')
+        const existing = JSON.parse(raw)
+        if (!existing.source?.session_id) {
+          patches.source = {
+            ...(existing.source || {}),
+            provider: 'claude',
+            session_id
+          }
+        }
+      } catch {
+        return res.status(404).json({ error: 'Thread not found' })
       }
     }
 
-    await writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
+    let metadata
+    try {
+      metadata = await patch_thread_metadata({ thread_id, patches })
+    } catch {
+      return res.status(404).json({ error: 'Thread not found' })
+    }
 
     // Emit directly for immediate client feedback (bypass 2s watcher debounce)
     emit_thread_updated(metadata)
@@ -1058,6 +1041,16 @@ router.post('/:thread_id/resume', async (req, res) => {
 // Rate-limit map for sync-user-session: transcript_path -> last_sync_timestamp
 const sync_rate_limit = new Map()
 const SYNC_RATE_LIMIT_MS = 1800
+
+// Periodic sweep: remove stale rate-limit entries every 5 minutes
+setInterval(() => {
+  const now = Date.now()
+  for (const [key, timestamp] of sync_rate_limit) {
+    if (now - timestamp > SYNC_RATE_LIMIT_MS) {
+      sync_rate_limit.delete(key)
+    }
+  }
+}, 5 * 60 * 1000).unref()
 
 // Sync user session from container hooks
 router.post('/sync-user-session', async (req, res) => {

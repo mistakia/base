@@ -13,10 +13,7 @@ export {
   get_active_session_for_thread,
   get_active_sessions_count,
   get_active_sessions_loading,
-  get_active_sessions_error,
-  get_active_sessions_with_details,
-  get_pending_sessions,
-  get_all_sessions_with_pending
+  get_active_sessions_error
 } from './selectors'
 
 export { active_sessions_sagas } from './sagas'

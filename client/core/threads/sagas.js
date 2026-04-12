@@ -220,15 +220,9 @@ export function* set_thread_archive_state_saga({ payload }) {
         yield call(delete_active_session, {
           session_id: active_session.session_id
         })
-        // Remove session from active list and immediately dismiss from ended
-        // list to avoid a brief flicker of the "ended" card in the panel
+        // Remove session from active list
         yield put(
           active_sessions_actions.active_session_ended(
-            active_session.session_id
-          )
-        )
-        yield put(
-          active_sessions_actions.dismiss_ended_session(
             active_session.session_id
           )
         )

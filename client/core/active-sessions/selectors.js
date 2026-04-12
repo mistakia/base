@@ -46,13 +46,6 @@ export function get_active_session_for_thread(state, thread_id) {
   return null
 }
 
-/**
- * Get session data for a specific thread_id (for panel enrichment).
- */
-export function get_session_data_by_thread_id(state, thread_id) {
-  return get_active_session_for_thread(state, thread_id)
-}
-
 export function get_active_sessions_count(state) {
   const active_sessions_state = get_active_sessions_state(state)
   const session_data = active_sessions_state.get('session_data')
@@ -67,37 +60,3 @@ export function get_active_sessions_error(state) {
   return get_active_sessions_state(state).get('error')
 }
 
-// Backward-compatible exports (return empty data for removed state)
-export function get_ended_sessions_count() {
-  return 0
-}
-
-export const get_prompt_snippets = createSelector(
-  [get_active_sessions_state],
-  () => ({})
-)
-
-export const get_pending_sessions = createSelector(
-  [get_active_sessions_state],
-  () => []
-)
-
-export const get_all_sessions_with_pending = createSelector(
-  [get_active_sessions_state],
-  (active_sessions_state) => {
-    const session_data = active_sessions_state.get('session_data')
-
-    if (!session_data || session_data.size === 0) {
-      return []
-    }
-
-    return session_data
-      .entrySeq()
-      .map(([session_id, data]) => ({
-        session_id,
-        ...data.toJS(),
-        is_pending: false
-      }))
-      .toArray()
-  }
-)

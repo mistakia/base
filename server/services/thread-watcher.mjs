@@ -193,7 +193,7 @@ const get_or_read_metadata = async (thread_id, metadata_dir) => {
     )
     if (metadata) {
       metadata_cache.set(thread_id, metadata)
-      index_thread_metadata(thread_id, metadata)
+      index_thread_metadata({ thread_id, metadata })
     }
   }
   return metadata

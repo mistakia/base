@@ -1,5 +1,5 @@
 import { join } from 'path'
-import { readFile, writeFile, access } from 'fs/promises'
+import { readFile, access } from 'fs/promises'
 import { homedir } from 'os'
 import { Worker } from 'bullmq'
 import debug from 'debug'
@@ -20,6 +20,7 @@ import {
   derive_projects_dir_name
 } from '#libs-server/threads/create-session-claude-cli.mjs'
 import { get_user_container_claude_home } from '#libs-server/threads/user-container-manager.mjs'
+import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
@@ -145,22 +146,14 @@ const check_and_mark_if_exhausted = async (job_id, account) => {
 }
 
 /**
- * Update session_status in a thread's metadata.json using targeted field merge.
- * Reads fresh state, patches only session_status, writes back.
+ * Update session_status in a thread's metadata.json via shared patch function.
  */
-const update_thread_session_status = async (thread_id, session_status) => {
+const update_thread_session_status = async ({ thread_id, session_status }) => {
   try {
-    const user_base_directory = get_user_base_directory()
-    const thread_base_directory = get_thread_base_directory({
-      user_base_directory
+    await patch_thread_metadata({
+      thread_id,
+      patches: { session_status }
     })
-    const metadata_path = join(thread_base_directory, thread_id, 'metadata.json')
-    const raw = await readFile(metadata_path, 'utf-8')
-    const metadata = JSON.parse(raw)
-    metadata.session_status = session_status
-    metadata.updated_at = new Date().toISOString()
-    await writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
-    log(`Thread ${thread_id}: session_status updated to '${session_status}'`)
   } catch (error) {
     log(
       `Thread ${thread_id}: failed to update session_status - ${error.message}`
@@ -325,7 +318,7 @@ const sync_session_fallback = async (job, { override_session_id } = {}) => {
 
   if (session_id && thread_id) {
     // Resume case or recovered session_id: import the specific session file
-    await sync_session_fallback_by_file(job, source_overrides, session_id)
+    await sync_session_fallback_by_file({ job, source_overrides, session_id })
   } else {
     // New session case: glob for all JSONL files in the projects directory
     await sync_session_fallback_by_glob(job, source_overrides)
@@ -335,11 +328,11 @@ const sync_session_fallback = async (job, { override_session_id } = {}) => {
 /**
  * Import a specific session file (resume case where session_id is known)
  */
-const sync_session_fallback_by_file = async (
+const sync_session_fallback_by_file = async ({
   job,
   source_overrides,
   session_id
-) => {
+}) => {
   const { working_directory, execution_mode, username } = job.data
 
   try {
@@ -540,7 +533,7 @@ const handle_job_failed = async (job, error) => {
 
   // Update thread session_status to 'failed'
   if (job.data.thread_id) {
-    await update_thread_session_status(job.data.thread_id, 'failed')
+    await update_thread_session_status({ thread_id: job.data.thread_id, session_status: 'failed' })
   }
 
   emit_thread_job_failed({
@@ -556,7 +549,7 @@ const handle_job_active = async (job) => {
   log(`Job ${job.id}: active`)
   if (job.data.thread_id) {
     // Update thread session_status to 'starting' before spawning CLI
-    await update_thread_session_status(job.data.thread_id, 'starting')
+    await update_thread_session_status({ thread_id: job.data.thread_id, session_status: 'starting' })
 
     emit_thread_job_started({
       job_id: job.id,

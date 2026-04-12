@@ -1,8 +1,6 @@
-import crypto from 'crypto'
 import express from 'express'
 import debug from 'debug'
 
-import config from '#config'
 import {
   register_active_session,
   update_active_session,
@@ -23,6 +21,7 @@ import { get_cached_latest_timeline_entry } from '#server/services/thread-watche
 import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
+import require_hook_auth from '#server/middleware/hook-auth.mjs'
 
 const log = debug('api:active-sessions')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -264,30 +263,6 @@ router.get('/:session_id', async (req, res) => {
     })
   }
 })
-
-/**
- * Middleware: require localhost or valid API key (hook auth pattern)
- */
-const require_hook_auth = (req, res, next) => {
-  const expected_key = config.job_tracker?.api_key
-  const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
-  if (!is_localhost) {
-    if (!expected_key || !auth_header) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
-    const provided_buf = Buffer.from(provided_key)
-    const expected_buf = Buffer.from(expected_key)
-    if (
-      provided_buf.length !== expected_buf.length ||
-      !crypto.timingSafeEqual(provided_buf, expected_buf)
-    ) {
-      return res.status(401).json({ error: 'Invalid API key' })
-    }
-  }
-  next()
-}
 
 /**
  * POST /api/active-sessions

@@ -43,7 +43,7 @@ export const rebuild_index = () => {
   transcript_path_to_thread_id.clear()
 
   for (const [thread_id, metadata] of metadata_cache_ref) {
-    index_thread_metadata(thread_id, metadata)
+    index_thread_metadata({ thread_id, metadata })
   }
 
   log(`Rebuilt index: ${session_id_to_thread_id.size} session mappings`)
@@ -53,10 +53,11 @@ export const rebuild_index = () => {
  * Index a single thread's metadata into the reverse index.
  * Called when thread watcher processes metadata changes.
  *
- * @param {string} thread_id
- * @param {Object} metadata
+ * @param {Object} params
+ * @param {string} params.thread_id
+ * @param {Object} params.metadata
  */
-export const index_thread_metadata = (thread_id, metadata) => {
+export const index_thread_metadata = ({ thread_id, metadata }) => {
   if (metadata?.source?.session_id) {
     session_id_to_thread_id.set(metadata.source.session_id, thread_id)
   }
@@ -135,7 +136,7 @@ export const find_thread_for_session = async ({
         const metadata = await read_json_file({ file_path: metadata_path })
 
         // Index for future lookups
-        index_thread_metadata(thread_id, metadata)
+        index_thread_metadata({ thread_id, metadata })
 
         const source = metadata.source
         if (session_id && source?.session_id === session_id) {
