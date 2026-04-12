@@ -1,4 +1,4 @@
-import { join, basename } from 'path'
+import { join, basename, isAbsolute } from 'path'
 import { access } from 'fs/promises'
 import { constants } from 'fs'
 import { homedir } from 'os'
@@ -91,8 +91,10 @@ export const generate_volume_mounts = async ({
       continue
     }
 
-    // Validate mount source exists on host
-    const host_source = join(user_base_directory, source)
+    // Resolve host source: absolute paths used as-is, relative paths joined with user_base_directory
+    const host_source = isAbsolute(source)
+      ? source
+      : join(user_base_directory, source)
     try {
       await access(host_source, constants.F_OK)
     } catch {
@@ -101,7 +103,7 @@ export const generate_volume_mounts = async ({
     }
 
     // Determine container target path
-    const container_target = target || join(container_user_base_path, source)
+    const container_target = target || (isAbsolute(source) ? source : join(container_user_base_path, source))
     const mount_mode = mode === 'rw' ? 'cached' : 'ro'
     mounts.push(`${host_source}:${container_target}:${mount_mode}`)
   }
