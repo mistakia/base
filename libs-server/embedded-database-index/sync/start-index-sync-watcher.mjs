@@ -139,11 +139,19 @@ export function start_index_sync_watcher({
           return
         }
 
-        await embedded_index_manager.sync_entity({
+        const sync_result = await embedded_index_manager.sync_entity({
           base_uri,
           entity_data: result.entity_properties
         })
-        log('Synced entity (%s): %s', entity_type, base_uri)
+        if (sync_result && sync_result.success === false) {
+          log(
+            'Failed to sync entity to index (%s): %s',
+            entity_type,
+            base_uri
+          )
+        } else {
+          log('Synced entity (%s): %s', entity_type, base_uri)
+        }
 
         if (on_entity_change) {
           on_entity_change(file_path)

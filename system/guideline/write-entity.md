@@ -79,6 +79,15 @@ Use the `base entity create` CLI command (via Bash tool) for creating new entity
 
 Use the Edit tool to modify existing entity files while preserving schema requirements.
 
+### For Renaming or Moving Entities
+
+Use `base entity move` to rename or relocate entity files. This preserves all frontmatter fields (including `user_public_key`, `entity_id`, timestamps) and updates the `base_uri` to match the new path. Never manually create a replacement file and delete the original -- this risks dropping required fields and breaking the index.
+
+```bash
+base entity move physical-item/old-name.md physical-item/new-name.md
+base entity move user:task/old.md user:task/subdir/new.md --dry-run
+```
+
 ### Examples
 
 For a new task entity using the CLI:

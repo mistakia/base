@@ -316,6 +316,14 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
     return
   }
 
+  const user_public_key_value =
+    frontmatter?.user_public_key || entity_data.user_public_key
+  if (!user_public_key_value) {
+    throw new Error(
+      `Entity ${base_uri} is missing required field: user_public_key`
+    )
+  }
+
   log('Upserting entity to SQLite: %s (%s)', base_uri, type)
 
   const title = frontmatter?.title || null
