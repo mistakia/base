@@ -68,6 +68,106 @@ const read_previous_metadata_from_git = async (thread_dir) => {
 }
 
 /**
+ * Find a pre-created thread (thread-first flow) that likely corresponds to
+ * this session but whose SessionStart hook has not yet synced
+ * source.session_id.
+ *
+ * Scans thread directories for recently-created threads (within 5 minutes)
+ * that have a prompt_snippet and session_status but no source.session_id,
+ * then compares the session's initial prompt against each candidate's
+ * prompt_snippet.
+ *
+ * @private
+ * @param {Object} params
+ * @param {Object} params.raw_session - Raw session from provider
+ * @param {Object} params.session_provider - Session provider instance
+ * @param {string} params.user_base_directory - User base directory path
+ * @param {string} params.session_id - Session ID (for logging)
+ * @returns {Promise<string|null>} Matching thread_id or null
+ */
+const find_precreated_thread_by_prompt = async ({
+  raw_session,
+  session_provider,
+  user_base_directory,
+  session_id
+}) => {
+  const { get_thread_base_directory } = await import(
+    '#libs-server/threads/threads-constants.mjs'
+  )
+  const threads_dir = get_thread_base_directory({ user_base_directory })
+
+  const RACE_WINDOW_MS = 5 * 60 * 1000
+  const now = Date.now()
+
+  let all_items
+  try {
+    all_items = await fs.readdir(threads_dir)
+  } catch {
+    return null
+  }
+
+  const uuid_re =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  // Pass 1: find candidate pre-created threads within the race window.
+  // Use metadata.json stat as a cheap pre-filter before reading content.
+  const candidates = []
+  for (const item of all_items) {
+    if (!uuid_re.test(item)) continue
+    try {
+      const meta_path = path.join(threads_dir, item, 'metadata.json')
+      const stat = await fs.stat(meta_path)
+      if (now - stat.mtimeMs > RACE_WINDOW_MS) continue
+
+      const content = await fs.readFile(meta_path, 'utf8')
+      const metadata = JSON.parse(content)
+
+      // Must be a pre-created thread: has session_status but no
+      // source.session_id (the field that gets set when SessionStart syncs)
+      if (!metadata.session_status || metadata.source?.session_id) continue
+      if (!metadata.prompt_snippet) continue
+
+      const created_at = new Date(metadata.created_at).getTime()
+      if (now - created_at > RACE_WINDOW_MS) continue
+
+      candidates.push({
+        thread_id: item,
+        prompt_snippet: metadata.prompt_snippet
+      })
+    } catch {
+      continue
+    }
+  }
+
+  if (candidates.length === 0) return null
+
+  // Pass 2: normalize session to extract initial prompt for comparison.
+  // This is deferred until we know candidates exist to avoid unnecessary work.
+  const { extract_initial_user_prompt_from_messages } = await import(
+    '#libs-server/integrations/thread/session-count-utilities.mjs'
+  )
+  const normalized = session_provider.normalize_session(raw_session)
+  const initial_prompt = extract_initial_user_prompt_from_messages({
+    messages: normalized.messages
+  })
+
+  if (!initial_prompt) return null
+
+  const session_snippet = initial_prompt.slice(0, 200)
+
+  for (const { thread_id, prompt_snippet } of candidates) {
+    if (prompt_snippet === session_snippet) {
+      log(
+        `Pre-created thread ${thread_id} matches session ${session_id} by prompt_snippet`
+      )
+      return thread_id
+    }
+  }
+
+  return null
+}
+
+/**
  * Calculate success rate for thread operations
  * Includes created, updated, and skipped sessions as successful operations
  *
@@ -415,6 +515,38 @@ export const process_single_session = async ({
   } catch (matcher_error) {
     log(
       `Session matcher lookup failed for ${session_id}: ${matcher_error.message}`
+    )
+  }
+
+  // Tertiary dedup: check for pre-created threads (thread-first flow) whose
+  // SessionStart hook has not yet synced source.session_id. The deterministic
+  // ID check (checkpoint 2) misses these because the thread has a random v4
+  // UUID, and the session matcher (checkpoint 3) misses because
+  // source.session_id is not yet populated. Match by comparing the session's
+  // initial prompt against prompt_snippet on recently-created threads.
+  try {
+    const precreated_thread_id = await find_precreated_thread_by_prompt({
+      raw_session,
+      session_provider,
+      user_base_directory,
+      session_id
+    })
+    if (precreated_thread_id) {
+      log(
+        `Found pre-created thread ${precreated_thread_id} for session ${session_id} via prompt_snippet match (session hook not yet synced)`
+      )
+      return {
+        status: 'skipped',
+        data: {
+          session_id,
+          thread_id: precreated_thread_id,
+          reason: 'precreated_thread_pending_session_sync'
+        }
+      }
+    }
+  } catch (precreated_error) {
+    log(
+      `Pre-created thread prompt lookup failed for ${session_id}: ${precreated_error.message}`
     )
   }
 
