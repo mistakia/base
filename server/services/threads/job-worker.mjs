@@ -459,11 +459,11 @@ const sync_session_fallback_by_glob = async (job, source_overrides) => {
           source_overrides
         }
 
-        // Pass known_thread_id to prevent duplicate creation when CLI crashes
-        // before SessionStart (source.session_id never written to metadata.json)
-        if (job.data.thread_id) {
-          sync_opts.known_thread_id = job.data.thread_id
-        }
+        // Do NOT pass known_thread_id on the glob path: this loop processes
+        // ALL JSONL files in the projects directory, not just the one for this
+        // job.  Passing known_thread_id would import every session into the
+        // pre-created thread.  Let each session create its own thread via the
+        // deterministic ID path instead.
 
         const result = await create_threads_from_session_provider(sync_opts)
 
