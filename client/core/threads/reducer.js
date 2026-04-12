@@ -81,6 +81,52 @@ function update_thread_in_basic_list(state, thread_id, updated_data) {
 }
 
 /**
+ * Prepends a thread to the basic threads list with dedup by thread_id.
+ * If a thread with the same thread_id already exists, replaces it with the new data.
+ */
+function add_thread_to_basic_list(state, new_thread) {
+  return state.update('threads', (threads) => {
+    if (!threads) return List([new_thread])
+    const new_id = new_thread.get
+      ? new_thread.get('thread_id')
+      : new_thread.thread_id
+    const existing_index = threads.findIndex((thread) => {
+      const id = thread.get ? thread.get('thread_id') : thread.thread_id
+      return id === new_id
+    })
+    if (existing_index !== -1) {
+      return threads.set(existing_index, new_thread)
+    }
+    return threads.unshift(new_thread)
+  })
+}
+
+/**
+ * Updates an existing thread in the basic list, or prepends it if not found.
+ * Combines update_thread_in_basic_list semantics with add-if-missing fallback.
+ */
+function upsert_thread_in_basic_list(state, thread_id, updated_data) {
+  return state.update('threads', (threads) => {
+    if (!threads) return List([Map(updated_data)])
+    const existing_index = threads.findIndex((thread) => {
+      const id = thread.get ? thread.get('thread_id') : thread.thread_id
+      return id === thread_id
+    })
+    if (existing_index !== -1) {
+      return threads.update(existing_index, (thread) => {
+        if (thread.merge) {
+          return thread.merge(updated_data)
+        }
+        return { ...thread, ...updated_data }
+      })
+    }
+    const new_entry =
+      updated_data instanceof Map ? updated_data : Map(updated_data)
+    return threads.unshift(new_entry)
+  })
+}
+
+/**
  * Appends a timeline entry to a cached thread
  */
 function append_timeline_entry(state, thread_id, entry) {
@@ -598,12 +644,16 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         thread_state: 'active',
         created_at: new Date().toISOString()
       })
-      return add_thread_to_all_views(state, optimistic_thread)
+      let new_state = add_thread_to_all_views(state, optimistic_thread)
+      new_state = add_thread_to_basic_list(new_state, optimistic_thread)
+      return new_state
     }
 
     case threads_action_types.THREAD_CREATED: {
       const new_thread = Map(payload.thread)
-      return add_thread_to_all_views(state, new_thread)
+      let new_state = add_thread_to_all_views(state, new_thread)
+      new_state = add_thread_to_basic_list(new_state, new_thread)
+      return new_state
     }
 
     case threads_action_types.THREAD_UPDATED: {
@@ -625,8 +675,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           current_data ? current_data.merge(updated_thread) : updated_thread
       )
 
-      // Also update the basic threads list
-      new_state = update_thread_in_basic_list(
+      // Upsert the basic threads list (handles threads not yet in the list)
+      new_state = upsert_thread_in_basic_list(
         new_state,
         thread_id,
         payload.thread
