@@ -75,6 +75,39 @@ async function compute_fresh_days(days) {
 }
 
 /**
+ * Merge frozen and fresh heatmap entries, compute max score, and build
+ * the cache result object. Shared by read-only and write-mode paths.
+ */
+function merge_and_finalize_heatmap({ frozen_entries, fresh_entries, days }) {
+  const merged_by_date = new Map()
+  for (const entry of frozen_entries) {
+    merged_by_date.set(entry.date, entry)
+  }
+  for (const entry of fresh_entries) {
+    merged_by_date.set(entry.date, entry)
+  }
+
+  const merged_data = Array.from(merged_by_date.values()).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  )
+  const max_score = merged_data.reduce(
+    (max, entry) => Math.max(max, entry.score ?? 0),
+    0
+  )
+  const since_date = new Date()
+  since_date.setDate(since_date.getDate() - days)
+
+  return {
+    data: merged_data,
+    max_score,
+    date_range: {
+      start: since_date.toISOString().split('T')[0],
+      end: new Date().toISOString().split('T')[0]
+    }
+  }
+}
+
+/**
  * Warm the activity heatmap cache
  * Uses an incremental strategy when SQLite is available:
  *   - Cold start (empty table): full computation + bulk insert
@@ -98,6 +131,60 @@ async function warm_activity_cache() {
       return
     }
 
+    // In read-only mode (base-api), the incremental strategy cannot persist
+    // daily entries to activity_heatmap_daily. Use frozen data from the table
+    // as a base but recompute from the last frozen date forward to fill gaps.
+    if (embedded_index_manager.read_only) {
+      let frozen_days = []
+      try {
+        frozen_days = await embedded_index_manager.query_heatmap_daily({ days })
+      } catch (error) {
+        log(
+          'Read-only: failed to read frozen days, computing all fresh: %s',
+          error.message
+        )
+      }
+
+      // Determine how many trailing days need fresh computation.
+      // Recompute from the day before the last frozen entry (to correct
+      // entries that were frozen mid-day) through today.
+      let fresh_days = days
+      if (frozen_days.length > 0) {
+        const last_frozen = frozen_days[frozen_days.length - 1].date
+        const last_frozen_date = new Date(last_frozen + 'T00:00:00Z')
+        const now = new Date()
+        const diff_ms = now.getTime() - last_frozen_date.getTime()
+        // Add 1 day overlap to correct the last frozen entry.
+        // Clamp to minimum 2 to guard against clock skew or timezone edge cases.
+        fresh_days = Math.max(Math.ceil(diff_ms / (24 * 60 * 60 * 1000)) + 1, 2)
+        fresh_days = Math.min(fresh_days, days)
+      }
+
+      log(
+        'Read-only mode: %d frozen rows, computing %d fresh days',
+        frozen_days.length,
+        fresh_days
+      )
+
+      const fresh_result = await compute_fresh_days(fresh_days)
+      const heatmap_data = merge_and_finalize_heatmap({
+        frozen_entries: frozen_days,
+        fresh_entries: fresh_result.data,
+        days
+      })
+
+      cache.activity_heatmap = {
+        data: heatmap_data,
+        timestamp: Date.now(),
+        days
+      }
+      log(
+        'Activity heatmap cache warmed (read-only, %d total entries)',
+        heatmap_data.data.length
+      )
+      return
+    }
+
     let row_count
     try {
       row_count = await embedded_index_manager.get_heatmap_count()
@@ -118,20 +205,17 @@ async function warm_activity_cache() {
       // Cold start: full computation, then bulk insert into cache table
       log('Cold start detected, performing full computation')
       const heatmap_data = await compute_fresh_days(days)
-      if (!embedded_index_manager.read_only) {
-        await embedded_index_manager.upsert_heatmap_daily_batch({
-          entries: heatmap_data.data
-        })
-      }
+      await embedded_index_manager.upsert_heatmap_daily_batch({
+        entries: heatmap_data.data
+      })
       cache.activity_heatmap = {
         data: heatmap_data,
         timestamp: Date.now(),
         days
       }
       log(
-        'Activity heatmap cache warmed (cold start, %d entries%s)',
-        heatmap_data.data.length,
-        embedded_index_manager.read_only ? '' : ' persisted'
+        'Activity heatmap cache warmed (cold start, %d entries persisted)',
+        heatmap_data.data.length
       )
       return
     }
@@ -183,58 +267,34 @@ async function warm_activity_cache() {
 
     const all_fresh = [...fresh_result.data, ...zero_entries]
 
-    // Persist fresh days (skip in read-only mode)
-    if (!embedded_index_manager.read_only) {
-      await embedded_index_manager.upsert_heatmap_daily_batch({
-        entries: all_fresh
-      })
-    }
+    // Persist fresh days to cache table
+    await embedded_index_manager.upsert_heatmap_daily_batch({
+      entries: all_fresh
+    })
 
-    // Merge: frozen days as base, fresh days overwrite matching dates
-    const merged_by_date = new Map()
-    for (const entry of frozen_days) {
-      merged_by_date.set(entry.date, entry)
-    }
-    for (const entry of all_fresh) {
-      merged_by_date.set(entry.date, entry)
-    }
+    const heatmap_data = merge_and_finalize_heatmap({
+      frozen_entries: frozen_days,
+      fresh_entries: all_fresh,
+      days
+    })
 
-    const merged_data = Array.from(merged_by_date.values()).sort((a, b) =>
-      a.date.localeCompare(b.date)
-    )
-
-    if (merged_data.length < days * 0.5) {
+    if (heatmap_data.data.length < days * 0.5) {
       log(
         'Warning: merged heatmap has only %d entries for %d day range (possible gaps)',
-        merged_data.length,
+        heatmap_data.data.length,
         days
       )
     }
 
-    const max_score = merged_data.reduce(
-      (max, entry) => Math.max(max, entry.score ?? 0),
-      0
-    )
-
-    const since_date = new Date()
-    since_date.setDate(since_date.getDate() - days)
-
     cache.activity_heatmap = {
-      data: {
-        data: merged_data,
-        max_score,
-        date_range: {
-          start: since_date.toISOString().split('T')[0],
-          end: today_str
-        }
-      },
+      data: heatmap_data,
       timestamp: Date.now(),
       days
     }
 
     log(
       'Activity heatmap cache warmed (incremental, %d total entries)',
-      merged_data.length
+      heatmap_data.data.length
     )
   } catch (error) {
     log('Failed to warm activity cache: %s', error.message)
