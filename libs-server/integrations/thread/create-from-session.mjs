@@ -632,6 +632,20 @@ export const update_thread_metadata = async (
       })
     }
 
+    // Backfill title from session messages if missing (thread-first flow
+    // pre-creates threads with title: null)
+    if (!updated_metadata.title) {
+      const initial_prompt = extract_initial_user_prompt_from_messages({
+        messages: normalized_session.messages
+      })
+      const default_title = generate_default_thread_title_from_prompt({
+        prompt: initial_prompt
+      })
+      if (default_title) {
+        updated_metadata.title = default_title
+      }
+    }
+
     // Compare using stable stringify that excludes timestamps and handles key ordering
     const existing_stable = stable_stringify_for_comparison(existing_metadata)
     const updated_stable = stable_stringify_for_comparison(updated_metadata)

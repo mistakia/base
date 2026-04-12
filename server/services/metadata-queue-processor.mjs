@@ -1,4 +1,3 @@
-import path from 'path'
 import debug from 'debug'
 
 import {
@@ -8,6 +7,7 @@ import {
 import { analyze_thread_for_metadata } from '#libs-server/metadata/analyze-thread.mjs'
 import { analyze_thread_for_tags } from '#libs-server/metadata/analyze-thread-tags.mjs'
 import config from '#config'
+import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
 
 /**
  * Queue processor for thread metadata analysis
@@ -18,15 +18,6 @@ import config from '#config'
  * Queue paths are configurable via config.metadata_queue. Relative paths
  * are resolved against user_base_directory.
  */
-
-const resolve_queue_path = (configured_path, fallback) => {
-  if (!configured_path) return fallback
-  if (path.isAbsolute(configured_path)) return configured_path
-  if (config.user_base_directory) {
-    return path.join(config.user_base_directory, configured_path)
-  }
-  return fallback
-}
 
 const QUEUE_FILE_PATH = resolve_queue_path(
   config.metadata_queue?.queue_file_path,

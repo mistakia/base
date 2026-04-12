@@ -27,6 +27,7 @@ import validate_working_directory from '#libs-server/threads/validate-working-di
 import crypto from 'crypto'
 import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
+import { generate_default_thread_title_from_prompt } from '#libs-server/integrations/thread/session-count-utilities.mjs'
 import { emit_thread_updated } from '#server/services/threads/event-emitter.mjs'
 import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
@@ -719,7 +720,7 @@ router.post('/create-session', async (req, res) => {
       inference_provider: 'anthropic',
       models: [],
       thread_state: 'active',
-      title: null,
+      title: generate_default_thread_title_from_prompt({ prompt }),
       thread_main_request: prompt,
       additional_metadata: {
         session_status: 'queued',

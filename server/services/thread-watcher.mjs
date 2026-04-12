@@ -1,6 +1,7 @@
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
+import config from '#config'
 import {
   emit_thread_created,
   emit_thread_updated,
@@ -10,6 +11,7 @@ import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/i
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
 import { index_thread_metadata } from '#libs-server/active-sessions/session-thread-matcher.mjs'
+import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
 
 const log = debug('threads:watcher')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -30,6 +32,11 @@ const FILE_NAMES = {
   METADATA: 'metadata.json',
   TIMELINE: 'timeline.jsonl'
 }
+
+const METADATA_QUEUE_FILE_PATH = resolve_queue_path(
+  config.metadata_queue?.queue_file_path,
+  '/tmp/claude-pending-metadata-analysis.queue'
+)
 
 // ============================================================================
 // State Management
@@ -405,6 +412,16 @@ const handle_metadata_added = async (file_path) => {
   const thread_dir = path.dirname(file_path)
   await initialize_timeline_tracking_for_new_thread(thread_id, thread_dir)
 
+  // Queue for AI title generation if no AI-generated title exists
+  if (
+    !metadata.title_prompt_version &&
+    metadata.thread_state !== 'archived'
+  ) {
+    fs.appendFile(METADATA_QUEUE_FILE_PATH, thread_id + '\n').catch((err) => {
+      log(`Failed to queue thread ${thread_id} for metadata analysis: ${err.message}`)
+    })
+  }
+
   // Notify index sync hooks (debounced by thread_id)
   if (metadata.thread_id) {
     schedule_thread_index_sync(metadata.thread_id)
@@ -431,6 +448,17 @@ const handle_metadata_changed = async (file_path) => {
   }
 
   emit_thread_updated(metadata)
+
+  // Queue for AI title generation if no AI-generated title exists
+  if (
+    metadata.thread_id &&
+    !metadata.title_prompt_version &&
+    metadata.thread_state !== 'archived'
+  ) {
+    fs.appendFile(METADATA_QUEUE_FILE_PATH, metadata.thread_id + '\n').catch((err) => {
+      log(`Failed to queue thread ${metadata.thread_id} for metadata analysis: ${err.message}`)
+    })
+  }
 
   // Notify index sync hooks (debounced by thread_id)
   if (metadata.thread_id) {

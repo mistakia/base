@@ -651,6 +651,23 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       let new_state = add_thread_to_all_views(state, optimistic_thread)
       new_state = add_thread_to_basic_list(new_state, optimistic_thread)
       new_state = new_state.set('session_created_at', Date.now())
+
+      // Insert optimistic user message so the timeline is not empty while
+      // the session is queued / starting up.
+      if (prompt) {
+        const now = new Date().toISOString()
+        const optimistic_entry = {
+          id: `optimistic-${thread_id}-${Date.now()}`,
+          type: 'message',
+          role: 'user',
+          content: prompt,
+          timestamp: now,
+          created_at: now,
+          _optimistic: true
+        }
+        new_state = append_timeline_entry(new_state, thread_id, optimistic_entry)
+      }
+
       return new_state
     }
 

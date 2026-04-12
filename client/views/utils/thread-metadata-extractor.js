@@ -184,6 +184,14 @@ export const extract_thread_title = (thread) => {
     return title
   }
 
+  // Fallback to prompt snippet
+  const prompt_snippet = thread.get
+    ? thread.get('prompt_snippet')
+    : thread.prompt_snippet
+  if (prompt_snippet) {
+    return prompt_snippet
+  }
+
   // Fallback to working directory basename
   const working_directory = extract_working_directory(thread)
   if (working_directory.formatted && working_directory.formatted !== '—') {
