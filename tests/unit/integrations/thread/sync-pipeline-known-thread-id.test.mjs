@@ -290,13 +290,17 @@ describe('process_single_session - known_thread_id routing', function () {
   })
 
   describe('when known_thread_id points to a non-existent directory', () => {
-    it('should throw because update_existing_thread cannot read metadata.json', async () => {
-      // The known_thread_id path calls update_existing_session_thread
-      // directly, which invokes update_existing_thread. That function
-      // reads metadata.json from the thread_dir. When the directory does
-      // not exist, the read will throw an ENOENT error. This is expected
-      // behavior -- the caller is responsible for ensuring the thread_id
-      // points to a valid pre-created thread.
+    it('should still return updated because update_thread_metadata gracefully handles missing metadata.json', async () => {
+      // When the thread directory does not exist, update_existing_thread
+      // will: (1) create raw-data/ via mkdir recursive, (2) attempt to
+      // read metadata.json which fails with ENOENT, but
+      // update_thread_metadata catches the error and returns false
+      // (metadata update failure does not stop timeline update), (3)
+      // build/create a new timeline.jsonl. The overall result is an
+      // 'updated' status with files_modified true. The caller is
+      // responsible for ensuring the thread_id points to a valid
+      // pre-created thread; if it does not, the thread ends up with
+      // timeline and raw data but no metadata.json.
       const non_existent_thread_id = crypto.randomUUID()
       const session_id = 'session-for-missing-thread'
 
@@ -306,25 +310,40 @@ describe('process_single_session - known_thread_id routing', function () {
         metadata: {}
       }
 
-      let threw = false
-      try {
-        await process_single_session({
-          raw_session,
-          session_provider: create_mock_session_provider(),
-          user_public_key: 'test-public-key',
-          user_base_directory,
-          allow_updates: true,
-          verbose: false,
-          known_thread_id: non_existent_thread_id
-        })
-      } catch (error) {
-        threw = true
-        // The error should originate from trying to read metadata.json
-        // in the non-existent thread directory
-        expect(error.message).to.include('ENOENT')
-      }
+      const result = await process_single_session({
+        raw_session,
+        session_provider: create_mock_session_provider(),
+        user_public_key: 'test-public-key',
+        user_base_directory,
+        allow_updates: true,
+        verbose: false,
+        known_thread_id: non_existent_thread_id
+      })
 
-      expect(threw).to.be.true
+      // The update path completes despite the missing metadata.json
+      expect(result).to.have.property('status', 'updated')
+      expect(result.data).to.have.property('thread_id', non_existent_thread_id)
+      expect(result.data).to.have.property('session_id', session_id)
+
+      // Verify the directory was created (by mkdir recursive in raw-data save)
+      // but metadata.json was NOT created (since update_thread_metadata
+      // only reads/modifies existing metadata, it does not create it)
+      const thread_dir = path.join(
+        user_base_directory,
+        'thread',
+        non_existent_thread_id
+      )
+      const raw_data_dir = path.join(thread_dir, 'raw-data')
+      const raw_data_stat = await fs.stat(raw_data_dir)
+      expect(raw_data_stat.isDirectory()).to.be.true
+
+      let metadata_exists = true
+      try {
+        await fs.stat(path.join(thread_dir, 'metadata.json'))
+      } catch {
+        metadata_exists = false
+      }
+      expect(metadata_exists).to.be.false
     })
   })
 })
