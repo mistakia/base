@@ -64,6 +64,18 @@ if [ -n "$JOB_ID" ]; then
     job_id_field="\"job_id\": \"$JOB_ID\","
 fi
 
+# Build thread_id JSON field (set by create-session-claude-cli for thread-first flow)
+thread_id_field=""
+if [ -n "$THREAD_ID" ]; then
+    thread_id_field="\"thread_id\": \"$THREAD_ID\","
+fi
+
+# Thread session-status API URL (for thread-first flow)
+LOCAL_THREAD_STATUS_URL=""
+if [ -n "$THREAD_ID" ]; then
+    LOCAL_THREAD_STATUS_URL="${LOCAL_PROTO}://${LOCAL_HOST}:${LOCAL_PORT}/api/threads/${THREAD_ID}/session-status"
+fi
+
 # Build production API URL with session path
 PROD_SESSION_URL=""
 if [ -n "$PROD_API_URL" ]; then
@@ -76,17 +88,24 @@ case "$HOOK_EVENT" in
         \"session_id\": \"${SESSION_ID}\",
         \"jsonl_session_id\": \"${JSONL_SESSION_ID}\",
         ${job_id_field}
+        ${thread_id_field}
         \"hook_source\": \"${HOOK_SOURCE}\",
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
     send_request "sync" "POST" "$LOCAL_API_URL" "$payload"
     [ -n "$PROD_SESSION_URL" ] && send_request "bg" "POST" "$PROD_SESSION_URL" "$payload" "true"
+    # Update thread session_status to active
+    if [ -n "$LOCAL_THREAD_STATUS_URL" ]; then
+        send_request "bg" "PUT" "$LOCAL_THREAD_STATUS_URL" \
+            "{\"session_status\": \"active\", \"session_id\": \"${SESSION_ID}\"}"
+    fi
     ;;
   UserPromptSubmit|PostToolUse)
     payload="{
         \"status\": \"active\",
         ${job_id_field}
+        ${thread_id_field}
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
@@ -97,15 +116,26 @@ case "$HOOK_EVENT" in
     payload="{
         \"status\": \"idle\",
         ${job_id_field}
+        ${thread_id_field}
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
     send_request "bg" "PUT" "$LOCAL_API_URL/${SESSION_ID}" "$payload"
     [ -n "$PROD_SESSION_URL" ] && send_request "bg" "PUT" "$PROD_SESSION_URL/${SESSION_ID}" "$payload" "true"
+    # Update thread session_status to idle
+    if [ -n "$LOCAL_THREAD_STATUS_URL" ]; then
+        send_request "bg" "PUT" "$LOCAL_THREAD_STATUS_URL" \
+            "{\"session_status\": \"idle\"}"
+    fi
     ;;
   SessionEnd)
     send_request "sync" "DELETE" "$LOCAL_API_URL/${SESSION_ID}"
     [ -n "$PROD_SESSION_URL" ] && send_request "bg" "DELETE" "$PROD_SESSION_URL/${SESSION_ID}" "" "true"
+    # Update thread session_status to completed
+    if [ -n "$LOCAL_THREAD_STATUS_URL" ]; then
+        send_request "bg" "PUT" "$LOCAL_THREAD_STATUS_URL" \
+            "{\"session_status\": \"completed\"}"
+    fi
     ;;
 esac
 

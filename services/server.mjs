@@ -7,8 +7,10 @@ import config from '#config'
 import {
   start_thread_watcher,
   stop_thread_watcher,
-  set_thread_watcher_hooks
+  set_thread_watcher_hooks,
+  get_metadata_cache
 } from '#server/services/thread-watcher.mjs'
+import { register_metadata_cache } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 import {
   start_worker,
   stop_worker
@@ -159,6 +161,7 @@ try {
           thread_directory
         })
         set_watcher_status('thread_watcher', 'ready')
+        register_metadata_cache(get_metadata_cache())
         logger(`Thread watcher initialized (${Date.now() - start_time}ms)`)
       } catch (watcher_error) {
         set_watcher_status('thread_watcher', 'failed')

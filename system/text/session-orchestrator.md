@@ -87,10 +87,13 @@ The `source` object replaces the previous `session_provider` and `external_sessi
 ### Spawned Sessions
 
 1. User or schedule triggers a session via API or CLI
-2. Base enqueues a CLI command (e.g., `claude --session-id <id>`)
-3. External CLI executes with hooks configured to call back to Base
-4. Session start hook creates the thread and registers it as active
-5. Session end hook finalizes metadata, commits thread data, queues analysis
+2. Base calls `create_thread()` with an explicit `thread_id`, `session_status: 'queued'`, `prompt_snippet` (first 200 chars of the user prompt), and `job_id`
+3. Base enqueues a BullMQ job, passing the pre-created `thread_id` through the job payload
+4. The CLI queue worker launches the session runner (e.g., `claude --session-id <id>`) with `THREAD_ID` set as an environment variable
+5. Session start hook updates `session_status` to `active` and registers the thread as an active session
+6. Session end hook finalizes metadata, commits thread data, queues analysis
+
+The `session_status` field on threads tracks the lifecycle of web-client-initiated sessions: `queued` (thread created, job enqueued), `starting` (job picked up by worker), `active` (session runner executing), `idle` (awaiting input), `completed` (session finished normally), `failed` (session errored). For non-spawned sessions this field is null.
 
 ### Imported Sessions
 

@@ -112,6 +112,10 @@ const SessionCard = ({ item }) => {
   const card_classes = [
     'session-card',
     item.status === 'running' ? 'session-card--running' : '',
+    item.status === 'queued' || item.status === 'starting'
+      ? 'session-card--queued'
+      : '',
+    item.status === 'failed' ? 'session-card--failed' : '',
     item.id || item.session_id ? 'session-card--clickable' : '',
     item.is_other_user ? 'session-card--other-user' : ''
   ]
@@ -133,7 +137,17 @@ const SessionCard = ({ item }) => {
       className={card_classes}
       onClick={item.id || item.session_id ? handle_click : undefined}>
       <div className='session-card__main-row'>
-        <span className='session-card__title'>{item.title || '-'}</span>
+        {(item.status === 'queued' ||
+          item.status === 'starting' ||
+          item.status === 'failed') && (
+          <span
+            className={`session-card__status-badge session-card__status-badge--${item.status}`}>
+            {item.status}
+          </span>
+        )}
+        <span className='session-card__title'>
+          {item.title || 'Untitled'}
+        </span>
         <span className='session-card__time'>
           {created_time && created_time !== updated_time ? (
             <>
@@ -260,7 +274,16 @@ SessionCard.propTypes = {
     id: PropTypes.string,
     session_id: PropTypes.string,
     title: PropTypes.string,
-    status: PropTypes.oneOf(['running', 'idle', 'review', 'archived', 'ended']),
+    status: PropTypes.oneOf([
+      'running',
+      'idle',
+      'review',
+      'archived',
+      'ended',
+      'queued',
+      'starting',
+      'failed'
+    ]),
     created_at: PropTypes.string,
     updated_at: PropTypes.string,
     working_directory: PropTypes.string,

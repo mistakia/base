@@ -132,7 +132,8 @@ export const create_threads_from_session_provider = async ({
   merge_agents = true,
   include_warm_agents = false,
   provider_options = {},
-  source_overrides = null
+  source_overrides = null,
+  known_thread_id = null
 }) => {
   if (!provider_name) {
     throw new Error('provider_name is required')
@@ -233,7 +234,8 @@ export const create_threads_from_session_provider = async ({
         user_base_directory,
         allow_updates,
         verbose,
-        source_overrides
+        source_overrides,
+        known_thread_id
       })
 
       // Add result to appropriate category
@@ -293,11 +295,35 @@ export const process_single_session = async ({
   user_base_directory,
   allow_updates,
   verbose,
-  source_overrides = null
+  source_overrides = null,
+  known_thread_id = null
 }) => {
   const session_id = session_provider.get_session_id(raw_session)
 
-  // Check if thread already exists
+  // When known_thread_id is set, skip deterministic check_thread_exists lookup
+  // and update the pre-created thread directly
+  if (known_thread_id) {
+    const { get_thread_base_directory } = await import(
+      '#libs-server/threads/threads-constants.mjs'
+    )
+    const thread_dir = path.join(
+      get_thread_base_directory({ user_base_directory }),
+      known_thread_id
+    )
+    log(
+      `Using known_thread_id ${known_thread_id} for session ${session_id}, skipping check_thread_exists`
+    )
+    return await update_existing_session_thread({
+      raw_session,
+      session_provider,
+      thread_id: known_thread_id,
+      thread_dir,
+      session_id,
+      source_overrides
+    })
+  }
+
+  // Check if thread already exists via deterministic ID lookup
   const { exists, thread_id, thread_dir } = await check_thread_exists(
     session_id,
     session_provider.name,

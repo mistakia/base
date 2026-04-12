@@ -15,10 +15,26 @@ const normalize_thread = (thread) => {
 
   const can_write = thread.can_write !== false
 
+  // Derive display status from session_status or thread_state
+  let status = 'review'
+  if (thread.session_status === 'active') {
+    status = 'running'
+  } else if (thread.session_status === 'idle') {
+    status = 'idle'
+  } else if (thread.session_status === 'queued' || thread.session_status === 'starting') {
+    status = thread.session_status
+  } else if (thread.session_status === 'failed') {
+    status = 'failed'
+  } else if (thread.session_status === 'completed') {
+    status = 'review'
+  } else if (thread.thread_state === 'archived') {
+    status = 'archived'
+  }
+
   return {
     id: thread.thread_id,
-    title: thread.title,
-    status: thread.thread_state === 'active' ? 'review' : 'archived',
+    title: thread.title || thread.prompt_snippet || null,
+    status,
     created_at: thread.created_at,
     updated_at: thread.updated_at,
     working_directory,

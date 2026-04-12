@@ -229,6 +229,19 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp when relation cleanup was last performed (ISO 8601)"
+    },
+    "session_status": {
+      "type": ["string", "null"],
+      "enum": ["queued", "starting", "active", "idle", "completed", "failed", null],
+      "description": "Current session lifecycle status for web-client-initiated sessions"
+    },
+    "prompt_snippet": {
+      "type": "string",
+      "description": "First 200 characters of the user prompt for display in the sessions panel"
+    },
+    "job_id": {
+      "type": "string",
+      "description": "BullMQ job ID for queue correlation with the session creation job"
     }
   },
   "additionalProperties": false

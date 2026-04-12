@@ -204,6 +204,7 @@ export function build_thread_metadata({
  * @param {string} [params.updated_at] Optional override for updated_at timestamp (ISO string)
  * @param {string} [params.title] Optional human-readable title for the thread
  * @param {string} [params.short_description] Optional brief description of the thread
+ * @param {string} [params.thread_id] Optional explicit thread_id (for pre-created threads). Mutually exclusive with source.session_id.
  * @returns {Promise<Object>} Created thread object
  */
 export default async function create_thread({
@@ -222,8 +223,18 @@ export default async function create_thread({
   created_at = null,
   updated_at = null,
   title = null,
-  short_description = null
+  short_description = null,
+  thread_id = null
 }) {
+  const is_pre_created = !!thread_id
+
+  // Validate mutually exclusive ID strategies
+  if (thread_id && source?.session_id) {
+    throw new Error(
+      'Cannot provide both explicit thread_id and source.session_id -- explicit thread_id is for pre-created threads, source.session_id implies deterministic ID generation'
+    )
+  }
+
   // Validate required parameters
   if (!user_public_key) {
     throw new Error('user_public_key is required')
@@ -235,7 +246,7 @@ export default async function create_thread({
 
   // Validate that we have at least one model
   // Allow empty models for external sessions (in-progress import before model responds)
-  if ((!models || models.length === 0) && !source) {
+  if ((!models || models.length === 0) && !source && !is_pre_created) {
     throw new Error('At least one model is required (pass models array)')
   }
 
@@ -264,7 +275,7 @@ export default async function create_thread({
 
   // For external/imported sessions, workflow_base_uri can be undefined
   const is_external_session = !!source
-  if (!is_external_session && !workflow_base_uri) {
+  if (!is_external_session && !workflow_base_uri && !is_pre_created) {
     throw new Error(
       'workflow_base_uri is required for non-external session threads'
     )
@@ -301,9 +312,15 @@ export default async function create_thread({
     }
   }
 
-  // Generate thread ID
-  let thread_id
-  if (is_external_session) {
+  // Generate thread ID -- three mutually exclusive strategies:
+  // 1. Explicit thread_id from caller (pre-created threads)
+  // 2. Deterministic UUIDv5 from source.session_id (external session import)
+  // 3. Random UUIDv4 (native workflow threads)
+  if (thread_id) {
+    log(
+      `Creating pre-created thread ${thread_id} for user ${user_public_key}`
+    )
+  } else if (is_external_session) {
     thread_id = generate_thread_id_from_session({
       session_id: source.session_id,
       session_provider: source.provider

@@ -124,6 +124,7 @@ const calculate_queue_position = async (queue, job_id) => {
  * @param {string} [params.execution_mode] - Where to execute: 'host', 'container', or 'container_user'
  * @param {Object} [params.thread_config] - Per-user thread configuration (for container_user mode)
  * @param {string} [params.username] - Username (required for container_user mode)
+ * @param {string} [params.job_id] - Optional explicit job ID (pre-generated for thread-first flow)
  * @returns {Promise<Object>} Job object with id and queue_position
  */
 export const add_thread_creation_job = async ({
@@ -134,10 +135,19 @@ export const add_thread_creation_job = async ({
   thread_id = null,
   execution_mode,
   thread_config = null,
-  username = null
+  username = null,
+  job_id = null
 }) => {
   try {
     const queue = get_thread_creation_queue()
+
+    const job_opts = {
+      priority: 1 // Lower number = higher priority
+    }
+
+    if (job_id) {
+      job_opts.jobId = job_id
+    }
 
     const job = await queue.add(
       'create-session',
@@ -151,9 +161,7 @@ export const add_thread_creation_job = async ({
         thread_config,
         username
       },
-      {
-        priority: 1 // Lower number = higher priority
-      }
+      job_opts
     )
 
     log(`Added thread creation job: ${job.id}`)

@@ -575,6 +575,32 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
     // WebSocket Real-Time Thread Events
     // ========================================================================
 
+    case threads_action_types.CREATE_THREAD_SESSION_FULFILLED: {
+      // Optimistically add thread to views with session_status: 'queued'
+      const { thread_id, job_id } = payload.data
+      const prompt = payload.opts?.prompt || ''
+
+      // Check if thread already exists (THREAD_CREATED from watcher may arrive first)
+      const already_exists = state
+        .get('thread_table_views')
+        .some((view) =>
+          view
+            .get('thread_table_data', List())
+            .some((t) => t.get('thread_id') === thread_id)
+        )
+      if (already_exists) return state
+
+      const optimistic_thread = Map({
+        thread_id,
+        session_status: 'queued',
+        prompt_snippet: prompt.slice(0, 200),
+        job_id,
+        thread_state: 'active',
+        created_at: new Date().toISOString()
+      })
+      return add_thread_to_all_views(state, optimistic_thread)
+    }
+
     case threads_action_types.THREAD_CREATED: {
       const new_thread = Map(payload.thread)
       return add_thread_to_all_views(state, new_thread)
@@ -796,14 +822,40 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
     }
 
     case threads_action_types.THREAD_JOB_FAILED: {
-      const { job_id } = payload
+      const { job_id, thread_id: failed_thread_id } = payload
       if (!job_id) return state
-      const match = state
+
+      // Update session_status to 'failed' on the thread in table views
+      let new_state = state
+      if (failed_thread_id) {
+        new_state = update_thread_in_all_views(
+          new_state,
+          failed_thread_id,
+          (thread) => thread.set('session_status', 'failed')
+        )
+      } else {
+        // Match by job_id in table views
+        new_state = state.update('thread_table_views', (views) =>
+          views.map((view) =>
+            view.updateIn(['thread_table_data'], (data) =>
+              data
+                ? data.map((thread) =>
+                    thread.get('job_id') === job_id
+                      ? thread.set('session_status', 'failed')
+                      : thread
+                  )
+                : data
+            )
+          )
+        )
+      }
+
+      const match = new_state
         .get('thread_pending_resumes')
         .findEntry((entry) => entry.get('job_id') === job_id)
       if (match) {
         const [matched_thread_id] = match
-        let new_state = state.updateIn(
+        new_state = new_state.updateIn(
           ['thread_pending_resumes', matched_thread_id],
           (entry) =>
             entry.merge({
@@ -812,9 +864,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
             })
         )
         new_state = remove_optimistic_entries(new_state, matched_thread_id)
-        return new_state
       }
-      return state
+      return new_state
     }
 
     default:

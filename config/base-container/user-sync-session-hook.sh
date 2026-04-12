@@ -1,7 +1,7 @@
 #!/bin/bash
 # User container sync session hook
 # Triggers server-side session import from inside user containers
-# Called by Claude Code hooks: UserPromptSubmit, PostToolUse, SessionEnd
+# Called by Claude Code hooks: SessionStart, UserPromptSubmit, PostToolUse, SessionEnd
 
 set -o pipefail
 
@@ -25,13 +25,20 @@ API_HOST="${BASE_API_HOST:-localhost}"
 API_PORT="${BASE_API_PORT:-8080}"
 API_BASE="${API_PROTO}://${API_HOST}:${API_PORT}"
 
-# Throttle: For PostToolUse events, skip if last sync was < 30s ago
+# Throttle interval: 2s when THREAD_ID is set (web sessions), 30s otherwise
+if [ -n "$THREAD_ID" ]; then
+  THROTTLE_SECONDS=2
+else
+  THROTTLE_SECONDS=30
+fi
+
+# Throttle: For PostToolUse events, skip if last sync was within throttle interval
 THROTTLE_FILE="/tmp/sync-throttle-${JSONL_SESSION_ID}"
 if [ "$HOOK_EVENT" = "PostToolUse" ] && [ -f "$THROTTLE_FILE" ]; then
   LAST_SYNC=$(cat "$THROTTLE_FILE" 2>/dev/null || echo 0)
   NOW=$(date +%s)
   ELAPSED=$((NOW - LAST_SYNC))
-  if [ "$ELAPSED" -lt 30 ]; then
+  if [ "$ELAPSED" -lt "$THROTTLE_SECONDS" ]; then
     exit 0
   fi
 fi
@@ -39,11 +46,17 @@ fi
 # Update throttle timestamp
 date +%s > "$THROTTLE_FILE" 2>/dev/null
 
+# Build known_thread_id field for pre-created thread dedup
+known_thread_id_field=""
+if [ -n "$THREAD_ID" ]; then
+  known_thread_id_field=",\"known_thread_id\": \"${THREAD_ID}\""
+fi
+
 PAYLOAD="{
   \"username\": \"${CONTAINER_USERNAME}\",
   \"transcript_path\": \"${TRANSCRIPT_PATH}\",
   \"hook_event_name\": \"${HOOK_EVENT}\",
-  \"user_public_key\": \"${USER_PUBLIC_KEY}\"
+  \"user_public_key\": \"${USER_PUBLIC_KEY}\"${known_thread_id_field}
 }"
 
 if [ "$HOOK_EVENT" = "SessionEnd" ]; then
@@ -56,7 +69,7 @@ if [ "$HOOK_EVENT" = "SessionEnd" ]; then
   # Clean up throttle temp file
   rm -f "$THROTTLE_FILE" 2>/dev/null
 else
-  # All other events: run in background
+  # All other events (SessionStart, UserPromptSubmit, PostToolUse): run in background
   curl -sk -X POST "${API_BASE}/api/threads/sync-user-session" \
     -H "Content-Type: application/json" \
     -d "$PAYLOAD" \

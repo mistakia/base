@@ -53,8 +53,24 @@ Supported session runners include Claude Code, Cursor, ChatGPT, and Pi. New runn
 - `workflow_base_uri`: For Base system sessions, references the executing workflow
 - `source`: Session origin info object with `provider` ('base', 'claude', 'cursor', 'chatgpt', 'pi'), `session_id`, `provider_metadata`, etc.
 - `thread_state`: Current state - `active` or `archived`
+- `session_status`: Current session lifecycle status for web-client-initiated sessions. Enum: `queued`, `starting`, `active`, `idle`, `completed`, `failed`, or null. Null for non-spawned sessions (imported or host-interactive).
+- `prompt_snippet`: First 200 characters of the user prompt, used for display in the sessions panel.
+- `job_id`: BullMQ job ID for queue correlation. Links the thread to its queued CLI command job.
 - `created_at`, `updated_at`, `archived_at`: Lifecycle timestamps
 - `archive_reason`: When archived, reason for archiving (`completed` or `user_abandoned`)
+
+## Thread Lifecycle (Spawned Sessions)
+
+For web-client-initiated sessions, the thread is created before the session runner starts, enabling immediate visibility in the UI:
+
+1. **Pre-creation**: Thread is created with `session_status: 'queued'`, `prompt_snippet`, and `job_id`. The thread exists and is visible before any session runner process starts.
+2. **Job pickup**: Worker picks up the BullMQ job and sets `session_status: 'starting'`. The `THREAD_ID` environment variable is passed to the session runner process.
+3. **Session active**: Session start hook fires, sets `session_status: 'active'`.
+4. **Session idle**: Session reaches an idle state awaiting input, sets `session_status: 'idle'`.
+5. **Completion**: Session end hook fires, sets `session_status: 'completed'`, finalizes metadata, and queues analysis.
+6. **Failure**: If the session errors at any stage, `session_status` is set to `failed`.
+
+For imported sessions and host-interactive sessions, threads are created after the session completes and `session_status` remains null.
 
 ## Session Runners
 

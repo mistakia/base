@@ -13,7 +13,7 @@ relations:
   - relates_to [[sys:system/text/session-orchestrator.md]]
   - relates_to [[sys:system/text/execution-threads.md]]
   - relates_to [[sys:system/text/background-services.md]]
-updated_at: '2026-03-02T00:00:00.000Z'
+updated_at: '2026-04-12T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -41,13 +41,13 @@ Throughout this document, Claude CLI is used as the reference implementation. Ha
 
 | Component                                            | Role                                                             |
 | ---------------------------------------------------- | ---------------------------------------------------------------- |
-| **Client**                                           | Submits prompt, receives job_id, tracks session via WebSocket    |
-| **Base API** (PM2: `base-api`)                       | REST endpoints + WebSocket server, manages session store         |
+| **Client**                                           | Submits prompt, receives thread_id + job_id, tracks via WebSocket |
+| **Base API** (PM2: `base-api`)                       | REST endpoints + WebSocket server, manages thread state          |
 | **BullMQ Queue** (Redis)                             | Job queue for session creation with concurrency control          |
 | **AI Harness** (e.g. Claude CLI)                     | Spawned process that executes the prompt                         |
 | **Hook Scripts**                                     | Fire during harness lifecycle, report state to API               |
-| **Redis Store**                                      | Active session records with TTL (default 10 minutes)             |
-| **Thread Watcher** (chokidar)                        | Filesystem watcher that detects thread file and timeline changes |
+| **Redis Store**                                      | Active session records with TTL (legacy sessions without THREAD_ID) |
+| **Thread Watcher** (chokidar)                        | Filesystem watcher that detects thread file and timeline changes; maintains in-memory metadata cache with reverse session index |
 | **Metadata Queue** (PM2: `metadata-queue-processor`) | Async title/description generation via Ollama                    |
 
 ### API Dual-Target
@@ -66,7 +66,7 @@ Claude Code provides a native hook system configured via `.claude/settings.local
 | `Stop`                 | Session idle (harness waiting for input)      |
 | `SessionEnd`           | Session ended (harness process exiting)       |
 
-Other harnesses would need equivalent adapters that translate their lifecycle events into the same API calls (POST/PUT/DELETE to `/api/active-sessions`).
+Other harnesses would need equivalent adapters that translate their lifecycle events into the same API calls. When `THREAD_ID` is set (thread-first sessions), hooks call `PUT /api/threads/:thread_id/session-status` for session state transitions. When `THREAD_ID` is not set (legacy/manual sessions), hooks fall back to POST/PUT/DELETE on `/api/active-sessions`.
 
 ## Complete Event Timeline
 
@@ -80,17 +80,30 @@ POST /api/threads/create-session
   body: { prompt, working_directory, execution_mode? }
   |
   v
-Server validates, enqueues BullMQ job
+Server validates
   |
   v
-Response: { job_id, queue_position, status: "queued", message: "..." }
+Generates thread_id and job_id via crypto.randomUUID()
+  |
+  v
+Calls create_thread() with:
+  thread_id (explicit), user_public_key, inference_provider: 'anthropic',
+  models: [], thread_state: 'active', title: null,
+  thread_main_request: prompt,
+  additional_metadata: { session_status: 'queued', prompt_snippet, job_id }
+  |
+  v
+Enqueues BullMQ job with thread_id in job data, job_id as BullMQ jobId
+  |
+  v
+Response: { thread_id, job_id, queue_position }
 ```
 
-**Client state**: Creates PendingSession with `jobId` and `promptSnippet`.
+**Client state**: Thread exists immediately with `session_status: 'queued'` and `prompt_snippet`. No pending session map needed -- the panel renders from the thread directly.
 
 **`execution_mode`**: Optional. Controls whether the harness spawns on the host or inside the Docker container. Defaults to the value of `config.threads.cli.default_execution_mode`.
 
-No WebSocket events. No thread exists yet.
+**Thread creation details**: The route passes an explicit `thread_id` to `create_thread()`, bypassing deterministic ID generation (which requires a `session_id` that does not exist yet). The `thread_main_request` parameter writes the user's prompt as the initial timeline entry. No `source` is passed -- the sync pipeline adds source data when the session completes. The thread watcher detects the new `metadata.json` and emits THREAD_CREATED.
 
 ### Phase 2: Job Processing (async, potentially queued)
 
@@ -98,14 +111,24 @@ No WebSocket events. No thread exists yet.
 BullMQ Worker picks up job (concurrency: 3, configurable via config.threads.queue.max_concurrent_jobs)
   |
   v
+Reads thread_id from job.data
+  |
+  v
+Updates session_status to 'starting' in thread metadata
+  |
+  v
 Spawns AI harness process
-  env: JOB_ID=<bullmq-job-id>
+  env: JOB_ID=<bullmq-job-id> THREAD_ID=<thread-uuid>
   cwd: <working_directory>
 ```
 
 **Delay**: 0-N seconds depending on queue depth.
 
+**THREAD_ID env var**: Forwarded to the CLI process (and to the container via `docker exec -e` in container mode) alongside `JOB_ID`. Hook scripts use `THREAD_ID` to update the correct thread without filesystem scanning.
+
 **Session resume**: If job data includes an existing `session_id`, the harness is invoked in resume mode rather than creating a new session. This affects thread correlation since the thread may already exist.
+
+**Job failure**: If the job fails (harness crash, timeout, etc.), the worker updates `session_status` to `'failed'` in the thread metadata. The thread remains visible and dismissable in the client.
 
 #### Harness-Specific: Claude CLI Spawning
 
@@ -140,28 +163,29 @@ Harness starts
   v
 SessionStart hook fires
   |
-  v
-POST /api/active-sessions (background, fire-and-forget)
-  body: { session_id, jsonl_session_id, job_id, working_directory, transcript_path }
+  +--> 1. sync-claude-session.sh (synchronous)
+  |     |
+  |     v
+  |     Runs session import pipeline (creates/updates thread data)
+  |     Throttle: 2s minimum between runs when THREAD_ID is set (reduced from 30s)
   |
-  v
-Server registers session in Redis:
-  { session_id, status: "active", thread_id: null, thread_title: null,
-    latest_timeline_event: null, working_directory, transcript_path,
-    job_id, started_at, last_activity_at }
-  |
-  v
-Server calls find_thread_for_session({ session_id, transcript_path })
-  -> null for new sessions (no thread metadata matches yet)
-  -> may return thread_id for resumed sessions where the thread already exists
-  |
-  v
-WS: ACTIVE_SESSION_STARTED
-  payload.session: { session_id, status: "active", thread_id: null,
-    thread_title: null, working_directory, job_id, started_at, last_activity_at }
+  +--> 2. active-session-hook.sh (background, fire-and-forget)
+        |
+        v
+        PUT /api/threads/:thread_id/session-status
+          body: { session_status: "active", session_id }
+          |
+          v
+        Server updates session_status in thread metadata.json (targeted field merge)
+        Server writes source.session_id to thread metadata
+          |
+          v
+        WS: THREAD_UPDATED (emitted directly, not via thread watcher debounce)
 ```
 
-**Key**: `thread_id` is `null` at this point for new sessions. For resumed sessions, `find_thread_for_session` may match an existing thread. `job_id` is the correlation key for queue-created sessions.
+**Key**: The thread already exists from Phase 1 with `thread_id` known from submission time. The hook uses `THREAD_ID` env var to update the correct thread. The session status endpoint emits THREAD_UPDATED directly for immediate client feedback (bypassing the thread watcher's 2s debounce). The sync hook now fires on SessionStart (in addition to UserPromptSubmit/PostToolUse/SessionEnd), closing the manual-session visibility gap.
+
+**`find_thread_for_session`**: Now uses an O(1) reverse index built from the thread watcher metadata cache, falling back to O(n) filesystem scan only when the index misses. For thread-first sessions where `THREAD_ID` is set, this lookup is not needed -- the thread_id is known.
 
 #### UserPromptSubmit (fires on each turn)
 
@@ -190,29 +214,17 @@ UserPromptSubmit hook fires
   +--> 2. active-session-hook.sh (background, fire-and-forget)
         |
         v
-        PUT /api/active-sessions/<session_id>
-          body: { status: "active", job_id, working_directory, transcript_path }
+        PUT /api/threads/:thread_id/session-status
+          body: { session_status: "active" }
           |
           v
-        If session has no thread_id yet (first discovery):
-          Server calls find_thread_for_session({ session_id, transcript_path })
-            -> matches by source.session_id, falls back to transcript_path
-            -> NOW may return a thread_id (if sync created the thread already)
-            -> If found, enriches session with full thread metadata:
-               thread_title, latest_timeline_event, message_count,
-               duration_minutes, total_tokens, source_provider
-        If session already has thread_id (subsequent updates):
-          Server updates latest_timeline_event from watcher cache only
-          Server invalidates thread cache
+        Server updates session_status in thread metadata.json
           |
           v
-        WS: ACTIVE_SESSION_UPDATED
-          payload.session: { session_id, status: "active",
-            thread_id: <uuid-or-null>, thread_title: <string-or-null>,
-            working_directory, job_id, ... }
+        WS: THREAD_UPDATED (emitted directly)
 ```
 
-**Key insight**: The thread can be created mid-session by the UserPromptSubmit sync hook. After the first sync, subsequent PUT calls will find the thread and include `thread_id` in the ACTIVE_SESSION_UPDATED event. Once linked, subsequent updates only refresh `latest_timeline_event` from the watcher's in-memory cache (not full thread metadata from disk).
+**Key insight**: For thread-first sessions, the `thread_id` is known from submission time (Phase 1). The hook uses `THREAD_ID` env var to call the session-status endpoint directly, bypassing the old `find_thread_for_session` correlation. The sync script updates the thread with the latest session data (timeline entries, metadata).
 
 #### PostToolUse (fires on each tool use)
 
@@ -224,22 +236,24 @@ PostToolUse hook fires
   |       body: { status: "active", job_id, working_directory, transcript_path }
   |       -> WS: ACTIVE_SESSION_UPDATED (same as above, thread_id may or may not be set)
   |
-  +--> 2. sync-claude-session.sh (throttled: 30s minimum between runs, lock-guarded)
+  +--> 2. sync-claude-session.sh (throttled: 2s when THREAD_ID set, 30s otherwise; lock-guarded)
         |
         v
-        Throttle check: if last sync < 30s ago, exits immediately (<1ms)
+        Throttle check: if last sync < threshold, exits immediately (<1ms)
+          (2s when THREAD_ID env var is set, 30s otherwise)
         Lock check: if another sync is running, exits immediately
         |
         v (when not throttled)
         convert-external-sessions.mjs import --allow-updates
           -> Updates thread metadata.json and timeline.jsonl
+          -> Passes known_thread_id when THREAD_ID is set (prevents duplicate creation)
           -> Thread watcher fires THREAD_UPDATED + THREAD_TIMELINE_ENTRY_ADDED
         |
         v
         analyze-thread-relations.mjs (throttled: minimum 300s between runs)
 ```
 
-**Note**: PostToolUse runs the sync script with throttling. Most invocations exit in <1ms (throttle check). When the converter runs (~once per 30s), it updates the thread with the latest session data. This provides live thread updates during long-running sessions. The throttle file is cleaned up on SessionEnd.
+**Note**: PostToolUse runs the sync script with throttling. Most invocations exit in <1ms (throttle check). When THREAD_ID is set (web-client sessions), the throttle is reduced from 30s to 2s for faster timeline delivery. The server-side rate limit (`SYNC_RATE_LIMIT_MS`) is set to 1800ms to stay safely below the 2s shell interval and avoid clock granularity boundary races. The throttle file is cleaned up on SessionEnd.
 
 #### Stop (fires when harness goes idle)
 
@@ -248,15 +262,17 @@ Stop hook fires
   |
   v
 active-session-hook.sh (background, fire-and-forget)
-  PUT /api/active-sessions/<session_id>
-    body: { status: "idle", job_id, working_directory, transcript_path }
+  PUT /api/threads/:thread_id/session-status
+    body: { session_status: "idle" }
     |
     v
-  WS: ACTIVE_SESSION_UPDATED
-    payload.session.status: "idle"
+  Server updates session_status in thread metadata.json
+    |
+    v
+  WS: THREAD_UPDATED (emitted directly)
 ```
 
-**Note**: The Stop event transitions the session status to "idle", distinct from "active". Clients should use this to show the session is waiting for input or has paused. Stop does NOT run the sync script (PostToolUse handles periodic sync).
+**Note**: The Stop event transitions `session_status` to "idle", distinct from "active". Clients should use this to show the session is waiting for input or has paused. Stop does NOT run the sync script (PostToolUse handles periodic sync).
 
 ### Phase 4: Session End
 
@@ -271,7 +287,9 @@ SessionEnd hooks fire (in order):
   |     v
   |     convert-external-sessions.mjs import --allow-updates (creates/updates thread)
   |       -> Writes metadata.json and timeline.jsonl to thread/<uuid>/
-  |       -> Thread watcher fires THREAD_CREATED (or THREAD_UPDATED) + THREAD_TIMELINE_ENTRY_ADDED
+  |       -> Passes known_thread_id when THREAD_ID is set (prevents duplicate creation)
+  |       -> Bypasses server-side rate limit (1800ms) unconditionally for SessionEnd
+  |       -> Thread watcher fires THREAD_UPDATED + THREAD_TIMELINE_ENTRY_ADDED
   |     |
   |     v
   |     analyze-thread-relations.mjs (forced, no throttle at SessionEnd)
@@ -287,22 +305,19 @@ SessionEnd hooks fire (in order):
   +--> 2. active-session-hook.sh (background, fire-and-forget)
         |
         v
-        DELETE /api/active-sessions/<session_id>
+        PUT /api/threads/:thread_id/session-status
+          body: { session_status: "completed" }
           |
           v
-        Server removes session from Redis
+        Server updates session_status in thread metadata.json
           |
           v
-        WS: ACTIVE_SESSION_ENDED
-          payload: { session_id } (ONLY session_id, no thread_id, no session object)
+        WS: THREAD_UPDATED (emitted directly)
 ```
 
-**Critical ordering issue**: The SessionEnd hooks fire sequentially. The sync script runs FIRST (up to 30s). The session hook runs SECOND. BUT the session hook sends its DELETE via background curl, so the actual order of WebSocket events the client receives is:
+**Ordering**: The SessionEnd hooks fire sequentially. The sync script runs FIRST (up to 30s). The session hook runs SECOND. The sync script's final import bypasses the server-side rate limit unconditionally -- SessionEnd is the final sync opportunity and must never be dropped. The session status endpoint emits THREAD_UPDATED directly so the client sees the `session_status: 'completed'` transition immediately.
 
-1. `THREAD_CREATED` (or `THREAD_UPDATED`) + `THREAD_TIMELINE_ENTRY_ADDED` - from the thread watcher detecting files written by sync script
-2. `ACTIVE_SESSION_ENDED` - from the DELETE (fires after sync script completes)
-
-However, since the DELETE is fire-and-forget background, there can be a small race where ACTIVE_SESSION_ENDED arrives before or very close to THREAD_CREATED.
+**Metadata write contention**: The SessionEnd sync and the session-status update can race on `metadata.json`. Both writers use a targeted field merge pattern (read fresh state, patch only their specific fields, write). The session-status endpoint owns `session_status` and `source`; the sync pipeline owns `models`, `inference_provider`, counts, `title`, and timeline data.
 
 ### Phase 5: Post-Session (async)
 
@@ -326,76 +341,11 @@ Thread watcher detects change -> WS: THREAD_UPDATED
 
 ## WebSocket Event Reference
 
-### ACTIVE_SESSION_STARTED
+### ACTIVE_SESSION_STARTED / ACTIVE_SESSION_UPDATED / ACTIVE_SESSION_ENDED
 
-```json
-{
-  "type": "ACTIVE_SESSION_STARTED",
-  "payload": {
-    "session": {
-      "session_id": "string",
-      "status": "active",
-      "thread_id": "string | null",
-      "thread_title": "string | null",
-      "latest_timeline_event": "object | null",
-      "working_directory": "string",
-      "transcript_path": "string",
-      "job_id": "string | null",
-      "started_at": "ISO string",
-      "last_activity_at": "ISO string"
-    }
-  }
-}
-```
+**Legacy events**: These events are still emitted for backward compatibility with sessions that do not have a `THREAD_ID` (manually started CLI sessions without the thread-first flow). For thread-first sessions, the primary state channel is THREAD_UPDATED events carrying `session_status` transitions. See THREAD_UPDATED below.
 
-**Emitted**: Once, when SessionStart hook fires POST.
-**thread_id**: Always null for new sessions. May be non-null for resumed sessions.
-**job_id**: Present when session was started via the job queue (client flow). Absent for manually started sessions.
-
-### ACTIVE_SESSION_UPDATED
-
-```json
-{
-  "type": "ACTIVE_SESSION_UPDATED",
-  "payload": {
-    "session": {
-      "session_id": "string",
-      "status": "active | idle",
-      "thread_id": "string | null",
-      "thread_title": "string | null",
-      "latest_timeline_event": "object | null",
-      "working_directory": "string",
-      "transcript_path": "string",
-      "job_id": "string | null",
-      "started_at": "ISO string",
-      "last_activity_at": "ISO string",
-      "message_count": "number (on first thread discovery)",
-      "duration_minutes": "number (on first thread discovery)",
-      "total_tokens": "number (on first thread discovery)",
-      "source_provider": "string (on first thread discovery)"
-    }
-  }
-}
-```
-
-**Emitted**: On every UserPromptSubmit, PostToolUse, and Stop hook fire.
-**status**: "active" for UserPromptSubmit and PostToolUse, "idle" for Stop.
-**thread_id**: Starts null, may become non-null once the thread is created AND find_thread_for_session() succeeds on a subsequent PUT call. For queue-created sessions, this typically happens after the first UserPromptSubmit sync creates the thread.
-**Thread-enriched fields**: `message_count`, `duration_minutes`, `total_tokens`, and `source_provider` are included when the thread is first discovered. On subsequent updates with an already-linked thread, only `latest_timeline_event` is refreshed.
-
-### ACTIVE_SESSION_ENDED
-
-```json
-{
-  "type": "ACTIVE_SESSION_ENDED",
-  "payload": {
-    "session_id": "string"
-  }
-}
-```
-
-**Emitted**: Once, when SessionEnd hook fires DELETE.
-**Note**: Only contains `session_id`. No thread_id, no session object. The session is already deleted from Redis.
+The legacy event payloads remain unchanged from the original format. Clients implementing the thread-first architecture should prefer THREAD_UPDATED for session state and use these events only as a fallback for non-thread-first sessions.
 
 ### THREAD_CREATED
 
@@ -486,9 +436,9 @@ Same payload structure as THREAD_CREATED. Emitted when metadata.json is modified
 }
 ```
 
-**Emitted**: When the BullMQ worker picks up a job and begins executing. Only emitted for resume jobs where `job.data.thread_id` is set -- new session jobs do not emit this event since no thread exists yet.
+**Emitted**: When the BullMQ worker picks up a job and begins executing. In the thread-first architecture, this is emitted for all web-client sessions (since `job.data.thread_id` is always set). For manually started sessions without a thread, this event is not emitted.
 **Broadcast**: Sent to all authenticated WebSocket clients without permission filtering.
-**Client use**: Transitions pending session resumes from "queued" to "starting" status.
+**Client use**: Clients using the thread-first flow receive `session_status: 'starting'` via THREAD_UPDATED instead. This event remains useful for resume jobs and legacy clients.
 
 ## Debug Tracing
 
@@ -504,7 +454,7 @@ DEBUG=api:*,base:session-lifecycle node server/...
 
 Trace output includes structured log entries at every state transition:
 
-- **Routes** (`active-sessions.mjs`): POST/PUT/DELETE with session_id, job_id, thread_id, thread discovery status
+- **Routes** (`active-sessions.mjs`, `threads.mjs`): POST/PUT/DELETE with session_id, job_id, thread_id; session-status PUT with thread_id and session_status transitions
 - **Event emitter** (`session-event-emitter.mjs`): WebSocket emission with event type, recipient count, redacted count
 - **Thread watcher** (`thread-watcher.mjs`): Thread creation detection, byte offset tracking, timeline entry emission
 - **Session-thread matcher** (`session-thread-matcher.mjs`): Thread lookup attempts, match method (session_id vs transcript_path)
@@ -526,114 +476,107 @@ Disable with `localStorage.removeItem('debug:session-lifecycle')`.
 
 ## Early Session Clickability
 
-Sessions are clickable as soon as they start, before a thread exists on disk. The flow:
+Sessions are clickable immediately from submission, since the thread exists from Phase 1. The flow:
 
-1. Session starts -- `session_id` is available immediately
-2. SessionCard checks for `item.session_id` when `item.id` (thread_id) is absent
-3. Clicking opens a session sheet (`session:${session_id}` key in thread-sheet stack)
-4. Session sheet renders the prompt as a user message in the same timeline format used by the full thread view, with a live session indicator below it. This ensures zero visual discontinuity when the thread data loads.
-5. When the session gains a thread_id (via ACTIVE_SESSION_UPDATED or THREAD_CREATED), the thread-sheet reducer auto-transitions the sheet key from `session:<id>` to the thread_id
-6. The thread-sheet saga detects the transition (by checking if the thread_id is now in the sheets stack) and auto-loads thread data + subscribes to WebSocket updates
+1. Client submits prompt -- receives `thread_id` in the create-session response
+2. Thread is created on disk with `session_status: 'queued'`, `prompt_snippet`, and the user's prompt as the initial timeline entry
+3. Panel renders the thread immediately with the prompt snippet as display text and a session status indicator
+4. Clicking opens the thread sheet directly (no intermediate session sheet needed)
+5. As the session progresses, THREAD_UPDATED events update `session_status` and the sync pipeline appends timeline entries
+6. The client auto-subscribes to the thread's timeline for live updates (SUBSCRIBE_THREAD)
+
+No sheet key transitions are needed -- the thread_id is stable from the start.
 
 ## Correlation Keys
 
-The session lifecycle uses multiple identifiers at different stages:
+The thread-first architecture simplifies correlation. The `thread_id` is known from submission time, eliminating the previous three-map correlation flow (job_id -> session_id -> thread_id).
 
-| Identifier          | Source                                 | Available When                                                      | Purpose                                   |
-| ------------------- | -------------------------------------- | ------------------------------------------------------------------- | ----------------------------------------- |
-| `job_id`            | BullMQ job ID                          | From create-session response                                        | Links client pending session to WS events |
-| `session_id`        | AI harness session UUID                | From ACTIVE_SESSION_STARTED                                         | Identifies the harness session            |
-| `thread_id`         | Deterministic from session_id+provider | From THREAD_CREATED or ACTIVE_SESSION_UPDATED (after thread exists) | Identifies the thread for navigation      |
-| `source.session_id` | Thread metadata                        | From THREAD_CREATED payload                                         | Links thread back to the session_id       |
+| Identifier          | Source                              | Available When                  | Purpose                                                    |
+| ------------------- | ----------------------------------- | ------------------------------- | ---------------------------------------------------------- |
+| `thread_id`         | `crypto.randomUUID()` at submission | From create-session response    | Primary identity for the session throughout its lifecycle  |
+| `job_id`            | `crypto.randomUUID()` at submission | From create-session response    | BullMQ job correlation, stored in thread metadata          |
+| `session_id`        | AI harness session UUID             | From SessionStart hook          | Identifies the harness session, written to thread metadata |
+| `source.session_id` | Thread metadata                     | After SessionStart fires        | Links thread back to the harness session_id                |
 
 ### Correlation Flow
 
 ```
-job_id (client has this)
-  |-- matches --> ACTIVE_SESSION_STARTED.payload.session.job_id
-  |                 gives us: session_id
+thread_id (client has this from create-session response)
+  |-- used directly for all operations:
+  |     thread panel rendering, timeline subscription, navigation
   |
-session_id (from WS event)
-  |-- matches --> THREAD_CREATED.payload.thread.source.session_id
-  |                 gives us: thread_id
+  |-- session_status transitions arrive as THREAD_UPDATED events
+  |     on the same thread_id (no correlation needed)
   |
-  |-- also found in --> ACTIVE_SESSION_UPDATED.payload.session.thread_id
-  |                       (when server matches the thread mid-session)
+  |-- job_id stored in thread metadata for BullMQ job tracking
 ```
+
+**Legacy flow**: For sessions started manually (not via the web client), the thread is created by the sync hook on SessionStart. These sessions use the original `find_thread_for_session` correlation path, now backed by an O(1) reverse index from the thread watcher metadata cache.
 
 ## Timing Characteristics
 
-| Event                                 | Typical Delay After Previous                                                             |
-| ------------------------------------- | ---------------------------------------------------------------------------------------- |
-| create-session response               | < 1 second                                                                               |
-| BullMQ job pickup                     | 0-30 seconds (depends on queue)                                                          |
-| Harness startup                       | 2-5 seconds (varies by harness)                                                          |
-| ACTIVE_SESSION_STARTED                | Immediate after startup                                                                  |
-| First ACTIVE_SESSION_UPDATED          | Seconds (after first prompt processing)                                                  |
-| Thread creation (metadata.json write) | During first successful sync (UserPromptSubmit or PostToolUse, whichever succeeds first) |
-| THREAD_CREATED (watcher detection)    | ~500ms after metadata.json write                                                         |
-| thread_id in ACTIVE_SESSION_UPDATED   | Next hook fire after thread exists                                                       |
-| Periodic thread updates (PostToolUse) | Every ~30s during active tool use (throttled sync)                                       |
-| ACTIVE_SESSION_ENDED                  | After all SessionEnd hooks complete                                                      |
-| THREAD_UPDATED (with generated title) | Seconds to minutes (async Ollama)                                                        |
+| Event                                    | Typical Delay After Previous                                                     |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| create-session response (with thread_id) | < 1 second (thread created synchronously before response)                        |
+| THREAD_CREATED (watcher detection)       | ~500ms after create-session (thread watcher detects metadata.json)               |
+| BullMQ job pickup                        | 0-30 seconds (depends on queue)                                                  |
+| THREAD_UPDATED (session_status: starting)| Immediate on job pickup                                                          |
+| Harness startup                          | 2-5 seconds (varies by harness)                                                  |
+| THREAD_UPDATED (session_status: active)  | Immediate after SessionStart hook fires                                          |
+| Periodic thread updates (PostToolUse)    | Every ~2s during active tool use (throttled sync, when THREAD_ID set; 30s otherwise) |
+| THREAD_UPDATED (session_status: completed)| After all SessionEnd hooks complete                                             |
+| THREAD_UPDATED (with generated title)    | Seconds to minutes (async Ollama)                                                |
 
 ## Client State Machine
 
-Based on the event flow, the client should track sessions through these states:
+The thread-first architecture simplifies client state. The active-sessions reducer is a thin ephemeral store keyed by `session_id` holding only transient fields: `{ thread_id, latest_timeline_event, context_percentage, last_activity_at }`. No more `pending_sessions`, `ended_sessions`, or `prompt_snippets` maps. The panel renders threads directly, enriched with ephemeral data where available.
+
+Session state is driven by the `session_status` field on the thread metadata:
 
 ```
-PENDING (has job_id, no session_id, clickable: no)
+QUEUED (thread exists, session_status: "queued", clickable: yes)
   |
-  |-- ACTIVE_SESSION_STARTED (matching job_id) --> ACTIVE
-  |-- THREAD_JOB_FAILED (matching job_id) -------> FAILED
+  |-- THREAD_UPDATED (session_status: "starting") --> STARTING
+  |-- THREAD_JOB_FAILED (matching job_id) ----------> FAILED (session_status: "failed")
   v
-ACTIVE (has session_id, thread_id: null, status: "active", clickable: yes via session sheet)
+STARTING (session_status: "starting", clickable: yes)
   |
-  |-- ACTIVE_SESSION_UPDATED (status: "idle") --> IDLE (waiting for input)
-  |-- THREAD_CREATED (matching source.session_id)
-  |   or ACTIVE_SESSION_UPDATED (with thread_id)
+  |-- THREAD_UPDATED (session_status: "active") --> ACTIVE
   v
-ACTIVE_LINKED (has session_id + thread_id, clickable: yes via thread sheet)
+ACTIVE (session_status: "active", clickable: yes)
   |
-  |-- ACTIVE_SESSION_UPDATED (status: "idle") --> IDLE_LINKED
-  |-- ACTIVE_SESSION_ENDED ----------------------> ENDED_LINKED (stays in sessions map)
+  |-- THREAD_UPDATED (session_status: "idle") ----> IDLE
+  |-- THREAD_UPDATED (session_status: "completed") -> COMPLETED
   v
-IDLE_LINKED (has session_id + thread_id, status: "idle")
+IDLE (session_status: "idle", clickable: yes)
   |
-  |-- ACTIVE_SESSION_UPDATED (status: "active") --> ACTIVE_LINKED
-  |-- ACTIVE_SESSION_ENDED -----------------------> ENDED_LINKED (stays in sessions map)
+  |-- THREAD_UPDATED (session_status: "active") --> ACTIVE
+  |-- THREAD_UPDATED (session_status: "completed") -> COMPLETED
   v
-ENDED_LINKED (has thread_id, status: "ended", stays inline in sessions map, clickable)
+COMPLETED (session_status: "completed", clickable: yes)
   |
-  |-- manual dismiss
+  |-- session_status cleared (set to null) by metadata analysis or manual action
   v
-REMOVED
+NORMAL THREAD
 
-ENDED_NO_THREAD (no thread_id, moved to ended_sessions map)
+FAILED (session_status: "failed", clickable: yes, dismissable)
   |
-  |-- THREAD_CREATED (matching source.session_id) --> promoted back to ENDED_LINKED
-  |     (moved from ended_sessions back to sessions map with thread_id)
-  |-- auto-dismiss after 60s (re-checks both maps for late thread linkage)
+  |-- manual dismiss or retry
   v
-REMOVED
-
-FAILED (has job_id + error_message)
-  |
-  |-- auto-dismiss timer or manual dismiss
-  v
-REMOVED
+REMOVED / RETRIED
 ```
 
 **Key behavioral changes**:
 
-- **Early clickability**: Sessions are clickable as soon as they have a `session_id` (before thread exists). The click opens a session sheet that auto-transitions to a thread sheet when `thread_id` becomes available.
-- **Inline ended sessions**: Sessions that end with a `thread_id` stay in the `sessions` map with status "ended" rather than moving to `ended_sessions`. This prevents the card from disappearing. Only sessions without a thread are auto-dismissed after 60s.
-- **Unified sorting**: All sessions (pending, active, ended) are sorted by `created_at` descending in a single array, preventing visual reordering when sessions transition between states.
+- **Immediate clickability**: Sessions are clickable from the moment the thread is created (Phase 1), before the harness even starts. The `prompt_snippet` in thread metadata provides display text immediately.
+- **State survives refresh**: Because `session_status` and `prompt_snippet` are persisted in thread metadata, all session state survives page refresh. No more ephemeral client-only state.
+- **Single sorted list**: The panel renders a single list of threads with active `session_status`, sorted by `created_at` descending. No separate pending/active/ended collections.
+- **No correlation needed**: The `thread_id` is the stable identity from submission time. THREAD_UPDATED events carry `session_status` transitions directly on the thread.
 
 **Key ordering rules**:
 
-- THREAD_CREATED can arrive before or after ACTIVE_SESSION_ENDED depending on timing. The client must handle both orderings.
-- ACTIVE_SESSION_UPDATED with thread_id and THREAD_CREATED with matching source.session_id are redundant paths to linking. The client should accept whichever arrives first and ignore duplicates.
+- All session state transitions arrive as THREAD_UPDATED events on the same `thread_id`.
+- The client auto-subscribes to active thread timelines (SUBSCRIBE_THREAD) for threads with active `session_status` belonging to the current user.
 - The "idle" status (from Stop events) indicates the harness is waiting for input or has paused processing. "active" means it is actively processing.
 
 ## Network Resilience
@@ -644,36 +587,48 @@ Clients must handle WebSocket disconnections gracefully since session lifecycle 
 
 On WebSocket reconnect, the client should:
 
-1. **Fetch active sessions**: `GET /api/active-sessions` returns current sessions from Redis. This recovers any ACTIVE_SESSION_STARTED events missed during disconnection. **Note**: This endpoint filters out sessions with archived threads and sessions that have neither a `thread_id` nor a `job_id` (e.g., very new sessions from other machines whose thread data hasn't synced yet).
-2. **Check for thread linkage**: Active sessions returned from the REST endpoint include `thread_id` if already linked, recovering missed THREAD_CREATED events.
-3. **Reconcile pending sessions**: Compare pending `job_id`s against active sessions' `job_id` fields to resolve any missed STARTED events.
-4. **Fetch recent threads**: If the client tracks ended sessions, `GET /api/threads` can recover threads created during disconnection.
+1. **Fetch active threads**: `GET /api/threads` with a filter for threads with active `session_status` (queued, starting, active, idle) returns all in-progress sessions. Since `session_status` is persisted in thread metadata, this recovers all session state -- no separate session store query needed.
+2. **Re-subscribe to timelines**: For each active thread, send SUBSCRIBE_THREAD to resume live timeline updates.
+3. **Legacy sessions**: `GET /api/active-sessions` still returns Redis-based sessions for non-thread-first sessions (manually started CLI sessions without THREAD_ID).
 
 ### Missed Event Scenarios
 
 | Missed Event                | Recovery                                                                              |
 | --------------------------- | ------------------------------------------------------------------------------------- |
-| ACTIVE_SESSION_STARTED      | GET /api/active-sessions will include it (if it has a thread_id or job_id)            |
-| ACTIVE_SESSION_UPDATED      | GET /api/active-sessions returns current state                                        |
-| ACTIVE_SESSION_ENDED        | Session will be absent from GET /api/active-sessions; client infers ended             |
-| THREAD_CREATED              | Thread appears in GET /api/threads; active session may include thread_id              |
-| THREAD_UPDATED              | GET /api/threads/<id> returns current metadata                                        |
+| THREAD_CREATED              | Thread appears in GET /api/threads; session_status indicates lifecycle stage           |
+| THREAD_UPDATED              | GET /api/threads/<id> returns current metadata including session_status                |
 | THREAD_TIMELINE_ENTRY_ADDED | Subscribe to thread after reconnect; fetch timeline via REST                          |
-| THREAD_JOB_FAILED           | Check job status via BullMQ job API if pending session has no matching active session |
+| THREAD_JOB_FAILED           | Thread metadata has session_status: "failed"; visible in GET /api/threads              |
+| ACTIVE_SESSION_STARTED      | Legacy: GET /api/active-sessions will include it (non-thread-first sessions only)     |
+| ACTIVE_SESSION_UPDATED      | Legacy: GET /api/active-sessions returns current state                                |
+| ACTIVE_SESSION_ENDED        | Legacy: Session absent from GET /api/active-sessions; client infers ended             |
 
 ### Stale State Detection
 
-Sessions in Redis have a TTL (default 10 minutes from last update). If a session's hooks stop firing (harness crash without SessionEnd), the Redis key expires and the session silently disappears. Clients should:
+For thread-first sessions, `session_status` is persisted in thread metadata and does not expire. If a session's hooks stop firing (harness crash without SessionEnd), the thread retains its last `session_status` (e.g., "active" or "starting") indefinitely. Clients should:
 
-- Periodically poll GET /api/active-sessions to detect stale sessions that expired
-- Treat a session absent from the REST response but still tracked locally as ended
-- Not rely solely on ACTIVE_SESSION_ENDED for end-of-session detection
+- Detect stale sessions by checking `last_activity_at` or thread `updated_at` against a staleness threshold
+- Treat threads with active `session_status` but no recent activity as potentially stale
+- The job worker sets `session_status: 'failed'` on job failure, which handles most crash scenarios
+
+For legacy sessions (Redis store), the TTL behavior (default 10 minutes) still applies.
 
 ## Harness Integration Guide
 
 ### Required API Calls
 
 Any AI harness integration must make these HTTP calls at the appropriate lifecycle points:
+
+When `THREAD_ID` is set (thread-first sessions):
+
+| Lifecycle Point | HTTP Call                                           | Required Fields                          |
+| --------------- | --------------------------------------------------- | ---------------------------------------- |
+| Session start   | `PUT /api/threads/:thread_id/session-status`        | `session_status: "active"`, `session_id` |
+| Activity/turn   | `PUT /api/threads/:thread_id/session-status`        | `session_status: "active"`               |
+| Idle/waiting    | `PUT /api/threads/:thread_id/session-status`        | `session_status: "idle"`                 |
+| Session end     | `PUT /api/threads/:thread_id/session-status`        | `session_status: "completed"`            |
+
+When `THREAD_ID` is not set (legacy/manual sessions):
 
 | Lifecycle Point | HTTP Call                                  | Required Fields                                                                              |
 | --------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------- |

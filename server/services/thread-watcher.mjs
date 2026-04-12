@@ -9,6 +9,7 @@ import {
 import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
+import { index_thread_metadata } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 
 const log = debug('threads:watcher')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -83,6 +84,14 @@ const find_latest_non_system_entry = (entries) => {
 export const get_cached_latest_timeline_entry = (thread_id) => {
   return latest_timeline_entry_cache.get(thread_id) || null
 }
+
+/**
+ * Get the metadata cache Map for building reverse indexes.
+ * Returns the live Map reference (read-only use expected).
+ *
+ * @returns {Map<string, Object>} Map of thread_id -> metadata
+ */
+export const get_metadata_cache = () => metadata_cache
 
 // ============================================================================
 // Index Sync Hook Debouncing
@@ -184,6 +193,7 @@ const get_or_read_metadata = async (thread_id, metadata_dir) => {
     )
     if (metadata) {
       metadata_cache.set(thread_id, metadata)
+      index_thread_metadata(thread_id, metadata)
     }
   }
   return metadata
@@ -385,6 +395,7 @@ const handle_metadata_added = async (file_path) => {
 
   // Cache metadata for use by timeline change handler
   metadata_cache.set(thread_id, metadata)
+  index_thread_metadata(thread_id, metadata)
 
   log_lifecycle('WATCHER metadata_added thread_id=%s', thread_id)
   log(`Emitting THREAD_CREATED for thread: ${thread_id}`)
@@ -413,9 +424,10 @@ const handle_metadata_changed = async (file_path) => {
     return
   }
 
-  // Update metadata cache
+  // Update metadata cache and reverse index
   if (metadata.thread_id) {
     metadata_cache.set(metadata.thread_id, metadata)
+    index_thread_metadata(metadata.thread_id, metadata)
   }
 
   emit_thread_updated(metadata)

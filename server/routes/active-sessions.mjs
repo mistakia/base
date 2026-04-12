@@ -266,10 +266,9 @@ router.get('/:session_id', async (req, res) => {
 })
 
 /**
- * POST /api/active-sessions
- * Register a new active session (called by SessionStart hook)
+ * Middleware: require localhost or valid API key (hook auth pattern)
  */
-router.post('/', async (req, res) => {
+const require_hook_auth = (req, res, next) => {
   const expected_key = config.job_tracker?.api_key
   const auth_header = req.headers.authorization
   const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
@@ -287,6 +286,14 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ error: 'Invalid API key' })
     }
   }
+  next()
+}
+
+/**
+ * POST /api/active-sessions
+ * Register a new active session (called by SessionStart hook)
+ */
+router.post('/', require_hook_auth, async (req, res) => {
 
   const { log } = req.app.locals
   const {
@@ -398,24 +405,7 @@ router.post('/', async (req, res) => {
  * Update an active session (with upsert behavior)
  * Called by UserPromptSubmit, PostToolUse (status=active) and Stop (status=idle) hooks
  */
-router.put('/:session_id', async (req, res) => {
-  const expected_key = config.job_tracker?.api_key
-  const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
-  if (!is_localhost) {
-    if (!expected_key || !auth_header) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
-    const provided_buf = Buffer.from(provided_key)
-    const expected_buf = Buffer.from(expected_key)
-    if (
-      provided_buf.length !== expected_buf.length ||
-      !crypto.timingSafeEqual(provided_buf, expected_buf)
-    ) {
-      return res.status(401).json({ error: 'Invalid API key' })
-    }
-  }
+router.put('/:session_id', require_hook_auth, async (req, res) => {
 
   const { log } = req.app.locals
   const { session_id } = req.params
@@ -458,8 +448,8 @@ router.put('/:session_id', async (req, res) => {
         .json({ success: true, session_id, tombstoned: true })
     }
 
-    // If no thread_id yet, try to find one
-    if (!session.thread_id) {
+    // If no thread_id yet and none provided in request body, try to discover one
+    if (!session.thread_id && !thread_id) {
       const found_thread_id = await find_thread_for_session({
         session_id,
         transcript_path: session.transcript_path
@@ -547,25 +537,7 @@ router.put('/:session_id', async (req, res) => {
  * DELETE /api/active-sessions/:session_id
  * Remove an active session (called by SessionEnd hook)
  */
-router.delete('/:session_id', async (req, res) => {
-  const expected_key = config.job_tracker?.api_key
-  const auth_header = req.headers.authorization
-  const is_localhost = ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.ip)
-  if (!is_localhost) {
-    if (!expected_key || !auth_header) {
-      return res.status(401).json({ error: 'Authentication required' })
-    }
-    const provided_key = auth_header.replace(/^Bearer\s+/i, '')
-    const provided_buf = Buffer.from(provided_key)
-    const expected_buf = Buffer.from(expected_key)
-    if (
-      provided_buf.length !== expected_buf.length ||
-      !crypto.timingSafeEqual(provided_buf, expected_buf)
-    ) {
-      return res.status(401).json({ error: 'Invalid API key' })
-    }
-  }
-
+router.delete('/:session_id', require_hook_auth, async (req, res) => {
   const { log } = req.app.locals
   const { session_id } = req.params
 

@@ -729,6 +729,7 @@ export const create_session_claude_cli = async ({
       '-w',
       container_working_directory,
       ...(job_id ? ['-e', `JOB_ID=${job_id}`] : []),
+      ...(thread_id ? ['-e', `THREAD_ID=${thread_id}`] : []),
       ...(claude_config_dir
         ? ['-e', `CLAUDE_CONFIG_DIR=${claude_config_dir}`]
         : []),
@@ -754,6 +755,7 @@ export const create_session_claude_cli = async ({
       env: {
         ...process.env,
         ...(job_id ? { JOB_ID: job_id } : {}),
+        ...(thread_id ? { THREAD_ID: thread_id } : {}),
         ...(claude_config_dir ? { CLAUDE_CONFIG_DIR: claude_config_dir } : {})
       }
     }
