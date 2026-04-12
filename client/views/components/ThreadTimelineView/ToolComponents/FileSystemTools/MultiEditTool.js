@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { Edit as EditIcon } from '@mui/icons-material'
-import { useSelector } from 'react-redux'
 import BaseToolComponent from '@components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import {
   build_dual_tone_header,
@@ -10,7 +9,7 @@ import {
   format_count_label
 } from '@views/components/ThreadTimelineView/ToolComponents/shared/title-utils'
 import { ensure_string_result } from '@views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
-import { get_threads_state } from '@core/threads/selectors'
+import { use_context_working_directory } from '@views/components/ThreadTimelineView/ToolComponents/shared/use-context-working-directory'
 import { MonospaceText } from '@views/components/primitives/styled/index.js'
 
 const MultiEditTool = ({ tool_call_event }) => {
@@ -23,13 +22,7 @@ const MultiEditTool = ({ tool_call_event }) => {
     return { file_path, edits }
   }
 
-  const threads_state = useSelector(get_threads_state)
-  const selected_thread_data = threads_state.get('selected_thread_data')
-  const working_directory = selected_thread_data?.getIn([
-    'source',
-    'provider_metadata',
-    'working_directory'
-  ])
+  const working_directory = use_context_working_directory()
 
   const get_action_button = () => {
     const { edits } = get_edit_info()

@@ -131,8 +131,8 @@ const ThreadPromptContainer = () => {
   )
   const directory_state = useSelector((state) => state.get('directory'))
   const router = useSelector((state) => state.get('router'))
-  const selected_thread_data = useSelector((state) =>
-    state.getIn(['threads', 'selected_thread_data'])
+  const thread_cache = useSelector((state) =>
+    state.getIn(['threads', 'thread_cache'])
   )
   const can_create_threads = useSelector(get_can_create_threads)
 
@@ -140,7 +140,7 @@ const ThreadPromptContainer = () => {
   const is_open_ref = useRef(is_open)
   const current_path_ref = useRef(router?.location?.pathname || '/')
   const path_info_ref = useRef(directory_state?.get('path_info'))
-  const selected_thread_data_ref = useRef(selected_thread_data)
+  const thread_cache_ref = useRef(thread_cache)
   const can_create_threads_ref = useRef(can_create_threads)
 
   // Keep refs in sync with state
@@ -157,8 +157,8 @@ const ThreadPromptContainer = () => {
   }, [directory_state])
 
   useEffect(() => {
-    selected_thread_data_ref.current = selected_thread_data
-  }, [selected_thread_data])
+    thread_cache_ref.current = thread_cache
+  }, [thread_cache])
 
   useEffect(() => {
     can_create_threads_ref.current = can_create_threads
@@ -194,11 +194,12 @@ const ThreadPromptContainer = () => {
           const is_file_page = !thread_id && path_info?.type === 'file'
 
           // Capture thread ownership for resume permission check
-          const thread_data = selected_thread_data_ref.current
-          const thread_user_public_key =
-            thread_id && thread_data?.get('thread_id') === thread_id
-              ? thread_data.get('user_public_key')
-              : null
+          const cached_thread = thread_id
+            ? thread_cache_ref.current?.get(thread_id)
+            : null
+          const thread_user_public_key = cached_thread
+            ? cached_thread.get('user_public_key')
+            : null
 
           dispatch(
             thread_prompt_actions.open({

@@ -313,7 +313,7 @@ export default function GlobalThreadInput() {
 
   const can_create_threads = useSelector(get_can_create_threads)
 
-  // Look up thread by ID from any available source (threads list, table, or selected_thread_data)
+  // Look up thread by ID from any available source (thread_cache, threads list, or table)
   const selected_thread = useSelector((state) => {
     if (!thread_id) return null
     return get_thread_by_id(state, thread_id)

@@ -1,0 +1,59 @@
+@import '@styles/variables'
+
+// Thread page wrapper: constrain width and align with timeline left column
+.thread-page__input-trigger
+  max-width: 1100px
+  margin: 0 auto
+  padding: 0 $space_base $space_lg
+
+  @media (min-width: 992px)
+    display: flex
+    gap: $space_lg
+    padding: 0 0 $space_lg
+
+.thread-page__input-trigger-inner
+  min-width: 0
+  flex: 1
+
+  @media (min-width: 992px)
+    flex: 2 0 0%
+
+// Spacer mirroring the timeline right column so the trigger aligns
+// with the timeline left column on desktop.
+.thread-page__input-trigger::after
+  @media (min-width: 992px)
+    content: ''
+    flex: 1 0 0%
+    min-width: 0
+
+.thread-input-trigger
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: $space_sm $space_base
+  border: 1px solid var(--color-border-light, #e8e8e8)
+  border-radius: $radius_base
+  background: var(--color-bg, #ffffff)
+  cursor: pointer
+  transition: border-color 0.15s ease
+
+  &:hover
+    border-color: var(--color-border, #d0d0d0)
+
+  &--hidden
+    visibility: hidden
+    pointer-events: none
+
+.thread-input-trigger__placeholder
+  font-size: $font_size_sm
+  color: var(--color-text-secondary, #888)
+  user-select: none
+
+.thread-input-trigger__icon
+  display: flex
+  align-items: center
+  justify-content: center
+  width: 24px
+  height: 24px
+  border-radius: $radius_sm
+  color: var(--color-text-secondary, #888)

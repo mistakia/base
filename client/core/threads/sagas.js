@@ -5,6 +5,7 @@ import {
   call,
   select,
   debounce,
+  delay,
   put
 } from 'redux-saga/effects'
 
@@ -20,10 +21,13 @@ import {
   delete_active_session
 } from '@core/api/sagas'
 import { threads_action_types, threads_actions } from './actions'
+import {
+  active_sessions_action_types,
+  active_sessions_actions
+} from '@core/active-sessions/actions'
 import { get_threads_state } from './selectors'
 import { get_app } from '@core/app/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
-import { active_sessions_actions } from '@core/active-sessions/actions'
 import { show_error_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
 import { thread_sheet_actions } from '@core/thread-sheet/actions'
@@ -365,6 +369,48 @@ export function* watch_thread_job_failed() {
   )
 }
 
+/**
+ * When a session ends, re-fetch thread data for any cached thread that was
+ * associated with the session. This is a safety net for missed WebSocket
+ * timeline events (FSEvents drops, brief disconnections, atomic rewrite
+ * timing). The thread-sheet saga handles its own re-fetch for the active
+ * sheet; this saga covers the thread page and any other cached thread view.
+ */
+export function* handle_session_ended_thread_refetch({ payload }) {
+  const { session_id } = payload
+
+  // Find the thread_id for this session from the active-sessions store
+  const session = yield select((state) =>
+    state.getIn(['active_sessions', 'sessions', session_id])
+  )
+  const thread_id = session?.get('thread_id')
+  if (!thread_id) return
+
+  // Only re-fetch if the thread is in the cache (meaning some view is displaying it)
+  const cached = yield select((state) =>
+    state.hasIn(['threads', 'thread_cache', thread_id])
+  )
+  if (!cached) return
+
+  // Skip if the thread-sheet saga will already handle this thread
+  const active_sheet = yield select((state) =>
+    state.getIn(['thread_sheet', 'active_sheet'])
+  )
+  if (active_sheet === thread_id) return
+
+  // Delay to allow the SessionEnd sync script to write the final timeline
+  yield delay(3000)
+
+  yield call(get_thread, { thread_id })
+}
+
+export function* watch_session_ended_thread_refetch() {
+  yield takeEvery(
+    active_sessions_action_types.ACTIVE_SESSION_ENDED,
+    handle_session_ended_thread_refetch
+  )
+}
+
 //= ====================================
 //  ROOT SAGA EXPORT
 //= ====================================
@@ -384,5 +430,7 @@ export const threads_sagas = [
   // Tag loading
   fork(watch_load_available_tags),
   // Job queue events
-  fork(watch_thread_job_failed)
+  fork(watch_thread_job_failed),
+  // Session-end safety net re-fetch
+  fork(watch_session_ended_thread_refetch)
 ]

@@ -7,42 +7,13 @@ import { active_sessions_action_types } from '@core/active-sessions/actions'
 const initial_state = new Map({
   // Currently open sheet id (thread_id or "session:<id>"), or null
   active_sheet: null,
-  // Map of thread_id -> { thread_data, is_loading, error }
+  // Map of "session:<id>" -> { session_id, session_status }
   sheet_data: Map()
 })
 
-const empty_sheet_data = Map({
-  thread_data: null,
-  is_loading: false,
-  error: null
-})
-
-/**
- * Appends a timeline entry to a sheet's thread data if thread_id matches an open sheet
- */
-function append_sheet_timeline_entry(state, thread_id, entry) {
-  const data = state.getIn(['sheet_data', thread_id])
-  if (!data || !data.get('thread_data')) {
-    return state
-  }
-
-  return state.updateIn(
-    ['sheet_data', thread_id, 'thread_data'],
-    (thread_data) =>
-      thread_data.update('timeline', (timeline) => {
-        if (timeline && Array.isArray(timeline)) {
-          const exists = timeline.some((e) => e.id === entry.id)
-          if (exists) return timeline
-          return [...timeline, entry]
-        }
-        return [entry]
-      })
-  )
-}
-
 /**
  * Transition a session sheet to a thread sheet by replacing the session key
- * with the thread_id and resetting sheet_data.
+ * with the thread_id.
  */
 function transition_session_sheet_to_thread(state, session_id, thread_id) {
   const sheet_key = `session:${session_id}`
@@ -51,7 +22,6 @@ function transition_session_sheet_to_thread(state, session_id, thread_id) {
   return state
     .set('active_sheet', thread_id)
     .deleteIn(['sheet_data', sheet_key])
-    .setIn(['sheet_data', thread_id], empty_sheet_data)
 }
 
 export function thread_sheet_reducer(state = initial_state, { type, payload }) {
@@ -64,12 +34,7 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
         return state
       }
 
-      // Preserve existing sheet_data for this thread if it exists (avoids
-      // discarding in-flight API responses on rapid re-open)
-      const existing_data = state.getIn(['sheet_data', thread_id])
-      return initial_state
-        .set('active_sheet', thread_id)
-        .setIn(['sheet_data', thread_id], existing_data || empty_sheet_data)
+      return initial_state.set('active_sheet', thread_id)
     }
 
     case thread_sheet_action_types.CLOSE_THREAD_SHEET: {
@@ -81,57 +46,6 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
 
     case thread_sheet_action_types.CLOSE_ALL_SHEETS: {
       return initial_state
-    }
-
-    case thread_sheet_action_types.GET_SHEET_THREAD_PENDING: {
-      const thread_id = payload.opts?.thread_id
-      if (!thread_id || !state.getIn(['sheet_data', thread_id])) return state
-      return state.mergeIn(['sheet_data', thread_id], {
-        is_loading: true,
-        error: null
-      })
-    }
-
-    case thread_sheet_action_types.GET_SHEET_THREAD_FULFILLED: {
-      const thread_id = payload.opts?.thread_id
-      if (!thread_id || !state.getIn(['sheet_data', thread_id])) return state
-      return state.mergeIn(['sheet_data', thread_id], {
-        thread_data: Map(payload.data),
-        is_loading: false,
-        error: null
-      })
-    }
-
-    case thread_sheet_action_types.GET_SHEET_THREAD_FAILED: {
-      const thread_id = payload.opts?.thread_id
-      if (!thread_id || !state.getIn(['sheet_data', thread_id])) return state
-      return state.mergeIn(['sheet_data', thread_id], {
-        is_loading: false,
-        error: payload.error
-      })
-    }
-
-    // Handle live WebSocket updates for any open sheet's thread
-    case threads_action_types.THREAD_UPDATED: {
-      const updated_thread = Map(payload.thread)
-      const thread_id = updated_thread.get('thread_id')
-
-      if (!state.getIn(['sheet_data', thread_id, 'thread_data'])) {
-        return state
-      }
-
-      return state.updateIn(
-        ['sheet_data', thread_id, 'thread_data'],
-        (current_data) => current_data.merge(updated_thread)
-      )
-    }
-
-    case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
-      const { thread_id, entry } = payload
-      if (!entry.truncated) {
-        return append_sheet_timeline_entry(state, thread_id, entry)
-      }
-      return state
     }
 
     // Session sheet support: open with session_id before thread exists
@@ -148,7 +62,7 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
         .set('active_sheet', sheet_key)
         .setIn(
           ['sheet_data', sheet_key],
-          empty_sheet_data.set('session_id', session_id)
+          Map({ session_id })
         )
     }
 

@@ -1,28 +1,42 @@
 import React, { useEffect } from 'react'
-import PropTypes from 'prop-types'
-import ImmutablePropTypes from 'react-immutable-proptypes'
 import { useParams } from 'react-router-dom'
+import { useSelector, useDispatch } from 'react-redux'
 
+import { threads_actions } from '@core/threads/actions'
+import {
+  get_thread_cache_data,
+  get_thread_loading_state
+} from '@core/threads/selectors'
+import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import {
   subscribe_to_thread,
   unsubscribe_from_thread
 } from '@core/websocket/service'
+import { extract_user_public_key } from '@views/utils/thread-metadata-extractor.js'
 import PageLayout from '@views/layout/PageLayout.js'
 import ThreadTimelineView from '@components/ThreadTimelineView/index.js'
+import ThreadInputTrigger from '@components/ThreadInputTrigger/ThreadInputTrigger.js'
 import PageHead from '@views/components/PageHead/index.js'
 import use_page_meta from '@views/hooks/usePageMeta.js'
 import use_dynamic_favicon from '@views/hooks/use-dynamic-favicon.js'
 
-const ThreadPage = ({
-  thread_data,
-  is_loading,
-  error,
-  active_session,
-  load_thread,
-  select_thread,
-  clear_selected_thread
-}) => {
+const ThreadPage = () => {
   const { '*': id } = useParams()
+  const dispatch = useDispatch()
+
+  const thread_data = useSelector((state) =>
+    id ? get_thread_cache_data(state, id) : null
+  )
+  const loading_state = useSelector((state) =>
+    id ? get_thread_loading_state(state, id) : null
+  )
+  const is_loading = loading_state?.get('is_loading') || false
+  const error = loading_state?.get('error') || null
+
+  const active_session = useSelector((state) =>
+    id ? get_active_session_for_thread(state, id) : null
+  )
+
   const thread_data_js = thread_data?.toJS ? thread_data.toJS() : thread_data
   const is_waiting = active_session?.status === 'idle'
   const page_meta = use_page_meta({
@@ -38,20 +52,16 @@ const ThreadPage = ({
 
   useEffect(() => {
     if (id) {
-      load_thread(id)
-      select_thread(id)
+      dispatch(threads_actions.load_thread(id))
       subscribe_to_thread(id)
     }
-  }, [id, load_thread, select_thread])
 
-  useEffect(() => {
     return () => {
-      clear_selected_thread()
       if (id) {
         unsubscribe_from_thread(id)
       }
     }
-  }, [id, clear_selected_thread])
+  }, [id, dispatch])
 
   if (is_loading) {
     return (
@@ -127,19 +137,17 @@ const ThreadPage = ({
       />
       <PageLayout>
         <ThreadTimelineView />
+        <div className='thread-page__input-trigger'>
+          <div className='thread-page__input-trigger-inner'>
+            <ThreadInputTrigger
+              thread_id={id}
+              thread_user_public_key={extract_user_public_key(thread_data)}
+            />
+          </div>
+        </div>
       </PageLayout>
     </>
   )
-}
-
-ThreadPage.propTypes = {
-  thread_data: ImmutablePropTypes.map,
-  is_loading: PropTypes.bool.isRequired,
-  error: PropTypes.string,
-  active_session: PropTypes.object,
-  load_thread: PropTypes.func.isRequired,
-  select_thread: PropTypes.func.isRequired,
-  clear_selected_thread: PropTypes.func.isRequired
 }
 
 export default ThreadPage

@@ -176,6 +176,20 @@ const TimelineList = ({
   // ============================================================================
 
   /**
+   * Scroll to bottom on initial timeline load and enable auto_scroll
+   */
+  const has_initial_scrolled_ref = useRef(false)
+  useEffect(() => {
+    if (has_initial_scrolled_ref.current) return
+    if (!timeline || get_timeline_length(timeline) === 0) return
+    has_initial_scrolled_ref.current = true
+    requestAnimationFrame(() => {
+      scroll_to_bottom('auto')
+      set_auto_scroll(true)
+    })
+  }, [timeline, get_timeline_length, scroll_to_bottom])
+
+  /**
    * Handle scroll events to enable/disable auto_scroll based on scroll position
    */
   useEffect(() => {

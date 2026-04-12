@@ -3,7 +3,10 @@ import { useSelector } from 'react-redux'
 import { Box, useMediaQuery } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
 
-import { get_threads_state } from '@core/threads/selectors'
+import {
+  get_thread_cache_data,
+  get_thread_loading_state
+} from '@core/threads/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { COLORS } from '@theme/colors.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
@@ -21,10 +24,6 @@ const ThreadTimelineView = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const current_path = location.pathname
-  const threads_state = useSelector(get_threads_state)
-  const selected_thread_data = threads_state.get('selected_thread_data')
-  const is_loading_thread = threads_state.get('is_loading_thread')
-  const thread_error = threads_state.get('thread_error')
   const [is_file_browser_visible, set_is_file_browser_visible] = useState(false)
   const is_mobile = useMediaQuery('(max-width: 991px)')
   const is_mobile_breadcrumb = useMediaQuery('(max-width: 768px)')
@@ -33,6 +32,15 @@ const ThreadTimelineView = () => {
   const thread_id = current_path.startsWith('/thread/')
     ? current_path.split('/')[2]
     : null
+
+  const thread_data = useSelector((state) =>
+    get_thread_cache_data(state, thread_id)
+  )
+  const loading_state = useSelector((state) =>
+    get_thread_loading_state(state, thread_id)
+  )
+  const is_loading_thread = loading_state?.get('is_loading') || false
+  const thread_error = loading_state?.get('error') || null
 
   // Get active session for this thread if it exists
   const active_session = useSelector((state) =>
@@ -62,8 +70,8 @@ const ThreadTimelineView = () => {
   }
 
   const timeline_to_display =
-    selected_thread_data && selected_thread_data.get('timeline')
-  const metadata = selected_thread_data
+    thread_data && thread_data.get('timeline')
+  const metadata = thread_data
   const has_timeline_entries =
     Array.isArray(timeline_to_display) && timeline_to_display.length > 0
 
@@ -85,7 +93,7 @@ const ThreadTimelineView = () => {
     return () => document.removeEventListener('keydown', handle_keydown)
   }, [])
 
-  if (!selected_thread_data) {
+  if (!thread_data) {
     return (
       <Box sx={{ p: 3 }}>
         <span>No thread data available</span>
@@ -118,7 +126,7 @@ const ThreadTimelineView = () => {
         default_collapsed={is_mobile}
       />
       <SharedViewBadge />
-      {selected_thread_data && (
+      {thread_data && (
         <FileActions>
           <button
             className='file-browser-toggle-button'

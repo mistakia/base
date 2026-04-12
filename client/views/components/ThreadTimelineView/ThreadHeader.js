@@ -525,7 +525,9 @@ const ThreadHeader = ({
   // Get current user's public key and cost display from Redux store
   const app_state = useSelector(get_app)
   const current_user_public_key = app_state.get('user_public_key')
-  const thread_cost_display = useSelector(get_thread_cost_display)
+  const thread_cost_display = useSelector((state) =>
+    get_thread_cost_display(state, thread_id)
+  )
 
   // Get active session for this thread
   const active_session = useSelector((state) =>

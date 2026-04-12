@@ -24,8 +24,6 @@ export const threads_action_types = {
   LOAD_THREAD: 'LOAD_THREAD',
   LOAD_THREADS_TABLE: 'LOAD_THREADS_TABLE',
   LOAD_THREADS_AVAILABLE_TAGS: 'LOAD_THREADS_AVAILABLE_TAGS',
-  SELECT_THREAD: 'SELECT_THREAD',
-  CLEAR_SELECTED_THREAD: 'CLEAR_SELECTED_THREAD',
   SET_THREAD_ARCHIVE_STATE: 'SET_THREAD_ARCHIVE_STATE',
 
   // Table view management actions
@@ -64,15 +62,6 @@ export const threads_actions = {
   load_thread: (thread_id) => ({
     type: threads_action_types.LOAD_THREAD,
     payload: { thread_id }
-  }),
-
-  select_thread: (thread_id) => ({
-    type: threads_action_types.SELECT_THREAD,
-    payload: { thread_id }
-  }),
-
-  clear_selected_thread: () => ({
-    type: threads_action_types.CLEAR_SELECTED_THREAD
   }),
 
   update_thread_table_view: ({ view }) => ({

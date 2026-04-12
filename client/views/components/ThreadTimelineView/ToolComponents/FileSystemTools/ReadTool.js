@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { Description as FileIcon } from '@mui/icons-material'
-import { useSelector } from 'react-redux'
 import BaseToolComponent from '@views/components/ThreadTimelineView/ToolComponents/BaseToolComponent'
 import {
   MonospaceText,
@@ -13,7 +12,7 @@ import {
   format_relative_path
 } from '@views/components/ThreadTimelineView/ToolComponents/shared/title-utils'
 import { get_line_count } from '@views/components/ThreadTimelineView/ToolComponents/shared/result-utils'
-import { get_threads_state } from '@core/threads/selectors'
+import { use_context_working_directory } from '@views/components/ThreadTimelineView/ToolComponents/shared/use-context-working-directory'
 
 const ReadTool = ({ tool_call_event, tool_result_event }) => {
   const [show_content, set_show_content] = useState(false)
@@ -170,13 +169,7 @@ const ReadTool = ({ tool_call_event, tool_result_event }) => {
     }
   }
 
-  const threads_state = useSelector(get_threads_state)
-  const selected_thread_data = threads_state.get('selected_thread_data')
-  const working_directory = selected_thread_data?.getIn([
-    'source',
-    'provider_metadata',
-    'working_directory'
-  ])
+  const working_directory = use_context_working_directory()
 
   const header_node = build_dual_tone_header({
     left_label: 'Read',

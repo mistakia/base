@@ -2,6 +2,7 @@ import { Record, List, Map } from 'immutable'
 
 import { threads_action_types } from './actions'
 import { thread_action_types } from '@core/thread/actions'
+import { thread_sheet_action_types } from '@core/thread-sheet/actions'
 import { app_actions } from '@core/app/actions'
 import { active_sessions_action_types } from '@core/active-sessions/actions'
 import { thread_columns } from '@views/components/ThreadsTable/index.js'
@@ -14,6 +15,7 @@ import {
   on_table_fulfilled,
   on_table_failed
 } from '@core/table/table-reducer-helpers.js'
+import { log_lifecycle } from '@core/utils/session-lifecycle-debug'
 
 // ============================================================================
 // Helper Functions for Reducer Logic
@@ -50,16 +52,11 @@ function add_thread_to_all_views(state, new_thread) {
 }
 
 /**
- * Updates selected thread data if it matches the given thread_id
+ * Updates a cached thread entry if it exists in thread_cache
  */
-function update_selected_thread_if_matches(state, thread_id, update_fn) {
-  const current_selected_id = state.getIn(['selected_thread_data', 'thread_id'])
-
-  if (state.get('selected_thread_data') && current_selected_id === thread_id) {
-    return state.update('selected_thread_data', update_fn)
-  }
-
-  return state
+function update_thread_cache_entry(state, thread_id, update_fn) {
+  if (!state.hasIn(['thread_cache', thread_id])) return state
+  return state.updateIn(['thread_cache', thread_id], update_fn)
 }
 
 /**
@@ -84,19 +81,14 @@ function update_thread_in_basic_list(state, thread_id, updated_data) {
 }
 
 /**
- * Appends a timeline entry to the selected thread
+ * Appends a timeline entry to a cached thread
  */
 function append_timeline_entry(state, thread_id, entry) {
-  return update_selected_thread_if_matches(state, thread_id, (thread_data) =>
+  return update_thread_cache_entry(state, thread_id, (thread_data) =>
     thread_data.update('timeline', (timeline) => {
-      // Timeline is a plain JS array from Map(payload.data), not an Immutable List
       if (timeline && Array.isArray(timeline)) {
-        // Check if entry already exists by id to prevent duplicates
-        // This can happen when websocket events arrive after get_thread already updated the data
         const exists = timeline.some((e) => e.id === entry.id)
-        if (exists) {
-          return timeline
-        }
+        if (exists) return timeline
         return [...timeline, entry]
       }
       return [entry]
@@ -105,7 +97,7 @@ function append_timeline_entry(state, thread_id, entry) {
 }
 
 function remove_optimistic_entries(state, thread_id) {
-  return update_selected_thread_if_matches(state, thread_id, (thread_data) =>
+  return update_thread_cache_entry(state, thread_id, (thread_data) =>
     thread_data.update('timeline', (timeline) => {
       if (timeline && Array.isArray(timeline)) {
         const filtered = timeline.filter((e) => !e._optimistic)
@@ -114,6 +106,46 @@ function remove_optimistic_entries(state, thread_id) {
       return timeline
     })
   )
+}
+
+/**
+ * After loading thread data into cache, re-inject optimistic entry if a pending
+ * resume exists and the loaded timeline does not already contain a user message
+ * timestamped after the pending resume's submitted_at.
+ */
+function reinject_optimistic_entry_if_needed(state, thread_id) {
+  const pending_resume = state.getIn(['thread_pending_resumes', thread_id])
+  if (!pending_resume || !pending_resume.get('prompt')) return state
+
+  const submitted_at = pending_resume.get('submitted_at')
+  const timeline = state.getIn(['thread_cache', thread_id, 'timeline'])
+  if (!timeline || !Array.isArray(timeline)) return state
+
+  // Check if timeline already has a user message after submitted_at
+  // Timeline entries from the server use `timestamp`, not `created_at`
+  const has_recent_user_message = timeline.some(
+    (e) =>
+      e.type === 'message' &&
+      e.role === 'user' &&
+      !e._optimistic &&
+      (e.timestamp || e.created_at) >= submitted_at
+  )
+  if (has_recent_user_message) return state
+
+  // Check if an optimistic entry already exists
+  const has_optimistic = timeline.some((e) => e._optimistic)
+  if (has_optimistic) return state
+
+  const optimistic_entry = {
+    id: `optimistic-${thread_id}-${Date.now()}`,
+    type: 'message',
+    role: 'user',
+    content: pending_resume.get('prompt'),
+    timestamp: submitted_at,
+    created_at: submitted_at,
+    _optimistic: true
+  }
+  return append_timeline_entry(state, thread_id, optimistic_entry)
 }
 
 // ============================================================================
@@ -216,12 +248,14 @@ const ThreadsState = new Record({
 
   // Basic threads list for simple get_threads API calls
   threads: new List(),
-  selected_thread: null,
-  selected_thread_data: null,
   is_loading_threads: false,
-  is_loading_thread: false,
   threads_error: null,
-  thread_error: null,
+
+  // Unified thread data cache keyed by thread_id.
+  // Entries are not proactively evicted; cleared on CLEAR_AUTH.
+  thread_cache: new Map(),
+  // Loading states per thread_id: { is_loading, error }
+  thread_loading: new Map(),
 
   // Pending resume state keyed by thread_id
   thread_pending_resumes: new Map(),
@@ -300,50 +334,56 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       })
 
     // ========================================================================
-    // Single Thread Actions
+    // Single Thread Actions (page and sheet share the same cache)
     // ========================================================================
 
     case threads_action_types.GET_THREAD_PENDING:
-      return state.merge({
-        is_loading_thread: true,
-        thread_error: null
-      })
+    case thread_sheet_action_types.GET_SHEET_THREAD_PENDING: {
+      const thread_id =
+        payload.opts?.thread_id || payload.opts?.params?.thread_id
+      if (!thread_id) return state
+      return state.setIn(
+        ['thread_loading', thread_id],
+        Map({ is_loading: true, error: null })
+      )
+    }
 
-    case threads_action_types.GET_THREAD_FULFILLED: {
+    case threads_action_types.GET_THREAD_FULFILLED:
+    case thread_sheet_action_types.GET_SHEET_THREAD_FULFILLED: {
       const thread_data = payload.data
       const thread_id = thread_data?.thread_id
-      let new_state = state.merge({
-        selected_thread_data: Map(thread_data),
-        is_loading_thread: false,
-        thread_error: null
-      })
-      // Also update the thread in the basic threads list if it exists
-      if (thread_id) {
-        new_state = update_thread_in_basic_list(
-          new_state,
-          thread_id,
-          thread_data
+      if (!thread_id) return state
+
+      let new_state = state
+        .setIn(['thread_cache', thread_id], Map(thread_data))
+        .setIn(
+          ['thread_loading', thread_id],
+          Map({ is_loading: false, error: null })
         )
-      }
+
+      // Re-inject optimistic entry if a pending resume exists
+      new_state = reinject_optimistic_entry_if_needed(new_state, thread_id)
+
+      // Also update the thread in the basic threads list if it exists
+      new_state = update_thread_in_basic_list(
+        new_state,
+        thread_id,
+        thread_data
+      )
+
       return new_state
     }
 
     case threads_action_types.GET_THREAD_FAILED:
-      return state.merge({
-        is_loading_thread: false,
-        thread_error: payload.error
-      })
-
-    case threads_action_types.SELECT_THREAD:
-      return state.merge({
-        selected_thread: payload.thread_id
-      })
-
-    case threads_action_types.CLEAR_SELECTED_THREAD:
-      return state.merge({
-        selected_thread: null,
-        selected_thread_data: null
-      })
+    case thread_sheet_action_types.GET_SHEET_THREAD_FAILED: {
+      const thread_id =
+        payload.opts?.thread_id || payload.opts?.params?.thread_id
+      if (!thread_id) return state
+      return state.setIn(
+        ['thread_loading', thread_id],
+        Map({ is_loading: false, error: payload.error })
+      )
+    }
 
     // ========================================================================
     // Models Data Actions
@@ -417,13 +457,16 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         )
       }
 
-      return state.update('thread_table_views', (views) =>
-        views.map((view) => {
-          let updated = remove_ownership_filter(view, 'saved_table_state')
-          updated = remove_ownership_filter(updated, 'thread_table_state')
-          return updated
-        })
-      )
+      return state
+        .set('thread_cache', new Map())
+        .set('thread_loading', new Map())
+        .update('thread_table_views', (views) =>
+          views.map((view) => {
+            let updated = remove_ownership_filter(view, 'saved_table_state')
+            updated = remove_ownership_filter(updated, 'thread_table_state')
+            return updated
+          })
+        )
     }
 
     // ========================================================================
@@ -509,8 +552,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
 
       let new_state = update_thread_in_basic_list(state, thread_id, thread_data)
 
-      // Update selected thread data so the detail page reflects the new state
-      new_state = update_selected_thread_if_matches(
+      // Update cached thread data so the detail page reflects the new state
+      new_state = update_thread_cache_entry(
         new_state,
         thread_id,
         (current_data) =>
@@ -548,8 +591,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         () => updated_thread
       )
 
-      // Update selected thread if it matches - MERGE instead of replace to preserve timeline
-      new_state = update_selected_thread_if_matches(
+      // Update cached thread if it exists - MERGE to preserve timeline
+      new_state = update_thread_cache_entry(
         new_state,
         thread_id,
         (current_data) =>
@@ -568,15 +611,25 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
 
     case threads_action_types.THREAD_TIMELINE_ENTRY_ADDED: {
       const { thread_id, entry } = payload
+      const cache_has_thread = state.hasIn(['thread_cache', thread_id])
 
-      // Only append full (non-truncated) entries to the selected thread timeline.
+      log_lifecycle('REDUCER', 'THREAD_TIMELINE_ENTRY_ADDED', {
+        thread_id,
+        entry_id: entry.id,
+        entry_type: entry.type,
+        entry_role: entry.role,
+        truncated: !!entry.truncated,
+        cache_has_thread
+      })
+
+      // Only append full (non-truncated) entries to cached thread timelines.
       // Truncated entries are received when the client is not subscribed to the
       // thread and contain only summary fields for session card display.
       let new_state = state
       if (!entry.truncated) {
         // If this is a user message, check for and replace any optimistic entry
         if (entry.type === 'message' && entry.role === 'user') {
-          new_state = update_selected_thread_if_matches(
+          new_state = update_thread_cache_entry(
             new_state,
             thread_id,
             (thread_data) =>
@@ -595,7 +648,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           )
           // If we replaced an optimistic entry, don't append again
           const current_timeline = new_state.getIn([
-            'selected_thread_data',
+            'thread_cache',
+            thread_id,
             'timeline'
           ])
           const already_has_entry =
@@ -611,9 +665,6 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       }
 
       // Update the basic threads list with the latest_timeline_event
-      // (works for both full and truncated entries since session cards
-      // only need summary-level fields)
-      // Skip if entry is a system event (should not be shown as latest)
       if (entry.type !== 'system') {
         new_state = update_thread_in_basic_list(new_state, thread_id, {
           latest_timeline_event: entry
@@ -661,14 +712,16 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           })
       )
 
-      // Insert optimistic user message into the selected thread timeline
+      // Insert optimistic user message into the cached thread timeline
       if (opts.prompt) {
+        const now = new Date().toISOString()
         const optimistic_entry = {
           id: `optimistic-${thread_id}-${Date.now()}`,
           type: 'message',
           role: 'user',
           content: opts.prompt,
-          created_at: new Date().toISOString(),
+          timestamp: now,
+          created_at: now,
           _optimistic: true
         }
         new_state = append_timeline_entry(

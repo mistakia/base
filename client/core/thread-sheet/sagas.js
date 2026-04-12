@@ -28,22 +28,20 @@ export function* handle_session_sheet_transition({ type, payload }) {
 
   if (!thread_id || !session_id) return
 
-  // Check if this thread_id is now in the sheets stack (meaning transition happened)
-  const sheets = yield select((state) =>
-    state.getIn(['thread_sheet', 'sheets'])
+  // Check if this thread_id is now the active sheet (meaning transition happened)
+  const active_sheet = yield select((state) =>
+    state.getIn(['thread_sheet', 'active_sheet'])
   )
-  if (!sheets || !sheets.includes(thread_id)) return
+  if (active_sheet !== thread_id) return
 
-  // Skip if thread data is already loading or loaded (handles duplicate events
-  // when both ACTIVE_SESSION_UPDATED and THREAD_CREATED fire for the same session)
-  const sheet_data = yield select((state) =>
-    state.getIn(['thread_sheet', 'sheet_data', thread_id])
+  // Skip if thread data is already loading or loaded in the cache
+  const loading_state = yield select((state) =>
+    state.getIn(['threads', 'thread_loading', thread_id])
   )
-  if (
-    sheet_data &&
-    (sheet_data.get('is_loading') || sheet_data.get('thread_data'))
+  const cached_data = yield select((state) =>
+    state.getIn(['threads', 'thread_cache', thread_id])
   )
-    return
+  if ((loading_state && loading_state.get('is_loading')) || cached_data) return
 
   // Load thread data and subscribe
   subscribe_to_thread(thread_id)
@@ -65,11 +63,11 @@ export function* handle_session_ended({ payload }) {
   const thread_id = session?.get('thread_id')
   if (!thread_id) return
 
-  // Check if this thread is open in a sheet
-  const sheets = yield select((state) =>
-    state.getIn(['thread_sheet', 'sheets'])
+  // Check if this thread is the active sheet
+  const active_sheet = yield select((state) =>
+    state.getIn(['thread_sheet', 'active_sheet'])
   )
-  if (!sheets || !sheets.includes(thread_id)) return
+  if (active_sheet !== thread_id) return
 
   // Delay to allow the sync script to process the final session state
   yield delay(3000)

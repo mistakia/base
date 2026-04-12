@@ -1,8 +1,6 @@
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import React, { useEffect, useCallback, useMemo, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { useSelector, useDispatch } from 'react-redux'
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward'
-import { CircularProgress } from '@mui/material'
 
 import {
   get_thread_sheet_active_sheet,
@@ -11,7 +9,6 @@ import {
   get_thread_sheet_error_for_id,
   thread_sheet_actions
 } from '@core/thread-sheet/index.js'
-import { threads_actions } from '@core/threads/actions'
 import {
   get_active_session_for_thread,
   get_active_session_by_id
@@ -30,144 +27,9 @@ import ThreadHeader from '@components/ThreadTimelineView/ThreadHeader'
 import TimelineList from '@components/ThreadTimelineView/TimelineList'
 import UserMessage from '@components/ThreadTimelineView/UserMessage'
 import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
-import Button from '@components/primitives/Button'
+import ThreadInputTrigger from '@components/ThreadInputTrigger/ThreadInputTrigger.js'
 
 import './ThreadSheet.styl'
-
-// Inline thread resume input
-const SheetThreadInput = ({
-  thread_id,
-  thread_data,
-  pending_resume,
-  dispatch
-}) => {
-  const input_ref = useRef(null)
-  const [message, set_message] = useState('')
-  const [is_submitting, set_is_submitting] = useState(false)
-
-  const current_user_public_key = useSelector((state) =>
-    state.getIn(['app', 'user_public_key'], null)
-  )
-
-  const thread_user_public_key = thread_data
-    ? extract_user_public_key(thread_data)
-    : null
-  const can_resume =
-    current_user_public_key &&
-    thread_user_public_key &&
-    current_user_public_key === thread_user_public_key
-
-  const working_directory = thread_data
-    ? extract_working_directory(thread_data).path
-    : null
-
-  const has_pending_resume =
-    pending_resume && pending_resume.get('status') !== 'failed'
-
-  // Restore prompt text to input when a resume job fails
-  useEffect(() => {
-    if (
-      pending_resume &&
-      pending_resume.get('status') === 'failed' &&
-      pending_resume.get('prompt')
-    ) {
-      set_message(
-        (prev_message) => prev_message || pending_resume.get('prompt')
-      )
-    }
-  }, [pending_resume])
-
-  const handle_submit = useCallback(
-    (e) => {
-      e.preventDefault()
-      if (!message.trim() || !can_resume || is_submitting || has_pending_resume)
-        return
-
-      dispatch(
-        threads_actions.resume_thread_session({
-          thread_id,
-          prompt: message,
-          working_directory: working_directory || 'user:'
-        })
-      )
-      set_is_submitting(true)
-      set_message('')
-      setTimeout(() => set_is_submitting(false), 500)
-    },
-    [
-      message,
-      can_resume,
-      is_submitting,
-      has_pending_resume,
-      dispatch,
-      thread_id,
-      working_directory
-    ]
-  )
-
-  const handle_key_down = useCallback(
-    (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        handle_submit(e)
-      }
-    },
-    [handle_submit]
-  )
-
-  const handle_form_submit = useCallback((e) => {
-    e.preventDefault()
-  }, [])
-
-  const handle_change = useCallback((e) => {
-    set_message(e.target.value)
-    const el = e.target
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [])
-
-  if (!can_resume) return null
-
-  const has_text = message.trim().length > 0
-  const input_disabled = is_submitting || has_pending_resume
-
-  return (
-    <div className='thread-sheet__input'>
-      <form onSubmit={handle_form_submit} className='thread-sheet__input-form'>
-        <textarea
-          ref={input_ref}
-          value={message}
-          onChange={handle_change}
-          onKeyDown={handle_key_down}
-          placeholder='Continue thread...'
-          className='thread-sheet__input-field'
-          disabled={input_disabled}
-          rows={1}
-        />
-        <div className='thread-sheet__input-bottom-row'>
-          <Button
-            type='submit'
-            variant='primary'
-            icon
-            disabled={!has_text || input_disabled}
-            className={`thread-sheet__input-send ${has_text || input_disabled ? 'thread-sheet__input-send--visible' : ''}`}>
-            {input_disabled ? (
-              <CircularProgress size={14} style={{ color: '#fff' }} />
-            ) : (
-              <ArrowUpwardIcon style={{ fontSize: 14 }} />
-            )}
-          </Button>
-        </div>
-      </form>
-    </div>
-  )
-}
-SheetThreadInput.propTypes = {
-  thread_id: PropTypes.string,
-  thread_data: PropTypes.object,
-  pending_resume: PropTypes.object,
-  dispatch: PropTypes.func
-}
 
 // Resume status indicator
 const ResumeStatusIndicator = ({ pending_resume }) => {
@@ -273,6 +135,9 @@ const SingleThreadSheet = ({ thread_id }) => {
   const working_directory = thread_data
     ? extract_working_directory(thread_data).path
     : null
+  const thread_user_public_key = thread_data
+    ? extract_user_public_key(thread_data)
+    : null
 
   // Scroll to bottom on initial timeline load
   const has_scrolled_ref = useRef(false)
@@ -355,13 +220,13 @@ const SingleThreadSheet = ({ thread_id }) => {
         </>
       )}
 
-      {/* Fixed thread input at bottom */}
-      <SheetThreadInput
-        thread_id={thread_id}
-        thread_data={thread_data}
-        pending_resume={pending_resume}
-        dispatch={dispatch}
-      />
+      {/* Trigger to open the full-featured global input */}
+      <div className='thread-sheet__input-trigger'>
+        <ThreadInputTrigger
+          thread_id={thread_id}
+          thread_user_public_key={thread_user_public_key}
+        />
+      </div>
     </div>
   )
 }
