@@ -7,6 +7,7 @@
 
 import debug from 'debug'
 import path from 'path'
+import { stat as fs_stat } from 'fs/promises'
 
 import {
   parse_all_claude_files,
@@ -852,8 +853,7 @@ const build_and_save_initial_state = async ({
   session_id
 }) => {
   try {
-    const { stat } = await import('fs/promises')
-    const file_stat = await stat(session_file)
+    const file_stat = await fs_stat(session_file)
     const parent_session = sessions[0]
 
     // Build subagent offsets
@@ -863,7 +863,7 @@ const build_and_save_initial_state = async ({
     })
     for (const agent_file of subagent_files) {
       try {
-        const agent_stat = await stat(agent_file)
+        const agent_stat = await fs_stat(agent_file)
         subagent_offsets[path.basename(agent_file)] = {
           byte_offset: agent_stat.size
         }

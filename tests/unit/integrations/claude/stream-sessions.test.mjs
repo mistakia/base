@@ -13,6 +13,7 @@ import {
   iterate_claude_session_files,
   scan_claude_agent_relationships
 } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
+import { clear_sync_state } from '#libs-server/integrations/claude/sync-state.mjs'
 import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
 import {
   register_user_base_directory,
@@ -599,8 +600,12 @@ describe('Claude Session Streaming', function () {
       register_user_base_directory(test_dir)
     })
 
-    after(() => {
+    after(async () => {
       clear_registered_directories()
+      // Clean up sync state files created by incremental parse
+      await clear_sync_state({ session_id: 'provider-parent-uuid' })
+      await clear_sync_state({ session_id: 'warm-parent-uuid' })
+      await clear_sync_state({ session_id: 'agent-orphan999' })
     })
 
     it('should yield single merged session when session_file has subagents', async () => {
