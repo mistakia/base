@@ -793,8 +793,15 @@ const parse_session_file_incremental = async ({
         if (agent_sessions.length > 0) {
           all_sessions.push(...agent_sessions)
         }
-        // We don't track subagent offsets for new files in this invocation;
-        // the next full parse will establish them
+        // Record offset so next invocation uses incremental reads
+        try {
+          const agent_stat = await fs_stat(agent_file)
+          new_subagent_offsets[agent_basename] = {
+            byte_offset: agent_stat.size
+          }
+        } catch {
+          // File vanished between parse and stat -- skip offset tracking
+        }
       } else if (agent_result.entries.length > 0) {
         // Build agent session from incremental entries
         const agent_session = {
