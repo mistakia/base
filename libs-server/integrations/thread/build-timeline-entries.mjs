@@ -17,6 +17,7 @@ import {
 
 const log = debug('integrations:thread:build-timeline-entries')
 const log_debug = debug('integrations:thread:build-timeline-entries:debug')
+const log_perf = debug('integrations:claude:perf')
 
 // Track unsupported message types and content formats for timeline conversion
 const TIMELINE_UNSUPPORTED = {
@@ -40,6 +41,7 @@ export const build_timeline_from_session = async (
   options = {}
 ) => {
   try {
+    const timeline_start = Date.now()
     log_debug(
       `Building timeline for thread ${thread_info.thread_id} from ${normalized_session.session_provider} session`
     )
@@ -78,22 +80,43 @@ export const build_timeline_from_session = async (
 
     // Check if timeline actually changed before writing using hash comparison
     // to avoid allocating two massive JSON strings in memory
+    const hash_start = Date.now()
     const existing_hash = await hash_file_streaming(timeline_path)
     const new_hash = hash_timeline_entries(final_timeline)
     const timeline_changed = existing_hash !== new_hash
+    const hash_ms = Date.now() - hash_start
 
     if (timeline_changed) {
       // Write timeline to file only if it changed (using JSONL format)
+      const write_start = Date.now()
       await write_timeline_jsonl({
         timeline_path,
         entries: final_timeline
       })
+      const write_ms = Date.now() - write_start
       log(
         `Created/updated timeline with ${final_timeline.length} entries at ${timeline_path}`
+      )
+      log_perf(
+        'build_timeline session=%s timeline_changed=true entries=%d merge_ms=%d hash_ms=%d write_ms=%d total_ms=%d',
+        normalized_session.session_id,
+        final_timeline.length,
+        hash_start - timeline_start,
+        hash_ms,
+        write_ms,
+        Date.now() - timeline_start
       )
     } else {
       log(
         `Timeline unchanged, skipping write for ${timeline_path} (${final_timeline.length} entries)`
+      )
+      log_perf(
+        'build_timeline session=%s timeline_changed=false entries=%d merge_ms=%d hash_ms=%d total_ms=%d',
+        normalized_session.session_id,
+        final_timeline.length,
+        hash_start - timeline_start,
+        hash_ms,
+        Date.now() - timeline_start
       )
     }
 

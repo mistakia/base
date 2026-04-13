@@ -1,4 +1,5 @@
 import { createReadStream, existsSync } from 'fs'
+import { stat as fs_stat } from 'fs/promises'
 import { readdir } from 'fs/promises'
 import { createInterface } from 'readline'
 import path from 'path'
@@ -13,6 +14,7 @@ import {
 
 const log = debug('integrations:claude:parse-jsonl')
 const log_debug = debug('integrations:claude:parse-jsonl:debug')
+const log_perf = debug('integrations:claude:perf')
 
 // Max character length for progress entry data.fullOutput field.
 // Claude Code logs cumulative command output on every progress tick, which can
@@ -110,6 +112,7 @@ export const find_session_file_by_id = async ({
 
 export const parse_claude_jsonl_file = async (file_path) => {
   try {
+    const parse_start = Date.now()
     log_debug(`Parsing Claude JSONL file: ${file_path}`)
 
     const file_stream = createReadStream(file_path)
@@ -196,8 +199,16 @@ export const parse_claude_jsonl_file = async (file_path) => {
       return (a.parse_line_number || 0) - (b.parse_line_number || 0)
     })
 
+    const parse_ms = Date.now() - parse_start
     log(
       `Parsed ${line_count} lines into 1 session (${primary_session_id}) with ${session.entries.length} entries from ${path.basename(file_path)}`
+    )
+    log_perf(
+      'parse_jsonl file=%s entries=%d lines=%d duration_ms=%d',
+      path.basename(file_path),
+      session.entries.length,
+      line_count,
+      parse_ms
     )
 
     return [session]
@@ -301,6 +312,8 @@ export const find_subagent_session_files = async ({ parent_session_file }) => {
  */
 export const parse_session_with_subagents = async (session_file) => {
   try {
+    const total_start = Date.now()
+
     // Parse the main session
     const parent_sessions = await parse_claude_jsonl_file(session_file)
 
@@ -310,6 +323,7 @@ export const parse_session_with_subagents = async (session_file) => {
     })
 
     const all_sessions = [...parent_sessions]
+    const subagent_start = Date.now()
 
     for (const agent_file of subagent_files) {
       try {
@@ -322,10 +336,25 @@ export const parse_session_with_subagents = async (session_file) => {
     }
 
     if (subagent_files.length > 0) {
+      const subagent_ms = Date.now() - subagent_start
       log(
         `Loaded session ${path.basename(session_file)} with ${subagent_files.length} subagent sessions`
       )
+      log_perf(
+        'parse_subagents file=%s subagent_count=%d subagent_parse_ms=%d',
+        path.basename(session_file),
+        subagent_files.length,
+        subagent_ms
+      )
     }
+
+    const total_ms = Date.now() - total_start
+    log_perf(
+      'parse_session_with_subagents file=%s total_sessions=%d total_ms=%d',
+      path.basename(session_file),
+      all_sessions.length,
+      total_ms
+    )
 
     return all_sessions
   } catch (error) {

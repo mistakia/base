@@ -21,6 +21,7 @@ import { build_timeline_from_session } from './build-timeline-entries.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
+const log_perf = debug('integrations:claude:perf')
 
 /**
  * Safely convert a date value to ISO string, returning null for invalid dates.
@@ -570,6 +571,7 @@ export const update_thread_metadata = async (
   { source_overrides = null } = {}
 ) => {
   try {
+    const metadata_start = Date.now()
     const metadata_path = path.join(thread_dir, 'metadata.json')
 
     // Read existing metadata
@@ -651,6 +653,8 @@ export const update_thread_metadata = async (
     const updated_stable = stable_stringify_for_comparison(updated_metadata)
     const metadata_changed = existing_stable !== updated_stable
 
+    const diff_ms = Date.now() - metadata_start
+
     if (metadata_changed) {
       // Only update updated_at when meaningful changes exist
       const session_metadata = normalized_session.metadata || {}
@@ -659,13 +663,27 @@ export const update_thread_metadata = async (
 
       updated_metadata.updated_at = timeline_updated_at
 
+      const write_start = Date.now()
       await write_file_to_filesystem({
         absolute_path: metadata_path,
         file_content: JSON.stringify(updated_metadata, null, 2)
       })
+      const write_ms = Date.now() - write_start
       log_debug(`Updated thread metadata at ${metadata_path}`)
+      log_perf(
+        'update_thread_metadata session=%s metadata_changed=true diff_ms=%d write_ms=%d total_ms=%d',
+        normalized_session.session_id,
+        diff_ms,
+        write_ms,
+        Date.now() - metadata_start
+      )
     } else {
       log_debug(`Metadata unchanged, skipping write for ${metadata_path}`)
+      log_perf(
+        'update_thread_metadata session=%s metadata_changed=false diff_ms=%d',
+        normalized_session.session_id,
+        diff_ms
+      )
     }
 
     return metadata_changed
