@@ -97,9 +97,6 @@ export const update_sync_counts = ({ counts, models, new_entries }) => {
       }
     }
 
-    if (!updated.working_directory && entry.cwd) {
-      updated.working_directory = entry.cwd
-    }
   }
 
   return { counts: updated, models: Array.from(model_set) }
@@ -120,11 +117,21 @@ export const build_initial_sync_state = ({
     new_entries: entries
   })
 
+  // Extract working_directory as top-level field (not a counter)
+  let working_directory = null
+  for (const entry of entries) {
+    if (entry.cwd) {
+      working_directory = entry.cwd
+      break
+    }
+  }
+
   return {
     byte_offset,
     subagent_offsets,
     counts,
     models,
-    summaries
+    summaries,
+    working_directory
   }
 }

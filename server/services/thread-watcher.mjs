@@ -118,7 +118,7 @@ const schedule_thread_index_sync = (thread_id) => {
   if (!index_sync_hooks?.on_thread_sync) return
 
   const scheduled_at = Date.now()
-  log_perf('schedule_thread_index_sync thread_id=%s scheduled_at=%d', thread_id, scheduled_at)
+  log_perf('schedule_thread_index_sync thread_id=%s', thread_id)
 
   index_sync_debouncer.call(thread_id, () => {
     const cached_metadata = metadata_cache.get(thread_id)
@@ -127,14 +127,12 @@ const schedule_thread_index_sync = (thread_id) => {
       return
     }
     const debounce_ms = Date.now() - scheduled_at
-    const sync_start = Date.now()
-    index_sync_hooks.on_thread_sync({ thread_id, metadata: cached_metadata })
     log_perf(
-      'thread_index_sync thread_id=%s debounce_wait_ms=%d sync_ms=%d',
+      'thread_index_sync thread_id=%s debounce_wait_ms=%d',
       thread_id,
-      debounce_ms,
-      Date.now() - sync_start
+      debounce_ms
     )
+    index_sync_hooks.on_thread_sync({ thread_id, metadata: cached_metadata })
   })
 }
 

@@ -735,8 +735,8 @@ const parse_session_file_incremental = async ({
   })
 
   // Use working_directory from state if not found in new entries
-  if (!parent_session.metadata.cwd && sync_state.counts?.working_directory) {
-    parent_session.metadata.cwd = sync_state.counts.working_directory
+  if (!parent_session.metadata.cwd && sync_state.working_directory) {
+    parent_session.metadata.cwd = sync_state.working_directory
   }
 
   // Update counts with new entries
@@ -747,21 +747,21 @@ const parse_session_file_incremental = async ({
       new_entries: parent_result.entries
     })
 
-  // Attach precomputed counts for downstream pipeline
+  // Attach precomputed data for downstream pipeline (single unified object)
   parent_session.precomputed_counts = {
-    message_count: updated_counts.user_message_count + updated_counts.assistant_message_count,
+    message_count:
+      (updated_counts.user_message_count || 0) +
+      (updated_counts.assistant_message_count || 0),
     user_message_count: updated_counts.user_message_count || 0,
     assistant_message_count: updated_counts.assistant_message_count || 0,
-    tool_call_count: updated_counts.tool_call_count || 0
-  }
-  parent_session.precomputed_token_counts = {
+    tool_call_count: updated_counts.tool_call_count || 0,
     input_tokens: updated_counts.input_tokens || 0,
     output_tokens: updated_counts.output_tokens || 0,
     cache_creation_input_tokens:
       updated_counts.cache_creation_input_tokens || 0,
-    cache_read_input_tokens: updated_counts.cache_read_input_tokens || 0
+    cache_read_input_tokens: updated_counts.cache_read_input_tokens || 0,
+    models: updated_models
   }
-  parent_session.precomputed_models = updated_models
   parent_session.incremental = true
 
   const all_sessions = [parent_session]
@@ -824,7 +824,9 @@ const parse_session_file_incremental = async ({
     }
   }
 
-  // Save updated state
+  // Save updated state (working_directory is top-level, not in counts)
+  const working_directory =
+    parent_session.metadata.cwd || sync_state.working_directory || null
   await save_sync_state({
     session_id,
     state: {
@@ -835,7 +837,8 @@ const parse_session_file_incremental = async ({
       summaries: [
         ...(sync_state.summaries || []),
         ...parent_result.summaries
-      ]
+      ],
+      working_directory
     }
   })
 

@@ -199,24 +199,16 @@ export const normalize_claude_session = (claude_session) => {
     // Pass through precomputed data from incremental sync.
     // In incremental mode, entries/messages are partial (new only), so
     // aggregate metadata computed by extract_session_metadata is incomplete.
-    // Override with accumulated totals from the sync state.
+    // Override with accumulated totals from the unified precomputed_counts.
     if (claude_session.precomputed_counts) {
-      result.precomputed_counts = claude_session.precomputed_counts
-    }
-    if (claude_session.precomputed_token_counts) {
-      result.precomputed_token_counts = claude_session.precomputed_token_counts
-      // Also update metadata so aggregate_token_counts sees correct values
-      result.metadata.input_tokens =
-        claude_session.precomputed_token_counts.input_tokens
-      result.metadata.output_tokens =
-        claude_session.precomputed_token_counts.output_tokens
+      const pc = claude_session.precomputed_counts
+      result.precomputed_counts = pc
+      result.metadata.input_tokens = pc.input_tokens
+      result.metadata.output_tokens = pc.output_tokens
       result.metadata.cache_creation_input_tokens =
-        claude_session.precomputed_token_counts.cache_creation_input_tokens
-      result.metadata.cache_read_input_tokens =
-        claude_session.precomputed_token_counts.cache_read_input_tokens
-    }
-    if (claude_session.precomputed_models) {
-      result.metadata.models = claude_session.precomputed_models
+        pc.cache_creation_input_tokens
+      result.metadata.cache_read_input_tokens = pc.cache_read_input_tokens
+      result.metadata.models = pc.models
     }
 
     return result

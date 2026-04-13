@@ -614,17 +614,13 @@ export const update_thread_metadata = async (
           assistant_message_count: precomputed.assistant_message_count
         }
       : calculate_detailed_message_counts(normalized_session.messages || [])
-    const token_counts = normalized_session.precomputed_token_counts
+    const token_counts = precomputed
       ? {
-          input_tokens: normalized_session.precomputed_token_counts.input_tokens,
-          output_tokens:
-            normalized_session.precomputed_token_counts.output_tokens,
+          input_tokens: precomputed.input_tokens,
+          output_tokens: precomputed.output_tokens,
           cache_creation_input_tokens:
-            normalized_session.precomputed_token_counts
-              .cache_creation_input_tokens,
-          cache_read_input_tokens:
-            normalized_session.precomputed_token_counts
-              .cache_read_input_tokens
+            precomputed.cache_creation_input_tokens,
+          cache_read_input_tokens: precomputed.cache_read_input_tokens
         }
       : aggregate_token_counts(normalized_session.metadata || {})
 
