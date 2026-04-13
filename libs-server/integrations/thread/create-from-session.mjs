@@ -598,14 +598,35 @@ export const update_thread_metadata = async (
       )
     }
 
-    // Calculate updated counts from normalized session
-    const counts = calculate_session_counts(normalized_session.messages || [])
-    const detailed_counts = calculate_detailed_message_counts(
-      normalized_session.messages || []
-    )
-    const token_counts = aggregate_token_counts(
-      normalized_session.metadata || {}
-    )
+    // Calculate updated counts from normalized session.
+    // When precomputed_counts exist (incremental sync), use them instead of
+    // iterating the partial messages array.
+    const precomputed = normalized_session.precomputed_counts
+    const counts = precomputed
+      ? {
+          message_count: precomputed.message_count,
+          tool_call_count: precomputed.tool_call_count
+        }
+      : calculate_session_counts(normalized_session.messages || [])
+    const detailed_counts = precomputed
+      ? {
+          user_message_count: precomputed.user_message_count,
+          assistant_message_count: precomputed.assistant_message_count
+        }
+      : calculate_detailed_message_counts(normalized_session.messages || [])
+    const token_counts = normalized_session.precomputed_token_counts
+      ? {
+          input_tokens: normalized_session.precomputed_token_counts.input_tokens,
+          output_tokens:
+            normalized_session.precomputed_token_counts.output_tokens,
+          cache_creation_input_tokens:
+            normalized_session.precomputed_token_counts
+              .cache_creation_input_tokens,
+          cache_read_input_tokens:
+            normalized_session.precomputed_token_counts
+              .cache_read_input_tokens
+        }
+      : aggregate_token_counts(normalized_session.metadata || {})
 
     const updated_metadata = {
       ...existing_metadata,

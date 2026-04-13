@@ -189,12 +189,37 @@ export const normalize_claude_session = (claude_session) => {
     // Extract session metadata
     const session_metadata = extract_session_metadata(entries, metadata)
 
-    return {
+    const result = {
       session_id,
       session_provider: 'claude',
       messages: normalized_messages,
       metadata: session_metadata
     }
+
+    // Pass through precomputed data from incremental sync.
+    // In incremental mode, entries/messages are partial (new only), so
+    // aggregate metadata computed by extract_session_metadata is incomplete.
+    // Override with accumulated totals from the sync state.
+    if (claude_session.precomputed_counts) {
+      result.precomputed_counts = claude_session.precomputed_counts
+    }
+    if (claude_session.precomputed_token_counts) {
+      result.precomputed_token_counts = claude_session.precomputed_token_counts
+      // Also update metadata so aggregate_token_counts sees correct values
+      result.metadata.input_tokens =
+        claude_session.precomputed_token_counts.input_tokens
+      result.metadata.output_tokens =
+        claude_session.precomputed_token_counts.output_tokens
+      result.metadata.cache_creation_input_tokens =
+        claude_session.precomputed_token_counts.cache_creation_input_tokens
+      result.metadata.cache_read_input_tokens =
+        claude_session.precomputed_token_counts.cache_read_input_tokens
+    }
+    if (claude_session.precomputed_models) {
+      result.metadata.models = claude_session.precomputed_models
+    }
+
+    return result
   } catch (error) {
     log(
       `Error normalizing Claude session ${claude_session.session_id}: ${error.message}`

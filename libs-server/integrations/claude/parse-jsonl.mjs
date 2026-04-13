@@ -617,6 +617,112 @@ export const get_session_file_timestamp = async ({
   return earliest_timestamp
 }
 
+/**
+ * Parse only new bytes appended to a Claude JSONL file since the given byte offset.
+ * Uses the same stat.size pattern as read_timeline_jsonl_from_offset in timeline-jsonl.mjs.
+ *
+ * @param {Object} params - Parameters object
+ * @param {string} params.file_path - Path to JSONL session file
+ * @param {number} params.byte_offset - Byte position to start reading from
+ * @returns {Promise<{entries: Array, new_byte_offset: number, summaries: Array}|null>}
+ *   Object with new entries, updated offset, and summaries, or null if file was replaced
+ */
+export const parse_claude_jsonl_from_offset = async ({
+  file_path,
+  byte_offset
+}) => {
+  const parse_start = Date.now()
+
+  let stat
+  try {
+    stat = await fs_stat(file_path)
+  } catch {
+    log(`File not found for offset read: ${file_path}`)
+    return null
+  }
+
+  // File was replaced (smaller than expected offset)
+  if (stat.size < byte_offset) {
+    log(
+      `File replaced (size=${stat.size} < offset=${byte_offset}): ${file_path}`
+    )
+    return null
+  }
+
+  // No new data
+  if (stat.size === byte_offset) {
+    log_perf(
+      'parse_jsonl_from_offset file=%s no_new_data offset=%d',
+      path.basename(file_path),
+      byte_offset
+    )
+    return { entries: [], new_byte_offset: byte_offset, summaries: [] }
+  }
+
+  const file_stream = createReadStream(file_path, { start: byte_offset })
+  const line_reader = createInterface({
+    input: file_stream,
+    crlfDelay: Infinity
+  })
+
+  const entries = []
+  const summaries = []
+  let line_count = 0
+
+  try {
+    for await (const line of line_reader) {
+      line_count++
+
+      if (line.trim() === '') {
+        continue
+      }
+
+      try {
+        const entry = JSON.parse(line)
+
+        // Apply same truncation as full parser
+        if (
+          entry.type === 'progress' &&
+          entry.data?.fullOutput?.length > MAX_PROGRESS_FULL_OUTPUT_CHARS
+        ) {
+          entry.data.fullOutput =
+            entry.data.fullOutput.slice(0, MAX_PROGRESS_FULL_OUTPUT_CHARS) +
+            '\n... [truncated]'
+        }
+
+        if (entry.type === 'summary') {
+          summaries.push(entry.summary)
+          continue
+        }
+
+        entry.line_number = entry.line_number || line_count
+        entry.parse_line_number = line_count
+        entries.push(entry)
+      } catch (parse_error) {
+        log(
+          `Error parsing line at offset ${byte_offset} + ${line_count} in ${file_path}: ${parse_error.message}`
+        )
+      }
+    }
+  } finally {
+    file_stream.destroy()
+    line_reader.close()
+  }
+
+  const parse_ms = Date.now() - parse_start
+  log_perf(
+    'parse_jsonl_from_offset file=%s entries=%d new_bytes=%d offset=%d->%d duration_ms=%d',
+    path.basename(file_path),
+    entries.length,
+    stat.size - byte_offset,
+    byte_offset,
+    stat.size,
+    parse_ms
+  )
+
+  return { entries, new_byte_offset: stat.size, summaries }
+}
+
 export const get_session_summary = (session) => {
   const { entries, metadata } = session
 

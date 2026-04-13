@@ -11,15 +11,25 @@ import path from 'path'
 import {
   parse_all_claude_files,
   parse_session_with_subagents,
+  parse_claude_jsonl_from_offset,
+  parse_claude_jsonl_file,
   find_session_file_by_id,
   find_claude_project_files,
+  find_subagent_session_files,
   extract_claude_session_metadata
 } from './parse-jsonl.mjs'
+import {
+  load_sync_state,
+  save_sync_state,
+  update_sync_counts,
+  build_initial_sync_state
+} from './sync-state.mjs'
 import { normalize_claude_session } from './normalize-session.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 
 const log = debug('integrations:claude:session-helpers')
 const log_debug = debug('integrations:claude:session-helpers:debug')
+const log_perf = debug('integrations:claude:perf')
 
 /**
  * Check if a file path represents an agent session based on path structure.
@@ -169,11 +179,45 @@ export const find_claude_sessions_from_filesystem = async ({
 
   if (session_file) {
     log_debug(`Using direct session file path: ${session_file}`)
-    // Import specific file and its associated subagent sessions
-    const sessions = await parse_session_with_subagents(session_file)
-    log_debug(
-      `Loaded ${sessions.length} sessions (including subagents) from ${session_file}`
-    )
+    const session_id_from_file = path.basename(session_file, '.jsonl')
+
+    // Try incremental path
+    const sync_state = await load_sync_state({
+      session_id: session_id_from_file
+    })
+
+    let sessions
+    if (sync_state) {
+      sessions = await parse_session_file_incremental({
+        session_file,
+        session_id: session_id_from_file,
+        sync_state
+      })
+    }
+
+    // Fallback to full parse if incremental returned null or no state
+    if (!sessions) {
+      const incr_start = Date.now()
+      sessions = await parse_session_with_subagents(session_file)
+      log_debug(
+        `Full parse: ${sessions.length} sessions from ${session_file}`
+      )
+
+      // Build and save initial sync state for next invocation
+      if (sessions.length > 0) {
+        await build_and_save_initial_state({
+          session_file,
+          sessions,
+          session_id: session_id_from_file
+        })
+      }
+      log_perf(
+        'find_sessions mode=full_parse session=%s total_ms=%d',
+        session_id_from_file,
+        Date.now() - incr_start
+      )
+    }
+
     // Apply filter_sessions if provided (e.g., for blacklist checking)
     if (filter_sessions && sessions.length > 0) {
       const filtered = sessions.filter(filter_sessions)
@@ -632,5 +676,212 @@ export const group_sessions_with_agents = ({
     orphan_agents,
     standalone_sessions,
     warm_agents_excluded
+  }
+}
+
+// ============================================================================
+// Incremental Parse Helpers
+// ============================================================================
+
+/**
+ * Parse a session file and its subagents incrementally using byte offsets.
+ * Returns null if any file was replaced (caller should fall back to full parse).
+ */
+const parse_session_file_incremental = async ({
+  session_file,
+  session_id,
+  sync_state
+}) => {
+  const incr_start = Date.now()
+
+  // Parse parent file from offset
+  const parent_result = await parse_claude_jsonl_from_offset({
+    file_path: session_file,
+    byte_offset: sync_state.byte_offset
+  })
+
+  // File replaced -- caller should do full parse and rebuild state
+  if (parent_result === null) {
+    log(`Incremental parse reset: parent file replaced for ${session_id}`)
+    return null
+  }
+
+  // Build parent session object with all entries (new only for normalization,
+  // but precomputed_counts carry the full-session totals)
+  const parent_session = {
+    session_id,
+    entries: parent_result.entries,
+    metadata: {
+      file_path: session_file,
+      file_summaries: [
+        ...(sync_state.summaries || []),
+        ...parent_result.summaries
+      ]
+    }
+  }
+
+  // Extract metadata from new entries
+  parent_result.entries.forEach((entry) => {
+    if (!parent_session.metadata.cwd && entry.cwd) {
+      parent_session.metadata.cwd = entry.cwd
+    }
+    if (!parent_session.metadata.version && entry.version) {
+      parent_session.metadata.version = entry.version
+    }
+    if (!parent_session.metadata.user_type && entry.userType) {
+      parent_session.metadata.user_type = entry.userType
+    }
+  })
+
+  // Use working_directory from state if not found in new entries
+  if (!parent_session.metadata.cwd && sync_state.counts?.working_directory) {
+    parent_session.metadata.cwd = sync_state.counts.working_directory
+  }
+
+  // Update counts with new entries
+  const { counts: updated_counts, models: updated_models } =
+    update_sync_counts({
+      counts: sync_state.counts || {},
+      models: sync_state.models || [],
+      new_entries: parent_result.entries
+    })
+
+  // Attach precomputed counts for downstream pipeline
+  parent_session.precomputed_counts = {
+    message_count: updated_counts.user_message_count + updated_counts.assistant_message_count,
+    user_message_count: updated_counts.user_message_count || 0,
+    assistant_message_count: updated_counts.assistant_message_count || 0,
+    tool_call_count: updated_counts.tool_call_count || 0
+  }
+  parent_session.precomputed_token_counts = {
+    input_tokens: updated_counts.input_tokens || 0,
+    output_tokens: updated_counts.output_tokens || 0,
+    cache_creation_input_tokens:
+      updated_counts.cache_creation_input_tokens || 0,
+    cache_read_input_tokens: updated_counts.cache_read_input_tokens || 0
+  }
+  parent_session.precomputed_models = updated_models
+  parent_session.incremental = true
+
+  const all_sessions = [parent_session]
+
+  // Handle subagent files incrementally
+  const subagent_files = await find_subagent_session_files({
+    parent_session_file: session_file
+  })
+
+  const new_subagent_offsets = { ...(sync_state.subagent_offsets || {}) }
+
+  for (const agent_file of subagent_files) {
+    const agent_basename = path.basename(agent_file)
+    const agent_offset =
+      sync_state.subagent_offsets?.[agent_basename]?.byte_offset || 0
+
+    try {
+      let agent_result
+      if (agent_offset > 0) {
+        agent_result = await parse_claude_jsonl_from_offset({
+          file_path: agent_file,
+          byte_offset: agent_offset
+        })
+      }
+
+      if (agent_result === null || agent_offset === 0) {
+        // Full parse for new or replaced subagent file
+        const agent_sessions = await parse_claude_jsonl_file(agent_file)
+        if (agent_sessions.length > 0) {
+          all_sessions.push(...agent_sessions)
+        }
+        // We don't track subagent offsets for new files in this invocation;
+        // the next full parse will establish them
+      } else if (agent_result.entries.length > 0) {
+        // Build agent session from incremental entries
+        const agent_session = {
+          session_id: path.basename(agent_file, '.jsonl'),
+          entries: agent_result.entries,
+          metadata: { file_path: agent_file, file_summaries: [] }
+        }
+        all_sessions.push(agent_session)
+        new_subagent_offsets[agent_basename] = {
+          byte_offset: agent_result.new_byte_offset
+        }
+      } else {
+        // No new data for this subagent
+        new_subagent_offsets[agent_basename] = {
+          byte_offset: agent_result.new_byte_offset
+        }
+      }
+    } catch (error) {
+      log(`Failed to incrementally parse subagent ${agent_file}: ${error.message}`)
+    }
+  }
+
+  // Save updated state
+  await save_sync_state({
+    session_id,
+    state: {
+      byte_offset: parent_result.new_byte_offset,
+      subagent_offsets: new_subagent_offsets,
+      counts: updated_counts,
+      models: updated_models,
+      summaries: [
+        ...(sync_state.summaries || []),
+        ...parent_result.summaries
+      ]
+    }
+  })
+
+  const total_ms = Date.now() - incr_start
+  log_perf(
+    'find_sessions mode=incremental session=%s new_entries=%d total_ms=%d',
+    session_id,
+    parent_result.entries.length,
+    total_ms
+  )
+
+  return all_sessions
+}
+
+/**
+ * Build and save initial sync state after a full parse.
+ * Called on first sync for a session (no existing state file).
+ */
+const build_and_save_initial_state = async ({
+  session_file,
+  sessions,
+  session_id
+}) => {
+  try {
+    const { stat } = await import('fs/promises')
+    const file_stat = await stat(session_file)
+    const parent_session = sessions[0]
+
+    // Build subagent offsets
+    const subagent_offsets = {}
+    const subagent_files = await find_subagent_session_files({
+      parent_session_file: session_file
+    })
+    for (const agent_file of subagent_files) {
+      try {
+        const agent_stat = await stat(agent_file)
+        subagent_offsets[path.basename(agent_file)] = {
+          byte_offset: agent_stat.size
+        }
+      } catch {
+        // Skip files that vanished
+      }
+    }
+
+    const initial_state = build_initial_sync_state({
+      entries: parent_session.entries,
+      byte_offset: file_stat.size,
+      subagent_offsets,
+      summaries: parent_session.metadata?.file_summaries || []
+    })
+
+    await save_sync_state({ session_id, state: initial_state })
+    log_debug(`Saved initial sync state for session ${session_id}`)
+  } catch (error) {
+    log(`Failed to save initial sync state: ${error.message}`)
   }
 }
