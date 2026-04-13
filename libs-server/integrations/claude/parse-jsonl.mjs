@@ -659,7 +659,12 @@ export const parse_claude_jsonl_from_offset = async ({
     return { entries: [], new_byte_offset: byte_offset, summaries: [] }
   }
 
-  const file_stream = createReadStream(file_path, { start: byte_offset })
+  // Cap at stat.size to avoid reading bytes appended after the stat call.
+  // Matches the pattern in read_timeline_jsonl_from_offset (timeline-jsonl.mjs).
+  const file_stream = createReadStream(file_path, {
+    start: byte_offset,
+    end: stat.size - 1
+  })
   const line_reader = createInterface({
     input: file_stream,
     crlfDelay: Infinity
