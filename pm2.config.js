@@ -173,7 +173,20 @@ const all_defined_apps = [
       machine_config.transcription_args ||
       '--port 8089 --model base.en --compute-type int8',
     env: common_env
-  })
+  }),
+  app(
+    'photos-service',
+    path.join(user_base_directory, 'extension/photo/service-entry.mjs'),
+    {
+      max_memory_restart: '512M',
+      env: {
+        PORT: '8087',
+        PHOTOS_ROOT: '/mnt/md0/personal/photos',
+        PHOTOS_STATE_DIR: '/mnt/md0/personal/photos/.photos-service-state',
+        PHOTO_DB_PATH: '/mnt/md0/personal/photos/.photo-index.db'
+      }
+    }
+  )
 ]
 
 const all_apps = all_defined_apps.filter((a) =>

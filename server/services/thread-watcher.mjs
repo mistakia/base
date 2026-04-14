@@ -105,7 +105,7 @@ export const get_metadata_cache = () => metadata_cache
 // Index Sync Hook Debouncing
 // ============================================================================
 
-const index_sync_debouncer = create_keyed_debouncer(2000)
+const index_sync_debouncer = create_keyed_debouncer(500)
 
 /**
  * Schedule a debounced index sync for a thread.
