@@ -8,8 +8,7 @@ import {
   is_account_exhausted,
   clear_account_exhausted,
   compute_account_score,
-  classify_usage_result,
-  configure_redis
+  classify_usage_result
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 import {
   select_account,
@@ -28,7 +27,6 @@ describe('Claude Account Rotation', function () {
 
   before(function () {
     try {
-      configure_redis(get_redis_connection)
       redis = get_redis_connection()
     } catch {
       skip = true

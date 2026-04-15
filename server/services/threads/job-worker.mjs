@@ -32,8 +32,7 @@ import {
 } from '#libs-server/integrations/claude/account-rotation/index.mjs'
 import {
   check_account_usage,
-  classify_usage_result,
-  configure_redis as configure_usage_redis
+  classify_usage_result
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 
 const log = debug('threads:worker')
@@ -593,7 +592,6 @@ export const start_worker = () => {
     return thread_worker
   }
 
-  configure_usage_redis(get_redis_connection)
   const connection = get_redis_connection()
   const concurrency =
     config.threads?.queue?.max_concurrent_jobs || DEFAULT_CONCURRENCY
