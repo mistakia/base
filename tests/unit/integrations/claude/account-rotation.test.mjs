@@ -10,8 +10,11 @@ import {
   compute_account_score,
   classify_usage_result
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
+import os from 'os'
+import path from 'path'
 import {
   select_account,
+  resolve_account_config_dir,
   AllAccountsExhaustedError
 } from '#libs-server/integrations/claude/account-rotation/select-account.mjs'
 import config from '#config'
@@ -59,6 +62,80 @@ describe('Claude Account Rotation', function () {
       const error = new AllAccountsExhaustedError([])
       expect(error.name).to.equal('AllAccountsExhaustedError')
       expect(error.account_details).to.have.lengthOf(0)
+    })
+  })
+
+  describe('resolve_account_config_dir', () => {
+    it('returns null for host default ~/.claude/', () => {
+      const result = resolve_account_config_dir({
+        account: { config_dir: '~/.claude/' },
+        execution_mode: 'host'
+      })
+      expect(result).to.be.null
+    })
+
+    it('returns null for host default ~/.claude (no trailing slash)', () => {
+      const result = resolve_account_config_dir({
+        account: { config_dir: '~/.claude' },
+        execution_mode: 'host'
+      })
+      expect(result).to.be.null
+    })
+
+    it('resolves tilde to absolute path for non-default host config_dir', () => {
+      const result = resolve_account_config_dir({
+        account: { config_dir: '~/.claude-earn.crop.code/' },
+        execution_mode: 'host'
+      })
+      expect(result).to.equal(
+        path.join(os.homedir(), '.claude-earn.crop.code/')
+      )
+    })
+
+    it('returns null for container default /home/node/.claude/', () => {
+      const result = resolve_account_config_dir({
+        account: {
+          config_dir: undefined,
+          container_config_dir: '/home/node/.claude/'
+        },
+        execution_mode: 'container'
+      })
+      expect(result).to.be.null
+    })
+
+    it('returns absolute container path for non-default container_config_dir', () => {
+      const result = resolve_account_config_dir({
+        account: {
+          config_dir: undefined,
+          container_config_dir: '/home/node/.claude-earn.crop.code'
+        },
+        execution_mode: 'container'
+      })
+      expect(result).to.equal('/home/node/.claude-earn.crop.code')
+    })
+
+    it('routes container_user execution_mode to container_config_dir', () => {
+      const result = resolve_account_config_dir({
+        account: {
+          config_dir: '~/.claude/',
+          container_config_dir: '/home/node/.claude-earn.crop.code'
+        },
+        execution_mode: 'container_user'
+      })
+      expect(result).to.equal('/home/node/.claude-earn.crop.code')
+    })
+
+    it('returns null when both config_dir and container_config_dir are null', () => {
+      const result_host = resolve_account_config_dir({
+        account: { config_dir: null, container_config_dir: null },
+        execution_mode: 'host'
+      })
+      const result_container = resolve_account_config_dir({
+        account: { config_dir: null, container_config_dir: null },
+        execution_mode: 'container'
+      })
+      expect(result_host).to.be.null
+      expect(result_container).to.be.null
     })
   })
 
@@ -446,6 +523,11 @@ describe('Claude Account Rotation', function () {
           expect(detail.reason).to.equal('over_threshold')
         }
       }
+
+      for (const a of accounts) {
+        const exhausted_key = await redis.get(`claude:exhausted:${a.namespace}`)
+        expect(exhausted_key).to.be.null
+      }
     })
 
     it('marks account over_threshold when live check returns five_hour at threshold', async function () {
@@ -473,6 +555,11 @@ describe('Claude Account Rotation', function () {
         for (const detail of error.account_details) {
           expect(detail.reason).to.equal('over_threshold')
         }
+      }
+
+      for (const a of accounts) {
+        const exhausted_key = await redis.get(`claude:exhausted:${a.namespace}`)
+        expect(exhausted_key).to.be.null
       }
     })
 

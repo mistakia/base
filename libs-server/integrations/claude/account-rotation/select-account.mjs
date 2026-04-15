@@ -20,6 +20,50 @@ const is_complete_usage = (u) =>
 const log = debug('claude:account-selector')
 
 /**
+ * Resolve an account's config_dir to an absolute filesystem path, or null
+ * for the default ~/.claude/ directory. Pure, side-effect-free.
+ *
+ * Claude Code stores its config at ~/.claude.json by default; setting
+ * CLAUDE_CONFIG_DIR=~/.claude/ makes it look for ~/.claude/.claude.json
+ * instead, which is a different file that lacks auth data. Returning null
+ * for the default dir lets callers skip setting CLAUDE_CONFIG_DIR entirely.
+ *
+ * For container mode, the resolved_dir is a container path (e.g.
+ * /home/node/.claude/) which won't match the host os.homedir(). path.basename
+ * detects any path whose leaf directory is '.claude' regardless of parent.
+ *
+ * @param {Object} params
+ * @param {Object} params.account - Account config object
+ * @param {string} [params.execution_mode] - 'host', 'container', or 'container_user'
+ * @returns {string|null} Absolute path, or null for default dir / missing config
+ */
+export const resolve_account_config_dir = ({
+  account,
+  execution_mode = 'host'
+}) => {
+  const raw_dir =
+    execution_mode === 'container' || execution_mode === 'container_user'
+      ? account.container_config_dir
+      : account.config_dir
+
+  if (raw_dir == null) return null
+
+  const resolved_dir = raw_dir.startsWith('~/')
+    ? path.join(os.homedir(), raw_dir.slice(2))
+    : raw_dir
+
+  const default_dir = path.join(os.homedir(), '.claude')
+  const normalized = resolved_dir.replace(/\/+$/, '')
+  const is_default =
+    normalized === default_dir ||
+    path.basename(normalized || '') === '.claude' ||
+    raw_dir === '~/.claude/' ||
+    raw_dir === '~/.claude'
+
+  return is_default ? null : resolved_dir
+}
+
+/**
  * Error thrown when all configured accounts are exhausted
  */
 export class AllAccountsExhaustedError extends Error {
@@ -68,6 +112,7 @@ export const select_account = async ({
     return null
   }
 
+  const threshold = accounts_config.utilization_threshold || 90
   const exhausted_details = []
   const scored_candidates = []
   const unscored_candidates = []
@@ -118,7 +163,6 @@ export const select_account = async ({
       usage = result.utilization
     }
 
-    const threshold = accounts_config.utilization_threshold || 90
     if (classify_usage_result({ utilization: usage, threshold }) === 'over') {
       log(
         'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
@@ -155,33 +199,7 @@ export const select_account = async ({
 
   if (candidates.length > 0) {
     const { account } = candidates[0]
-    const raw_dir =
-      execution_mode === 'container' || execution_mode === 'container_user'
-        ? account.container_config_dir
-        : account.config_dir
-
-    // Resolve tilde to absolute path (tilde won't expand in env vars)
-    const resolved_dir = raw_dir?.startsWith('~/')
-      ? path.join(os.homedir(), raw_dir.slice(2))
-      : raw_dir
-
-    // Do not set CLAUDE_CONFIG_DIR for the default ~/.claude/ directory.
-    // Claude Code stores its config at ~/.claude.json by default; setting
-    // CLAUDE_CONFIG_DIR=~/.claude/ makes it look for ~/.claude/.claude.json
-    // instead, which is a different file that lacks auth data.
-    //
-    // For container mode, the resolved_dir is a container path (e.g.
-    // /home/node/.claude/) which won't match the host os.homedir(). Use
-    // path.basename to detect any path whose leaf directory is '.claude'
-    // regardless of the parent (host vs container home).
-    const default_dir = path.join(os.homedir(), '.claude')
-    const normalized = resolved_dir?.replace(/\/+$/, '')
-    const is_default =
-      normalized === default_dir ||
-      path.basename(normalized || '') === '.claude' ||
-      raw_dir === '~/.claude/' ||
-      raw_dir === '~/.claude'
-    const config_dir = is_default ? null : resolved_dir
+    const config_dir = resolve_account_config_dir({ account, execution_mode })
 
     log(
       'Selected account: %s (config_dir: %s)',
