@@ -248,6 +248,113 @@ describe('extract-timeline-references', () => {
       expect(result[1].access_type).to.equal('create')
     })
 
+    const make_bash_timeline = (command) => [
+      {
+        type: 'tool_call',
+        content: {
+          tool_name: 'Bash',
+          tool_parameters: { command }
+        }
+      }
+    ]
+
+    it('should extract base entity create positional URI', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base entity create "user:task/foo.md" --type task'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(1)
+      expect(entity_refs[0].base_uri).to.equal('user:task/foo.md')
+      expect(entity_refs[0].access_type).to.equal('create')
+    })
+
+    it('should extract base entity update as modify', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base entity update "user:task/foo.md" --status Completed'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(1)
+      expect(entity_refs[0].base_uri).to.equal('user:task/foo.md')
+      expect(entity_refs[0].access_type).to.equal('modify')
+    })
+
+    it('should extract base entity observe as modify', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base entity observe "user:task/foo.md" "[note] x"'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(1)
+      expect(entity_refs[0].base_uri).to.equal('user:task/foo.md')
+      expect(entity_refs[0].access_type).to.equal('modify')
+    })
+
+    it('should extract base entity move as delete + create', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base entity move "user:task/old.md" "user:task/new.md"'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(2)
+      expect(entity_refs[0].base_uri).to.equal('user:task/old.md')
+      expect(entity_refs[0].access_type).to.equal('delete')
+      expect(entity_refs[1].base_uri).to.equal('user:task/new.md')
+      expect(entity_refs[1].access_type).to.equal('create')
+    })
+
+    it('should extract base relation add as modify + reference', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base relation add "user:task/a.md" blocks "user:task/b.md"'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(2)
+      expect(entity_refs[0].base_uri).to.equal('user:task/a.md')
+      expect(entity_refs[0].access_type).to.equal('modify')
+      expect(entity_refs[1].base_uri).to.equal('user:task/b.md')
+      expect(entity_refs[1].access_type).to.equal('reference')
+    })
+
+    it('should produce no base refs for base entity list', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline('base entity list -t task')
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(0)
+    })
+
+    it('should extract both halves of a chained base entity command', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base entity update "user:task/a.md" --status Completed && base entity observe "user:task/b.md" "[note] x"'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(2)
+      expect(entity_refs.map((r) => r.base_uri)).to.deep.equal([
+        'user:task/a.md',
+        'user:task/b.md'
+      ])
+      expect(entity_refs.every((r) => r.access_type === 'modify')).to.be.true
+    })
+
+    it('should reject base relation add with flag in relation-type slot', () => {
+      const result = extract_from_bash_commands({
+        timeline: make_bash_timeline(
+          'base relation add "user:task/a.md" --dry-run blocks "user:task/b.md"'
+        )
+      })
+      const entity_refs = result.filter((r) => r.base_uri)
+      expect(entity_refs).to.have.length(0)
+    })
+
     it('should skip non-Bash tool calls', () => {
       const timeline = [
         {

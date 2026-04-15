@@ -331,18 +331,67 @@ export function extract_from_bash_commands({ timeline }) {
     const command = entry.content?.tool_parameters?.command
     if (!command) continue
 
-    // Detect `base entity create` CLI commands
-    const entity_create_match = command.match(
-      /base\s+entity\s+create\s+["']?((?:user|sys):[^\s"']+)["']?/
-    )
-    if (entity_create_match) {
-      references.push({
-        base_uri: entity_create_match[1],
-        access_type: 'create',
-        confidence: 'high',
-        source: 'bash_command'
-      })
-      continue
+    // Detect `base entity` / `base relation` CLI commands. Split on chained
+    // command operators (&&, ||, ;, |) first so later commands in a chain
+    // aren't silently dropped.
+    const base_cli_single_uri_patterns = [
+      [/base\s+entity\s+create\s+["']?((?:user|sys):[^\s"']+)/, 'create'],
+      [/base\s+entity\s+update\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
+      [/base\s+entity\s+observe\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
+      [/base\s+entity\s+visibility\s+set\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
+      [/base\s+entity\s+get\s+["']?((?:user|sys):[^\s"']+)/, 'read'],
+      [/base\s+entity\s+tree\s+["']?((?:user|sys):[^\s"']+)/, 'read']
+    ]
+
+    for (const segment of command.split(/\s*(?:&&|\|\||;|\|)\s*/)) {
+      for (const [pattern, access_type] of base_cli_single_uri_patterns) {
+        const match = segment.match(pattern)
+        if (match) {
+          references.push({
+            base_uri: match[1],
+            access_type,
+            confidence: 'high',
+            source: 'bash_command'
+          })
+        }
+      }
+
+      const move_match = segment.match(
+        /base\s+entity\s+move\s+["']?((?:user|sys):[^\s"']+)["']?\s+["']?((?:user|sys):[^\s"']+)/
+      )
+      if (move_match) {
+        references.push({
+          base_uri: move_match[1],
+          access_type: 'delete',
+          confidence: 'high',
+          source: 'bash_command'
+        })
+        references.push({
+          base_uri: move_match[2],
+          access_type: 'create',
+          confidence: 'high',
+          source: 'bash_command'
+        })
+      }
+
+      // <type> restricted to [a-z_]+ so flags like --dry-run are rejected.
+      const relation_match = segment.match(
+        /base\s+relation\s+(?:add|remove)\s+["']?((?:user|sys):[^\s"']+)["']?\s+([a-z_]+)\s+["']?((?:user|sys):[^\s"']+)/
+      )
+      if (relation_match) {
+        references.push({
+          base_uri: relation_match[1],
+          access_type: 'modify',
+          confidence: 'high',
+          source: 'bash_command'
+        })
+        references.push({
+          base_uri: relation_match[3],
+          access_type: 'reference',
+          confidence: 'high',
+          source: 'bash_command'
+        })
+      }
     }
 
     const parsed = parse_bash_command(command)
