@@ -48,6 +48,9 @@ const options = {
   limit: parseInt(getArg('limit', '0'), 10),
   verbose: getArg('verbose', false),
   updateEntities: getArg('update-entities', false),
+  // --force is vestigial for the primary analysis path (analysis always runs
+  // now that the skip gate is gone), but still required to drive the
+  // `--update-entities` mode via `force: options.force || options.updateEntities`.
   force: getArg('force', false),
   syncKuzu: getArg('sync-kuzu', false),
   help: getArg('help', false) || getArg('h', false)
@@ -125,10 +128,6 @@ async function findThreadsNeedingAnalysis() {
 
         if (metadata.relations_analyzed_at) {
           stats.already_analyzed++
-          // Skip if not forcing re-analysis
-          if (!options.force) {
-            continue
-          }
         }
 
         threads.push({

@@ -18,6 +18,7 @@ import {
   update_existing_thread
 } from '#libs-server/integrations/thread/create-from-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
+import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
 import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-session-provider.mjs'
 import { ChatGPTSessionProvider } from '#libs-server/integrations/chatgpt/chatgpt-session-provider.mjs'
@@ -603,6 +604,16 @@ const create_new_session_thread = async ({
   // Release large objects to help GC
   normalized_session = null
 
+  // Queue relation analysis so new-thread imports get linked to referenced
+  // entities without blocking the import on the analysis queue.
+  try {
+    await queue_relation_analysis(thread_result.thread_id)
+  } catch (error) {
+    log(
+      `Failed to queue relation analysis for thread ${thread_result.thread_id}: ${error.message}`
+    )
+  }
+
   return {
     status: 'created',
     data: {
@@ -640,13 +651,22 @@ const update_existing_session_thread = async ({
   // Release large objects to help GC
   normalized_session = null
 
+  // Queue relation analysis so re-imports of an existing thread pick up any
+  // newly-added entity references without blocking on the analysis queue.
+  try {
+    await queue_relation_analysis(thread_id)
+  } catch (error) {
+    log(
+      `Failed to queue relation analysis for thread ${thread_id}: ${error.message}`
+    )
+  }
+
   return {
     status: 'updated',
     data: {
       session_id,
       thread_id,
       thread_dir,
-      new_entries_added: update_result.new_entries_added,
       total_entries: update_result.total_entries,
       files_modified: update_result.files_modified
     }
@@ -707,7 +727,7 @@ const log_session_result = (session_result, provider_name) => {
       break
     case 'updated':
       log_debug(
-        `Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (${data.new_entries_added} new entries, files ${data.files_modified ? 'modified' : 'unchanged'})`
+        `Updated thread ${data.thread_id} for ${provider_name} session ${session_id} (files ${data.files_modified ? 'modified' : 'unchanged'})`
       )
       break
     case 'skipped':

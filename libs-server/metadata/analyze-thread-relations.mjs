@@ -140,12 +140,13 @@ export async function queue_relation_analysis(thread_id) {
  * @param {Object} params
  * @param {string} params.thread_id - Thread ID to analyze
  * @param {boolean} [params.dry_run=false] - If true, don't update metadata
- * @param {boolean} [params.force=false] - Force re-analysis even if already analyzed
+ * @param {boolean} [params.force=false] - Vestigial; analysis always runs now. Retained so backfill's `--update-entities` subprocess path can keep passing `--force` without breakage.
  * @returns {Promise<Object>} Analysis result
  */
 export async function analyze_thread_relations({
   thread_id,
   dry_run = false,
+  // eslint-disable-next-line no-unused-vars
   force = false
 }) {
   if (!thread_id) {
@@ -155,25 +156,7 @@ export async function analyze_thread_relations({
   log(`Analyzing relations for thread ${thread_id}`)
 
   // Load thread data
-  const { metadata, timeline } = await read_thread_data({ thread_id })
-
-  // Check if already analyzed (unless force is true)
-  if (metadata.relations_analyzed_at && !force) {
-    log(
-      `Thread ${thread_id} already analyzed at ${metadata.relations_analyzed_at}`
-    )
-    return {
-      thread_id,
-      status: 'already_analyzed',
-      relations_analyzed_at: metadata.relations_analyzed_at
-    }
-  }
-
-  if (force && metadata.relations_analyzed_at) {
-    log(
-      `Force re-analyzing thread ${thread_id} (previously analyzed at ${metadata.relations_analyzed_at})`
-    )
-  }
+  const { timeline } = await read_thread_data({ thread_id })
 
   // Extract all references from timeline, separated by type
   const { entity_references, file_references, directory_references } =
