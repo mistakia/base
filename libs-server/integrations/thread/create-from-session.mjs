@@ -505,20 +505,17 @@ export const update_existing_thread = async (
       { source_overrides }
     )
 
-    // Build/update timeline with merge support
+    // Always rebuild timeline from the full normalized session.
     const timeline_result = await build_timeline_from_session(
       normalized_session,
-      { thread_dir },
-      {
-        update_existing: true
-      }
+      { thread_dir }
     )
 
     const files_modified = metadata_changed || timeline_result.timeline_modified
 
     if (files_modified) {
       log_debug(
-        `Updated thread ${thread_id} with ${timeline_result.new_entries_added} new timeline entries (metadata: ${metadata_changed ? 'changed' : 'unchanged'}, timeline: ${timeline_result.timeline_modified ? 'changed' : 'unchanged'})`
+        `Updated thread ${thread_id} (${timeline_result.entry_count} timeline entries; metadata: ${metadata_changed ? 'changed' : 'unchanged'}, timeline: ${timeline_result.timeline_modified ? 'changed' : 'unchanged'})`
       )
     } else {
       log_debug(
@@ -529,7 +526,6 @@ export const update_existing_thread = async (
     return {
       thread_id,
       thread_dir,
-      new_entries_added: timeline_result.new_entries_added,
       total_entries: timeline_result.entry_count,
       files_modified
     }
@@ -757,11 +753,10 @@ export const create_threads_from_sessions = async (
             session_id: session.session_id,
             thread_id,
             thread_dir,
-            new_entries_added: update_result.new_entries_added,
             files_modified: update_result.files_modified
           })
           log_debug(
-            `Successfully updated thread ${thread_id} for session ${session.session_id} (${update_result.new_entries_added} new entries, files ${update_result.files_modified ? 'modified' : 'unchanged'})`
+            `Successfully updated thread ${thread_id} for session ${session.session_id} (files ${update_result.files_modified ? 'modified' : 'unchanged'})`
           )
         } else {
           log_debug(

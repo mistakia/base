@@ -10,7 +10,6 @@ import {
   link_tool_call_to_result
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 import {
-  read_timeline_jsonl_or_default,
   write_timeline_jsonl,
   sort_timeline_entries
 } from '#libs-server/threads/timeline/index.mjs'
@@ -37,8 +36,7 @@ const log_timeline_unsupported = (category, value, context = '') => {
 
 export const build_timeline_from_session = async (
   normalized_session,
-  thread_info,
-  options = {}
+  thread_info
 ) => {
   try {
     const timeline_start = Date.now()
@@ -46,7 +44,6 @@ export const build_timeline_from_session = async (
       `Building timeline for thread ${thread_info.thread_id} from ${normalized_session.session_provider} session`
     )
 
-    const { update_existing = false } = options
     const timeline_entries = []
 
     // Convert session messages to timeline entries - these represent the actual session content
@@ -61,16 +58,11 @@ export const build_timeline_from_session = async (
       }
     }
 
-    // Handle existing timeline updates for re-imports
+    // Always rebuild the timeline from normalized_session (the full source).
+    // The previous merge path cached derived data and dropped late-session
+    // entries, so every downstream consumer must recompute from upstream.
     const timeline_path = path.join(thread_info.thread_dir, 'timeline.jsonl')
-    let final_timeline = timeline_entries
-
-    if (update_existing) {
-      final_timeline = await merge_with_existing_timeline({
-        timeline_path,
-        new_entries: timeline_entries
-      })
-    }
+    const final_timeline = timeline_entries
 
     // Sort timeline entries by timestamp (primary) with ordering.sequence as tie-breaker
     sort_timeline_entries(final_timeline)
@@ -153,10 +145,6 @@ export const build_timeline_from_session = async (
       timeline_path,
       entry_count: final_timeline.length,
       timeline_modified: timeline_changed,
-      new_entries_added: update_existing
-        ? final_timeline.length -
-          (await get_existing_timeline_length(timeline_path))
-        : final_timeline.length,
       tool_validation,
       unsupported_items: {
         message_types: Array.from(TIMELINE_UNSUPPORTED.message_types),
@@ -458,83 +446,6 @@ const format_message_content = (content) => {
   }
 
   return JSON.stringify(content, null, 2)
-}
-
-const merge_with_existing_timeline = async ({ timeline_path, new_entries }) => {
-  try {
-    // Read existing timeline if it exists
-    const existing_timeline = await read_existing_timeline(timeline_path)
-    if (!existing_timeline || existing_timeline.length === 0) {
-      log('No existing timeline found, creating new timeline')
-      return new_entries
-    }
-
-    log(`Found existing timeline with ${existing_timeline.length} entries`)
-
-    // Create a map of existing entries by ID for fast lookup
-    const existing_entries_map = new Map()
-    existing_timeline.forEach((entry) => {
-      if (entry.id) {
-        existing_entries_map.set(entry.id, entry)
-      }
-    })
-
-    // Track new entries that don't exist yet
-    const new_unique_entries = []
-    let updated_entries = 0
-
-    for (const new_entry of new_entries) {
-      if (existing_entries_map.has(new_entry.id)) {
-        // Entry already exists - check if it needs updating
-        const existing_entry = existing_entries_map.get(new_entry.id)
-        if (JSON.stringify(existing_entry) !== JSON.stringify(new_entry)) {
-          // Update the existing entry with new data
-          existing_entries_map.set(new_entry.id, new_entry)
-          updated_entries++
-          log_debug(`Updated existing timeline entry: ${new_entry.id}`)
-        }
-      } else {
-        // This is a new entry
-        new_unique_entries.push(new_entry)
-      }
-    }
-
-    // Combine existing and new entries
-    const all_entries = Array.from(existing_entries_map.values()).concat(
-      new_unique_entries
-    )
-
-    log(
-      `Timeline merge complete: ${new_unique_entries.length} new entries added, ${updated_entries} entries updated`
-    )
-
-    return all_entries
-  } catch (error) {
-    log(`Error merging timeline, creating new timeline: ${error.message}`)
-    return new_entries
-  }
-}
-
-const read_existing_timeline = async (timeline_path) => {
-  try {
-    const entries = await read_timeline_jsonl_or_default({
-      timeline_path,
-      default_value: null
-    })
-    return entries
-  } catch (error) {
-    log(`Error reading existing timeline: ${error.message}`)
-    return null
-  }
-}
-
-const get_existing_timeline_length = async (timeline_path) => {
-  try {
-    const existing_timeline = await read_existing_timeline(timeline_path)
-    return existing_timeline ? existing_timeline.length : 0
-  } catch (error) {
-    return 0
-  }
 }
 
 export const create_timeline_summary = (timeline_entries) => {
