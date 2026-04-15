@@ -361,7 +361,7 @@ const is_usage_available = (usage_data, threshold) => {
  *
  * @param {Object} params
  * @param {Object|null} params.utilization - Usage API `utilization` payload
- * @param {number} params.threshold - Utilization threshold (0-100)
+ * @param {number} params.threshold - Utilization threshold (0-100); comparison is inclusive (>=), so a window reading exactly `threshold` classifies as 'over'
  * @returns {'unmeasurable'|'under'|'over'}
  */
 export const classify_usage_result = ({ utilization, threshold }) => {
