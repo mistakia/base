@@ -5,6 +5,7 @@ import os from 'os'
 
 import {
   check_account_usage,
+  classify_usage_result,
   compute_account_score,
   get_cached_usage,
   is_account_exhausted,
@@ -12,6 +13,9 @@ import {
   mark_account_auth_failed,
   mark_account_exhausted
 } from './check-usage.mjs'
+
+const is_complete_usage = (u) =>
+  u && u.five_hour?.utilization != null && u.seven_day?.utilization != null
 
 const log = debug('claude:account-selector')
 
@@ -44,10 +48,14 @@ const NOTIFICATION_COOLDOWN_MS = 3600000
  *
  * @param {Object} [options]
  * @param {string} [options.execution_mode] - 'host' or 'container' (determines which config_dir to return)
+ * @param {Function} [options.check_usage_fn] - Usage checker override (test seam); defaults to `check_account_usage`
  * @returns {Object|null} Account object with config_dir, or null if feature disabled
  * @throws {AllAccountsExhaustedError} If all accounts are exhausted
  */
-export const select_account = async ({ execution_mode = 'host' } = {}) => {
+export const select_account = async ({
+  execution_mode = 'host',
+  check_usage_fn = check_account_usage
+} = {}) => {
   const accounts_config = config.claude_accounts
   if (!accounts_config?.enabled) {
     log('Account rotation disabled')
@@ -86,28 +94,46 @@ export const select_account = async ({ execution_mode = 'host' } = {}) => {
     }
 
     const cached = await get_cached_usage(account.namespace)
-    const score = cached ? compute_account_score(cached) : null
+    let usage = is_complete_usage(cached) ? cached : null
 
-    // Skip accounts over threshold if we have cached data
-    if (cached) {
-      const threshold = accounts_config.utilization_threshold || 90
-      const five_hour = cached.five_hour?.utilization ?? 0
-      const seven_day = cached.seven_day?.utilization ?? 0
-      if (five_hour >= threshold || seven_day >= threshold) {
+    if (usage === null) {
+      const result = await check_usage_fn({
+        namespace: account.namespace,
+        org_uuid: account.org_uuid,
+        browser_profile: account.browser_profile
+      })
+      if (
+        result.error ||
+        result.utilization == null ||
+        !is_complete_usage(result.utilization)
+      ) {
         log(
-          'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
+          'live check unavailable for %s: %s',
           account.namespace,
-          five_hour,
-          seven_day
+          result.error || 'incomplete usage data'
         )
-        exhausted_details.push({
-          namespace: account.namespace,
-          reason: 'over_threshold'
-        })
+        unscored_candidates.push({ account })
         continue
       }
+      usage = result.utilization
     }
 
+    const threshold = accounts_config.utilization_threshold || 90
+    if (classify_usage_result({ utilization: usage, threshold }) === 'over') {
+      log(
+        'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
+        account.namespace,
+        usage.five_hour?.utilization,
+        usage.seven_day?.utilization
+      )
+      exhausted_details.push({
+        namespace: account.namespace,
+        reason: 'over_threshold'
+      })
+      continue
+    }
+
+    const score = compute_account_score(usage)
     if (score !== null) {
       scored_candidates.push({ account, score })
       log('Account %s score: %.3f', account.namespace, score)

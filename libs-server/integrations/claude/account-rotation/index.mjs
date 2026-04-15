@@ -7,7 +7,8 @@ export {
   clear_account_exhausted,
   mark_account_auth_failed,
   is_account_auth_failed,
-  compute_account_score
+  compute_account_score,
+  classify_usage_result
 } from './check-usage.mjs'
 
 export {

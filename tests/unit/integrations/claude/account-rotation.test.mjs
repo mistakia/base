@@ -8,6 +8,7 @@ import {
   is_account_exhausted,
   clear_account_exhausted,
   compute_account_score,
+  classify_usage_result,
   configure_redis
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 import {
@@ -279,6 +280,298 @@ describe('Claude Account Rotation', function () {
 
       expect(score).to.be.greaterThan(0.9)
       expect(score).to.be.at.most(1.0)
+    })
+  })
+
+  describe('classify_usage_result', () => {
+    const threshold = 90
+
+    it('returns unmeasurable for null utilization', () => {
+      expect(
+        classify_usage_result({ utilization: null, threshold })
+      ).to.equal('unmeasurable')
+    })
+
+    it('returns unmeasurable when five_hour.utilization missing', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: {},
+            seven_day: { utilization: 10 }
+          },
+          threshold
+        })
+      ).to.equal('unmeasurable')
+    })
+
+    it('returns unmeasurable when seven_day.utilization missing', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: { utilization: 10 },
+            seven_day: {}
+          },
+          threshold
+        })
+      ).to.equal('unmeasurable')
+    })
+
+    it('returns under when both windows below threshold', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: { utilization: 10 },
+            seven_day: { utilization: 20 }
+          },
+          threshold
+        })
+      ).to.equal('under')
+    })
+
+    it('returns over when seven_day at 100%', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: { utilization: 5 },
+            seven_day: { utilization: 100 }
+          },
+          threshold
+        })
+      ).to.equal('over')
+    })
+
+    it('returns over when five_hour at or above threshold', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: { utilization: 95 },
+            seven_day: { utilization: 10 }
+          },
+          threshold
+        })
+      ).to.equal('over')
+    })
+
+    it('classifies exactly-at-threshold as over', () => {
+      expect(
+        classify_usage_result({
+          utilization: {
+            five_hour: { utilization: 90 },
+            seven_day: { utilization: 10 }
+          },
+          threshold
+        })
+      ).to.equal('over')
+    })
+  })
+
+  describe('select_account fill-on-miss', function () {
+    beforeEach(async function () {
+      if (skip) this.skip()
+      if (!config.claude_accounts?.enabled) this.skip()
+      const keys = await redis.keys('claude:*')
+      if (keys.length > 0) await redis.del(...keys)
+    })
+
+    const make_usage = (five_hour_pct, seven_day_pct) => ({
+      five_hour: {
+        utilization: five_hour_pct,
+        resets_at: new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString()
+      },
+      seven_day: {
+        utilization: seven_day_pct,
+        resets_at: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString()
+      }
+    })
+
+    const make_checker = (responses) => {
+      return async ({ namespace }) => {
+        const response = responses[namespace]
+        if (!response) {
+          return { available: false, utilization: null, cached: false, error: 'unknown' }
+        }
+        return response
+      }
+    }
+
+    it('selects account on cache miss when live check returns under-threshold', async function () {
+      const accounts = config.claude_accounts.accounts
+      const primary = accounts.find((a) => a.priority === 1)
+
+      const responses = {}
+      for (const a of accounts) {
+        responses[a.namespace] = {
+          available: true,
+          utilization: make_usage(10, 20),
+          cached: false,
+          error: null
+        }
+      }
+
+      const account = await select_account({
+        execution_mode: 'host',
+        check_usage_fn: make_checker(responses)
+      })
+
+      expect(account).to.not.be.null
+      expect(account.namespace).to.equal(primary.namespace)
+
+      const exhausted_key = await redis.get(
+        `claude:exhausted:${primary.namespace}`
+      )
+      expect(exhausted_key).to.be.null
+    })
+
+    it('marks account over_threshold when live check returns seven_day=100', async function () {
+      const accounts = config.claude_accounts.accounts
+      if (accounts.length < 2) this.skip()
+
+      const responses = {}
+      for (const a of accounts) {
+        responses[a.namespace] = {
+          available: false,
+          utilization: make_usage(5, 100),
+          cached: false,
+          error: null
+        }
+      }
+
+      try {
+        await select_account({
+          execution_mode: 'host',
+          check_usage_fn: make_checker(responses)
+        })
+        expect.fail('should have thrown AllAccountsExhaustedError')
+      } catch (error) {
+        expect(error).to.be.an.instanceOf(AllAccountsExhaustedError)
+        for (const detail of error.account_details) {
+          expect(detail.reason).to.equal('over_threshold')
+        }
+      }
+    })
+
+    it('marks account over_threshold when live check returns five_hour at threshold', async function () {
+      const accounts = config.claude_accounts.accounts
+      if (accounts.length < 2) this.skip()
+
+      const responses = {}
+      for (const a of accounts) {
+        responses[a.namespace] = {
+          available: false,
+          utilization: make_usage(95, 10),
+          cached: false,
+          error: null
+        }
+      }
+
+      try {
+        await select_account({
+          execution_mode: 'host',
+          check_usage_fn: make_checker(responses)
+        })
+        expect.fail('should have thrown AllAccountsExhaustedError')
+      } catch (error) {
+        expect(error).to.be.an.instanceOf(AllAccountsExhaustedError)
+        for (const detail of error.account_details) {
+          expect(detail.reason).to.equal('over_threshold')
+        }
+      }
+    })
+
+    it('falls back to unscored on session_expired and does not write exhausted marker', async function () {
+      const accounts = config.claude_accounts.accounts
+
+      const responses = {}
+      for (const a of accounts) {
+        responses[a.namespace] = {
+          available: false,
+          utilization: null,
+          cached: false,
+          error: 'session_expired'
+        }
+      }
+
+      const account = await select_account({
+        execution_mode: 'host',
+        check_usage_fn: make_checker(responses)
+      })
+
+      expect(account).to.not.be.null
+
+      for (const a of accounts) {
+        const exhausted_key = await redis.get(`claude:exhausted:${a.namespace}`)
+        expect(exhausted_key).to.be.null
+      }
+    })
+
+    it('prefers priority-2 when priority-1 live check errors and priority-2 is under threshold', async function () {
+      const accounts = config.claude_accounts.accounts
+      if (accounts.length < 2) this.skip()
+
+      const primary = accounts.find((a) => a.priority === 1)
+      const secondary = accounts.find((a) => a.priority === 2)
+      if (!primary || !secondary) this.skip()
+
+      const responses = {
+        [primary.namespace]: {
+          available: false,
+          utilization: null,
+          cached: false,
+          error: 'cloudflare_challenge'
+        },
+        [secondary.namespace]: {
+          available: true,
+          utilization: make_usage(10, 20),
+          cached: false,
+          error: null
+        }
+      }
+
+      const account = await select_account({
+        execution_mode: 'host',
+        check_usage_fn: make_checker(responses)
+      })
+
+      expect(account).to.not.be.null
+      expect(account.namespace).to.equal(secondary.namespace)
+    })
+
+    it('treats partial cached entry as miss and re-applies threshold via live check', async function () {
+      const accounts = config.claude_accounts.accounts
+      const primary = accounts.find((a) => a.priority === 1)
+
+      await set_cached_usage(
+        primary.namespace,
+        { five_hour: { utilization: 10 }, seven_day: {} },
+        60
+      )
+
+      const responses = {}
+      for (const a of accounts) {
+        responses[a.namespace] = {
+          available: false,
+          utilization: make_usage(5, 100),
+          cached: false,
+          error: null
+        }
+      }
+
+      let check_called = false
+      const checker = async (params) => {
+        if (params.namespace === primary.namespace) check_called = true
+        return responses[params.namespace]
+      }
+
+      try {
+        await select_account({
+          execution_mode: 'host',
+          check_usage_fn: checker
+        })
+      } catch (error) {
+        expect(error).to.be.an.instanceOf(AllAccountsExhaustedError)
+      }
+
+      expect(check_called).to.be.true
     })
   })
 })

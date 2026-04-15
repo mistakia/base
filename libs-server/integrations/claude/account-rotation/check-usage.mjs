@@ -372,6 +372,27 @@ const is_usage_available = (usage_data, threshold) => {
   return five_hour < threshold && seven_day < threshold
 }
 
+/**
+ * Classify a usage result against a utilization threshold.
+ *
+ * Pure helper with no Redis, IO, or logging. A missing utilization object
+ * or a utilization object missing either window is classified as
+ * 'unmeasurable' so callers never treat absent data as 0%.
+ *
+ * @param {Object} params
+ * @param {Object|null} params.utilization - Usage API `utilization` payload
+ * @param {number} params.threshold - Utilization threshold (0-100)
+ * @returns {'unmeasurable'|'under'|'over'}
+ */
+export const classify_usage_result = ({ utilization, threshold }) => {
+  if (utilization == null) return 'unmeasurable'
+  const five_hour = utilization.five_hour?.utilization
+  const seven_day = utilization.seven_day?.utilization
+  if (five_hour == null || seven_day == null) return 'unmeasurable'
+  if (five_hour >= threshold || seven_day >= threshold) return 'over'
+  return 'under'
+}
+
 const SEVEN_DAY_MS = 7 * 24 * 60 * 60 * 1000
 
 /**

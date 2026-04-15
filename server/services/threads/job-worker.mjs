@@ -32,6 +32,7 @@ import {
 } from '#libs-server/integrations/claude/account-rotation/index.mjs'
 import {
   check_account_usage,
+  classify_usage_result,
   configure_redis as configure_usage_redis
 } from '#libs-server/integrations/claude/account-rotation/check-usage.mjs'
 
@@ -115,9 +116,23 @@ const check_and_mark_if_exhausted = async (job_id, account) => {
       browser_profile: account.browser_profile
     })
 
-    if (!usage.available) {
+    const verdict = classify_usage_result({
+      utilization: usage.utilization,
+      threshold
+    })
+
+    if (verdict === 'unmeasurable') {
       log(
-        `Job ${job_id}: account %s confirmed exhausted via usage API, marking`,
+        `Job ${job_id}: cannot measure %s (%s) -- skipping exhaustion marking`,
+        account.namespace,
+        usage.error || 'no utilization data'
+      )
+      return
+    }
+
+    if (verdict === 'over') {
+      log(
+        `Job ${job_id}: account %s confirmed over threshold, marking`,
         account.namespace
       )
       await handle_rate_limit_failure({
@@ -125,17 +140,18 @@ const check_and_mark_if_exhausted = async (job_id, account) => {
         org_uuid: account.org_uuid,
         browser_profile: account.browser_profile
       })
-    } else if (usage.utilization) {
-      const five_hour = usage.utilization.five_hour?.utilization || 0
-      const seven_day = usage.utilization.seven_day?.utilization || 0
-      log(
-        `Job ${job_id}: account %s not rate-limited (5h: %d%%, 7d: %d%%, threshold: %d%%)`,
-        account.namespace,
-        five_hour,
-        seven_day,
-        threshold
-      )
+      return
     }
+
+    const five_hour = usage.utilization.five_hour?.utilization
+    const seven_day = usage.utilization.seven_day?.utilization
+    log(
+      `Job ${job_id}: account %s not rate-limited (5h: %d%%, 7d: %d%%, threshold: %d%%)`,
+      account.namespace,
+      five_hour,
+      seven_day,
+      threshold
+    )
   } catch (check_error) {
     log(
       `Job ${job_id}: usage check failed for %s, skipping exhaustion marking: %s`,
