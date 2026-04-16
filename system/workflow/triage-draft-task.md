@@ -272,7 +272,7 @@ Adjust workflow reference to `write-general-implementation-plan.md` for general 
 
 ```bash
 node "$USER_BASE_DIRECTORY/repository/active/base/cli/queue-command.mjs" \
-  "claude-session \"use [[sys:system/workflow/write-software-implementation-plan.md]] to build a plan for [[user:${task_path}]]\n- project: [[user:repository/active/<project>]]\n- related tasks: [[user:task/path/related.md]]\n- key files: path/to/relevant/file.js\n- notes: <context>\"" \
+  "base harness run claude -p \"use [[sys:system/workflow/write-software-implementation-plan.md]] to build a plan for [[user:${task_path}]]\n- project: [[user:repository/active/<project>]]\n- related tasks: [[user:task/path/related.md]]\n- key files: path/to/relevant/file.js\n- notes: <context>\"" \
   --tags claude-session,task-planning --priority 5
 ```
 
