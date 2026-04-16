@@ -259,7 +259,7 @@ Update `updated_at` timestamp.
 **Build enriched planning prompt** with context discovered during triage:
 
 ```
-claude-session "use [[sys:system/workflow/write-software-implementation-plan.md]] to build a plan for [[user:${task_path}]]
+base harness run claude -p "use [[sys:system/workflow/write-software-implementation-plan.md]] to build a plan for [[user:${task_path}]]
 - project: [[user:repository/active/<project>]]
 - related tasks: [[user:task/path/related.md]]
 - key files: path/to/relevant/file.js
