@@ -333,9 +333,19 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
     }
   })
 
+  // Some raw event types nest the timestamp (file-history-snapshot stores
+  // it under snapshot.timestamp; older sessions occasionally have no
+  // timestamp at all on bookkeeping events). Fall back to the nested form
+  // so the canonical entry always carries a timestamp.
+  const raw_timestamp =
+    entry.timestamp ||
+    entry.snapshot?.timestamp ||
+    entry.message?.timestamp ||
+    null
+
   const base_normalized = {
     id: entry.uuid,
-    timestamp: new Date(entry.timestamp),
+    timestamp: raw_timestamp ? new Date(raw_timestamp) : null,
     provider_data: {
       line_number: entry.line_number,
       session_index: index,
@@ -350,7 +360,7 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
   const derive_id = ({ system_type }) =>
     deterministic_timeline_entry_id({
       thread_id,
-      timestamp: entry.timestamp,
+      timestamp: raw_timestamp || `line:${entry.line_number ?? index}`,
       type: 'system',
       system_type,
       sequence: index,
