@@ -19,6 +19,20 @@ const UNSUPPORTED_TRACKING = {
   metadata_fields: new Set()
 }
 
+// Drop null/undefined values from an Anthropic `usage` object. Anthropic
+// occasionally returns `service_tier: null` on non-metered responses, which
+// violates the timeline schema's `service_tier: string` contract. Exported
+// for unit testing.
+export const sanitize_usage = (usage) => {
+  if (!usage || typeof usage !== 'object') return usage
+  const clean = {}
+  for (const [key, value] of Object.entries(usage)) {
+    if (value === null || value === undefined) continue
+    clean[key] = value
+  }
+  return clean
+}
+
 const log_unsupported = ({ category, value, context = '' }) => {
   if (!UNSUPPORTED_TRACKING[category].has(value)) {
     UNSUPPORTED_TRACKING[category].add(value)
@@ -554,7 +568,7 @@ const normalize_assistant_entry = (entry, base_normalized) => {
     metadata: {
       model: entry.message?.model,
       request_id: entry.requestId,
-      usage: entry.message?.usage,
+      usage: sanitize_usage(entry.message?.usage),
       stop_reason: entry.message?.stop_reason,
       stop_sequence: entry.message?.stop_sequence,
       is_meta: entry.isMeta || false,
