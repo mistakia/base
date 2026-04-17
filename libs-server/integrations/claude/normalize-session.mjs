@@ -1,4 +1,3 @@
-// import { v4 as uuidv4 } from 'uuid'
 import debug from 'debug'
 
 import {
@@ -6,6 +5,8 @@ import {
   create_tool_result_entry
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 import { sort_timeline_entries } from '#libs-server/threads/timeline/index.mjs'
+import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
+import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
 
 const log = debug('integrations:claude:normalize-session')
 const log_debug = debug('integrations:claude:normalize-session:debug')
@@ -48,6 +49,15 @@ export const normalize_claude_session = (claude_session) => {
 
     const { session_id, entries, metadata } = claude_session
 
+    // Resolved up-front so producers below can derive deterministic timeline
+    // entry ids for raw events that lack an upstream uuid (queue-operation,
+    // file-history-snapshot, permission-mode, attachment, last-prompt,
+    // custom-title, agent-name, default/unknown).
+    const thread_id = generate_thread_id_from_session({
+      session_id,
+      session_provider: 'claude'
+    })
+
     // Build parent-child relationships from parentUuid
     const entry_map = new Map()
     const normalized_messages = []
@@ -62,7 +72,8 @@ export const normalize_claude_session = (claude_session) => {
     entries.forEach((entry, index) => {
       const normalized_entry = normalize_claude_entry({
         entry,
-        index
+        index,
+        thread_id
       })
       if (normalized_entry) {
         normalized_entry.ordering = {
@@ -234,7 +245,7 @@ export const normalize_claude_session = (claude_session) => {
   }
 }
 
-const normalize_claude_entry = ({ entry, index }) => {
+const normalize_claude_entry = ({ entry, index, thread_id }) => {
   // Track all properties found in the entry for completeness analysis
   const all_entry_keys = Object.keys(entry)
   const known_keys = [
@@ -332,6 +343,20 @@ const normalize_claude_entry = ({ entry, index }) => {
     }
   }
 
+  // Deterministic id factory for raw events without an upstream uuid.
+  // Same input -> same id, so re-importing a session produces a byte-
+  // identical timeline. The line_number discriminator covers the rare case
+  // where two same-type events share a millisecond-precision timestamp.
+  const derive_id = ({ system_type }) =>
+    deterministic_timeline_entry_id({
+      thread_id,
+      timestamp: entry.timestamp,
+      type: 'system',
+      system_type,
+      sequence: index,
+      discriminator: String(entry.line_number ?? '')
+    })
+
   switch (entry.type) {
     case 'user':
       return normalize_user_entry(entry, base_normalized)
@@ -367,20 +392,129 @@ const normalize_claude_entry = ({ entry, index }) => {
         }
       }
 
-    case 'file-history-snapshot':
+    case 'queue-operation': {
+      // enqueue carries the queued prompt text in `content`; dequeue/remove/
+      // popAll are bookkeeping. Preserve `unsupported_message_type` because
+      // client/views/components/ThreadTimelineView/utils/system-event-utils.js
+      // already keys off it for display routing.
+      const op = entry.operation || 'unknown'
+      const content =
+        op === 'enqueue' && typeof entry.content === 'string' && entry.content
+          ? entry.content
+          : `Queue ${op}`
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'status' }),
+        type: 'system',
+        content,
+        system_type: 'status',
+        metadata: {
+          queue_operation: op,
+          original_type: 'queue-operation',
+          unsupported_message_type: 'queue-operation'
+        }
+      }
+    }
+
+    case 'file-history-snapshot': {
+      const file_count = entry.snapshot?.trackedFileBackups
+        ? Object.keys(entry.snapshot.trackedFileBackups).length
+        : 0
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'status' }),
+        type: 'system',
+        content: entry.isSnapshotUpdate
+          ? 'File history snapshot updated'
+          : 'File history snapshot',
+        system_type: 'status',
+        metadata: {
+          original_type: 'file-history-snapshot',
+          snapshot_message_id: entry.snapshot?.messageId || entry.messageId || null,
+          is_snapshot_update: !!entry.isSnapshotUpdate,
+          file_count
+        }
+      }
+    }
+
     case 'permission-mode':
-    case 'progress':
-    case 'queue-operation':
-    case 'attachment':
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'configuration' }),
+        type: 'system',
+        content: `Permission mode: ${entry.permissionMode || 'unknown'}`,
+        system_type: 'configuration',
+        metadata: {
+          original_type: 'permission-mode',
+          permission_mode: entry.permissionMode || null
+        }
+      }
+
+    case 'attachment': {
+      // claude's `attachment` raw type carries deferred_tools_delta, which is
+      // a tool-availability change, not a user file upload. Image/file uploads
+      // arrive as content blocks inside user messages and are already handled
+      // by normalize_user_entry.
+      const attachment = entry.attachment || {}
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'configuration' }),
+        type: 'system',
+        content: 'Deferred tools updated',
+        system_type: 'configuration',
+        metadata: {
+          original_type: 'attachment',
+          attachment_type: attachment.type || null,
+          added_tool_count: Array.isArray(attachment.addedNames)
+            ? attachment.addedNames.length
+            : 0,
+          removed_tool_count: Array.isArray(attachment.removedNames)
+            ? attachment.removedNames.length
+            : 0
+        }
+      }
+    }
+
     case 'last-prompt':
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'status' }),
+        type: 'system',
+        content: typeof entry.lastPrompt === 'string' ? entry.lastPrompt : '',
+        system_type: 'status',
+        metadata: {
+          original_type: 'last-prompt'
+        }
+      }
+
     case 'agent-name':
-    case 'custom-title':
+    case 'custom-title': {
+      const title = entry.customTitle || entry.agentName || ''
+      return {
+        ...base_normalized,
+        id: derive_id({ system_type: 'configuration' }),
+        type: 'system',
+        content: `Session title: ${title}`,
+        system_type: 'configuration',
+        metadata: {
+          original_type: entry.type,
+          title
+        }
+      }
+    }
+
+    case 'progress':
+      // ~1.9M events corpus-wide (hook_progress, bash_progress, agent_progress
+      // streaming partials). Final outcomes are captured in the corresponding
+      // tool_result entries; materializing every progress tick would balloon
+      // timelines 10-100x without adding state. Intentionally dropped.
       return null
 
     default:
       log_unsupported({ category: 'entry_types', value: entry.type })
       return {
         ...base_normalized,
+        id: entry.uuid || derive_id({ system_type: 'status' }),
         type: 'unknown',
         role: 'system',
         content: JSON.stringify(entry),
