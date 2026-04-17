@@ -4,6 +4,8 @@ import path from 'path'
 import Ajv from 'ajv'
 import addFormats from 'ajv-formats'
 
+import { entry_validators } from '#libs-server/threads/add-timeline-entry.mjs'
+
 const ajv = new Ajv({ allErrors: true, strict: false })
 addFormats(ajv)
 
@@ -49,6 +51,17 @@ describe('Thread Timeline Schema Validation', () => {
         type: 'tool_result',
         schema_version: 2,
         content: { tool_call_id: 't1', result: 'ok' }
+      }
+      expect(validate(entry)).to.equal(true, JSON.stringify(validate.errors))
+    })
+
+    it('validates a tool_result entry with only error and no result (schema widened by e06fc040)', () => {
+      const entry = {
+        id: 't3',
+        timestamp: '2026-04-16T00:00:00Z',
+        type: 'tool_result',
+        schema_version: 2,
+        content: { tool_call_id: 't1', error: 'oops' }
       }
       expect(validate(entry)).to.equal(true, JSON.stringify(validate.errors))
     })
@@ -140,6 +153,28 @@ describe('Thread Timeline Schema Validation', () => {
         schema_version: 2
       }
       expect(validate(entry)).to.equal(false)
+    })
+  })
+
+  describe('runtime tool_result sub-validator', () => {
+    // Runtime-only floor: the schema (post-e06fc040) permits tool_result with
+    // neither result nor error, but the runtime producer requires at least one
+    // so newly-written entries carry meaningful payload.
+    it('throws when both result and error are absent', () => {
+      const entry = { content: { tool_call_id: 't1' } }
+      expect(() => entry_validators.tool_result(entry)).to.throw(
+        'tool_result entry must have result or error'
+      )
+    })
+
+    it('accepts an entry with only error (no result)', () => {
+      const entry = { content: { tool_call_id: 't1', error: 'oops' } }
+      expect(() => entry_validators.tool_result(entry)).to.not.throw()
+    })
+
+    it('accepts an entry with result: null', () => {
+      const entry = { content: { tool_call_id: 't1', result: null } }
+      expect(() => entry_validators.tool_result(entry)).to.not.throw()
     })
   })
 })

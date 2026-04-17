@@ -40,7 +40,7 @@ const SYSTEM_TYPE_REQUIRED_METADATA = {
 }
 
 // Validation functions for different entry types
-const entry_validators = {
+export const entry_validators = {
   message: (entry) => {
     if (!entry.role) throw new Error('message entry must have a role')
 
@@ -62,8 +62,11 @@ const entry_validators = {
   },
 
   tool_result: (entry) => {
-    if (!entry.content.result)
-      throw new Error('tool_result entry must have a result')
+    if (
+      entry.content.result === undefined &&
+      entry.content.error === undefined
+    )
+      throw new Error('tool_result entry must have result or error')
   },
 
   thinking: (entry) => {
