@@ -335,13 +335,14 @@ const migrate_thread = async (thread_id) => {
   let entries_changed = 0
 
   const tmp_path = `${timeline_path}.migrate.tmp`
-  // A stale tmp from a crashed prior run would be silently overwritten by
-  // createWriteStream. Fail fast so the operator can investigate.
+  // A stale tmp from a crashed prior run is always safe to discard: the rename
+  // to timeline_path is the commit point, so any tmp left behind represents an
+  // incomplete write. Remove it and log so operators notice recurring crashes.
   if (!DRY_RUN) {
     try {
-      await fs.access(tmp_path)
-      throw new Error(
-        `stale migrate tmp file exists: ${tmp_path} (remove or investigate before rerunning)`
+      await fs.unlink(tmp_path)
+      console.warn(
+        `[migrate] ${thread_id}: removed stale tmp from prior run: ${tmp_path}`
       )
     } catch (err) {
       if (err.code !== 'ENOENT') throw err

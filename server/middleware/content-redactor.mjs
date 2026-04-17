@@ -415,7 +415,6 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
   'from_state',
   'to_state',
   'error_type',
-  'severity',
   'is_interrupt',
   'level',
   'unsupported_message_type'
