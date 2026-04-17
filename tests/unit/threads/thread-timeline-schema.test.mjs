@@ -73,6 +73,10 @@ describe('Thread Timeline Schema Validation', () => {
         'compaction',
         'branch_point'
       ]
+      const required_metadata_by_type = {
+        state_change: { from_state: 'running', to_state: 'completed' },
+        error: { error_type: 'validation_error' }
+      }
       for (const system_type of system_types) {
         const entry = {
           id: `s_${system_type}`,
@@ -81,7 +85,7 @@ describe('Thread Timeline Schema Validation', () => {
           schema_version: 2,
           system_type,
           content: 'a system message',
-          metadata: {}
+          metadata: required_metadata_by_type[system_type] || {}
         }
         expect(validate(entry)).to.equal(
           true,

@@ -282,7 +282,50 @@
               "description": "System-specific metadata. Contract by system_type: state_change requires from_state/to_state; error requires error_type; others have optional fields (see plan).",
               "additionalProperties": true
             }
-          }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "system_type": { "const": "state_change" }
+                },
+                "required": ["system_type"]
+              },
+              "then": {
+                "required": ["metadata"],
+                "properties": {
+                  "metadata": {
+                    "type": "object",
+                    "required": ["from_state", "to_state"],
+                    "properties": {
+                      "from_state": { "type": "string" },
+                      "to_state": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "system_type": { "const": "error" }
+                },
+                "required": ["system_type"]
+              },
+              "then": {
+                "required": ["metadata"],
+                "properties": {
+                  "metadata": {
+                    "type": "object",
+                    "required": ["error_type"],
+                    "properties": {
+                      "error_type": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          ]
         }
       },
       {

@@ -417,7 +417,8 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
   'error_type',
   'is_interrupt',
   'level',
-  'unsupported_message_type'
+  'unsupported_message_type',
+  'context_data'
 ])
 
 const SYSTEM_METADATA_STRING_MAX_LENGTH = 2048
@@ -436,6 +437,9 @@ const redact_system_metadata = (metadata) => {
     } else if (typeof value === 'string') {
       redacted[key] = truncate_redacted_string(redact_text_content(value))
     } else if (is_valid_object(value) || Array.isArray(value)) {
+      log(
+        `system metadata: non-passthrough structural value key=${key} type=${Array.isArray(value) ? 'array' : 'object'}`
+      )
       redacted[key] = redact_object_values(value)
     } else {
       redacted[key] = value

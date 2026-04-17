@@ -31,6 +31,14 @@ const VALID_SYSTEM_TYPES = [
   'branch_point'
 ]
 
+// Per-system_type required metadata contracts. Mirrors the JSON Schema
+// allOf/if-then blocks in system/text/thread-timeline-schema.json so
+// runtime writes fail fast without needing ajv in the hot path.
+const SYSTEM_TYPE_REQUIRED_METADATA = {
+  state_change: ['from_state', 'to_state'],
+  error: ['error_type']
+}
+
 // Validation functions for different entry types
 const entry_validators = {
   message: (entry) => {
@@ -73,6 +81,16 @@ const entry_validators = {
       throw new Error(
         `Invalid system_type: ${entry.system_type}. Must be one of: ${VALID_SYSTEM_TYPES.join(', ')}`
       )
+    }
+    const required_metadata = SYSTEM_TYPE_REQUIRED_METADATA[entry.system_type]
+    if (required_metadata) {
+      const metadata = entry.metadata || {}
+      const missing = required_metadata.filter((key) => metadata[key] == null)
+      if (missing.length > 0) {
+        throw new Error(
+          `system_type '${entry.system_type}' requires metadata fields: ${missing.join(', ')}`
+        )
+      }
     }
   }
 }
@@ -125,6 +143,9 @@ export default async function add_timeline_entry({ thread_id, entry }) {
   // one. Validate explicitly-provided versions are positive integers.
   if (new_entry.schema_version === undefined) {
     new_entry.schema_version = TIMELINE_SCHEMA_VERSION
+    log(
+      `schema_version backstop: stamped v${TIMELINE_SCHEMA_VERSION} on ${new_entry.type} entry for thread ${thread_id}`
+    )
   } else if (
     !Number.isInteger(new_entry.schema_version) ||
     new_entry.schema_version < 1
