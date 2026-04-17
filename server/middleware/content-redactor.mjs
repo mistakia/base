@@ -407,6 +407,44 @@ export const redact_object_property = (value, property_name) => {
   return DEFAULT_REDACTED_STRING
 }
 
+// Non-sensitive structural keys on system-entry metadata that must survive
+// redaction so the client dispatch logic (thread_lifecycle) and system_type
+// discriminator keep working.
+const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
+  'thread_lifecycle',
+  'from_state',
+  'to_state',
+  'error_type',
+  'severity',
+  'is_interrupt',
+  'level',
+  'unsupported_message_type'
+])
+
+const SYSTEM_METADATA_STRING_MAX_LENGTH = 2048
+
+const truncate_redacted_string = (value) =>
+  value.length > SYSTEM_METADATA_STRING_MAX_LENGTH
+    ? value.slice(0, SYSTEM_METADATA_STRING_MAX_LENGTH) + ' [truncated]'
+    : value
+
+const redact_system_metadata = (metadata) => {
+  if (!is_valid_object(metadata)) return metadata
+  const redacted = {}
+  for (const [key, value] of Object.entries(metadata)) {
+    if (SYSTEM_METADATA_PASSTHROUGH_KEYS.has(key)) {
+      redacted[key] = value
+    } else if (typeof value === 'string') {
+      redacted[key] = truncate_redacted_string(redact_text_content(value))
+    } else if (is_valid_object(value) || Array.isArray(value)) {
+      redacted[key] = redact_object_values(value)
+    } else {
+      redacted[key] = value
+    }
+  }
+  return redacted
+}
+
 /**
  * Redacts object values while preserving keys
  */
@@ -608,21 +646,12 @@ const redact_timeline_entry = (entry) => {
       }
       break
 
-    case 'error':
-      if (redacted_entry.message) {
-        redacted_entry.message = redact_text_content(redacted_entry.message)
-      }
-      if (redacted_entry.details) {
-        redacted_entry.details = redact_object_values(redacted_entry.details)
-      }
-      break
-
-    case 'thread_main_request':
-    case 'notification':
-    case 'assistant_response':
     case 'system':
       if (redacted_entry.content) {
         redacted_entry.content = redact_text_content(redacted_entry.content)
+      }
+      if (redacted_entry.metadata) {
+        redacted_entry.metadata = redact_system_metadata(redacted_entry.metadata)
       }
       break
 
@@ -641,24 +670,6 @@ const redact_timeline_entry = (entry) => {
               : redacted_entry.content.signature
           }
         }
-      }
-      break
-
-    case 'human_request':
-      if (redacted_entry.prompt) {
-        redacted_entry.prompt = redact_text_content(redacted_entry.prompt)
-      }
-      if (redacted_entry.response) {
-        redacted_entry.response = redact_text_content(redacted_entry.response)
-      }
-      break
-
-    case 'state_change':
-      if (redacted_entry.reason) {
-        redacted_entry.reason = redact_text_content(redacted_entry.reason)
-      }
-      if (redacted_entry.metadata) {
-        redacted_entry.metadata = redact_object_values(redacted_entry.metadata)
       }
       break
   }
@@ -741,13 +752,6 @@ export const redact_thread_data = (thread) => {
   // Preserve message counts, tool call counts, token counts, cost,
   // and model/provider fields for public views -- these are aggregate
   // statistics and metadata that do not leak private content
-
-  // Redact thread main request content
-  if (redacted.thread_main_request) {
-    redacted.thread_main_request = redact_text_content(
-      redacted.thread_main_request
-    )
-  }
 
   // Redact timeline entries
   if (redacted.timeline && Array.isArray(redacted.timeline)) {

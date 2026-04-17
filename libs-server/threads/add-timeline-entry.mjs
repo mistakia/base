@@ -9,21 +9,26 @@ import {
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const log = debug('threads:timeline')
 
-// Valid timeline entry types
+// Valid timeline entry types (5 primitives)
 const VALID_ENTRY_TYPES = [
   'message',
   'tool_call',
   'tool_result',
+  'thinking',
+  'system'
+]
+
+const VALID_SYSTEM_TYPES = [
+  'status',
   'state_change',
-  'thread_state_change',
   'error',
-  'thread_main_request',
-  'notification',
-  'human_request',
-  'assistant_response'
+  'configuration',
+  'compaction',
+  'branch_point'
 ]
 
 // Validation functions for different entry types
@@ -41,11 +46,6 @@ const entry_validators = {
     if (!entry.content) throw new Error('message entry must have content')
   },
 
-  thread_main_request: (entry) => {
-    if (!entry.content)
-      throw new Error('thread_main_request entry must have content')
-  },
-
   tool_call: (entry) => {
     if (!entry.content.tool_name)
       throw new Error('tool_call entry must have a tool_name')
@@ -58,41 +58,22 @@ const entry_validators = {
       throw new Error('tool_result entry must have a result')
   },
 
-  state_change: (entry) => {
-    if (!entry.content?.from_state)
-      throw new Error('state_change entry must have content.from_state')
-    if (!entry.content?.to_state)
-      throw new Error('state_change entry must have content.to_state')
+  thinking: (entry) => {
+    if (entry.content === undefined || entry.content === null)
+      throw new Error('thinking entry must have content')
   },
 
-  thread_state_change: (entry) => {
-    if (!entry.previous_thread_state)
+  system: (entry) => {
+    if (entry.content === undefined || entry.content === null)
+      throw new Error('system entry must have content')
+    if (
+      entry.system_type !== undefined &&
+      !VALID_SYSTEM_TYPES.includes(entry.system_type)
+    ) {
       throw new Error(
-        'thread_state_change entry must have previous_thread_state'
+        `Invalid system_type: ${entry.system_type}. Must be one of: ${VALID_SYSTEM_TYPES.join(', ')}`
       )
-    if (!entry.new_thread_state)
-      throw new Error('thread_state_change entry must have new_thread_state')
-  },
-
-  error: (entry) => {
-    if (!entry.error_type)
-      throw new Error('error entry must have an error_type')
-    if (!entry.message) throw new Error('error entry must have a message')
-  },
-
-  notification: (entry) => {
-    if (!entry.content.message)
-      throw new Error('notification entry must have a message')
-  },
-
-  human_request: (entry) => {
-    if (!entry.content.question)
-      throw new Error('human_request entry must have a question')
-  },
-
-  assistant_response: (entry) => {
-    if (!entry.content.text && !entry.content.tool_calls)
-      throw new Error('assistant_response entry must have text or tool_calls')
+    }
   }
 }
 
@@ -138,6 +119,19 @@ export default async function add_timeline_entry({ thread_id, entry }) {
 
   if (!new_entry.id) {
     new_entry.id = `${entry.type}_${uuid().split('-')[0]}`
+  }
+
+  // Backstop: stamp current schema version on any caller that did not provide
+  // one. Validate explicitly-provided versions are positive integers.
+  if (new_entry.schema_version === undefined) {
+    new_entry.schema_version = TIMELINE_SCHEMA_VERSION
+  } else if (
+    !Number.isInteger(new_entry.schema_version) ||
+    new_entry.schema_version < 1
+  ) {
+    throw new Error(
+      `Invalid schema_version: ${new_entry.schema_version}. Must be a positive integer.`
+    )
   }
 
   // Validate entry based on type

@@ -8,6 +8,7 @@ import './SystemMessage.styl'
 import { ansi_to_html } from '@views/utils/ansi-to-html.js'
 import { get_system_event_display } from './utils/system-event-utils.js'
 import TaskNotificationMessage from './TaskNotificationMessage'
+import ThreadStateChangeMessage from './ThreadStateChangeMessage'
 
 const SystemMessage = ({ message, working_directory = null }) => {
   const [is_expanded, set_is_expanded] = useState(false)
@@ -15,6 +16,12 @@ const SystemMessage = ({ message, working_directory = null }) => {
   const on_toggle = useCallback(() => {
     set_is_expanded((v) => !v)
   }, [])
+
+  // Delegate thread lifecycle state changes to dedicated component
+  // (migrated from thread_state_change type, now type="system" with thread_lifecycle metadata)
+  if (message.metadata?.thread_lifecycle === true) {
+    return <ThreadStateChangeMessage event={message} />
+  }
 
   const { label, severity } = get_system_event_display(message)
 
@@ -110,7 +117,11 @@ SystemMessage.propTypes = {
       .isRequired,
     system_type: PropTypes.string,
     metadata: PropTypes.shape({
-      level: PropTypes.string
+      level: PropTypes.string,
+      thread_lifecycle: PropTypes.bool,
+      from_state: PropTypes.string,
+      to_state: PropTypes.string,
+      reason: PropTypes.string
     })
   }).isRequired,
   working_directory: PropTypes.string

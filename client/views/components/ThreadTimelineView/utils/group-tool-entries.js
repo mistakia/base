@@ -17,9 +17,9 @@ export const group_tool_entries = (timeline_events) => {
   const pending_tool_calls = new Map() // Track tool calls waiting for results
 
   timeline_events.forEach((timeline_event, index) => {
-    // Skip thread_main_request entries -- their content duplicates the first
-    // user message which is shown via the optimistic insertion path.
-    if (timeline_event.type === 'thread_main_request') {
+    // Optimistic entries are pre-rendered elsewhere (ThreadSheet prompt
+    // snippet); skip them here to avoid double-rendering the same content.
+    if (timeline_event._optimistic) {
       return
     }
 

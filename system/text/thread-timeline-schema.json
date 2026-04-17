@@ -22,17 +22,15 @@
           "message",
           "tool_call",
           "tool_result",
-          "error",
-          "state_change",
-          "thread_state_change",
-          "thread_main_request",
-          "notification",
-          "human_request",
-          "assistant_response",
-          "system",
-          "thinking"
+          "thinking",
+          "system"
         ],
-        "description": "Type of timeline entry"
+        "description": "Type of timeline entry (5 primitives)"
+      },
+      "schema_version": {
+        "type": "integer",
+        "minimum": 1,
+        "description": "Timeline entry schema version. Absent = 1 (legacy 12-type, pre-consolidation). 2 = consolidated 5-type. Producers stamp the current version on write; migrations gate transformations on version, leaving already-current entries untouched."
       },
       "provider": {
         "type": "string",
@@ -52,11 +50,28 @@
             "description": "Sequential position in the normalized session (0-based index)"
           },
           "parent_id": {
-            "type": "string",
+            "type": ["string", "null"],
             "description": "ID of parent entry for hierarchical relationships"
           }
         },
         "additionalProperties": false
+      },
+      "role": {
+        "description": "Present on message entries; narrowed under allOf[type=message]"
+      },
+      "content": {
+        "description": "Present on message/tool_call/tool_result/thinking/system entries; narrowed under each allOf branch"
+      },
+      "metadata": {
+        "type": "object",
+        "description": "Present on most entry types; narrowed under each allOf branch",
+        "additionalProperties": true
+      },
+      "system_type": {
+        "description": "Present on system entries; narrowed under allOf[type=system]"
+      },
+      "thinking_type": {
+        "description": "Present on thinking entries; narrowed under allOf[type=thinking]"
       }
     },
     "allOf": [
@@ -136,19 +151,14 @@
                   }
                 },
                 "stop_reason": {
-                  "type": "string",
-                  "enum": [
-                    "end_turn",
-                    "stop_sequence",
-                    "tool_use",
-                    "max_tokens"
-                  ]
+                  "type": ["string", "null"],
+                  "description": "Why generation stopped; freeform to accommodate provider-specific values (e.g., 'end_turn', 'stop_sequence', 'tool_use', 'max_tokens', 'refusal', 'pause_turn', null)"
                 },
                 "stop_sequence": {
-                  "type": "string"
+                  "type": ["string", "null"]
                 },
                 "git_branch": {
-                  "type": "string",
+                  "type": ["string", "null"],
                   "description": "Git branch context"
                 },
                 "is_meta": {
@@ -156,15 +166,15 @@
                   "description": "Whether this is a metadata entry"
                 },
                 "level": {
-                  "type": "number",
-                  "description": "Hierarchical level of the entry"
+                  "type": ["string", "number", "null"],
+                  "description": "Severity level; client dispatches on string values 'warning'/'error' (see system-event-utils.js). Numeric values are a legacy hierarchical-depth encoding kept for backward compatibility. null appears on entries where the producer had nothing to record."
                 },
                 "parse_line_number": {
                   "type": "number",
                   "description": "Line number from external session parsing"
                 },
                 "toolUseID": {
-                  "type": "string",
+                  "type": ["string", "null"],
                   "description": "Tool use identifier for tracking tool interactions"
                 }
               },
@@ -254,177 +264,6 @@
       },
       {
         "if": {
-          "properties": { "type": { "const": "error" } }
-        },
-        "then": {
-          "required": ["error_type", "message"],
-          "properties": {
-            "error_type": {
-              "type": "string",
-              "description": "Category of error that occurred"
-            },
-            "message": {
-              "type": "string",
-              "description": "Human-readable error description"
-            },
-            "details": {
-              "type": "object",
-              "description": "Additional error details and context",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "state_change" } }
-        },
-        "then": {
-          "required": ["content"],
-          "properties": {
-            "content": {
-              "type": "object",
-              "description": "Execution state change details",
-              "required": ["from_state", "to_state"],
-              "properties": {
-                "from_state": {
-                  "type": "string",
-                  "description": "Previous execution state"
-                },
-                "to_state": {
-                  "type": "string",
-                  "description": "New execution state"
-                },
-                "reason": {
-                  "type": "string",
-                  "description": "Reason for the state change"
-                }
-              },
-              "additionalProperties": false
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Additional context for the state change",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "thread_state_change" } }
-        },
-        "then": {
-          "required": ["previous_thread_state", "new_thread_state"],
-          "properties": {
-            "previous_thread_state": {
-              "type": "string",
-              "enum": ["active", "archived"],
-              "description": "Previous thread lifecycle state"
-            },
-            "new_thread_state": {
-              "type": "string",
-              "enum": ["active", "archived"],
-              "description": "New thread lifecycle state"
-            },
-            "reason": {
-              "type": "string",
-              "description": "Reason for the state change (e.g., completed, user_abandoned)"
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Additional context for the state change",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "thread_main_request" } }
-        },
-        "then": {
-          "required": ["content"],
-          "properties": {
-            "content": {
-              "type": "string",
-              "description": "Initial request or objective that started the thread"
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "human_request" } }
-        },
-        "then": {
-          "required": ["request_id", "prompt", "request_type", "status"],
-          "properties": {
-            "request_id": {
-              "type": "string",
-              "description": "Unique identifier for the human request"
-            },
-            "prompt": {
-              "type": "string",
-              "description": "The prompt/question presented to the human"
-            },
-            "request_type": {
-              "type": "string",
-              "enum": ["blocking", "non_blocking"],
-              "description": "Whether the thread waits for response or continues"
-            },
-            "status": {
-              "type": "string",
-              "enum": ["pending", "responded", "cancelled"],
-              "description": "Current status of the human request"
-            },
-            "response": {
-              "type": "string",
-              "description": "Human's response (only present when status is 'responded')"
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "notification" } }
-        },
-        "then": {
-          "required": ["content"],
-          "properties": {
-            "content": {
-              "type": "string",
-              "description": "Notification message content"
-            },
-            "severity": {
-              "type": "string",
-              "enum": ["info", "warning", "error"],
-              "description": "Severity level of the notification"
-            }
-          }
-        }
-      },
-      {
-        "if": {
-          "properties": { "type": { "const": "assistant_response" } }
-        },
-        "then": {
-          "required": ["content"],
-          "properties": {
-            "content": {
-              "type": "string",
-              "description": "Response content from the assistant"
-            },
-            "metadata": {
-              "type": "object",
-              "description": "Additional response metadata",
-              "additionalProperties": true
-            }
-          }
-        }
-      },
-      {
-        "if": {
           "properties": { "type": { "const": "system" } }
         },
         "then": {
@@ -432,16 +271,23 @@
           "properties": {
             "content": {
               "type": "string",
-              "description": "System-level message or notification content"
+              "description": "Human-readable system message content. Structured data belongs in metadata."
             },
             "system_type": {
               "type": "string",
-              "enum": ["initialization", "configuration", "status", "cleanup"],
-              "description": "Type of system entry"
+              "enum": [
+                "status",
+                "state_change",
+                "error",
+                "configuration",
+                "compaction",
+                "branch_point"
+              ],
+              "description": "Discriminator for system event kind. status: general informational updates. state_change: execution/thread lifecycle transitions (metadata.thread_lifecycle=true for thread state). error: error events (message in content, error_type in metadata). configuration: model/thinking_level/setting changes. compaction: context compression events. branch_point: conversation fork annotations."
             },
             "metadata": {
               "type": "object",
-              "description": "System-specific metadata",
+              "description": "System-specific metadata. Contract by system_type: state_change requires from_state/to_state; error requires error_type; others have optional fields (see plan).",
               "additionalProperties": true
             }
           }
@@ -480,8 +326,7 @@
             },
             "thinking_type": {
               "type": "string",
-              "enum": ["reasoning", "planning", "reflection", "analysis"],
-              "description": "Type of thinking process"
+              "description": "Type of thinking process (freeform label; real producers currently only emit 'reasoning' — broaden if you plumb real values from sources)"
             },
             "metadata": {
               "type": "object",

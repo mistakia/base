@@ -111,7 +111,8 @@ describe('Threads API', () => {
           {
             id: 'req_001',
             timestamp: new Date().toISOString(),
-            type: 'thread_main_request',
+            type: 'message',
+            role: 'user',
             content: 'Hello, this is a test message'
           }
         ]
@@ -134,10 +135,12 @@ describe('Threads API', () => {
       // Verify timeline is returned
       expect(response.body.timeline).to.be.an('array')
       expect(response.body.timeline).to.have.lengthOf(1)
-      expect(response.body.timeline[0].type).to.equal('thread_main_request')
+      expect(response.body.timeline[0].type).to.equal('message')
+      expect(response.body.timeline[0].role).to.equal('user')
       expect(response.body.timeline[0].content).to.equal(
         'Hello, this is a test message'
       )
+      expect(response.body.timeline[0].schema_version).to.equal(2)
     })
 
     it('should return 404 for non-existent thread', async () => {

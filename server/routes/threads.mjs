@@ -713,7 +713,8 @@ router.post('/create-session', async (req, res) => {
     const thread_id = crypto.randomUUID()
     const job_id = crypto.randomUUID()
 
-    // Create thread entity on disk before queuing the job
+    // Create thread entity on disk before queuing the job; the initial
+    // user message is written atomically as part of thread creation.
     await create_thread({
       thread_id,
       user_public_key,
@@ -721,7 +722,11 @@ router.post('/create-session', async (req, res) => {
       models: [],
       thread_state: 'active',
       title: generate_default_thread_title_from_prompt({ prompt }),
-      thread_main_request: prompt,
+      initial_timeline_entry: {
+        type: 'message',
+        role: 'user',
+        content: prompt
+      },
       additional_metadata: {
         session_status: 'queued',
         prompt_snippet: prompt.slice(0, 200),

@@ -5,6 +5,7 @@ import { register_base_directories } from '#libs-server/base-uri/index.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const { THREAD_STATE } = thread_constants
 
@@ -20,7 +21,6 @@ const { THREAD_STATE } = thread_constants
  * @param {string} [options.archive_reason] Archive reason if thread_state is archived
  * @param {Object} [options.test_directories] Test directories object with system and user paths
  * @param {Array} [options.initial_timeline=[]] Initial timeline entries
- * @param {string} [options.thread_main_request] Main request for the thread
  * @param {boolean} [options.create_git_branches=false] Whether to create git branches (default false for tests)
  * @returns {Promise<Object>} Created thread info including thread_id, context_dir, and user
  */
@@ -33,7 +33,6 @@ export default async function create_test_thread({
   archive_reason,
   test_directories,
   initial_timeline,
-  thread_main_request,
   create_git_branches = false
 }) {
   // Create test user if not provided
@@ -59,13 +58,6 @@ export default async function create_test_thread({
     })
   }
 
-  // Extract thread_main_request from initial_timeline if provided and no explicit thread_main_request
-  if (!thread_main_request && initial_timeline && initial_timeline.length > 0) {
-    thread_main_request = initial_timeline.find(
-      (entry) => entry.type === 'thread_main_request'
-    )?.content
-  }
-
   // Create the thread using the actual implementation
   const thread = await create_thread({
     user_public_key: user.user_public_key,
@@ -74,14 +66,20 @@ export default async function create_test_thread({
     models,
     thread_state,
     archive_reason,
-    thread_main_request,
     create_git_branches
   })
 
-  // Write initial_timeline entries to the timeline.jsonl file if provided
+  // Write initial_timeline entries to the timeline.jsonl file if provided.
+  // Stamp schema_version on any entry that does not already carry one so
+  // tests mirror the production backstop in add-timeline-entry.
   if (initial_timeline && initial_timeline.length > 0) {
     const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
-    await write_timeline_jsonl({ timeline_path, entries: initial_timeline })
+    const stamped = initial_timeline.map((entry) =>
+      entry.schema_version === undefined
+        ? { ...entry, schema_version: TIMELINE_SCHEMA_VERSION }
+        : entry
+    )
+    await write_timeline_jsonl({ timeline_path, entries: stamped })
   }
 
   const cleanup = () => {

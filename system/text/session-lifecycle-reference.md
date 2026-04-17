@@ -89,8 +89,10 @@ Generates thread_id and job_id via crypto.randomUUID()
 Calls create_thread() with:
   thread_id (explicit), user_public_key, inference_provider: 'anthropic',
   models: [], thread_state: 'active', title: null,
-  thread_main_request: prompt,
   additional_metadata: { session_status: 'queued', prompt_snippet, job_id }
+  |
+  v
+Appends the first user message via add_timeline_entry()
   |
   v
 Enqueues BullMQ job with thread_id in job data, job_id as BullMQ jobId
@@ -103,7 +105,7 @@ Response: { thread_id, job_id, queue_position }
 
 **`execution_mode`**: Optional. Controls whether the harness spawns on the host or inside the Docker container. Defaults to the value of `config.threads.cli.default_execution_mode`.
 
-**Thread creation details**: The route passes an explicit `thread_id` to `create_thread()`, bypassing deterministic ID generation (which requires a `session_id` that does not exist yet). The `thread_main_request` parameter writes the user's prompt as the initial timeline entry. No `source` is passed -- the sync pipeline adds source data when the session completes. The thread watcher detects the new `metadata.json` and emits THREAD_CREATED.
+**Thread creation details**: The route passes an explicit `thread_id` to `create_thread()`, bypassing deterministic ID generation (which requires a `session_id` that does not exist yet). The route then appends the user's prompt as the initial timeline entry via `add_timeline_entry()`. No `source` is passed -- the sync pipeline adds source data when the session completes. The thread watcher detects the new `metadata.json` and emits THREAD_CREATED.
 
 ### Phase 2: Job Processing (async, potentially queued)
 

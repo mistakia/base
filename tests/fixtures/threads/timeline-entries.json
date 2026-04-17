@@ -6,7 +6,8 @@
       "timestamp": "2023-05-10T14:30:00Z",
       "type": "message",
       "role": "user",
-      "content": "Hello, can you help me with a programming question?"
+      "content": "Hello, can you help me with a programming question?",
+      "schema_version": 2
     }
   },
   {
@@ -59,8 +60,10 @@
     "entry": {
       "id": "state_001",
       "timestamp": "2023-05-10T14:31:00Z",
-      "type": "state_change",
-      "content": {
+      "type": "system",
+      "system_type": "state_change",
+      "content": "active -> paused: Maximum iterations reached",
+      "metadata": {
         "from_state": "active",
         "to_state": "paused",
         "reason": "Maximum iterations reached"
@@ -72,10 +75,15 @@
     "entry": {
       "id": "thread_state_001",
       "timestamp": "2023-05-10T14:31:30Z",
-      "type": "thread_state_change",
-      "previous_thread_state": "active",
-      "new_thread_state": "archived",
-      "reason": "completed"
+      "type": "system",
+      "system_type": "state_change",
+      "content": "active -> archived: completed",
+      "metadata": {
+        "from_state": "active",
+        "to_state": "archived",
+        "thread_lifecycle": true,
+        "reason": "completed"
+      }
     }
   },
   {
@@ -83,12 +91,16 @@
     "entry": {
       "id": "error_001",
       "timestamp": "2023-05-10T14:32:00Z",
-      "type": "error",
-      "error_type": "tool_execution_failed",
-      "tool_call_id": "tool_002",
-      "message": "Failed to execute tool: Invalid parameters",
-      "details": {
-        "stack": "Error: Invalid parameters\n    at executeToolCall (/path/to/file.js:123:45)"
+      "type": "system",
+      "system_type": "error",
+      "content": "[tool_execution_failed] Failed to execute tool: Invalid parameters",
+      "metadata": {
+        "error_type": "tool_execution_failed",
+        "message": "Failed to execute tool: Invalid parameters",
+        "tool_call_id": "tool_002",
+        "details": {
+          "stack": "Error: Invalid parameters\n    at executeToolCall (/path/to/file.js:123:45)"
+        }
       }
     }
   },

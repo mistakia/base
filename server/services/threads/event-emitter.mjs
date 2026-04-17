@@ -112,8 +112,7 @@ const create_truncated_entry = (entry) => {
       break
     }
 
-    case 'tool_call':
-    case 'tool_use': {
+    case 'tool_call': {
       const tool_name = entry.content?.tool_name
       const tool_input =
         entry.content?.tool_parameters || entry.content?.input || {}
@@ -135,12 +134,6 @@ const create_truncated_entry = (entry) => {
 
     case 'tool_result':
       truncated.content = { error: Boolean(entry.content?.error) }
-      break
-
-    case 'error':
-      truncated.content = entry.content?.message
-        ? { message: entry.content.message }
-        : {}
       break
 
     default:

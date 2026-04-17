@@ -17,6 +17,7 @@ import {
   get_user_base_directory
 } from '#libs-server/base-uri/index.mjs'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:create')
@@ -193,7 +194,7 @@ export function build_thread_metadata({
  * @param {string} params.inference_provider Name of inference provider (e.g., 'ollama')
  * @param {Array<string>} [params.models] Models used in the thread
  * @param {string} [params.thread_state=THREAD_STATE.ACTIVE] Thread state
- * @param {string} [params.thread_main_request] Initial user request to add to timeline
+ * @param {Object} [params.initial_timeline_entry] Optional first timeline entry written atomically with thread creation
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {boolean} [params.create_git_branches=false] Whether to create git branches and worktrees
@@ -213,7 +214,7 @@ export default async function create_thread({
   inference_provider,
   models,
   thread_state = THREAD_STATE.ACTIVE,
-  thread_main_request,
+  initial_timeline_entry = null,
   prompt_properties = {},
   tools = [],
   create_git_branches = false,
@@ -377,22 +378,20 @@ export default async function create_thread({
     short_description
   })
 
-  // Initialize timeline
-  const timeline = []
-
-  // Add thread main request if provided (optional, now treated as a universal property)
-  if (thread_main_request) {
-    timeline.push({
-      id: `req_${uuid().split('-')[0]}`,
-      timestamp: now,
-      type: 'thread_main_request',
-      content: thread_main_request
-    })
-    metadata.prompt_properties.main_request = thread_main_request
-  }
-
-  // Write timeline to file (only if we have timeline content or it's not an external session)
-  if (timeline.length > 0 || !source) {
+  // Write the initial timeline entry atomically with thread creation when
+  // provided. The file is otherwise created on first append by the caller;
+  // external sessions get their timeline from the import pipeline.
+  const timeline = initial_timeline_entry
+    ? [
+        {
+          ...initial_timeline_entry,
+          id: initial_timeline_entry.id || `msg_${uuid().split('-')[0]}`,
+          timestamp: initial_timeline_entry.timestamp || now,
+          schema_version: TIMELINE_SCHEMA_VERSION
+        }
+      ]
+    : []
+  if (timeline.length > 0) {
     await write_timeline_jsonl({
       timeline_path: path.join(thread_dir, 'timeline.jsonl'),
       entries: timeline

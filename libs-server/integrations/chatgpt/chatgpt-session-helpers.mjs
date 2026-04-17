@@ -14,6 +14,7 @@ import {
 } from './chatgpt-config.mjs'
 import { v5 as uuidv5 } from 'uuid'
 import { calculate_session_counts } from '#libs-server/integrations/thread/session-count-utilities.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const log = debug('integrations:chatgpt:session-helpers')
 
@@ -208,7 +209,8 @@ export const build_timeline_entry_from_message = ({ message }) => {
       message_type: message.type,
       role: message.role
     }),
-    provider: 'chatgpt'
+    provider: 'chatgpt',
+    schema_version: TIMELINE_SCHEMA_VERSION
   }
 
   switch (message.type) {
@@ -260,11 +262,12 @@ export const build_timeline_entry_from_message = ({ message }) => {
     case 'context':
       return {
         ...base_entry,
-        type: 'state_change',
-        data: {
+        type: 'system',
+        system_type: 'configuration',
+        content: 'Model context updated',
+        metadata: {
           change_type: 'context_update',
-          context_data: message.context_data,
-          description: 'Model context updated'
+          context_data: message.context_data
         }
       }
 
@@ -312,7 +315,7 @@ export const map_message_type_to_timeline_type = ({ message_type, role }) => {
     case 'tool_result':
       return 'tool_result'
     case 'context':
-      return 'state_change'
+      return 'system'
     case 'text':
     case 'code':
     case 'multimodal':

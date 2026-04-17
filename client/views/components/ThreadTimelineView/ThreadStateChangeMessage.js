@@ -14,9 +14,11 @@ const format_reason = (reason) => {
 }
 
 const ThreadStateChangeMessage = ({ event }) => {
-  const previous_state = event.previous_thread_state || 'unknown'
-  const new_state = event.new_thread_state || 'unknown'
-  const reason = event.reason
+  // Read from metadata (post-migration format) or fall back to top-level (legacy)
+  const metadata = event.metadata || {}
+  const previous_state = metadata.from_state || event.previous_thread_state || 'unknown'
+  const new_state = metadata.to_state || event.new_thread_state || 'unknown'
+  const reason = metadata.reason || event.reason
 
   const formatted_reason = format_reason(reason)
 
@@ -34,6 +36,11 @@ const ThreadStateChangeMessage = ({ event }) => {
 
 ThreadStateChangeMessage.propTypes = {
   event: PropTypes.shape({
+    metadata: PropTypes.shape({
+      from_state: PropTypes.string,
+      to_state: PropTypes.string,
+      reason: PropTypes.string
+    }),
     previous_thread_state: PropTypes.string,
     new_thread_state: PropTypes.string,
     reason: PropTypes.string

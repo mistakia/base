@@ -152,12 +152,28 @@ const get_event_summary = (timeline_event) => {
       return content?.error ? 'Tool error' : 'Tool completed'
     case 'thinking':
       return 'Thinking...'
-    case 'system':
-      return 'System message'
+    case 'system': {
+      const system_type = timeline_event.system_type
+      if (system_type === 'state_change') {
+        return typeof content === 'string'
+          ? `State: ${truncate(content, 60)}`
+          : 'State change'
+      }
+      if (system_type === 'error') {
+        return typeof content === 'string'
+          ? truncate(content, 80)
+          : 'Error occurred'
+      }
+      return typeof content === 'string'
+        ? truncate(content, 80)
+        : 'System message'
+    }
     case 'completion':
       return 'Completed'
-    case 'error':
-      return content?.message || 'Error occurred'
+    case 'thread_state_change':
+      return typeof content === 'string'
+        ? `State: ${truncate(content, 60)}`
+        : 'State change'
     default:
       return type
   }

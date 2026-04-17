@@ -1,11 +1,13 @@
 /**
  * Utility functions for filtering and classifying system events in thread timelines.
  *
- * System events with type="system" and system_type="status" are filtered to only
+ * System events with type="system" are filtered to only
  * display meaningful events to users:
  * - Warnings (level="warning"): Model limits, hook failures
  * - Errors (level="error"): Critical failures
  * - Interrupts (is_interrupt=true): User-initiated interruptions
+ * - State transitions (system_type="state_change"): Lifecycle and execution state changes
+ * - Error events (system_type="error"): Error notifications
  */
 
 /**
@@ -34,6 +36,11 @@ export const is_displayable_system_event = (event) => {
 
   // Display task notifications (queue operations)
   if (metadata.unsupported_message_type === 'queue-operation') {
+    return true
+  }
+
+  // Display state transitions and error events (migrated from dedicated types)
+  if (event.system_type === 'state_change' || event.system_type === 'error') {
     return true
   }
 
@@ -80,6 +87,22 @@ export const get_system_event_display = (event) => {
     return {
       label: content,
       severity: 'tasknotification'
+    }
+  }
+
+  // Migrated error events (from dedicated error type)
+  if (event.system_type === 'error') {
+    return {
+      label: content || 'Error',
+      severity: 'error'
+    }
+  }
+
+  // Migrated state change events
+  if (event.system_type === 'state_change') {
+    return {
+      label: content || 'State change',
+      severity: 'info'
     }
   }
 

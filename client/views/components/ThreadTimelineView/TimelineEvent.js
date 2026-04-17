@@ -85,6 +85,8 @@ const TimelineEvent = ({
             working_directory={working_directory}
           />
         )
+      // Legacy: pre-migration entries still use the retired `thread_state_change`
+      // type until `cli/migrate-timeline-to-5-types.mjs` runs on stored data.
       case 'thread_state_change':
         return <ThreadStateChangeMessage event={timeline_event} />
       case 'tool_use':

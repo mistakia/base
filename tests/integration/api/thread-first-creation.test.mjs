@@ -95,10 +95,12 @@ describe('Thread-First Creation Flow', () => {
           .split('\n')
           .map(JSON.parse)
         expect(timeline_entries).to.have.lengthOf(1)
-        expect(timeline_entries[0].type).to.equal('thread_main_request')
+        expect(timeline_entries[0].type).to.equal('message')
+        expect(timeline_entries[0].role).to.equal('user')
         expect(timeline_entries[0].content).to.equal(
           'Test prompt for thread-first creation'
         )
+        expect(timeline_entries[0].schema_version).to.equal(2)
       }
     })
 

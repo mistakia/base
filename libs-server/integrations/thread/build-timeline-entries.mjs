@@ -13,6 +13,7 @@ import {
   write_timeline_jsonl,
   sort_timeline_entries
 } from '#libs-server/threads/timeline/index.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
 const log_debug = debug('integrations:thread:build-timeline-entries:debug')
@@ -180,7 +181,6 @@ const convert_message_to_timeline_entry = ({
     'result',
     'tool_id',
     'execution_status',
-    'error',
     'thinking_type',
     'system_type'
   ]
@@ -211,12 +211,13 @@ const convert_message_to_timeline_entry = ({
   const base_entry = {
     id: message.id,
     timestamp: iso_timestamp,
-    session_provider,
+    provider: session_provider,
     provider_data: message.provider_data || {},
     ordering: {
       sequence: sequence_index,
       parent_id: message.parent_id || null
-    }
+    },
+    schema_version: TIMELINE_SCHEMA_VERSION
   }
 
   switch (message.type) {
@@ -286,29 +287,43 @@ const convert_message_to_timeline_entry = ({
         }
       }
 
-    case 'state_change':
+    case 'state_change': {
+      const from_state = message.previous_state || 'unknown'
+      const to_state = message.new_state || 'unknown'
+      const reason = message.reason || message.content
+      const content = reason
+        ? `${from_state} -> ${to_state}: ${reason}`
+        : `${from_state} -> ${to_state}`
       return {
         ...base_entry,
-        type: 'state_change',
-        previous_state: message.previous_state || 'unknown',
-        new_state: message.new_state || 'unknown',
-        reason: message.reason || message.content,
+        type: 'system',
+        system_type: 'state_change',
+        content,
         metadata: {
+          from_state,
+          to_state,
+          ...(reason ? { reason } : {}),
           ...message.metadata
         }
       }
+    }
 
-    case 'error':
+    case 'error': {
+      const error_type = message.error_type || 'unknown'
+      const error_message = message.content || message.message || ''
       return {
         ...base_entry,
-        type: 'error',
-        error_type: message.error_type || 'unknown',
-        message: message.content || message.message,
-        details: message.details || {},
+        type: 'system',
+        system_type: 'error',
+        content: `[${error_type}] ${error_message}`,
         metadata: {
+          error_type,
+          message: error_message,
+          ...(message.details ? { details: message.details } : {}),
           ...message.metadata
         }
       }
+    }
 
     case 'unknown':
       return {
@@ -446,30 +461,6 @@ const format_message_content = (content) => {
   }
 
   return JSON.stringify(content, null, 2)
-}
-
-export const create_timeline_summary = (timeline_entries) => {
-  const entry_types = timeline_entries.reduce((counts, entry) => {
-    counts[entry.type] = (counts[entry.type] || 0) + 1
-    return counts
-  }, {})
-
-  const timestamps = timeline_entries.map((entry) => new Date(entry.timestamp))
-  const start_time = new Date(Math.min(...timestamps))
-  const end_time = new Date(Math.max(...timestamps))
-
-  return {
-    total_entries: timeline_entries.length,
-    entry_types,
-    start_time,
-    end_time,
-    duration_minutes: (end_time - start_time) / (1000 * 60),
-    message_count: entry_types.message || 0,
-    tool_call_count: entry_types.tool_call || 0,
-    tool_result_count: entry_types.tool_result || 0,
-    state_change_count: entry_types.state_change || 0,
-    error_count: entry_types.error || 0
-  }
 }
 
 /**

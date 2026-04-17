@@ -10,7 +10,10 @@ import {
   reset_all_tables
 } from '#tests/utils/index.mjs'
 import { thread_constants } from '#libs-shared'
-import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import {
+  read_timeline_jsonl,
+  read_timeline_jsonl_or_default
+} from '#libs-server/threads/timeline/index.mjs'
 
 const { THREAD_STATE } = thread_constants
 
@@ -82,9 +85,10 @@ describe('create_thread', () => {
     expect(metadata.created_at).to.be.a('string')
     expect(metadata.git_branch).to.equal(`thread/${thread.thread_id}`)
 
-    // Check timeline file (JSONL format)
+    // No initial_timeline_entry provided; the timeline file is created lazily
+    // on first append, so the default-read returns an empty array.
     const timeline_path = path.join(thread_dir, 'timeline.jsonl')
-    const timeline = await read_timeline_jsonl({ timeline_path })
+    const timeline = await read_timeline_jsonl_or_default({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.be.empty
@@ -106,25 +110,27 @@ describe('create_thread', () => {
     expect(thread.user_worktree_path).to.be.a('string')
   })
 
-  it('should create a thread with a main request', async () => {
-    const thread_data = {
+  it('should create a thread with an initial timeline entry', async () => {
+    const thread = await create_thread({
       user_public_key: test_user.user_public_key,
       workflow_base_uri: 'sys:system/workflow/test-workflow.md',
       inference_provider: 'ollama',
       models: ['llama2'],
-      thread_main_request: 'Hello, this is my first message',
+      initial_timeline_entry: {
+        type: 'message',
+        role: 'user',
+        content: 'Hello, this is my first message'
+      },
       create_git_branches: true
-    }
+    })
 
-    const thread = await create_thread(thread_data)
-
-    // Check timeline file (JSONL format)
     const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
     const timeline = await read_timeline_jsonl({ timeline_path })
 
     expect(timeline).to.be.an('array')
     expect(timeline).to.have.lengthOf(1)
-    expect(timeline[0].type).to.equal('thread_main_request')
+    expect(timeline[0].type).to.equal('message')
+    expect(timeline[0].role).to.equal('user')
     expect(timeline[0].content).to.equal('Hello, this is my first message')
   })
 

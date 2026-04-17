@@ -17,6 +17,7 @@ import {
   append_timeline_entry_jsonl,
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
+import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 
 const {
   THREAD_STATE,
@@ -95,17 +96,24 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
   })
   const metadata = JSON.parse(written)
 
-  // Add thread_state change entry to timeline
+  // Add thread state change as a system entry (system_type="state_change")
+  const from_state = thread.thread_state
+  const to_state = thread_state
   const timeline_entry = {
     id: `thread_state_${Date.now()}`,
     timestamp: metadata.updated_at,
-    type: 'thread_state_change',
-    previous_thread_state: thread.thread_state,
-    new_thread_state: thread_state
-  }
-
-  if (reason) {
-    timeline_entry.reason = reason
+    type: 'system',
+    system_type: 'state_change',
+    content: reason
+      ? `${from_state} -> ${to_state}: ${reason}`
+      : `${from_state} -> ${to_state}`,
+    metadata: {
+      from_state,
+      to_state,
+      thread_lifecycle: true,
+      ...(reason ? { reason } : {})
+    },
+    schema_version: TIMELINE_SCHEMA_VERSION
   }
 
   // Append timeline entry (streaming write - avoids read-modify-write)
