@@ -1,5 +1,4 @@
 import path from 'path'
-import { v4 as uuid } from 'uuid'
 import debug from 'debug'
 
 import get_thread from './get-thread.mjs'
@@ -138,8 +137,14 @@ export default async function add_timeline_entry({ thread_id, entry }) {
     new_entry.timestamp = new Date().toISOString()
   }
 
+  // id is the caller's responsibility. Importers use
+  // libs-shared/timeline/deterministic-id.mjs so re-imports are idempotent;
+  // runtime callers explicitly call uuid() at their own site so the
+  // non-determinism is visible there. No silent fallback here.
   if (!new_entry.id) {
-    new_entry.id = `${entry.type}_${uuid().split('-')[0]}`
+    throw new Error(
+      'entry.id is required. Importers should use deterministic_timeline_entry_id; runtime callers should pass uuid() explicitly.'
+    )
   }
 
   // Backstop: stamp current schema version on any caller that did not provide

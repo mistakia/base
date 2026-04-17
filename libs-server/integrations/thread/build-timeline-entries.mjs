@@ -14,6 +14,7 @@ import {
   sort_timeline_entries
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
 
 const log = debug('integrations:thread:build-timeline-entries')
 const log_debug = debug('integrations:thread:build-timeline-entries:debug')
@@ -52,7 +53,8 @@ export const build_timeline_from_session = async (
       const entry = convert_message_to_timeline_entry({
         message,
         session_provider: normalized_session.session_provider,
-        sequence_index: index
+        sequence_index: index,
+        thread_id: thread_info.thread_id
       })
       if (entry) {
         timeline_entries.push(entry)
@@ -162,7 +164,8 @@ export const build_timeline_from_session = async (
 const convert_message_to_timeline_entry = ({
   message,
   session_provider,
-  sequence_index
+  sequence_index,
+  thread_id
 }) => {
   // Track any unexpected message properties
   const known_message_keys = [
@@ -208,8 +211,21 @@ const convert_message_to_timeline_entry = ({
     iso_timestamp = new Date().toISOString()
   }
 
+  // Deterministic id fallback covers normalized messages whose upstream
+  // source provided no id. Same input yields same id, so re-importing a
+  // session produces a byte-identical timeline.jsonl.
+  const id =
+    message.id ||
+    deterministic_timeline_entry_id({
+      thread_id,
+      timestamp: iso_timestamp,
+      type: message.type || 'message',
+      system_type: message.system_type || message.role || '',
+      sequence: sequence_index
+    })
+
   const base_entry = {
-    id: message.id,
+    id,
     timestamp: iso_timestamp,
     provider: session_provider,
     provider_data: message.provider_data || {},

@@ -418,7 +418,22 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
   'is_interrupt',
   'level',
   'unsupported_message_type',
-  'context_data'
+  'context_data',
+  // Structural keys on system entries materialized from previously-dropped
+  // claude raw event types (queue-operation, file-history-snapshot,
+  // permission-mode, attachment, last-prompt, custom-title, agent-name).
+  // These are non-sensitive descriptors of session lifecycle facts; redacting
+  // them would erase the discriminator the UI uses to label and group events.
+  'original_type',
+  'queue_operation',
+  'permission_mode',
+  'attachment_type',
+  'added_tool_count',
+  'removed_tool_count',
+  'snapshot_message_id',
+  'is_snapshot_update',
+  'file_count',
+  'title'
 ])
 
 const SYSTEM_METADATA_STRING_MAX_LENGTH = 2048

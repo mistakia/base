@@ -4,6 +4,8 @@ import {
   create_tool_call_entry,
   create_tool_result_entry
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
+import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
+import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
 
 const log = debug('integrations:cursor:normalize')
 
@@ -92,9 +94,18 @@ export const normalize_cursor_conversation = (conversation) => {
     })
   }
 
+  // Resolve thread_id once so normalize_message can derive deterministic ids
+  // when the upstream cursor message lacks an id.
+  const thread_id = generate_thread_id_from_session({
+    session_id: conversation.composer_id,
+    session_provider: 'cursor'
+  })
+
   // Normalize messages and extract tool interactions
+  let msg_index = 0
   for (const msg of conversation.messages || []) {
-    const normalized = normalize_message(msg)
+    const normalized = normalize_message(msg, { thread_id, msg_index })
+    msg_index++
     if (normalized) {
       session.messages.push(normalized)
 
@@ -261,7 +272,7 @@ function extract_cursor_tool_interactions(msg) {
 /**
  * Normalize a single message
  */
-function normalize_message(msg) {
+function normalize_message(msg, { thread_id, msg_index } = {}) {
   // Track unknown message fields
   const known_message_fields = [
     'id',
@@ -289,8 +300,17 @@ function normalize_message(msg) {
     }
   })
 
+  const id =
+    msg.id ||
+    deterministic_timeline_entry_id({
+      thread_id,
+      timestamp: msg.timestamp,
+      type: 'message',
+      system_type: normalize_role(msg.role),
+      sequence: msg_index
+    })
   const normalized = {
-    id: msg.id,
+    id,
     role: normalize_role(msg.role),
     timestamp: msg.timestamp,
     content: msg.content || ''
