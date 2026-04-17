@@ -13,6 +13,8 @@ import get_thread from '#libs-server/threads/get-thread.mjs'
 import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { thread_constants } from '#libs-shared'
 import list_threads from '#libs-server/threads/list-threads.mjs'
+import { validate_timeline_schema } from '#libs-server/threads/validate-timeline-schema.mjs'
+import { get_system_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
   flush_and_exit,
   format_thread,
@@ -48,7 +50,7 @@ function resolve_ref_pattern(ref) {
 
 export const command = 'thread <command>'
 export const describe =
-  'Thread operations (list, get, status, timeline, archive, analyze)'
+  'Thread operations (list, get, status, timeline, archive, analyze, validate)'
 
 export const builder = (yargs) =>
   yargs
@@ -338,9 +340,39 @@ export const builder = (yargs) =>
           }),
       handle_stale
     )
+    .command(
+      'validate',
+      'Validate thread timeline entries against the timeline schema',
+      (yargs) =>
+        yargs
+          .option('thread-id', {
+            describe: 'Validate a single thread',
+            type: 'string'
+          })
+          .option('sample', {
+            describe: 'Random sample size of threads',
+            type: 'number'
+          })
+          .option('limit', {
+            describe: 'Per-thread error cap',
+            type: 'number',
+            default: 5
+          })
+          .option('fail-fast', {
+            describe: 'Stop on the first invalid entry',
+            type: 'boolean',
+            default: false
+          })
+          .option('json', {
+            describe: 'Output as JSON',
+            type: 'boolean',
+            default: false
+          }),
+      handle_validate
+    )
     .demandCommand(
       1,
-      'Specify a subcommand: list, get, status, timeline, messages, stale, archive, or analyze'
+      'Specify a subcommand: list, get, status, timeline, messages, stale, archive, analyze, or validate'
     )
 
 export const handler = () => {}
@@ -684,6 +716,76 @@ async function handle_messages(argv) {
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_validate(argv) {
+  let exit_code = 0
+  try {
+    const user_base_dir = process.env.USER_BASE_DIRECTORY
+    if (!user_base_dir) {
+      console.error('Error: USER_BASE_DIRECTORY environment variable is not set.')
+      flush_and_exit(2)
+      return
+    }
+
+    const thread_dir = path.join(user_base_dir, 'thread')
+    const schema_path = path.join(
+      get_system_base_directory(),
+      'system/text/thread-timeline-schema.json'
+    )
+
+    const result = await validate_timeline_schema({
+      thread_id: argv['thread-id'],
+      sample: argv.sample,
+      limit: argv.limit,
+      fail_fast: argv['fail-fast'],
+      thread_dir,
+      schema_path,
+      on_progress: (processed, total) => {
+        if (!argv.json) {
+          console.log(`[validate] processed ${processed}/${total} threads`)
+        }
+      }
+    })
+
+    if (argv.json) {
+      console.log(JSON.stringify(result, null, 2))
+    } else {
+      console.log(
+        `[validate] checked ${result.entries_checked} entries across ${result.threads_checked} threads`
+      )
+      console.log(
+        `[validate] ${result.threads_with_errors} thread(s) with validation errors, ${result.entries_invalid} entries invalid`
+      )
+      for (const r of result.bad_threads) {
+        console.log(`\n${r.thread_id} (${r.invalid} invalid of ${r.entries}):`)
+        for (const e of r.errors) {
+          if (e.parse_error) {
+            console.log(`  line ${e.line}: parse error: ${e.parse_error}`)
+            continue
+          }
+          if (e.fatal) {
+            console.log(`  fatal: ${e.fatal}`)
+            continue
+          }
+          console.log(
+            `  line ${e.line} id=${e.entry_id} type=${e.type} v${e.schema_version}:`
+          )
+          for (const err of e.errors) {
+            console.log(
+              `    ${err.path} ${err.keyword}: ${err.message} ${JSON.stringify(err.params)}`
+            )
+          }
+        }
+      }
+    }
+
+    exit_code = result.entries_invalid > 0 ? 1 : 0
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 2
   }
   flush_and_exit(exit_code)
 }
