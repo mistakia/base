@@ -227,7 +227,7 @@
           "properties": {
             "content": {
               "type": "object",
-              "required": ["tool_call_id", "result"],
+              "required": ["tool_call_id"],
               "properties": {
                 "tool_call_id": {
                   "type": "string",
@@ -245,16 +245,8 @@
                   ]
                 },
                 "error": {
-                  "type": "object",
-                  "description": "Error information if tool execution failed",
-                  "properties": {
-                    "message": { "type": "string" },
-                    "code": { "type": "string" },
-                    "details": {
-                      "type": "object",
-                      "additionalProperties": true
-                    }
-                  }
+                  "type": ["object", "string", "null"],
+                  "description": "Error information if tool execution failed. In practice emitted as a string by all upstream tool providers; object form is reserved for structured error details with message/code/details."
                 }
               },
               "additionalProperties": false

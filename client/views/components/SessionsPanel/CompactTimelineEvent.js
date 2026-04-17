@@ -170,10 +170,6 @@ const get_event_summary = (timeline_event) => {
     }
     case 'completion':
       return 'Completed'
-    case 'thread_state_change':
-      return typeof content === 'string'
-        ? `State: ${truncate(content, 60)}`
-        : 'State change'
     default:
       return type
   }

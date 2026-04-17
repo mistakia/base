@@ -6,7 +6,6 @@ import UserMessage from './UserMessage'
 import AssistantMessage from './AssistantMessage'
 import ThinkingMessage from './ThinkingMessage'
 import SystemMessage from './SystemMessage'
-import ThreadStateChangeMessage from './ThreadStateChangeMessage'
 import ToolEvent from './ToolEvent'
 import HookMessage from './HookMessage'
 import TaskNotificationMessage from './TaskNotificationMessage'
@@ -85,11 +84,6 @@ const TimelineEvent = ({
             working_directory={working_directory}
           />
         )
-      // Legacy: pre-migration entries still use the retired `thread_state_change`
-      // type until `cli/migrate-timeline-to-5-types.mjs` runs on stored data.
-      case 'thread_state_change':
-        return <ThreadStateChangeMessage event={timeline_event} />
-      case 'tool_use':
       case 'tool_call':
       case 'tool_result':
         return (

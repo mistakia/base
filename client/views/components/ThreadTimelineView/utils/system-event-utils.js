@@ -39,7 +39,6 @@ export const is_displayable_system_event = (event) => {
     return true
   }
 
-  // Display state transitions and error events (migrated from dedicated types)
   if (event.system_type === 'state_change' || event.system_type === 'error') {
     return true
   }
@@ -90,7 +89,6 @@ export const get_system_event_display = (event) => {
     }
   }
 
-  // Migrated error events (from dedicated error type)
   if (event.system_type === 'error') {
     return {
       label: content || 'Error',
@@ -98,7 +96,6 @@ export const get_system_event_display = (event) => {
     }
   }
 
-  // Migrated state change events
   if (event.system_type === 'state_change') {
     return {
       label: content || 'State change',
