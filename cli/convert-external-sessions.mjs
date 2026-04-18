@@ -119,7 +119,9 @@ function output_quiet(result, argv) {
 
   if (result.results?.skipped?.length > 0) {
     result.results.skipped.forEach((thread) => {
-      console.log(`${thread.thread_id} (skipped)`)
+      const id = thread.thread_id || thread.session_id || thread.composer_id
+      const reason = thread.reason ? `: ${thread.reason}` : ''
+      console.log(`${id} (skipped${reason})`)
     })
   }
 
