@@ -764,7 +764,17 @@ const parse_session_file_incremental = async ({
   // Aggregates (counts, models, summaries) are derived from the full source
   // JSONL each parse -- the append-only source is the sole authority. One
   // extra streaming pass here; sync-state holds only the parse cursor.
-  const [full_parent_session] = await parse_claude_jsonl_file(session_file)
+  // If the file vanishes or becomes unreadable between the offset read and
+  // this full read, fall back to the caller's full-parse path via null.
+  let full_parent_session
+  try {
+    ;[full_parent_session] = await parse_claude_jsonl_file(session_file)
+  } catch (error) {
+    log(
+      `Incremental parse reset: full-parse failed for ${session_id}: ${error.message}`
+    )
+    return null
+  }
 
   const parent_session = {
     session_id,
