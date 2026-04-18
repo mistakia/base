@@ -29,7 +29,9 @@ describe('Tool Extraction Integration Tests', () => {
           tool_parameters: { param1: 'value1' },
           tool_call_id: 'call-456',
           timestamp: new Date('2024-01-01T12:00:00Z'),
-          provider_data: { test: true }
+          provider_data: { test: true },
+          block_index: 0,
+          line_number: 1
         })
 
         expect(entry.type).to.equal('tool_call')
@@ -42,11 +44,14 @@ describe('Tool Extraction Integration Tests', () => {
         expect(entry.ordering.parent_id).to.equal('parent-123')
       })
 
-      it('should handle missing optional parameters', () => {
+      it('uses provided required parameters', () => {
         const entry = create_tool_call_entry({
           parent_id: 'parent-123',
           tool_name: 'test_tool',
-          tool_call_id: 'call-456'
+          tool_call_id: 'call-456',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          block_index: 0,
+          line_number: 1
         })
 
         expect(entry.type).to.equal('tool_call')
@@ -71,7 +76,9 @@ describe('Tool Extraction Integration Tests', () => {
           tool_call_id: 'call-456',
           result: 'execution completed',
           timestamp: new Date('2024-01-01T12:01:00Z'),
-          provider_data: { test: true }
+          provider_data: { test: true },
+          block_index: 0,
+          line_number: 1
         })
 
         expect(entry.type).to.equal('tool_result')
@@ -83,7 +90,10 @@ describe('Tool Extraction Integration Tests', () => {
       it('should handle error results', () => {
         const entry = create_tool_result_entry({
           tool_call_id: 'call-456',
-          error: 'execution failed'
+          error: 'execution failed',
+          timestamp: '2024-01-01T12:01:00.000Z',
+          block_index: 0,
+          line_number: 1
         })
 
         expect(entry.content.error).to.equal('execution failed')
@@ -104,7 +114,10 @@ describe('Tool Extraction Integration Tests', () => {
         const entry = create_tool_call_entry({
           parent_id: 'parent-123',
           tool_name: 'test_tool',
-          tool_call_id: 'call-456'
+          tool_call_id: 'call-456',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          block_index: 0,
+          line_number: 1
         })
 
         const errors = validate_tool_call_entry(entry)
@@ -114,7 +127,10 @@ describe('Tool Extraction Integration Tests', () => {
       it('should validate correct tool result entry', () => {
         const entry = create_tool_result_entry({
           tool_call_id: 'call-456',
-          result: 'success'
+          result: 'success',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          block_index: 0,
+          line_number: 1
         })
 
         const errors = validate_tool_result_entry(entry)
@@ -133,24 +149,37 @@ describe('Tool Extraction Integration Tests', () => {
 
     describe('Tool interaction linking', () => {
       it('should find orphaned tool calls and results', () => {
+        const ts = '2024-01-01T12:00:00.000Z'
         const timeline_entries = [
           create_tool_call_entry({
             parent_id: 'parent-1',
             tool_name: 'tool1',
-            tool_call_id: 'call-1'
+            tool_call_id: 'call-1',
+            timestamp: ts,
+            block_index: 0,
+            line_number: 1
           }),
           create_tool_call_entry({
             parent_id: 'parent-2',
             tool_name: 'tool2',
-            tool_call_id: 'call-2'
+            tool_call_id: 'call-2',
+            timestamp: ts,
+            block_index: 0,
+            line_number: 2
           }),
           create_tool_result_entry({
             tool_call_id: 'call-1',
-            result: 'result1'
+            result: 'result1',
+            timestamp: ts,
+            block_index: 0,
+            line_number: 3
           }),
           create_tool_result_entry({
             tool_call_id: 'call-orphaned',
-            result: 'orphaned result'
+            result: 'orphaned result',
+            timestamp: ts,
+            block_index: 0,
+            line_number: 4
           })
         ].filter(Boolean) // Remove any null entries
 
@@ -169,12 +198,18 @@ describe('Tool Extraction Integration Tests', () => {
         const tool_call_entry = create_tool_call_entry({
           parent_id: 'parent-123',
           tool_name: 'link_test_tool',
-          tool_call_id: 'call-link-1'
+          tool_call_id: 'call-link-1',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          block_index: 0,
+          line_number: 1
         })
 
         const tool_result_entry = create_tool_result_entry({
           tool_call_id: 'call-link-1',
-          result: 'result payload string with more than 20 chars'
+          result: 'result payload string with more than 20 chars',
+          timestamp: '2024-01-01T12:00:00.000Z',
+          block_index: 0,
+          line_number: 2
         })
 
         const linked = link_tool_call_to_result(
@@ -562,6 +597,7 @@ describe('Tool Extraction Integration Tests', () => {
       const normalized_session = {
         session_id: 'test-session',
         session_provider: 'claude',
+        parse_mode: 'full',
         messages: [
           {
             id: 'msg-1',
@@ -637,6 +673,7 @@ describe('Tool Extraction Integration Tests', () => {
       const normalized_session = {
         session_id: 'test-session-orphaned',
         session_provider: 'test',
+        parse_mode: 'full',
         messages: [
           {
             id: 'tool-call-orphaned',
@@ -683,12 +720,18 @@ describe('Tool Extraction Integration Tests', () => {
       const tool_call = create_tool_call_entry({
         parent_id: 'parent-123',
         tool_name: 'test_tool',
-        tool_call_id: 'call-456'
+        tool_call_id: 'call-456',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        block_index: 0,
+        line_number: 1
       })
 
       const tool_result = create_tool_result_entry({
         tool_call_id: 'call-456',
-        result: 'success'
+        result: 'success',
+        timestamp: '2024-01-01T12:00:00.000Z',
+        block_index: 0,
+        line_number: 2
       })
 
       // Basic schema validation - entries should have required fields
