@@ -6,6 +6,7 @@
  */
 
 import fs from 'fs/promises'
+import fs_sync from 'fs'
 import path from 'path'
 import debug from 'debug'
 
@@ -15,7 +16,9 @@ import {
   initialize_sqlite_client,
   execute_sqlite_query,
   execute_sqlite_run,
-  checkpoint_sqlite
+  checkpoint_sqlite,
+  with_sqlite_reader,
+  is_sqlite_initialized
 } from './sqlite/sqlite-database-client.mjs'
 import {
   create_sqlite_schema,
@@ -54,7 +57,6 @@ import {
   CURRENT_SCHEMA_VERSION
 } from './sqlite/sqlite-metadata-operations.mjs'
 import sqlite_backend from './backends/sqlite/index.mjs'
-import fallbacks from './fallbacks.mjs'
 import { ENTITY_DIRECTORIES } from './sync/index-sync-filters.mjs'
 import {
   discover_repositories,
@@ -73,7 +75,6 @@ const log = debug('embedded-index')
 class EmbeddedIndexManager {
   constructor() {
     this.initialized = false
-    this.read_only = false
     this.sqlite_ready = false
     this.index_config = null
     this.sync_in_progress = false
@@ -88,9 +89,7 @@ class EmbeddedIndexManager {
     this._timeline_sync_cache = new Map()
     this._timeline_cache_max_size = 200
 
-    // Backend and fallback registration
     this._backend = sqlite_backend
-    this._fallbacks = fallbacks
 
     // Metrics collector (set externally via set_metrics)
     this._metrics = null
@@ -102,17 +101,6 @@ class EmbeddedIndexManager {
    */
   set_metrics(metrics) {
     this._metrics = metrics
-  }
-
-  /**
-   * Check if a write operation should be blocked in read-only mode.
-   * @param {string} operation_name - Name of the write operation for logging
-   * @returns {boolean} True if the operation is blocked
-   */
-  _is_write_blocked(operation_name) {
-    if (!this.read_only) return false
-    log('Write operation %s ignored in read-only mode', operation_name)
-    return true
   }
 
   /**
@@ -186,13 +174,12 @@ class EmbeddedIndexManager {
     return this.index_config
   }
 
-  async initialize({ read_only = false } = {}) {
+  async initialize() {
     if (this.initialized) {
       log('Index manager already initialized')
       return
     }
 
-    this.read_only = read_only
     const index_config = this.get_index_config()
 
     if (!index_config.enabled) {
@@ -200,7 +187,7 @@ class EmbeddedIndexManager {
       return
     }
 
-    log('Initializing embedded index manager (read_only: %s)', read_only)
+    log('Initializing embedded index manager')
 
     try {
       await this._initialize_sqlite(index_config)
@@ -213,28 +200,32 @@ class EmbeddedIndexManager {
 
     this.initialized = true
 
-    // Perform startup sync with fallback chain (write mode only)
-    if (this.sqlite_ready && !this.read_only) {
+    if (this.sqlite_ready) {
       await this._perform_startup_sync()
     }
 
-    log(
-      'Embedded index manager initialized (sqlite: %s, read_only: %s)',
-      this.sqlite_ready,
-      this.read_only
-    )
+    log('Embedded index manager initialized (sqlite: %s)', this.sqlite_ready)
   }
 
   async _initialize_sqlite(index_config) {
     await initialize_sqlite_client({
-      database_path: index_config.sqlite_path,
-      read_only: this.read_only
+      database_path: index_config.sqlite_path
     })
 
-    // Schema creation requires write access
-    if (!this.read_only) {
-      await create_sqlite_schema()
+    await create_sqlite_schema()
+  }
+
+  _with_reader(fn) {
+    // When a writer handle is already open in this process (index-sync-service
+    // and tests), reuse it directly -- opening a second handle against
+    // :memory: is impossible, and against a file-backed DB adds pointless
+    // overhead. The stale-read race this helper addresses only affects
+    // reader-only processes like base-api, where no module-level handle exists.
+    if (is_sqlite_initialized()) {
+      return fn()
     }
+    const { sqlite_path } = this.get_index_config()
+    return with_sqlite_reader({ database_path: sqlite_path }, fn)
   }
 
   /**
@@ -348,10 +339,6 @@ class EmbeddedIndexManager {
    * @returns {Promise<Object>} Resync result
    */
   async perform_resync() {
-    if (this._is_write_blocked('perform_resync')) {
-      return { success: false, error: 'Read-only mode' }
-    }
-
     if (!this.initialized) {
       log('Index manager not initialized, cannot resync')
       return { success: false, error: 'Not initialized' }
@@ -373,10 +360,6 @@ class EmbeddedIndexManager {
    * @returns {Promise<Object>} Sync result
    */
   async perform_sync({ mode }) {
-    if (this._is_write_blocked('perform_sync')) {
-      return { success: false, error: 'Read-only mode' }
-    }
-
     if (!this.initialized) {
       log('Index manager not initialized, cannot sync')
       return { success: false, error: 'Not initialized' }
@@ -407,10 +390,6 @@ class EmbeddedIndexManager {
    * Index is NOT available during this operation.
    */
   async reset_and_rebuild_index() {
-    if (this._is_write_blocked('reset_and_rebuild_index')) {
-      return
-    }
-
     const release_lock = await this._acquire_sync_lock()
     try {
       await this._reset_and_rebuild_index_internal()
@@ -633,10 +612,6 @@ class EmbeddedIndexManager {
   async sync_entity({ base_uri, entity_data, skip_ipc = false }) {
     const result = { success: true, sqlite_synced: false }
 
-    if (this._is_write_blocked('sync_entity')) {
-      return { success: false, sqlite_synced: false }
-    }
-
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity sync')
       return { success: false, sqlite_synced: false }
@@ -697,10 +672,6 @@ class EmbeddedIndexManager {
   }
 
   async remove_entity({ base_uri }) {
-    if (this._is_write_blocked('remove_entity')) {
-      return
-    }
-
     if (!this.initialized) {
       log('Index manager not initialized, skipping entity removal')
       return
@@ -734,10 +705,6 @@ class EmbeddedIndexManager {
    * @returns {{ success: boolean, sqlite_synced: boolean }}
    */
   async sync_thread({ thread_id, metadata }) {
-    if (this._is_write_blocked('sync_thread')) {
-      return { success: false, sqlite_synced: false }
-    }
-
     // Check if there's already a pending sync for this thread
     const pending = this._pending_thread_syncs.get(thread_id)
 
@@ -940,10 +907,6 @@ class EmbeddedIndexManager {
   }
 
   async remove_thread({ thread_id }) {
-    if (this._is_write_blocked('remove_thread')) {
-      return
-    }
-
     if (!this.initialized) {
       log('Index manager not initialized, skipping thread removal')
       return
@@ -973,161 +936,132 @@ class EmbeddedIndexManager {
     }
   }
 
-  // ---- Query delegation methods ----
+  // ---- Read methods (short-lived readonly handle per call) ----
 
-  /**
-   * Execute a backend query method with automatic fallback.
-   * Always tries the backend first (the database may be available even if
-   * the manager was not formally initialized). On failure, falls back to
-   * the filesystem fallback if one is registered.
-   * @param {string} method - Backend method name
-   * @param {Object} params - Parameters to pass
-   * @returns {Promise<*>} Query result
-   */
-  async _query_with_fallback(method, params) {
-    try {
-      return await this._backend[method](params)
-    } catch (error) {
-      log('Backend %s failed: %s', method, error.message)
-      if (this._fallbacks[method]) {
-        return this._fallbacks[method](params)
-      }
-      throw error
-    }
-  }
-
-  /**
-   * Execute a backend method that requires the index (no fallback).
-   * Throws if the backend is not ready.
-   * @param {string} method - Backend method name
-   * @param {Object} params - Parameters to pass
-   * @returns {Promise<*>} Result
-   */
-  async _query_index_only(method, params) {
-    if (!this.is_ready()) {
-      throw new Error(`Index not available for ${method}`)
-    }
-    return this._backend[method](params)
-  }
-
-  // Thread queries
   async query_threads(params) {
-    return this._query_with_fallback('query_threads', params)
+    return this._with_reader(() => this._backend.query_threads(params))
   }
 
   async count_threads(params) {
-    return this._query_with_fallback('count_threads', params)
+    return this._with_reader(() => this._backend.count_threads(params))
   }
 
-  // Task queries
   async query_tasks(params) {
-    return this._query_with_fallback('query_tasks', params)
+    return this._with_reader(() => this._backend.query_tasks(params))
   }
 
   async count_tasks(params) {
-    return this._query_with_fallback('count_tasks', params)
+    return this._with_reader(() => this._backend.count_tasks(params))
   }
 
-  // Physical item queries
   async query_physical_items(params) {
-    return this._query_with_fallback('query_physical_items', params)
+    return this._with_reader(() => this._backend.query_physical_items(params))
   }
 
   async count_physical_items(params) {
-    return this._query_with_fallback('count_physical_items', params)
+    return this._with_reader(() => this._backend.count_physical_items(params))
   }
 
-  // Entity queries (no filesystem fallback -- 503 on unavailability)
   async query_entities(params) {
-    return this._query_index_only('query_entities', params)
+    return this._with_reader(() => this._backend.query_entities(params))
   }
 
   async count_entities(params) {
-    return this._query_index_only('count_entities', params)
+    return this._with_reader(() => this._backend.count_entities(params))
   }
 
   async get_entity_by_uri(params) {
-    return this._query_index_only('get_entity_by_uri', params)
+    return this._with_reader(() => this._backend.get_entity_by_uri(params))
   }
 
   async get_entity_by_id(params) {
-    return this._query_index_only('get_entity_by_id', params)
+    return this._with_reader(() => this._backend.get_entity_by_id(params))
   }
 
-  // Relation queries (no fallback)
   async find_related_entities(params) {
-    return this._query_index_only('find_related_entities', params)
+    return this._with_reader(() => this._backend.find_related_entities(params))
   }
 
   async find_entities_relating_to(params) {
-    return this._query_index_only('find_entities_relating_to', params)
+    return this._with_reader(() =>
+      this._backend.find_entities_relating_to(params)
+    )
   }
 
   async find_threads_relating_to(params) {
-    return this._query_index_only('find_threads_relating_to', params)
+    return this._with_reader(() =>
+      this._backend.find_threads_relating_to(params)
+    )
   }
 
-  // Tag queries (no fallback)
   async query_tags(params) {
-    return this._query_index_only('query_tags', params)
+    return this._with_reader(() => this._backend.query_tags(params))
   }
 
   async query_tag_statistics(params) {
-    return this._query_index_only('query_tag_statistics', params)
+    return this._with_reader(() => this._backend.query_tag_statistics(params))
   }
 
-  // Activity queries (no fallback)
   async query_git_activity_daily(params) {
-    return this._query_index_only('query_git_activity_daily', params)
-  }
-
-  async upsert_git_activity_daily_batch(params) {
-    return this._query_index_only('upsert_git_activity_daily_batch', params)
+    return this._with_reader(() =>
+      this._backend.query_git_activity_daily(params)
+    )
   }
 
   async query_thread_activity_aggregated(params) {
-    return this._query_index_only('query_thread_activity_aggregated', params)
+    return this._with_reader(() =>
+      this._backend.query_thread_activity_aggregated(params)
+    )
   }
 
   async query_heatmap_daily(params) {
-    return this._query_index_only('query_heatmap_daily', params)
-  }
-
-  async upsert_heatmap_daily_batch(params) {
-    return this._query_index_only('upsert_heatmap_daily_batch', params)
-  }
-
-  async truncate_heatmap_daily() {
-    return this._query_index_only('truncate_heatmap_daily')
+    return this._with_reader(() => this._backend.query_heatmap_daily(params))
   }
 
   async get_heatmap_count() {
-    return this._query_index_only('get_heatmap_count')
+    return this._with_reader(() => this._backend.get_heatmap_count())
   }
 
   async query_entities_by_thread_activity(params) {
-    return this._query_index_only('query_entities_by_thread_activity', params)
+    return this._with_reader(() =>
+      this._backend.query_entities_by_thread_activity(params)
+    )
   }
 
   async query_tasks_for_activity(params) {
-    return this._query_with_fallback('query_tasks_for_activity', params)
-  }
-
-  // Embedding queries (no fallback)
-  async upsert_embeddings(params) {
-    return this._query_index_only('upsert_embeddings', params)
+    return this._with_reader(() =>
+      this._backend.query_tasks_for_activity(params)
+    )
   }
 
   async search_similar(params) {
-    return this._query_index_only('search_similar', params)
-  }
-
-  async delete_entity_embeddings(params) {
-    return this._query_index_only('delete_entity_embeddings', params)
+    return this._with_reader(() => this._backend.search_similar(params))
   }
 
   async get_embedding_hashes() {
-    return this._query_index_only('get_embedding_hashes')
+    return this._with_reader(() => this._backend.get_embedding_hashes())
+  }
+
+  // ---- Write methods (writer-path module-level handle) ----
+
+  async upsert_git_activity_daily_batch(params) {
+    return this._backend.upsert_git_activity_daily_batch(params)
+  }
+
+  async upsert_heatmap_daily_batch(params) {
+    return this._backend.upsert_heatmap_daily_batch(params)
+  }
+
+  async truncate_heatmap_daily() {
+    return this._backend.truncate_heatmap_daily()
+  }
+
+  async upsert_embeddings(params) {
+    return this._backend.upsert_embeddings(params)
+  }
+
+  async delete_entity_embeddings(params) {
+    return this._backend.delete_entity_embeddings(params)
   }
 
   get_index_status() {
@@ -1144,7 +1078,19 @@ class EmbeddedIndexManager {
   }
 
   is_ready() {
-    return this.initialized && this.sqlite_ready
+    if (this.initialized && this.sqlite_ready) return true
+    // Tests share a module-level handle via initialize_sqlite_client without
+    // going through the manager's initialize(); honor that state.
+    if (is_sqlite_initialized()) return true
+    // Reader-only processes (e.g., base-api) never initialize the manager.
+    // Treat the index as ready if the SQLite file exists at the configured
+    // path -- reads open short-lived readonly handles per operation.
+    try {
+      const { sqlite_path } = this.get_index_config()
+      return Boolean(sqlite_path) && fs_sync.existsSync(sqlite_path)
+    } catch {
+      return false
+    }
   }
 
   is_sqlite_ready() {
@@ -1152,6 +1098,8 @@ class EmbeddedIndexManager {
   }
 
   async shutdown() {
+    if (!this.initialized) return
+
     log('Shutting down embedded index manager')
 
     if (this.sqlite_ready) {
@@ -1164,7 +1112,6 @@ class EmbeddedIndexManager {
     }
 
     this.initialized = false
-    this.read_only = false
     this.sqlite_ready = false
     this._timeline_sync_cache.clear()
     log('Embedded index manager shut down')

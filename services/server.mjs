@@ -85,27 +85,6 @@ if (process.env.pm_id !== undefined) {
 const logger = debug('server')
 debug.enable(process.env.DEBUG || 'server,api')
 
-// Initialize embedded index (SQLite) BEFORE accepting connections.
-// This ensures thread list queries use SQLite instead of expensive filesystem
-// reads (which would read all timeline.jsonl files on first request).
-let embedded_index_ready = false
-
-try {
-  logger('Initializing embedded index before server start...')
-  await embedded_index_manager.initialize({ read_only: true })
-  const status = embedded_index_manager.get_index_status()
-  logger(`Embedded index initialized (sqlite: ${status.sqlite_ready})`)
-  embedded_index_ready = status.sqlite_ready
-
-  if (!status.sqlite_ready) {
-    logger(
-      'WARNING: SQLite not ready - queries will use slower filesystem fallback'
-    )
-  }
-} catch (error) {
-  logger(`Failed to initialize embedded index: ${error.message}`)
-  logger(error)
-}
 
 // Pre-warm git status cache BEFORE server starts accepting connections.
 // This eliminates 600ms+ cold start delay on first git status request.
@@ -278,16 +257,14 @@ try {
 
     // Attach thread sync forwarding hooks to the already-running thread watcher.
     // Thread changes are forwarded via IPC queue to the index-sync-service.
-    if (embedded_index_ready) {
-      try {
-        set_thread_watcher_hooks(thread_sync_forwarding_hooks)
-        logger('Thread sync forwarding hooks attached')
-      } catch (hook_error) {
-        logger(
-          `Failed to set thread sync forwarding hooks: ${hook_error.message}`
-        )
-        logger(hook_error)
-      }
+    try {
+      set_thread_watcher_hooks(thread_sync_forwarding_hooks)
+      logger('Thread sync forwarding hooks attached')
+    } catch (hook_error) {
+      logger(
+        `Failed to set thread sync forwarding hooks: ${hook_error.message}`
+      )
+      logger(hook_error)
     }
 
     // Start consolidated user-base watcher (replaces chokidar instances for
@@ -330,23 +307,21 @@ try {
 
     // Start entity change IPC watcher to receive cache invalidation
     // notifications from index-sync-service (replaces entity_index callbacks)
-    if (embedded_index_ready) {
-      try {
-        start_entity_change_watcher({
-          on_entity_change: ({ entries }) => {
-            logger(
-              'Entity change IPC: %d entries, invalidating cache',
-              entries.length
-            )
-            invalidate_tasks_cache()
-          }
-        })
-        logger('Entity change IPC watcher started')
-      } catch (ipc_error) {
-        logger(
-          `Failed to start entity change IPC watcher: ${ipc_error.message}`
-        )
-      }
+    try {
+      start_entity_change_watcher({
+        on_entity_change: ({ entries }) => {
+          logger(
+            'Entity change IPC: %d entries, invalidating cache',
+            entries.length
+          )
+          invalidate_tasks_cache()
+        }
+      })
+      logger('Entity change IPC watcher started')
+    } catch (ipc_error) {
+      logger(
+        `Failed to start entity change IPC watcher: ${ipc_error.message}`
+      )
     }
 
     logger('All watchers initialized')

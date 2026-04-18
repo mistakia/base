@@ -7,7 +7,6 @@
 import path from 'path'
 
 import config from '#config'
-import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   get_stats_database_connection,
   close_stats_pool,
@@ -91,11 +90,6 @@ async function load_extension_collectors() {
 
 async function handle_snapshot(argv) {
   try {
-    // Initialize DuckDB for collectors that need it
-    if (!embedded_index_manager.initialized) {
-      await embedded_index_manager.initialize({ read_only: true })
-    }
-
     const pool = await get_stats_database_connection({ config })
     const collector_list = argv.collectors
       ? argv.collectors.split(',').map((s) => s.trim())

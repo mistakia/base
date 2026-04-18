@@ -6,6 +6,8 @@ import create_thread from '#libs-server/threads/create-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { is_sqlite_initialized } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { upsert_thread_to_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
 
 const { THREAD_STATE } = thread_constants
 
@@ -80,6 +82,37 @@ export default async function create_test_thread({
         : entry
     )
     await write_timeline_jsonl({ timeline_path, entries: stamped })
+  }
+
+  // When a test initializes the SQLite module-level handle (via
+  // initialize_sqlite_client), mirror the thread row into SQLite so route
+  // handlers that query via embedded_index_manager observe the test thread.
+  // Tests that do not initialize SQLite are unaffected.
+  if (is_sqlite_initialized()) {
+    const now = new Date().toISOString()
+    try {
+      await upsert_thread_to_sqlite({
+        thread_data: {
+          thread_id: thread.thread_id,
+          title: thread.title || null,
+          short_description: null,
+          thread_state,
+          archived_at: archive_reason ? now : null,
+          archive_reason: archive_reason || null,
+          created_at: now,
+          updated_at: now,
+          user_public_key: user.user_public_key,
+          inference_provider,
+          primary_model: models?.[0] || null,
+          message_count: 0,
+          user_message_count: 0,
+          assistant_message_count: 0,
+          tool_call_count: 0
+        }
+      })
+    } catch {
+      // Test may not have created the sqlite schema; leave it to the test.
+    }
   }
 
   const cleanup = () => {

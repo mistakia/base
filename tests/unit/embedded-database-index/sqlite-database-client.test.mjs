@@ -10,7 +10,8 @@ import {
   execute_sqlite_query,
   execute_sqlite_run,
   close_sqlite_connection,
-  is_sqlite_initialized
+  is_sqlite_initialized,
+  with_sqlite_reader
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 describe('SQLite Database Client', () => {
@@ -50,14 +51,12 @@ describe('SQLite Database Client', () => {
         query:
           'CREATE TABLE IF NOT EXISTS test_table (id INTEGER, name VARCHAR)'
       })
-      // If no error thrown, test passes
     })
 
     it('should execute INSERT statements successfully', async () => {
       await execute_sqlite_run({
         query: "INSERT INTO test_table VALUES (1, 'test')"
       })
-      // If no error thrown, test passes
     })
   })
 
@@ -81,7 +80,6 @@ describe('SQLite Database Client', () => {
     })
 
     it('should handle complex queries', async () => {
-      // Insert additional test data
       await execute_sqlite_run({
         query: "INSERT INTO test_table VALUES (2, 'second'), (3, 'third')"
       })
@@ -104,6 +102,57 @@ describe('SQLite Database Client', () => {
       } catch (error) {
         expect(error).to.be.an('error')
       }
+    })
+  })
+
+  describe('with_sqlite_reader context scoping', () => {
+    let tmp_path
+
+    before(async () => {
+      const os = await import('node:os')
+      const path = await import('node:path')
+      const fs = await import('node:fs/promises')
+      const tmp_dir = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'sqlite-reader-unit-')
+      )
+      tmp_path = path.join(tmp_dir, 'reader.db')
+
+      // Seed a file-backed DB so a readonly handle can open it.
+      const { Database } = await import('bun:sqlite')
+      const seed = new Database(tmp_path)
+      seed.exec('PRAGMA journal_mode=WAL')
+      seed.exec('CREATE TABLE scope_test (id INTEGER, value TEXT)')
+      seed.prepare("INSERT INTO scope_test VALUES (1, 'scoped')").run()
+      seed.close()
+    })
+
+    it('prefers the scoped handle over the module-level handle', async () => {
+      // The module-level handle is the in-memory DB initialized in the outer
+      // before(). It does not have the scope_test table. If the scoped
+      // handle is honored, the query succeeds and returns 'scoped'.
+      const rows = await with_sqlite_reader(
+        { database_path: tmp_path },
+        async () => {
+          return execute_sqlite_query({
+            query: 'SELECT value FROM scope_test WHERE id = 1'
+          })
+        }
+      )
+      expect(rows).to.be.an('array')
+      expect(rows[0].value).to.equal('scoped')
+    })
+
+    it('closes the handle after the callback throws', async () => {
+      let caught
+      try {
+        await with_sqlite_reader({ database_path: tmp_path }, async () => {
+          throw new Error('scoped-reader-error')
+        })
+      } catch (error) {
+        caught = error
+      }
+      expect(caught).to.be.an('error')
+      expect(caught.message).to.equal('scoped-reader-error')
     })
   })
 })

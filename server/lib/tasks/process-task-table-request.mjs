@@ -3,12 +3,8 @@
  */
 
 import debug from 'debug'
-import { list_tasks_from_filesystem } from '#libs-server/task/filesystem/list-tasks-from-filesystem.mjs'
-import { process_generic_table_request } from '#libs-server/table-processing/process-table-request.mjs'
-import { TABLE_DATA_TYPES } from 'react-table/src/constants.mjs'
 import { check_permissions_batch } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
-import { TASK_PRIORITY_ORDER } from '#libs-shared/task-constants.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { apply_tag_redaction_to_tasks } from './tag-visibility.mjs'
 
@@ -55,26 +51,7 @@ function normalize_task_for_table_response(task, defaults) {
   }
 }
 
-// Configuration constants
 const CONFIG = {
-  // Column type mapping for task data
-  column_types: {
-    created_at: TABLE_DATA_TYPES.DATE,
-    updated_at: TABLE_DATA_TYPES.DATE,
-    start_by: TABLE_DATA_TYPES.DATE,
-    finish_by: TABLE_DATA_TYPES.DATE,
-    planned_start: TABLE_DATA_TYPES.DATE,
-    planned_finish: TABLE_DATA_TYPES.DATE,
-    started_at: TABLE_DATA_TYPES.DATE,
-    finished_at: TABLE_DATA_TYPES.DATE,
-    snooze_until: TABLE_DATA_TYPES.DATE,
-    estimated_total_duration: TABLE_DATA_TYPES.NUMBER,
-    estimated_preparation_duration: TABLE_DATA_TYPES.NUMBER,
-    estimated_execution_duration: TABLE_DATA_TYPES.NUMBER,
-    estimated_cleanup_duration: TABLE_DATA_TYPES.NUMBER,
-    actual_duration: TABLE_DATA_TYPES.NUMBER
-  },
-
   // Redaction configuration
   redaction: {
     preserved_keys: ['type', 'entity_type', 'status', 'priority', 'archived'],
@@ -100,156 +77,6 @@ const CONFIG = {
     default_sort: { column_id: 'created_at', desc: true },
     content_preview_length: 200
   }
-}
-
-/**
- * Extract task properties with fallback values
- */
-function extract_task_properties(entity_properties) {
-  const { defaults } = CONFIG
-
-  return {
-    // Basic properties
-    entity_id: entity_properties.entity_id,
-    title: entity_properties.title || defaults.title,
-    status: entity_properties.status || defaults.status,
-    priority: entity_properties.priority || defaults.priority,
-    description: entity_properties.description || defaults.description,
-    created_at: entity_properties.created_at,
-    updated_at: entity_properties.updated_at,
-    user_public_key: entity_properties.user_public_key,
-
-    // Timing properties
-    start_by: entity_properties.start_by,
-    finish_by: entity_properties.finish_by,
-    planned_start: entity_properties.planned_start,
-    planned_finish: entity_properties.planned_finish,
-    started_at: entity_properties.started_at,
-    finished_at: entity_properties.finished_at,
-    snooze_until: entity_properties.snooze_until,
-
-    // Duration properties
-    estimated_total_duration: entity_properties.estimated_total_duration,
-    estimated_preparation_duration:
-      entity_properties.estimated_preparation_duration,
-    estimated_execution_duration:
-      entity_properties.estimated_execution_duration,
-    estimated_cleanup_duration: entity_properties.estimated_cleanup_duration,
-    actual_duration: entity_properties.actual_duration,
-
-    // Metadata
-    assigned_to: entity_properties.assigned_to,
-    archived: entity_properties.archived || defaults.archived,
-    relations: entity_properties.relations || [],
-    tags: entity_properties.tags || []
-  }
-}
-
-/**
- * Extract file information and content preview
- */
-function extract_file_info(task_entity) {
-  const { absolute_path, file_info, entity_content } = task_entity
-  const { content_preview_length } = CONFIG.table
-
-  return {
-    absolute_path: absolute_path || file_info?.absolute_path,
-    base_uri: file_info?.base_uri,
-    content_preview: entity_content
-      ? entity_content.substring(0, content_preview_length) + '...'
-      : ''
-  }
-}
-
-/**
- * Process task entity for table display
- */
-function process_task_for_table(task_entity) {
-  const { entity_properties, is_redacted, can_write } = task_entity
-
-  const properties = extract_task_properties(entity_properties)
-  const file_info = extract_file_info(task_entity)
-
-  return {
-    ...properties,
-    ...file_info,
-    is_redacted: is_redacted || false,
-    can_write: can_write !== false
-  }
-}
-
-/**
- * Process all tasks with batch permission checking
- * Uses check_permissions_batch for efficiency and returns both read/write permissions
- */
-async function process_tasks_with_permissions(tasks, user_public_key) {
-  // Collect base_uris for batch permission checking
-  const resource_paths = tasks
-    .map((task) => task.entity_properties?.base_uri)
-    .filter(Boolean)
-
-  // Batch check permissions for all tasks at once
-  const permissions_by_path = await check_permissions_batch({
-    user_public_key,
-    resource_paths
-  })
-
-  // Apply permissions, redaction, and can_write flag to each task
-  return tasks.map((task) => {
-    const base_uri = task.entity_properties?.base_uri
-    const permission = base_uri ? permissions_by_path[base_uri] : null
-
-    if (permission?.read?.allowed) {
-      return {
-        ...task,
-        is_redacted: false,
-        can_write: permission?.write?.allowed || false
-      }
-    }
-
-    // User lacks read permission - redact the task
-    const redacted = redact_entity_object(task, {
-      preserve_keys: CONFIG.redaction.preserved_keys,
-      redact_keys: CONFIG.redaction.redacted_keys
-    })
-    return { ...redacted, can_write: false }
-  })
-}
-
-/**
- * Normalize table response format
- */
-function normalize_response(result, table_state) {
-  return {
-    rows: result.data,
-    total_row_count: result.total_count,
-    metadata: {
-      fetched: result.data.length,
-      has_more: result.has_more,
-      limit: result.limit,
-      offset: result.offset,
-      processing_time_ms: result.processing_time_ms,
-      table_state: table_state || {}
-    }
-  }
-}
-
-/**
- * Custom get_value function for task table that handles priority sorting
- * Maps priority strings to numeric order for proper sorting
- */
-function get_task_value_for_sorting(item, column_id) {
-  const value = item[column_id]
-
-  // Special handling for priority column to use semantic ordering
-  if (column_id === 'priority') {
-    // Map priority string to numeric order (higher number = higher priority)
-    // This ensures Critical > High > Medium > Low > None
-    return TASK_PRIORITY_ORDER[value] ?? 0
-  }
-
-  // For all other columns, return the value as-is
-  return value
 }
 
 /**
@@ -389,51 +216,6 @@ async function process_task_table_request_indexed({
 }
 
 /**
- * Process task table request using filesystem (fallback)
- */
-async function process_task_table_request_filesystem({
-  table_state,
-  requesting_user_public_key
-}) {
-  // Get tasks from filesystem
-  const all_tasks = await list_tasks_from_filesystem({
-    include_completed: true,
-    archived: false
-  })
-
-  // Apply task-level permissions and redaction
-  const redacted_tasks = await process_tasks_with_permissions(
-    all_tasks,
-    requesting_user_public_key
-  )
-
-  // Process with generic table processor
-  const result = await process_generic_table_request({
-    data: redacted_tasks,
-    table_state,
-    extract_metadata: process_task_for_table,
-    get_value: get_task_value_for_sorting,
-    default_sort: CONFIG.table.default_sort,
-    column_types: CONFIG.column_types
-  })
-
-  // Apply tag-level redaction to the processed result
-  const { tasks: final_rows, tag_visibility } =
-    await apply_tag_redaction_to_tasks({
-      tasks: result.data,
-      user_public_key: requesting_user_public_key
-    })
-
-  const response = normalize_response(
-    { ...result, data: final_rows },
-    table_state
-  )
-  response.tag_visibility = tag_visibility
-  response.metadata.source = 'filesystem'
-  return response
-}
-
-/**
  * Process table request with server-side filtering, sorting, and pagination
  */
 export async function process_task_table_request({
@@ -445,32 +227,10 @@ export async function process_task_table_request({
     requesting_user_public_key
   })
 
-  try {
-    // Try indexed query first (manager handles routine index-down via
-    // _query_with_fallback; this outer catch handles unexpected errors
-    // like database corruption or normalization failures)
-    try {
-      return await process_task_table_request_indexed({
-        table_state,
-        requesting_user_public_key
-      })
-    } catch (index_error) {
-      log(
-        'Indexed task query failed unexpectedly, falling back to filesystem table processing: %s',
-        index_error.message
-      )
-    }
-
-    // Fallback to filesystem-based table processing (full in-memory sort/filter)
-    log('Using filesystem for task table query')
-    return await process_task_table_request_filesystem({
-      table_state,
-      requesting_user_public_key
-    })
-  } catch (error) {
-    log(`Error processing task table request: ${error.message}`)
-    throw error
-  }
+  return process_task_table_request_indexed({
+    table_state,
+    requesting_user_public_key
+  })
 }
 
 export default process_task_table_request

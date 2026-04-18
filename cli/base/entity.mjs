@@ -857,7 +857,6 @@ async function handle_list(argv) {
       }
 
       const since_date = parse_time_period_date(period)
-      await embedded_index_manager.initialize()
 
       entities = await embedded_index_manager.query_entities_by_thread_activity(
         {
@@ -1071,8 +1070,7 @@ async function handle_threads(argv) {
     const threads = await query(
       () => fetch_entity_threads_from_api(argv),
       async () => {
-        await embedded_index_manager.initialize()
-        return embedded_index_manager.find_threads_relating_to({
+          return embedded_index_manager.find_threads_relating_to({
           base_uri: argv.base_uri,
           relation_type: argv['relation-type'] || null,
           limit: argv.limit,
@@ -1484,7 +1482,6 @@ async function handle_tree(argv) {
     }
 
     const fetch_relations_direct = async (uri) => {
-      await embedded_index_manager.initialize({ read_only: true })
       const forward = await embedded_index_manager.find_related_entities({
         base_uri: uri,
         limit: 100,
@@ -1569,8 +1566,7 @@ async function handle_tree(argv) {
 
     const fetch_project_entities = async (tag_uri) => {
       const direct_fallback = async () => {
-        await embedded_index_manager.initialize({ read_only: true })
-        const entities = await embedded_index_manager.query_entities({
+          const entities = await embedded_index_manager.query_entities({
           filters: [{ column_id: 'tags', operator: 'IN', value: [tag_uri] }],
           limit: 1000,
           offset: 0

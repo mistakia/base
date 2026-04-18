@@ -4,6 +4,7 @@
  * Manages connection to embedded SQLite database using bun:sqlite.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks'
 import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
@@ -12,12 +13,12 @@ const log = debug('embedded-index:sqlite')
 
 let sqlite_database = null
 let database_path = null
-let connection_read_only = false
+
+const reader_context = new AsyncLocalStorage()
 
 export async function initialize_sqlite_client({
   database_path: db_path,
-  in_memory = false,
-  read_only = false
+  in_memory = false
 }) {
   if (sqlite_database) {
     log('SQLite client already initialized')
@@ -25,12 +26,7 @@ export async function initialize_sqlite_client({
   }
 
   database_path = in_memory ? ':memory:' : db_path
-  connection_read_only = read_only
-  log(
-    'Initializing SQLite client at %s (read_only: %s)',
-    database_path,
-    read_only
-  )
+  log('Initializing SQLite client at %s', database_path)
 
   if (!in_memory && db_path) {
     const dir = path.dirname(db_path)
@@ -39,23 +35,37 @@ export async function initialize_sqlite_client({
 
   const { Database } = await import('bun:sqlite')
 
-  sqlite_database = read_only
-    ? new Database(database_path, { readonly: true })
-    : new Database(database_path)
+  sqlite_database = new Database(database_path)
 
-  if (!read_only) {
-    sqlite_database.exec('PRAGMA journal_mode=WAL')
-    sqlite_database.exec('PRAGMA synchronous=NORMAL')
-    sqlite_database.exec('PRAGMA busy_timeout=5000')
-  }
+  sqlite_database.exec('PRAGMA journal_mode=WAL')
+  sqlite_database.exec('PRAGMA synchronous=NORMAL')
+  sqlite_database.exec('PRAGMA busy_timeout=5000')
 
-  log('SQLite client initialized (read_only: %s)', read_only)
+  log('SQLite client initialized')
 }
 
-export async function execute_sqlite_query({ query, parameters = [] }) {
+export async function with_sqlite_reader({ database_path: db_path }, fn) {
+  const { Database } = await import('bun:sqlite')
+  const db = new Database(db_path, { readonly: true })
+  db.exec('PRAGMA busy_timeout=5000')
+  try {
+    return await reader_context.run({ db }, fn)
+  } finally {
+    db.close()
+  }
+}
+
+function get_active_database() {
+  const store = reader_context.getStore()
+  if (store?.db) return store.db
   if (!sqlite_database) {
     throw new Error('SQLite client not initialized')
   }
+  return sqlite_database
+}
+
+export async function execute_sqlite_query({ query, parameters = [] }) {
+  const db = get_active_database()
 
   log('Executing SQLite query: %s', query.substring(0, 100))
 
@@ -64,7 +74,7 @@ export async function execute_sqlite_query({ query, parameters = [] }) {
   )
 
   try {
-    const stmt = sqlite_database.prepare(query)
+    const stmt = db.prepare(query)
     const result = stmt.all(...sanitized_parameters)
     return result
   } catch (error) {
@@ -74,9 +84,7 @@ export async function execute_sqlite_query({ query, parameters = [] }) {
 }
 
 export async function execute_sqlite_run({ query, parameters = [] }) {
-  if (!sqlite_database) {
-    throw new Error('SQLite client not initialized')
-  }
+  const db = get_active_database()
 
   log('Executing SQLite run: %s', query.substring(0, 100))
 
@@ -85,7 +93,7 @@ export async function execute_sqlite_run({ query, parameters = [] }) {
   )
 
   try {
-    const stmt = sqlite_database.prepare(query)
+    const stmt = db.prepare(query)
     stmt.run(...sanitized_parameters)
   } catch (error) {
     log('SQLite run error: %s', error.message)
@@ -98,7 +106,6 @@ export async function close_sqlite_connection() {
     sqlite_database.close()
     sqlite_database = null
     database_path = null
-    connection_read_only = false
     log('SQLite connection closed')
   }
 }
@@ -109,10 +116,6 @@ export function get_sqlite_database_path() {
 
 export function is_sqlite_initialized() {
   return sqlite_database !== null
-}
-
-export function is_sqlite_read_only() {
-  return connection_read_only
 }
 
 /**
@@ -148,6 +151,5 @@ export const sqlite_database_client = {
   execute_run: execute_sqlite_run,
   close: close_sqlite_connection,
   get_database_path: get_sqlite_database_path,
-  is_read_only: is_sqlite_read_only,
   checkpoint: checkpoint_sqlite
 }

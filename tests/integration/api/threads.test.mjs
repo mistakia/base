@@ -10,6 +10,12 @@ import {
   authenticate_request,
   reset_all_tables
 } from '#tests/utils/index.mjs'
+import {
+  initialize_sqlite_client,
+  close_sqlite_connection
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
+import { execute_sqlite_run } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 describe('Threads API', () => {
   let test_user
@@ -17,14 +23,19 @@ describe('Threads API', () => {
 
   before(async () => {
     await reset_all_tables()
+    await close_sqlite_connection()
+    await initialize_sqlite_client({ in_memory: true })
+    await create_sqlite_schema()
     test_user = await create_test_user()
   })
 
   after(async () => {
+    await close_sqlite_connection()
     await reset_all_tables()
   })
 
   beforeEach(async () => {
+    await execute_sqlite_run({ query: 'DELETE FROM threads' })
     const test_repo = await create_temp_test_repo({
       prefix: 'threads-base-repo-',
       register_directories: true

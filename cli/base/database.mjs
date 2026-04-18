@@ -5,7 +5,6 @@
  * Agents can discover, query, and manage database data.
  */
 
-import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import {
   get_database_entity,
   list_database_entities
@@ -114,17 +113,9 @@ export const builder = (yargs) =>
     .demandCommand(1, 'You must specify a subcommand')
 
 /**
- * Ensure embedded index is initialized
+ * Reader-scoped reads are per-call; no initialization needed.
  */
-async function ensure_index() {
-  if (!embedded_index_manager.initialized) {
-    try {
-      await embedded_index_manager.initialize({ read_only: true })
-    } catch {
-      // SQLite may be locked by base-api; database commands fall back to filesystem
-    }
-  }
-}
+async function ensure_index() {}
 
 /**
  * Handle list command
