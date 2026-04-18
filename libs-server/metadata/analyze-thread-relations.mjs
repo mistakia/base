@@ -13,10 +13,15 @@ import {
   RELATION_ACCESSES,
   RELATION_MODIFIES,
   RELATION_CREATES,
-  RELATION_RELATES_TO
+  RELATION_RELATES_TO,
+  RELATION_CONTINUED_FROM
 } from '#libs-shared/entity-relations.mjs'
 import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
+import {
+  list_thread_ids,
+  get_thread_metadata
+} from '#libs-server/threads/list-threads.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import { extract_timeline_references_separated } from './extract-timeline-references.mjs'
 
@@ -46,6 +51,192 @@ export const RELATION_ANALYSIS_CONFIG = {
   get QUEUE_FILE_PATH() {
     return resolve_relation_queue_path()
   }
+}
+
+// ============================================================================
+// Continuation detection constants and helpers
+// ============================================================================
+
+const CONTINUATION_WINDOW_DAYS = 14
+const CONTINUATION_SHINGLE_K = 8
+const CONTINUATION_MIN_SHINGLES = 20
+const CONTINUATION_THRESHOLD = 0.3
+const CONTINUATION_SLOW_RUN_WARN_MS = 10000
+const CONTINUATION_FS_CONCURRENCY = 32
+const MS_PER_DAY = 86400000
+
+async function map_with_concurrency(items, concurrency, fn) {
+  const results = new Array(items.length)
+  let next = 0
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (true) {
+      const index = next++
+      if (index >= items.length) return
+      results[index] = await fn(items[index], index)
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+export function normalize_text(text) {
+  if (typeof text !== 'string' || text.length === 0) return ''
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+export function build_shingles({ text, k = CONTINUATION_SHINGLE_K }) {
+  const normalized = normalize_text(text)
+  if (!normalized) return new Set()
+  const tokens = normalized.split(' ').filter(Boolean)
+  const out = new Set()
+  for (let i = 0; i + k <= tokens.length; i++) {
+    out.add(tokens.slice(i, i + k).join(' '))
+  }
+  return out
+}
+
+export function extract_first_user_prompt({ timeline }) {
+  if (!Array.isArray(timeline)) return null
+  for (const event of timeline) {
+    if (
+      event &&
+      event.type === 'message' &&
+      event.role === 'user' &&
+      typeof event.content === 'string'
+    ) {
+      return event.content
+    }
+  }
+  return null
+}
+
+export function extract_assistant_text({ timeline }) {
+  if (!Array.isArray(timeline)) return ''
+  const parts = []
+  for (const event of timeline) {
+    if (
+      event &&
+      event.type === 'message' &&
+      event.role === 'assistant' &&
+      typeof event.content === 'string'
+    ) {
+      parts.push(event.content)
+    }
+  }
+  return parts.join('\n\n')
+}
+
+export function score_continuation_coverage({
+  candidate_shingles,
+  source_shingles
+}) {
+  if (!candidate_shingles || candidate_shingles.size === 0) return 0
+  if (!source_shingles || source_shingles.size === 0) return 0
+  let intersection = 0
+  for (const shingle of candidate_shingles) {
+    if (source_shingles.has(shingle)) intersection++
+  }
+  return intersection / candidate_shingles.size
+}
+
+/**
+ * Detect prior threads whose assistant text was pasted as this thread's first
+ * user prompt. Scans prior threads inside a bounded recent-updates window and
+ * measures candidate-side shingle coverage.
+ *
+ * @param {Object} params
+ * @param {string} params.thread_id - Analyzed thread ID (excluded from candidates)
+ * @param {Array} params.timeline - Timeline of the analyzed thread
+ * @param {string} params.analyzed_created_at - ISO timestamp of analyzed thread's creation
+ * @param {string} [params.user_base_directory] - Override for tests
+ * @returns {Promise<Array<{source_thread_id: string, coverage: number}>>}
+ */
+export async function detect_continuation_source({
+  thread_id,
+  timeline,
+  analyzed_created_at,
+  user_base_directory
+}) {
+  const prompt = extract_first_user_prompt({ timeline })
+  if (!prompt) return []
+
+  const candidate_shingles = build_shingles({ text: prompt })
+  if (candidate_shingles.size < CONTINUATION_MIN_SHINGLES) return []
+
+  const analyzed_created_ms = new Date(analyzed_created_at).getTime()
+  if (Number.isNaN(analyzed_created_ms)) return []
+
+  const all_ids = await list_thread_ids({ user_base_directory })
+  const candidate_ids = all_ids.filter((id) => id !== thread_id)
+
+  const window_candidates = []
+  await map_with_concurrency(
+    candidate_ids,
+    CONTINUATION_FS_CONCURRENCY,
+    async (candidate_id) => {
+      const metadata = await get_thread_metadata({
+        thread_id: candidate_id,
+        user_base_directory
+      })
+      if (!metadata) return
+
+      const source_created_ms = metadata.created_at
+        ? new Date(metadata.created_at).getTime()
+        : NaN
+      if (Number.isNaN(source_created_ms)) return
+      if (source_created_ms > analyzed_created_ms) return
+
+      const source_updated_ms = metadata.updated_at
+        ? new Date(metadata.updated_at).getTime()
+        : source_created_ms
+      const window_end_ms =
+        (Number.isNaN(source_updated_ms) ? source_created_ms : source_updated_ms) +
+        CONTINUATION_WINDOW_DAYS * MS_PER_DAY
+      if (window_end_ms < analyzed_created_ms) return
+
+      window_candidates.push(candidate_id)
+    }
+  )
+
+  const matches = []
+  await map_with_concurrency(
+    window_candidates,
+    CONTINUATION_FS_CONCURRENCY,
+    async (candidate_id) => {
+      let source_timeline
+      try {
+        const data = await read_thread_data({
+          thread_id: candidate_id,
+          user_base_directory
+        })
+        source_timeline = data.timeline
+      } catch (error) {
+        log(`Skipping candidate ${candidate_id}: ${error.message}`)
+        return
+      }
+
+      const source_shingles = build_shingles({
+        text: extract_assistant_text({ timeline: source_timeline })
+      })
+      const coverage = score_continuation_coverage({
+        candidate_shingles,
+        source_shingles
+      })
+      if (coverage >= CONTINUATION_THRESHOLD) {
+        matches.push({ source_thread_id: candidate_id, coverage })
+      }
+    }
+  )
+
+  matches.sort((a, b) => {
+    if (b.coverage !== a.coverage) return b.coverage - a.coverage
+    return a.source_thread_id < b.source_thread_id ? -1 : 1
+  })
+  return matches
 }
 
 /**
@@ -156,7 +347,9 @@ export async function analyze_thread_relations({
   log(`Analyzing relations for thread ${thread_id}`)
 
   // Load thread data
-  const { timeline } = await read_thread_data({ thread_id })
+  const { metadata: analyzed_metadata, timeline } = await read_thread_data({
+    thread_id
+  })
 
   // Extract all references from timeline, separated by type
   const { entity_references, file_references, directory_references } =
@@ -170,6 +363,31 @@ export async function analyze_thread_relations({
   const entity_relations = build_entity_relations({
     references: entity_references
   })
+
+  // Detect thread continuation source
+  const t_continuation_start = Date.now()
+  const continuation_matches = await detect_continuation_source({
+    thread_id,
+    timeline,
+    analyzed_created_at: analyzed_metadata.created_at
+  })
+  const continuation_ms = Date.now() - t_continuation_start
+  if (continuation_ms > CONTINUATION_SLOW_RUN_WARN_MS) {
+    log(
+      'continuation detection slow: %dms for %s',
+      continuation_ms,
+      thread_id
+    )
+  }
+
+  for (const match of continuation_matches) {
+    const base_uri = `user:thread/${match.source_thread_id}.md`
+    if (!is_valid_base_uri({ base_uri })) {
+      log(`Skipping invalid continuation base_uri: ${base_uri}`)
+      continue
+    }
+    entity_relations.push(`${RELATION_CONTINUED_FROM} [[${base_uri}]]`)
+  }
 
   // Extract file base_uris for storage
   const file_base_uris = file_references.map((ref) => ref.base_uri)
@@ -187,6 +405,7 @@ export async function analyze_thread_relations({
     relations: entity_relations,
     file_references: file_base_uris,
     directory_references: directory_base_uris,
+    continuation_matches,
     dry_run
   }
 

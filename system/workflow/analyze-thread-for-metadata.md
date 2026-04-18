@@ -134,6 +134,10 @@ Thread structure:
    - Track tokens used in analysis
    - Report if timeline was truncated
    - Suggest alternative strategy if needed
+
+## Relation Extraction
+
+Relation extraction (performed by `analyze-thread-relations`) emits entity, file, and directory references, and additionally detects thread continuation sources. When a thread's first user prompt overlaps substantially with a prior thread's assistant text (shingle-overlap matching bounded by a recent-thread time window), the analyzer writes a `continued_from [[user:thread/<source>.md]]` relation on the child. The inverse `continued_by` direction is derived on read from the same relation and is never written. If an expected continuation relation is missing, the likely causes are: the source thread falls outside the recent-thread window, the pasted prompt was edited enough to push coverage below the match threshold, or the candidate prompt is shorter than the minimum shingle floor.
      </instructions>
 
 <output_format>
