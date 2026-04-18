@@ -144,7 +144,7 @@ const all_defined_apps = [
   app('index-sync-service', 'server/services/index-sync-service.mjs', {
     max_memory_restart: '768M',
     exp_backoff_restart_delay: 1000,
-    env: { DEBUG: 'index-sync*,embedded-index*' }
+    env: { DEBUG: 'index-sync' }
   }),
   app(
     'metadata-queue-processor',

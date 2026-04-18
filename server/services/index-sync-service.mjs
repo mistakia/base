@@ -361,12 +361,8 @@ if (is_main_module) {
     debug.log = console.error.bind(console)
   }
 
-  if (process.env.DEBUG || is_pm2_execution) {
-    debug.enable(
-      process.env.DEBUG || 'index-sync*,embedded-index*,markdown:scanner*'
-    )
-  } else {
-    debug.enable('index-sync*,embedded-index*,markdown:scanner*')
+  if (process.env.DEBUG) {
+    debug.enable(process.env.DEBUG)
   }
 
   log('Starting index sync service as standalone service')
