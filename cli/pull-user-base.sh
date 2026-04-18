@@ -78,8 +78,19 @@ PULLED=false
 if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
     # Strictly behind - fast-forward
     echo "Local is behind remote, fast-forwarding..."
-    if ! git merge --ff-only "$REMOTE_BRANCH"; then
-        echo "Fast-forward merge failed" >&2
+    merge_stderr=$(git merge --ff-only "$REMOTE_BRANCH" 2>&1 1>/dev/null) || merge_failed=true
+    if [ "${merge_failed:-}" = true ]; then
+        echo "Fast-forward merge failed: $merge_stderr" >&2
+        if echo "$merge_stderr" | grep -q "untracked working tree files would be overwritten"; then
+            blockers=$(echo "$merge_stderr" | awk '/^\t/{print $1}' | head -5 | tr '\n' ' ')
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
+                --title "User-base sync blocked: untracked file collision" \
+                --message "pull-user-base: fast-forward blocked on $(hostname) by untracked file(s) colliding with incoming tracked path(s): ${blockers}. Remove or relocate, then sync resumes." || true
+        else
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
+                --title "User-base sync failed" \
+                --message "pull-user-base: fast-forward failed on $(hostname): $(echo "$merge_stderr" | head -1)" || true
+        fi
         exit 1
     fi
     echo "Pull completed successfully"
@@ -87,15 +98,27 @@ if [ "$LOCAL_COMMIT" = "$MERGE_BASE" ]; then
 else
     # Diverged - merge with submodule pointer auto-resolution
     echo "Local and remote have diverged, merging..."
-    if ! git merge "$REMOTE_BRANCH" 2>/dev/null; then
+    merge_stderr=$(git merge "$REMOTE_BRANCH" 2>&1 1>/dev/null) || merge_failed=true
+    if [ "${merge_failed:-}" = true ]; then
+        # Detect "untracked working tree files would be overwritten" before
+        # checking ls-files -u (this class of failure aborts merge before
+        # populating the unmerged index, so the existing path below misses it).
+        if echo "$merge_stderr" | grep -q "untracked working tree files would be overwritten"; then
+            blockers=$(echo "$merge_stderr" | awk '/^\t/{print $1}' | head -5 | tr '\n' ' ')
+            echo "Merge blocked by untracked file collision: ${blockers}" >&2
+            "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
+                --title "User-base sync blocked: untracked file collision" \
+                --message "pull-user-base: merge blocked on $(hostname) by untracked file(s) colliding with incoming tracked path(s): ${blockers}. Remove or relocate, then sync resumes." || true
+            exit 1
+        fi
         # Check for unmerged files
         unmerged=$(git ls-files -u 2>/dev/null)
         if [ -z "$unmerged" ]; then
             git merge --abort 2>/dev/null || true
-            echo "Merge failed (unknown error)" >&2
+            echo "Merge failed (unknown error): $merge_stderr" >&2
             "$USER_BASE_DIRECTORY/cli/monitoring/discord-notify.sh" --template service --severity error \
                 --title "User-base sync failed" \
-                --message "pull-user-base: merge failed on $(hostname), manual intervention required" || true
+                --message "pull-user-base: merge failed on $(hostname): $(echo "$merge_stderr" | head -1)" || true
             exit 1
         fi
         # Check if ALL conflicts are submodule pointers (mode 160000)
