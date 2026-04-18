@@ -19,12 +19,7 @@ import {
   find_subagent_session_files,
   extract_claude_session_metadata
 } from './parse-jsonl.mjs'
-import {
-  load_sync_state,
-  save_sync_state,
-  update_sync_counts,
-  build_initial_sync_state
-} from './sync-state.mjs'
+import { load_sync_state, save_sync_state } from './sync-state.mjs'
 import { normalize_claude_session } from './normalize-session.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 
@@ -691,6 +686,59 @@ export const group_sessions_with_agents = ({
 // ============================================================================
 
 /**
+ * Pure aggregation of Claude raw JSONL entries into full-session count and
+ * model totals. Derived fresh on every parse -- not persisted in sync-state.
+ */
+const compute_session_counts = (entries) => {
+  let user_message_count = 0
+  let assistant_message_count = 0
+  let tool_call_count = 0
+  let input_tokens = 0
+  let output_tokens = 0
+  let cache_creation_input_tokens = 0
+  let cache_read_input_tokens = 0
+  const model_set = new Set()
+
+  for (const entry of entries) {
+    if (entry.type === 'user') {
+      user_message_count++
+    } else if (entry.type === 'assistant') {
+      assistant_message_count++
+
+      if (entry.message?.usage) {
+        const u = entry.message.usage
+        input_tokens += u.input_tokens || 0
+        output_tokens += u.output_tokens || 0
+        cache_creation_input_tokens += u.cache_creation_input_tokens || 0
+        cache_read_input_tokens += u.cache_read_input_tokens || 0
+      }
+
+      if (entry.message?.model) {
+        model_set.add(entry.message.model)
+      }
+
+      if (Array.isArray(entry.message?.content)) {
+        for (const block of entry.message.content) {
+          if (block.type === 'tool_use') tool_call_count++
+        }
+      }
+    }
+  }
+
+  return {
+    message_count: user_message_count + assistant_message_count,
+    user_message_count,
+    assistant_message_count,
+    tool_call_count,
+    input_tokens,
+    output_tokens,
+    cache_creation_input_tokens,
+    cache_read_input_tokens,
+    models: Array.from(model_set)
+  }
+}
+
+/**
  * Parse a session file and its subagents incrementally using byte offsets.
  * Returns null if any file was replaced (caller should fall back to full parse).
  */
@@ -713,61 +761,30 @@ const parse_session_file_incremental = async ({
     return null
   }
 
-  // Build parent session object with all entries (new only for normalization,
-  // but precomputed_counts carry the full-session totals)
+  // Aggregates (counts, models, summaries) are derived from the full source
+  // JSONL each parse -- the append-only source is the sole authority. One
+  // extra streaming pass here; sync-state holds only the parse cursor.
+  const [full_parent_session] = await parse_claude_jsonl_file(session_file)
+
   const parent_session = {
     session_id,
     entries: parent_result.entries,
     metadata: {
       file_path: session_file,
-      file_summaries: [
-        ...(sync_state.summaries || []),
-        ...parent_result.summaries
-      ]
+      cwd: full_parent_session.metadata.cwd,
+      version: full_parent_session.metadata.version,
+      user_type: full_parent_session.metadata.user_type,
+      file_summaries: full_parent_session.metadata.file_summaries || []
     }
   }
 
-  // Extract metadata from new entries
-  parent_result.entries.forEach((entry) => {
-    if (!parent_session.metadata.cwd && entry.cwd) {
-      parent_session.metadata.cwd = entry.cwd
-    }
-    if (!parent_session.metadata.version && entry.version) {
-      parent_session.metadata.version = entry.version
-    }
-    if (!parent_session.metadata.user_type && entry.userType) {
-      parent_session.metadata.user_type = entry.userType
-    }
-  })
-
-  // Use working_directory from state if not found in new entries
   if (!parent_session.metadata.cwd && sync_state.working_directory) {
     parent_session.metadata.cwd = sync_state.working_directory
   }
 
-  // Update counts with new entries
-  const { counts: updated_counts, models: updated_models } =
-    update_sync_counts({
-      counts: sync_state.counts || {},
-      models: sync_state.models || [],
-      new_entries: parent_result.entries
-    })
-
-  // Attach precomputed data for downstream pipeline (single unified object)
-  parent_session.precomputed_counts = {
-    message_count:
-      (updated_counts.user_message_count || 0) +
-      (updated_counts.assistant_message_count || 0),
-    user_message_count: updated_counts.user_message_count || 0,
-    assistant_message_count: updated_counts.assistant_message_count || 0,
-    tool_call_count: updated_counts.tool_call_count || 0,
-    input_tokens: updated_counts.input_tokens || 0,
-    output_tokens: updated_counts.output_tokens || 0,
-    cache_creation_input_tokens:
-      updated_counts.cache_creation_input_tokens || 0,
-    cache_read_input_tokens: updated_counts.cache_read_input_tokens || 0,
-    models: updated_models
-  }
+  parent_session.precomputed_counts = compute_session_counts(
+    full_parent_session.entries
+  )
   parent_session.parse_mode = 'delta'
 
   const all_sessions = [parent_session]
@@ -835,7 +852,6 @@ const parse_session_file_incremental = async ({
     }
   }
 
-  // Save updated state (working_directory is top-level, not in counts)
   const working_directory =
     parent_session.metadata.cwd || sync_state.working_directory || null
   await save_sync_state({
@@ -843,12 +859,6 @@ const parse_session_file_incremental = async ({
     state: {
       byte_offset: parent_result.new_byte_offset,
       subagent_offsets: new_subagent_offsets,
-      counts: updated_counts,
-      models: updated_models,
-      summaries: [
-        ...(sync_state.summaries || []),
-        ...parent_result.summaries
-      ],
       working_directory
     }
   })
@@ -898,14 +908,22 @@ const build_and_save_initial_state = async ({
       }
     }
 
-    const initial_state = build_initial_sync_state({
-      entries: parent_session.entries,
-      byte_offset: file_stat.size,
-      subagent_offsets,
-      summaries: parent_session.metadata?.file_summaries || []
-    })
+    let working_directory = null
+    for (const entry of parent_session.entries) {
+      if (entry.cwd) {
+        working_directory = entry.cwd
+        break
+      }
+    }
 
-    await save_sync_state({ session_id, state: initial_state })
+    await save_sync_state({
+      session_id,
+      state: {
+        byte_offset: file_stat.size,
+        subagent_offsets,
+        working_directory
+      }
+    })
     log_debug(`Saved initial sync state for session ${session_id}`)
   } catch (error) {
     log(`Failed to save initial sync state: ${error.message}`)
