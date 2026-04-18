@@ -1,5 +1,27 @@
 import path from 'path'
+import os from 'os'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+
+// Roots considered safe for thread I/O under NODE_ENV=test. Includes the
+// platform tmpdir and the literal /tmp / /private/tmp paths (macOS symlink)
+// because config/config-test.json points user_base_directory at /tmp/...
+const TEST_SAFE_ROOTS = [
+  os.tmpdir(),
+  '/tmp',
+  '/private/tmp',
+  '/var/folders'
+]
+
+const is_under_safe_test_root = (absolute_path) => {
+  const resolved = path.resolve(absolute_path)
+  return TEST_SAFE_ROOTS.some((root) => {
+    const root_resolved = path.resolve(root)
+    return (
+      resolved === root_resolved ||
+      resolved.startsWith(root_resolved + path.sep)
+    )
+  })
+}
 
 // Thread state constants
 export const THREAD_STATE = {
@@ -48,6 +70,19 @@ export const THREAD_CONTEXT_DIR = 'thread'
  */
 export function get_thread_base_directory({ user_base_directory } = {}) {
   const base_directory = user_base_directory || get_user_base_directory()
+
+  // Hard guard: when NODE_ENV=test, thread/ must live under a tmp root.
+  // A test that tries to read or write a production thread/ directory is a
+  // bug -- it will leak synthetic fixtures into real history. Refuse loudly
+  // at the boundary instead of silently corrupting user data.
+  if (process.env.NODE_ENV === 'test' && !is_under_safe_test_root(base_directory)) {
+    throw new Error(
+      `Refusing to resolve thread base directory under NODE_ENV=test: ` +
+        `${base_directory} is not under a tmp root (${TEST_SAFE_ROOTS.join(', ')}). ` +
+        `Tests must point user_base_directory at a tmp sandbox (see tests/utils/setup-test-directories.mjs).`
+    )
+  }
+
   return path.join(base_directory, THREAD_CONTEXT_DIR)
 }
 
