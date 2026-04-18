@@ -17,14 +17,22 @@ export function deterministic_timeline_entry_id({
   timestamp,
   type,
   system_type = '',
-  sequence = '',
-  discriminator = ''
+  source_uuid = '',
+  discriminator = '',
+  // Accepted for backward compatibility during rollout; no longer part of key.
+  // eslint-disable-next-line no-unused-vars
+  sequence = ''
 }) {
   if (!thread_id) throw new Error('deterministic_timeline_entry_id: thread_id required')
   if (!timestamp) throw new Error('deterministic_timeline_entry_id: timestamp required')
   if (!type) throw new Error('deterministic_timeline_entry_id: type required')
+  if (!source_uuid && !discriminator) {
+    throw new Error(
+      'deterministic_timeline_entry_id: source_uuid or discriminator required'
+    )
+  }
 
   const ts = timestamp instanceof Date ? timestamp.toISOString() : String(timestamp)
-  const key = [thread_id, ts, type, system_type, sequence, discriminator].join('|')
+  const key = [thread_id, ts, type, system_type, source_uuid, discriminator].join('|')
   return uuidv5(key, TIMELINE_ENTRY_NAMESPACE)
 }

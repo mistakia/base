@@ -25,7 +25,8 @@ const create_mock_session_provider = () => ({
       session_id: raw_session.session_id,
       session_provider: 'claude',
       messages: raw_session.messages || [],
-      metadata: raw_session.metadata || {}
+      metadata: raw_session.metadata || {},
+      parse_mode: raw_session.parse_mode || 'full'
     }
   },
 

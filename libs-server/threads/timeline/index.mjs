@@ -10,3 +10,4 @@ export {
 } from './timeline-jsonl.mjs'
 
 export { sort_timeline_entries } from './sort-timeline-entries.mjs'
+export { acquire_thread_import_lock } from './thread-import-lock.mjs'

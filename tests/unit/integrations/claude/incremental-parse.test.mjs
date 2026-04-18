@@ -11,9 +11,7 @@ import {
 import {
   load_sync_state,
   save_sync_state,
-  clear_sync_state,
-  update_sync_counts,
-  build_initial_sync_state
+  clear_sync_state
 } from '#libs-server/integrations/claude/sync-state.mjs'
 
 describe('Incremental JSONL Parse', function () {
@@ -189,10 +187,8 @@ describe('Incremental JSONL Parse', function () {
     it('should round-trip save and load', async () => {
       const state = {
         byte_offset: 12345,
-        subagent_offsets: {},
-        counts: { message_count: 10, user_message_count: 5 },
-        models: ['claude-sonnet-4-6'],
-        summaries: []
+        subagent_offsets: { 'agent-abc.jsonl': { byte_offset: 100 } },
+        working_directory: '/tmp/project'
       }
 
       await save_sync_state({ session_id: test_session_id, state })
@@ -239,102 +235,6 @@ describe('Incremental JSONL Parse', function () {
       await clear_sync_state({ session_id: clear_id })
       const loaded = await load_sync_state({ session_id: clear_id })
       expect(loaded).to.be.null
-    })
-  })
-
-  describe('update_sync_counts', () => {
-    it('should correctly increment all counter types', () => {
-      const entries = [
-        make_entry('user', 1),
-        make_entry('assistant', 2),
-        make_entry('user', 3),
-        {
-          uuid: 'tool-1',
-          timestamp: '2026-01-01T00:00:04.000Z',
-          type: 'assistant',
-          message: {
-            content: [{ type: 'tool_use', id: 'tu-1', name: 'Read', input: {} }],
-            model: 'claude-opus-4-6',
-            usage: { input_tokens: 200, output_tokens: 100 }
-          }
-        }
-      ]
-
-      const result = update_sync_counts({
-        counts: {},
-        models: [],
-        new_entries: entries
-      })
-
-      expect(result.counts.user_message_count).to.equal(2)
-      expect(result.counts.assistant_message_count).to.equal(2)
-      expect(result.counts.input_tokens).to.equal(300) // 100 + 200
-      expect(result.counts.output_tokens).to.equal(150) // 50 + 100
-      expect(result.counts.cache_creation_input_tokens).to.equal(10)
-      expect(result.counts.cache_read_input_tokens).to.equal(5)
-      expect(result.counts.tool_call_count).to.equal(1)
-      expect(result.models).to.include('claude-sonnet-4-6')
-      expect(result.models).to.include('claude-opus-4-6')
-    })
-
-    it('should accumulate on top of existing counts', () => {
-      const existing_counts = {
-        message_count: 5,
-        user_message_count: 3,
-        assistant_message_count: 2,
-        input_tokens: 500,
-        output_tokens: 200,
-        tool_call_count: 1
-      }
-
-      const result = update_sync_counts({
-        counts: existing_counts,
-        models: ['claude-sonnet-4-6'],
-        new_entries: [make_entry('user', 10)]
-      })
-
-      expect(result.counts.message_count).to.equal(6)
-      expect(result.counts.user_message_count).to.equal(4)
-      expect(result.counts.assistant_message_count).to.equal(2)
-      expect(result.counts.input_tokens).to.equal(500)
-      expect(result.counts.tool_call_count).to.equal(1)
-    })
-
-    it('should track timestamps', () => {
-      const result = update_sync_counts({
-        counts: {},
-        models: [],
-        new_entries: [make_entry('user', 1), make_entry('assistant', 5)]
-      })
-
-      expect(result.counts.first_timestamp).to.equal(
-        '2026-01-01T00:00:01.000Z'
-      )
-      expect(result.counts.last_timestamp).to.equal(
-        '2026-01-01T00:00:05.000Z'
-      )
-    })
-  })
-
-  describe('build_initial_sync_state', () => {
-    it('should build state from entries and offset', () => {
-      const entries = [make_entry('user', 1), make_entry('assistant', 2)]
-
-      const state = build_initial_sync_state({
-        entries,
-        byte_offset: 500,
-        subagent_offsets: { 'agent-abc.jsonl': { byte_offset: 200 } },
-        summaries: ['Summary 1']
-      })
-
-      expect(state.byte_offset).to.equal(500)
-      expect(state.subagent_offsets).to.deep.equal({
-        'agent-abc.jsonl': { byte_offset: 200 }
-      })
-      expect(state.counts.user_message_count).to.equal(1)
-      expect(state.counts.assistant_message_count).to.equal(1)
-      expect(state.models).to.include('claude-sonnet-4-6')
-      expect(state.summaries).to.deep.equal(['Summary 1'])
     })
   })
 

@@ -379,11 +379,12 @@ describe('Claude Session Thinking Block Extraction', () => {
       // Should have 4 entries: 2 main messages + 2 thinking entries
       expect(result.messages).to.have.length(4)
 
-      // Verify sequence numbers are in correct order
+      // Composite source-intrinsic sequence = line_number * 10000 + block_offset.
+      // Main message entries use block 0; sub-entries (thinking) use block 1+.
       const sequences = result.messages
         .map((m) => m.ordering.sequence)
         .sort((a, b) => a - b)
-      expect(sequences).to.deep.equal([0, 1, 2, 3])
+      expect(sequences).to.deep.equal([10000, 10001, 20000, 20001])
 
       // Verify thinking entries have correct parent relationships
       const thinking1 = result.messages.find((m) => m.id === 'msg1-thinking-0')

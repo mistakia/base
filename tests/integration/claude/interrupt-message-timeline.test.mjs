@@ -61,6 +61,7 @@ describe('Claude Interrupt Message Timeline Integration', () => {
 
     // Normalize the session
     const normalized_session = normalize_claude_session(claude_session)
+    normalized_session.parse_mode = 'full'
 
     // Verify normalization
     expect(normalized_session.messages).to.have.length(3)
@@ -116,13 +117,11 @@ describe('Claude Interrupt Message Timeline Integration', () => {
     // Verify timeline entry conforms to schema structure
     expect(interrupt_timeline_entry).to.have.property('id')
     expect(interrupt_timeline_entry).to.have.property('timestamp')
-    expect(interrupt_timeline_entry).to.have.property(
-      'session_provider',
-      'claude'
-    )
+    expect(interrupt_timeline_entry).to.have.property('provider', 'claude')
     expect(interrupt_timeline_entry).to.have.property('ordering')
     expect(interrupt_timeline_entry.ordering).to.have.property('sequence')
-    expect(interrupt_timeline_entry.ordering.sequence).to.equal(1)
+    // Composite sequence: line_number * 10000 for main-message entries.
+    expect(interrupt_timeline_entry.ordering.sequence).to.equal(2 * 10000)
 
     // Clean up
     temp_dir_obj.cleanup()
@@ -183,6 +182,7 @@ describe('Claude Interrupt Message Timeline Integration', () => {
     }
 
     const normalized_session = normalize_claude_session(claude_session)
+    normalized_session.parse_mode = 'full'
     const thread_info = { thread_id: 'mixed-test', thread_dir }
 
     const timeline_result = await build_timeline_from_session(
@@ -198,9 +198,9 @@ describe('Claude Interrupt Message Timeline Integration', () => {
     // Verify ordering is maintained
     expect(timeline_entries).to.have.length(5)
 
-    // Check sequence ordering
+    // Composite sequence: line_number * 10000 for main-message entries.
     timeline_entries.forEach((entry, index) => {
-      expect(entry.ordering.sequence).to.equal(index)
+      expect(entry.ordering.sequence).to.equal((index + 1) * 10000)
     })
 
     // Check that interrupts are properly classified as system messages

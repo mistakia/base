@@ -201,7 +201,8 @@ function traverseConversationTree(mapping, node_id, messages, processed) {
       // Extract tool interactions as separate timeline entries
       const tool_entries = extractToolInteractionsFromMessage(
         node.message,
-        node_id
+        node_id,
+        messages.length - 1
       )
       tool_entries.forEach((tool_entry) => {
         if (tool_entry) {
@@ -222,7 +223,7 @@ function traverseConversationTree(mapping, node_id, messages, processed) {
 /**
  * Extract tool interactions as separate timeline entries
  */
-function extractToolInteractionsFromMessage(message, node_id) {
+function extractToolInteractionsFromMessage(message, node_id, msg_index = 0) {
   const tool_entries = []
   const content_type = message.content?.content_type
 
@@ -244,7 +245,10 @@ function extractToolInteractionsFromMessage(message, node_id) {
             channel: message.channel,
             weight: message.weight
           }
-        }
+        },
+        block_index: 0,
+        line_number: msg_index,
+        source_uuid: message.id || node_id || ''
       })
 
       if (tool_call_entry) {
@@ -272,7 +276,10 @@ function extractToolInteractionsFromMessage(message, node_id) {
             channel: message.channel,
             weight: message.weight
           }
-        }
+        },
+        block_index: 0,
+        line_number: msg_index,
+        source_uuid: message.id || node_id || ''
       })
 
       if (tool_result_entry) {

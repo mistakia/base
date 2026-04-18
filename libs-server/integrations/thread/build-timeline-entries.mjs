@@ -1,7 +1,5 @@
 import debug from 'debug'
 import path from 'path'
-import crypto from 'crypto'
-import { createReadStream } from 'fs'
 import fs from 'fs/promises'
 
 import {
@@ -10,11 +8,13 @@ import {
   link_tool_call_to_result
 } from '#libs-server/integrations/shared/tool-extraction-utils.mjs'
 import {
-  write_timeline_jsonl,
+  append_timeline_entries,
   sort_timeline_entries
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
+
+const EPOCH_ISO = '1970-01-01T00:00:00.000Z'
 
 const log = debug('integrations:thread:build-timeline-entries')
 const log_debug = debug('integrations:thread:build-timeline-entries:debug')
@@ -61,9 +61,6 @@ export const build_timeline_from_session = async (
       }
     }
 
-    // Always rebuild the timeline from normalized_session (the full source).
-    // The previous merge path cached derived data and dropped late-session
-    // entries, so every downstream consumer must recompute from upstream.
     const timeline_path = path.join(thread_info.thread_dir, 'timeline.jsonl')
     const final_timeline = timeline_entries
 
@@ -73,47 +70,43 @@ export const build_timeline_from_session = async (
     // Validate and report tool interaction quality
     const tool_validation = validate_tool_interactions(final_timeline)
 
-    // Check if timeline actually changed before writing using hash comparison
-    // to avoid allocating two massive JSON strings in memory
-    const hash_start = Date.now()
-    const existing_hash = await hash_file_streaming(timeline_path)
-    const new_hash = hash_timeline_entries(final_timeline)
-    const timeline_changed = existing_hash !== new_hash
-    const hash_ms = Date.now() - hash_start
+    const parse_mode = normalized_session.parse_mode
+    if (parse_mode !== 'full' && parse_mode !== 'delta') {
+      throw new Error(
+        `build_timeline_from_session: normalized_session.parse_mode must be 'full' or 'delta', got ${parse_mode}`
+      )
+    }
 
-    if (timeline_changed) {
-      // Write timeline to file only if it changed (using JSONL format)
-      const write_start = Date.now()
-      await write_timeline_jsonl({
+    const write_start = Date.now()
+    let wrote = false
+    if (parse_mode === 'full') {
+      await fs.writeFile(timeline_path, '')
+      if (final_timeline.length > 0) {
+        await append_timeline_entries({
+          timeline_path,
+          entries: final_timeline
+        })
+      }
+      wrote = true
+    } else if (final_timeline.length > 0) {
+      await append_timeline_entries({
         timeline_path,
         entries: final_timeline
       })
-      const write_ms = Date.now() - write_start
-      log(
-        `Created/updated timeline with ${final_timeline.length} entries at ${timeline_path}`
-      )
-      log_perf(
-        'build_timeline session=%s timeline_changed=true entries=%d merge_ms=%d hash_ms=%d write_ms=%d total_ms=%d',
-        normalized_session.session_id,
-        final_timeline.length,
-        hash_start - timeline_start,
-        hash_ms,
-        write_ms,
-        Date.now() - timeline_start
-      )
-    } else {
-      log(
-        `Timeline unchanged, skipping write for ${timeline_path} (${final_timeline.length} entries)`
-      )
-      log_perf(
-        'build_timeline session=%s timeline_changed=false entries=%d merge_ms=%d hash_ms=%d total_ms=%d',
-        normalized_session.session_id,
-        final_timeline.length,
-        hash_start - timeline_start,
-        hash_ms,
-        Date.now() - timeline_start
-      )
+      wrote = true
     }
+    const write_ms = Date.now() - write_start
+    log(
+      `Timeline write (parse_mode=${parse_mode}) with ${final_timeline.length} entries at ${timeline_path}`
+    )
+    log_perf(
+      'build_timeline session=%s parse_mode=%s entries=%d write_ms=%d total_ms=%d',
+      normalized_session.session_id,
+      parse_mode,
+      final_timeline.length,
+      write_ms,
+      Date.now() - timeline_start
+    )
 
     // Log summary of unsupported items found during timeline conversion
     if (TIMELINE_UNSUPPORTED.message_types.size > 0) {
@@ -147,7 +140,7 @@ export const build_timeline_from_session = async (
     return {
       timeline_path,
       entry_count: final_timeline.length,
-      timeline_modified: timeline_changed,
+      timeline_modified: wrote,
       tool_validation,
       unsupported_items: {
         message_types: Array.from(TIMELINE_UNSUPPORTED.message_types),
@@ -197,23 +190,24 @@ const convert_message_to_timeline_entry = ({
     }
   })
 
-  // Normalize timestamp to ISO string regardless of input type
+  // Normalize timestamp to ISO string. Entries without a valid timestamp
+  // (e.g. file-history-snapshot) get EPOCH_ISO so id/timestamp remain
+  // deterministic across re-imports.
   let iso_timestamp
   const ts = message.timestamp
   if (ts instanceof Date && !isNaN(ts.getTime())) {
     iso_timestamp = ts.toISOString()
   } else if (typeof ts === 'string' || typeof ts === 'number') {
     const d = new Date(ts)
-    iso_timestamp = isNaN(d.getTime())
-      ? new Date().toISOString()
-      : d.toISOString()
+    iso_timestamp = isNaN(d.getTime()) ? EPOCH_ISO : d.toISOString()
   } else {
-    iso_timestamp = new Date().toISOString()
+    iso_timestamp = EPOCH_ISO
   }
 
   // Deterministic id fallback covers normalized messages whose upstream
-  // source provided no id. Same input yields same id, so re-importing a
-  // session produces a byte-identical timeline.jsonl.
+  // source provided no id. Keyed on source_uuid so the id is stable across
+  // full/delta re-imports of the same source bytes.
+  const source_uuid = message.ordering?.source_uuid || ''
   const id =
     message.id ||
     deterministic_timeline_entry_id({
@@ -221,18 +215,24 @@ const convert_message_to_timeline_entry = ({
       timestamp: iso_timestamp,
       type: message.type || 'message',
       system_type: message.system_type || message.role || '',
-      sequence: sequence_index
+      source_uuid,
+      // Providers that have not yet plumbed source_uuid (Cursor/ChatGPT
+      // message-level ids are migrated in a sibling task) fall back to
+      // sequence_index as a non-empty discriminator so the id stays
+      // deterministic per-position within a single session import.
+      discriminator: source_uuid ? '' : String(sequence_index)
     })
+
+  const ordering = message.ordering
+    ? { ...message.ordering }
+    : { sequence: sequence_index, parent_id: message.parent_id || null }
 
   const base_entry = {
     id,
     timestamp: iso_timestamp,
     provider: session_provider,
     provider_data: message.provider_data || {},
-    ordering: {
-      sequence: sequence_index,
-      parent_id: message.parent_id || null
-    },
+    ordering,
     schema_version: TIMELINE_SCHEMA_VERSION
   }
 
@@ -477,43 +477,6 @@ const format_message_content = (content) => {
   }
 
   return JSON.stringify(content, null, 2)
-}
-
-/**
- * Hash a file by streaming raw bytes through SHA-256.
- * Returns null if the file does not exist.
- */
-const hash_file_streaming = async (file_path) => {
-  try {
-    await fs.access(file_path)
-  } catch {
-    return null
-  }
-
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash('sha256')
-    const stream = createReadStream(file_path)
-    stream.on('data', (chunk) => hash.update(chunk))
-    stream.on('end', () => resolve(hash.digest('hex')))
-    stream.on('error', reject)
-  })
-}
-
-/**
- * Hash timeline entries incrementally without building one massive string.
- * Produces the same hash as hashing the JSONL file that write_timeline_jsonl
- * would produce (JSON.stringify(entry) + '\n' per entry).
- *
- * Note: relies on JSON.stringify producing deterministic key order for
- * same-shaped objects (guaranteed in V8). A mismatch only causes a harmless
- * re-write.
- */
-const hash_timeline_entries = (entries) => {
-  const hash = crypto.createHash('sha256')
-  for (const entry of entries) {
-    hash.update(JSON.stringify(entry) + '\n')
-  }
-  return hash.digest('hex')
 }
 
 /**
