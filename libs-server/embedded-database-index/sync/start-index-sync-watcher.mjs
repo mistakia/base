@@ -109,9 +109,15 @@ export const thread_sync_forwarding_hooks = {
 export function start_index_sync_watcher({
   on_task_change,
   on_entity_change,
-  on_entity_delete
+  on_entity_delete,
+  metrics
 } = {}) {
   log('Starting index sync watcher')
+
+  const record_failure = (counter_name, message) => {
+    if (metrics) metrics.increment(counter_name)
+    console.warn('[watcher-failure] %s', message)
+  }
 
   start_index_file_watcher({
     // Generic entity change handler for all entity types
@@ -136,6 +142,10 @@ export function start_index_sync_watcher({
 
         if (!result.success) {
           log('Failed to read entity %s: %s', file_path, result.error)
+          record_failure(
+            'watcher_entity_read_failed',
+            `entity_read base_uri=${base_uri} path=${file_path} reason=${result.error}`
+          )
           return
         }
 
@@ -149,6 +159,10 @@ export function start_index_sync_watcher({
             entity_type,
             base_uri
           )
+          record_failure(
+            'watcher_entity_sync_failed',
+            `entity_sync type=${entity_type} base_uri=${base_uri} reason=${sync_result.error || 'unknown'}`
+          )
         } else {
           log('Synced entity (%s): %s', entity_type, base_uri)
         }
@@ -158,6 +172,10 @@ export function start_index_sync_watcher({
         }
       } catch (error) {
         log('Error handling entity change %s: %s', file_path, error.message)
+        record_failure(
+          'watcher_entity_sync_failed',
+          `entity_change path=${file_path} reason=${error.message}`
+        )
       }
     },
 
@@ -185,6 +203,10 @@ export function start_index_sync_watcher({
         }
       } catch (error) {
         log('Error handling entity delete %s: %s', file_path, error.message)
+        record_failure(
+          'watcher_entity_delete_failed',
+          `entity_delete path=${file_path} reason=${error.message}`
+        )
       }
     }
   })

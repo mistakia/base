@@ -29,6 +29,12 @@ export async function get_index_metadata({ key }) {
 }
 
 export async function set_index_metadata({ key, value }) {
+  if (value === null || value === undefined) {
+    throw new TypeError(
+      `set_index_metadata: value must be a non-null string (key=${key})`
+    )
+  }
+
   log('Setting metadata for key: %s', key)
 
   const updated_at = new Date().toISOString()

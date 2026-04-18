@@ -178,6 +178,7 @@ export const start_index_sync_service = async () => {
   if (index_config.file_watcher_enabled) {
     try {
       start_index_sync_watcher({
+        metrics,
         on_entity_change: (file_path) => {
           handle_embedding_file_change(file_path)
         },
@@ -254,14 +255,49 @@ export const start_index_sync_service = async () => {
             'Skipping thread sync %s: no metadata found after retry',
             thread_id
           )
+          if (metrics) metrics.increment('watcher_thread_sync_failed')
+          console.warn(
+            '[watcher-failure] thread_sync thread_id=%s reason=no_metadata',
+            thread_id
+          )
           return
         }
-        await embedded_index_manager.sync_thread({ thread_id, metadata })
-        log('Synced forwarded thread: %s', thread_id)
+        try {
+          const result = await embedded_index_manager.sync_thread({
+            thread_id,
+            metadata
+          })
+          if (result && result.success === false) {
+            if (metrics) metrics.increment('watcher_thread_sync_failed')
+            console.warn(
+              '[watcher-failure] thread_sync thread_id=%s reason=%s',
+              thread_id,
+              result.error || 'unknown'
+            )
+            return
+          }
+          log('Synced forwarded thread: %s', thread_id)
+        } catch (error) {
+          if (metrics) metrics.increment('watcher_thread_sync_failed')
+          console.warn(
+            '[watcher-failure] thread_sync thread_id=%s reason=%s',
+            thread_id,
+            error.message
+          )
+        }
       },
       on_thread_delete: async ({ thread_id }) => {
-        await embedded_index_manager.remove_thread({ thread_id })
-        log('Removed forwarded thread: %s', thread_id)
+        try {
+          await embedded_index_manager.remove_thread({ thread_id })
+          log('Removed forwarded thread: %s', thread_id)
+        } catch (error) {
+          if (metrics) metrics.increment('watcher_thread_delete_failed')
+          console.warn(
+            '[watcher-failure] thread_delete thread_id=%s reason=%s',
+            thread_id,
+            error.message
+          )
+        }
       }
     })
     log('Thread sync request watcher started')
