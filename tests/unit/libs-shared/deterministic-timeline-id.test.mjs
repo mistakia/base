@@ -8,7 +8,7 @@ describe('deterministic_timeline_entry_id', () => {
     timestamp: '2026-04-17T05:00:00.000Z',
     type: 'system',
     system_type: 'status',
-    sequence: 0
+    source_uuid: 'src-uuid-1'
   }
 
   it('returns a uuid v5 string', () => {
@@ -41,9 +41,9 @@ describe('deterministic_timeline_entry_id', () => {
     expect(a).to.not.equal(b)
   })
 
-  it('produces distinct ids for different sequence', () => {
+  it('produces distinct ids for different source_uuid', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, sequence: 1 })
+    const b = deterministic_timeline_entry_id({ ...base, source_uuid: 'src-uuid-2' })
     expect(a).to.not.equal(b)
   })
 
@@ -54,9 +54,21 @@ describe('deterministic_timeline_entry_id', () => {
   })
 
   it('uses the discriminator to disambiguate when other fields collide', () => {
-    const a = deterministic_timeline_entry_id({ ...base, discriminator: 'a' })
-    const b = deterministic_timeline_entry_id({ ...base, discriminator: 'b' })
+    const a = deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: 'a' })
+    const b = deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: 'b' })
     expect(a).to.not.equal(b)
+  })
+
+  it('passing sequence does not alter the id (legacy no-op)', () => {
+    const a = deterministic_timeline_entry_id(base)
+    const b = deterministic_timeline_entry_id({ ...base, sequence: 42 })
+    expect(a).to.equal(b)
+  })
+
+  it('throws when both source_uuid and discriminator are empty', () => {
+    expect(() =>
+      deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: '' })
+    ).to.throw(/source_uuid or discriminator/)
   })
 
   it('throws when thread_id missing', () => {

@@ -18,6 +18,7 @@ import {
   generate_default_thread_title_from_prompt
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
+import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
@@ -217,7 +218,8 @@ const save_raw_session_data = async ({
       await save_claude_raw_data({
         raw_data_dir,
         raw_data: raw_session_data,
-        session_id
+        session_id,
+        parse_mode: normalized_session.parse_mode
       })
       break
     case 'cursor':
@@ -243,13 +245,25 @@ const save_raw_session_data = async ({
   // that is never read back by any code. Bulk session data is synced via rsync.
 }
 
-const save_claude_raw_data = async ({ raw_data_dir, raw_data, session_id }) => {
+const save_claude_raw_data = async ({
+  raw_data_dir,
+  raw_data,
+  session_id,
+  parse_mode
+}) => {
+  if (parse_mode !== 'full' && parse_mode !== 'delta') {
+    throw new Error(
+      `save_claude_raw_data: parse_mode must be 'full' or 'delta', got ${parse_mode}`
+    )
+  }
+
   // Save original JSONL entries if available using streaming writes
   // to avoid holding multiple copies in memory for large sessions
   if (raw_data.entries && Array.isArray(raw_data.entries)) {
     const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
+    const flags = parse_mode === 'full' ? 'w' : 'a'
     await new Promise((resolve, reject) => {
-      const write_stream = createWriteStream(jsonl_file)
+      const write_stream = createWriteStream(jsonl_file, { flags })
       write_stream.on('error', reject)
       write_stream.on('finish', resolve)
       for (let i = 0; i < raw_data.entries.length; i++) {
@@ -263,7 +277,7 @@ const save_claude_raw_data = async ({ raw_data_dir, raw_data, session_id }) => {
     })
     // Release the entries array itself
     raw_data.entries = null
-    log_debug(`Saved Claude JSONL data to ${jsonl_file}`)
+    log_debug(`Saved Claude JSONL data to ${jsonl_file} (parse_mode=${parse_mode})`)
   }
 
   // Save session metadata
@@ -477,39 +491,47 @@ export const update_existing_thread = async (
       `Updating existing thread ${thread_id} for session ${normalized_session.session_id}`
     )
 
-    // Update raw data if provided
-    if (raw_session_data) {
-      const raw_data_dir = path.join(thread_dir, 'raw-data')
-      await fs.mkdir(raw_data_dir, { recursive: true })
-      await save_raw_session_data({
-        raw_data_dir,
-        session_provider: normalized_session.session_provider,
-        raw_session_data,
-        normalized_session
-      })
+    await fs.mkdir(thread_dir, { recursive: true })
+    const import_lock = await acquire_thread_import_lock({ thread_dir })
+    let metadata_changed
+    let timeline_result
+    try {
+      // Update raw data if provided
+      if (raw_session_data) {
+        const raw_data_dir = path.join(thread_dir, 'raw-data')
+        await fs.mkdir(raw_data_dir, { recursive: true })
+        await save_raw_session_data({
+          raw_data_dir,
+          session_provider: normalized_session.session_provider,
+          raw_session_data,
+          normalized_session
+        })
+      }
+
+      // Save plan to shared location if session has a plan_slug
+      const plan_slug = normalized_session.metadata?.plan_slug
+      if (plan_slug) {
+        await save_plan_to_shared_location({
+          plan_slug,
+          user_base_directory
+        })
+      }
+
+      // Update thread metadata
+      metadata_changed = await update_thread_metadata(
+        thread_dir,
+        normalized_session,
+        { source_overrides }
+      )
+
+      // Always rebuild timeline from the full normalized session.
+      timeline_result = await build_timeline_from_session(
+        normalized_session,
+        { thread_dir, thread_id }
+      )
+    } finally {
+      await import_lock.release()
     }
-
-    // Save plan to shared location if session has a plan_slug
-    const plan_slug = normalized_session.metadata?.plan_slug
-    if (plan_slug) {
-      await save_plan_to_shared_location({
-        plan_slug,
-        user_base_directory
-      })
-    }
-
-    // Update thread metadata
-    const metadata_changed = await update_thread_metadata(
-      thread_dir,
-      normalized_session,
-      { source_overrides }
-    )
-
-    // Always rebuild timeline from the full normalized session.
-    const timeline_result = await build_timeline_from_session(
-      normalized_session,
-      { thread_dir }
-    )
 
     const files_modified = metadata_changed || timeline_result.timeline_modified
 

@@ -110,7 +110,7 @@ export const normalize_cursor_conversation = (conversation) => {
       session.messages.push(normalized)
 
       // Extract potential tool interactions as separate timeline entries
-      const tool_entries = extract_cursor_tool_interactions(msg)
+      const tool_entries = extract_cursor_tool_interactions(msg, msg_index - 1)
       tool_entries.forEach((tool_entry) => {
         if (tool_entry) {
           session.messages.push(tool_entry)
@@ -179,7 +179,7 @@ export const normalize_cursor_conversations = (conversations) => {
  * This is a basic implementation since Cursor's tool interaction patterns
  * are not well-defined in the current schema
  */
-function extract_cursor_tool_interactions(msg) {
+function extract_cursor_tool_interactions(msg, msg_index = 0) {
   const tool_entries = []
 
   try {
@@ -204,7 +204,10 @@ function extract_cursor_tool_interactions(msg) {
           is_extracted_tool: true,
           message_type: msg.type,
           timing_info: msg.timing_info
-        }
+        },
+        block_index: 0,
+        line_number: msg_index,
+        source_uuid: msg.id || ''
       })
 
       if (tool_call_entry) {
@@ -225,7 +228,10 @@ function extract_cursor_tool_interactions(msg) {
           message_type: msg.type,
           timing_info: msg.timing_info,
           finish_reason: msg.finish_reason
-        }
+        },
+        block_index: 0,
+        line_number: msg_index,
+        source_uuid: msg.id || ''
       })
 
       if (tool_result_entry) {
@@ -251,7 +257,10 @@ function extract_cursor_tool_interactions(msg) {
               is_extracted_tool: true,
               content_part_index: index,
               language: part.language
-            }
+            },
+            block_index: index,
+            line_number: msg_index,
+            source_uuid: msg.id || ''
           })
 
           if (tool_call_entry) {

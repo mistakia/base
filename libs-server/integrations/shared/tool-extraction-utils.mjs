@@ -42,7 +42,9 @@ export const create_tool_call_entry = ({
   tool_call_id,
   timestamp,
   provider_data,
-  sequence_index = null
+  block_index,
+  line_number,
+  source_uuid = ''
 }) => {
   if (!parent_id || !tool_name || !tool_call_id) {
     log('Missing required parameters for tool call entry:', {
@@ -52,12 +54,21 @@ export const create_tool_call_entry = ({
     })
     return null
   }
+  if (block_index == null) {
+    throw new Error('create_tool_call_entry: block_index required')
+  }
+  if (line_number == null) {
+    throw new Error('create_tool_call_entry: line_number required')
+  }
+  if (!timestamp) {
+    throw new Error('create_tool_call_entry: timestamp required')
+  }
 
-  const entry_id = `${parent_id}-tool-call-${sequence_index ?? Date.now()}`
+  const entry_id = `${parent_id}-tool-call-${block_index}`
 
   const entry = {
     id: entry_id,
-    timestamp: timestamp || new Date().toISOString(),
+    timestamp,
     type: 'tool_call',
     content: {
       tool_name,
@@ -67,7 +78,8 @@ export const create_tool_call_entry = ({
     },
     provider_data: provider_data || {},
     ordering: {
-      sequence: sequence_index,
+      sequence: line_number * 10000 + block_index,
+      source_uuid,
       parent_id
     }
   }
@@ -100,14 +112,25 @@ export const create_tool_result_entry = ({
   error,
   timestamp,
   provider_data,
-  sequence_index = null
+  block_index,
+  line_number,
+  source_uuid = ''
 }) => {
   if (!tool_call_id) {
     log('Missing required tool_call_id for tool result entry')
     return null
   }
+  if (block_index == null) {
+    throw new Error('create_tool_result_entry: block_index required')
+  }
+  if (line_number == null) {
+    throw new Error('create_tool_result_entry: line_number required')
+  }
+  if (!timestamp) {
+    throw new Error('create_tool_result_entry: timestamp required')
+  }
 
-  const entry_id = `${tool_call_id}-result-${sequence_index ?? Date.now()}`
+  const entry_id = `${tool_call_id}-result-${block_index}`
 
   const content = {
     tool_call_id,
@@ -120,12 +143,13 @@ export const create_tool_result_entry = ({
 
   const entry = {
     id: entry_id,
-    timestamp: timestamp || new Date().toISOString(),
+    timestamp,
     type: 'tool_result',
     content,
     provider_data: provider_data || {},
     ordering: {
-      sequence: sequence_index,
+      sequence: line_number * 10000 + block_index,
+      source_uuid,
       parent_id: null
     }
   }
@@ -271,7 +295,9 @@ export const extract_tool_interactions = (
             content_block_index: index,
             is_extracted_tool: true
           },
-          sequence_index: index
+          block_index: index,
+          line_number: parent_entry.line_number ?? parent_entry.provider_data?.line_number ?? 0,
+          source_uuid: parent_entry.uuid || parent_entry.id || ''
         })
 
         if (tool_call_entry) {
@@ -298,7 +324,9 @@ export const extract_tool_interactions = (
             content_block_index: index,
             is_extracted_tool: true
           },
-          sequence_index: index
+          block_index: index,
+          line_number: parent_entry.line_number ?? parent_entry.provider_data?.line_number ?? 0,
+          source_uuid: parent_entry.uuid || parent_entry.id || ''
         })
 
         if (tool_result_entry) {

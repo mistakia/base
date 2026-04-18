@@ -155,6 +155,9 @@ export const scan_claude_agent_relationships = async ({
  */
 export const find_claude_sessions_from_data = async ({ sessions = [] }) => {
   log(`Processing ${sessions.length} provided Claude sessions`)
+  for (const s of sessions) {
+    if (!s.parse_mode) s.parse_mode = 'full'
+  }
   return sessions
 }
 
@@ -200,6 +203,7 @@ export const find_claude_sessions_from_filesystem = async ({
     if (!sessions) {
       const incr_start = Date.now()
       sessions = await parse_session_with_subagents(session_file)
+      for (const s of sessions) s.parse_mode = 'full'
       log_debug(
         `Full parse: ${sessions.length} sessions from ${session_file}`
       )
@@ -242,6 +246,7 @@ export const find_claude_sessions_from_filesystem = async ({
     if (found_file) {
       log_debug(`Found session file for ID ${session_id}: ${found_file}`)
       const sessions = await parse_session_with_subagents(found_file)
+      for (const s of sessions) s.parse_mode = 'full'
       log_debug(
         `Loaded ${sessions.length} sessions (including subagents) for session ${session_id}`
       )
@@ -273,6 +278,7 @@ export const find_claude_sessions_from_filesystem = async ({
     claude_projects_directories,
     filter_sessions
   })
+  for (const s of sessions) s.parse_mode = 'full'
 
   log(`Found ${sessions.length} Claude sessions from filesystem`)
   return sessions
@@ -762,9 +768,10 @@ const parse_session_file_incremental = async ({
     cache_read_input_tokens: updated_counts.cache_read_input_tokens || 0,
     models: updated_models
   }
-  parent_session.incremental = true
+  parent_session.parse_mode = 'delta'
 
   const all_sessions = [parent_session]
+  let any_new_subagent_data = false
 
   // Handle subagent files incrementally
   const subagent_files = await find_subagent_session_files({
@@ -791,7 +798,9 @@ const parse_session_file_incremental = async ({
         // Full parse for new or replaced subagent file
         const agent_sessions = await parse_claude_jsonl_file(agent_file)
         if (agent_sessions.length > 0) {
+          for (const s of agent_sessions) s.parse_mode = 'full'
           all_sessions.push(...agent_sessions)
+          any_new_subagent_data = true
         }
         // Record offset so next invocation uses incremental reads
         try {
@@ -807,9 +816,11 @@ const parse_session_file_incremental = async ({
         const agent_session = {
           session_id: path.basename(agent_file, '.jsonl'),
           entries: agent_result.entries,
-          metadata: { file_path: agent_file, file_summaries: [] }
+          metadata: { file_path: agent_file, file_summaries: [] },
+          parse_mode: 'delta'
         }
         all_sessions.push(agent_session)
+        any_new_subagent_data = true
         new_subagent_offsets[agent_basename] = {
           byte_offset: agent_result.new_byte_offset
         }
@@ -849,6 +860,11 @@ const parse_session_file_incremental = async ({
     parent_result.entries.length,
     total_ms
   )
+
+  // If no new parent entries and no new subagent data, caller should skip this session
+  if (parent_result.entries.length === 0 && !any_new_subagent_data) {
+    return []
+  }
 
   return all_sessions
 }

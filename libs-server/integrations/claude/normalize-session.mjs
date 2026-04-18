@@ -67,8 +67,24 @@ export const normalize_claude_session = (claude_session) => {
       entry_map.set(entry.uuid, entry)
     })
 
-    // Second pass: convert entries to normalized format
-    let overall_sequence = 0
+    // Second pass: convert entries to normalized format.
+    // ordering.sequence is a source-intrinsic composite
+    // (line_number * 10000 + content_index) so re-parses produce identical
+    // ordering and sub-entries (thinking/tool_use/tool_result) sharing a
+    // source line still get distinct tiebreaker values.
+    // Sub-entries (thinking / tool_use / tool_result) derived from a single
+    // source line get content_index + 1 so the main message entry keeps slot
+    // 0 and sub-entries never collide with it.
+    const compose_sequence = ({ line_number, content_index = 0 }) => {
+      if (content_index >= 10000) {
+        throw new Error(
+          `normalize_claude_session: content_index ${content_index} exceeds per-line reserve (10000)`
+        )
+      }
+      return (line_number ?? 0) * 10000 + content_index
+    }
+    const compose_sub_sequence = ({ line_number, content_index }) =>
+      compose_sequence({ line_number, content_index: content_index + 1 })
     entries.forEach((entry, index) => {
       const normalized_entry = normalize_claude_entry({
         entry,
@@ -77,7 +93,8 @@ export const normalize_claude_session = (claude_session) => {
       })
       if (normalized_entry) {
         normalized_entry.ordering = {
-          sequence: overall_sequence++,
+          sequence: compose_sequence({ line_number: entry.line_number }),
+          source_uuid: entry.uuid || '',
           parent_id: entry.parentUuid || null
         }
         normalized_messages.push(normalized_entry)
@@ -117,11 +134,14 @@ export const normalize_claude_session = (claude_session) => {
                 is_thinking_block: true // Add marker to identify thinking blocks
               },
               ordering: {
-                sequence: overall_sequence,
+                sequence: compose_sub_sequence({
+                  line_number: entry.line_number,
+                  content_index
+                }),
+                source_uuid: entry.uuid || '',
                 parent_id: entry.uuid
               }
             }
-            overall_sequence++ // Increment after creating the entry
             normalized_messages.push(thinking_entry)
           }
         })
@@ -164,11 +184,12 @@ export const normalize_claude_session = (claude_session) => {
                 content_block_index: content_index,
                 is_extracted_tool: true
               },
-              sequence_index: overall_sequence
+              block_index: content_index + 1,
+              line_number: entry.line_number,
+              source_uuid: entry.uuid || ''
             })
 
             if (tool_call_entry) {
-              overall_sequence++ // Increment after creating the entry
               normalized_messages.push(tool_call_entry)
             }
           }
@@ -196,11 +217,12 @@ export const normalize_claude_session = (claude_session) => {
                 content_block_index: content_index,
                 is_extracted_tool: true
               },
-              sequence_index: overall_sequence
+              block_index: content_index + 1,
+              line_number: entry.line_number,
+              source_uuid: entry.uuid || ''
             })
 
             if (tool_result_entry) {
-              overall_sequence++ // Increment after creating the entry
               normalized_messages.push(tool_result_entry)
             }
           }
@@ -219,6 +241,10 @@ export const normalize_claude_session = (claude_session) => {
       session_provider: 'claude',
       messages: normalized_messages,
       metadata: session_metadata
+    }
+
+    if (claude_session.parse_mode) {
+      result.parse_mode = claude_session.parse_mode
     }
 
     // Pass through precomputed data from incremental sync.
@@ -343,8 +369,28 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
     entry.message?.timestamp ||
     null
 
+  // Deterministic id factory for raw events without an upstream uuid.
+  // Same input -> same id, so re-importing a session produces a byte-
+  // identical timeline. The line_number discriminator covers the rare case
+  // where two same-type events share a millisecond-precision timestamp.
+  const derive_id = ({ system_type, type = 'system' }) => {
+    if (entry.uuid == null && entry.line_number == null) {
+      throw new Error(
+        `normalize_claude_entry: entry missing both uuid and line_number (type=${entry.type})`
+      )
+    }
+    return deterministic_timeline_entry_id({
+      thread_id,
+      timestamp: raw_timestamp || `line:${entry.line_number ?? index}`,
+      type,
+      system_type,
+      source_uuid: entry.uuid || '',
+      discriminator: String(entry.line_number ?? '')
+    })
+  }
+
   const base_normalized = {
-    id: entry.uuid,
+    id: entry.uuid || derive_id({ system_type: 'message', type: 'message' }),
     timestamp: raw_timestamp ? new Date(raw_timestamp) : null,
     provider_data: {
       line_number: entry.line_number,
@@ -352,20 +398,6 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
       is_sidechain: entry.isSidechain || false
     }
   }
-
-  // Deterministic id factory for raw events without an upstream uuid.
-  // Same input -> same id, so re-importing a session produces a byte-
-  // identical timeline. The line_number discriminator covers the rare case
-  // where two same-type events share a millisecond-precision timestamp.
-  const derive_id = ({ system_type }) =>
-    deterministic_timeline_entry_id({
-      thread_id,
-      timestamp: raw_timestamp || `line:${entry.line_number ?? index}`,
-      type: 'system',
-      system_type,
-      sequence: index,
-      discriminator: String(entry.line_number ?? '')
-    })
 
   switch (entry.type) {
     case 'user':
