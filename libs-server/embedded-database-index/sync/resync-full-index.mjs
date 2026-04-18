@@ -265,8 +265,7 @@ export async function resync_full_index({ index_manager }) {
     }
 
     // Unconditional summary line so the aggregate is visible in pm2 logs
-    // regardless of the active DEBUG namespace. Matches the [metrics]
-    // convention from sync-metrics.mjs.
+    // regardless of the active DEBUG namespace.
     console.error(
       '[resync-summary] entities_synced=%d entities_failed=%d threads_synced=%d threads_failed=%d entity_orphans_removed=%d thread_orphans_removed=%d metadata_updated=%s',
       stats.entities_synced,
@@ -278,26 +277,22 @@ export async function resync_full_index({ index_manager }) {
       metadata_updated
     )
 
-    if (total_failed > 0) {
-      const FAILURE_SAMPLE_LIMIT = 20
-      const format_failures = (items) => {
-        const list = items || []
-        const sample = list.slice(0, FAILURE_SAMPLE_LIMIT).join(', ')
-        const overflow = list.length - FAILURE_SAMPLE_LIMIT
-        return overflow > 0 ? `${sample} (...${overflow} more)` : sample
-      }
-      if (stats.failed_entity_uris && stats.failed_entity_uris.length > 0) {
-        console.warn(
-          '[resync-summary] failed_entities=%s',
-          format_failures(stats.failed_entity_uris)
-        )
-      }
-      if (stats.failed_thread_ids && stats.failed_thread_ids.length > 0) {
-        console.warn(
-          '[resync-summary] failed_threads=%s',
-          format_failures(stats.failed_thread_ids)
-        )
-      }
+    const sample_failures = (list) => {
+      const sample = list.slice(0, 20).join(', ')
+      const overflow = list.length - 20
+      return overflow > 0 ? `${sample} (...${overflow} more)` : sample
+    }
+    if (stats.failed_entity_uris && stats.failed_entity_uris.length > 0) {
+      console.warn(
+        '[resync-summary] failed_entities=%s',
+        sample_failures(stats.failed_entity_uris)
+      )
+    }
+    if (stats.failed_thread_ids && stats.failed_thread_ids.length > 0) {
+      console.warn(
+        '[resync-summary] failed_threads=%s',
+        sample_failures(stats.failed_thread_ids)
+      )
     }
 
     // Individual entity/thread sync failures (bad YAML, missing fields,

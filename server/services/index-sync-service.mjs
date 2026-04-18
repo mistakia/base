@@ -255,10 +255,10 @@ export const start_index_sync_service = async () => {
             'Skipping thread sync %s: no metadata found after retry',
             thread_id
           )
-          if (metrics) metrics.increment('watcher_thread_sync_failed')
-          console.warn(
-            '[watcher-failure] thread_sync thread_id=%s reason=no_metadata',
-            thread_id
+          metrics.record_failure(
+            'watcher_thread_sync_failed',
+            `thread_sync thread_id=${thread_id} reason=no_metadata`,
+            `sync:${thread_id}`
           )
           return
         }
@@ -268,21 +268,19 @@ export const start_index_sync_service = async () => {
             metadata
           })
           if (result && result.success === false) {
-            if (metrics) metrics.increment('watcher_thread_sync_failed')
-            console.warn(
-              '[watcher-failure] thread_sync thread_id=%s reason=%s',
-              thread_id,
-              result.error || 'unknown'
+            metrics.record_failure(
+              'watcher_thread_sync_failed',
+              `thread_sync thread_id=${thread_id} reason=${result.error || 'unknown'}`,
+              `sync:${thread_id}`
             )
             return
           }
           log('Synced forwarded thread: %s', thread_id)
         } catch (error) {
-          if (metrics) metrics.increment('watcher_thread_sync_failed')
-          console.warn(
-            '[watcher-failure] thread_sync thread_id=%s reason=%s',
-            thread_id,
-            error.message
+          metrics.record_failure(
+            'watcher_thread_sync_failed',
+            `thread_sync thread_id=${thread_id} reason=${error.message}`,
+            `sync:${thread_id}`
           )
         }
       },
@@ -291,11 +289,10 @@ export const start_index_sync_service = async () => {
           await embedded_index_manager.remove_thread({ thread_id })
           log('Removed forwarded thread: %s', thread_id)
         } catch (error) {
-          if (metrics) metrics.increment('watcher_thread_delete_failed')
-          console.warn(
-            '[watcher-failure] thread_delete thread_id=%s reason=%s',
-            thread_id,
-            error.message
+          metrics.record_failure(
+            'watcher_thread_delete_failed',
+            `thread_delete thread_id=${thread_id} reason=${error.message}`,
+            `delete:${thread_id}`
           )
         }
       }

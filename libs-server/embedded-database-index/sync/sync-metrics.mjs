@@ -10,6 +10,8 @@
 
 const DUMP_INTERVAL_MS = 300000 // 5 minutes
 const HEARTBEAT_INTERVAL_MS = 60000 // 60 seconds
+const FAILURE_WARN_DEDUPE_WINDOW_MS = 60000 // suppress repeat warns for same key
+const FAILURE_WARN_DEDUPE_MAX_ENTRIES = 1024
 
 /**
  * Create a sync metrics collector.
@@ -50,6 +52,29 @@ export function create_sync_metrics({ get_sqlite_ready, get_cache_size }) {
 
   function record_sync() {
     last_sync_at = Date.now()
+  }
+
+  // Dedupe [watcher-failure] warns so a persistent bad file doesn't flood
+  // PM2 logs on every chokidar event. Aggregate counters still increment.
+  const warn_seen_at = new Map()
+
+  function record_failure(counter_name, message, dedupe_key) {
+    increment(counter_name)
+    const key = dedupe_key || message
+    const now = Date.now()
+    const last = warn_seen_at.get(key)
+    if (last !== undefined && now - last < FAILURE_WARN_DEDUPE_WINDOW_MS) {
+      return
+    }
+    if (warn_seen_at.size >= FAILURE_WARN_DEDUPE_MAX_ENTRIES) {
+      // Drop the oldest half to bound memory under truly diverse failure streams
+      const keep_after = now - FAILURE_WARN_DEDUPE_WINDOW_MS
+      for (const [k, ts] of warn_seen_at) {
+        if (ts < keep_after) warn_seen_at.delete(k)
+      }
+    }
+    warn_seen_at.set(key, now)
+    console.warn('[watcher-failure] %s', message)
   }
 
   function dump() {
@@ -109,6 +134,7 @@ export function create_sync_metrics({ get_sqlite_ready, get_cache_size }) {
     timing,
     gauge,
     record_sync,
+    record_failure,
     dump,
     start,
     stop

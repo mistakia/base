@@ -114,9 +114,12 @@ export function start_index_sync_watcher({
 } = {}) {
   log('Starting index sync watcher')
 
-  const record_failure = (counter_name, message) => {
-    if (metrics) metrics.increment(counter_name)
-    console.warn('[watcher-failure] %s', message)
+  const record_failure = (counter_name, message, dedupe_key) => {
+    if (metrics) {
+      metrics.record_failure(counter_name, message, dedupe_key)
+    } else {
+      console.warn('[watcher-failure] %s', message)
+    }
   }
 
   start_index_file_watcher({
@@ -144,7 +147,8 @@ export function start_index_sync_watcher({
           log('Failed to read entity %s: %s', file_path, result.error)
           record_failure(
             'watcher_entity_read_failed',
-            `entity_read base_uri=${base_uri} path=${file_path} reason=${result.error}`
+            `entity_read base_uri=${base_uri} path=${file_path} reason=${result.error}`,
+            `read:${base_uri}`
           )
           return
         }
@@ -161,7 +165,8 @@ export function start_index_sync_watcher({
           )
           record_failure(
             'watcher_entity_sync_failed',
-            `entity_sync type=${entity_type} base_uri=${base_uri} reason=${sync_result.error || 'unknown'}`
+            `entity_sync type=${entity_type} base_uri=${base_uri} reason=${sync_result.error || 'unknown'}`,
+            `sync:${base_uri}`
           )
         } else {
           log('Synced entity (%s): %s', entity_type, base_uri)
@@ -174,7 +179,8 @@ export function start_index_sync_watcher({
         log('Error handling entity change %s: %s', file_path, error.message)
         record_failure(
           'watcher_entity_sync_failed',
-          `entity_change path=${file_path} reason=${error.message}`
+          `entity_change path=${file_path} reason=${error.message}`,
+          `change:${file_path}`
         )
       }
     },
@@ -205,7 +211,8 @@ export function start_index_sync_watcher({
         log('Error handling entity delete %s: %s', file_path, error.message)
         record_failure(
           'watcher_entity_delete_failed',
-          `entity_delete path=${file_path} reason=${error.message}`
+          `entity_delete path=${file_path} reason=${error.message}`,
+          `delete:${file_path}`
         )
       }
     }
