@@ -218,7 +218,7 @@ const DEFAULT_TABLE_COLUMNS = [
 
 const DEFAULT_TABLE_STATE = create_default_table_state({
   columns: DEFAULT_TABLE_COLUMNS,
-  sort: [{ column_id: 'updated_at', desc: true }]
+  sort: [{ column_id: 'created_at', desc: true }]
 })
 
 const DEFAULT_THREAD_TABLE_VIEW = create_view({
@@ -234,7 +234,7 @@ const ACTIVE_THREADS_VIEW = create_view({
   view_name: 'Active Threads',
   table_state: create_default_table_state({
     columns: DEFAULT_TABLE_COLUMNS,
-    sort: [{ column_id: 'updated_at', desc: true }],
+    sort: [{ column_id: 'created_at', desc: true }],
     where: new List([
       {
         column_id: 'thread_state',
