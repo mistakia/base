@@ -68,34 +68,36 @@ describe('Claude Account Rotation', function () {
   describe('resolve_account_config_dir', () => {
     it('returns null for host default ~/.claude/', () => {
       const result = resolve_account_config_dir({
-        account: { config_dir: '~/.claude/' },
-        execution_mode: 'host'
+        account: { namespace: 'test-primary' },
+        execution_mode: 'host',
+        machine_id: 'test-host-default'
       })
       expect(result).to.be.null
     })
 
     it('returns null for host default ~/.claude (no trailing slash)', () => {
       const result = resolve_account_config_dir({
-        account: { config_dir: '~/.claude' },
-        execution_mode: 'host'
+        account: { namespace: 'test-primary' },
+        execution_mode: 'host',
+        machine_id: 'test-host-default-notrail'
       })
       expect(result).to.be.null
     })
 
     it('resolves tilde to absolute path for non-default host config_dir', () => {
       const result = resolve_account_config_dir({
-        account: { config_dir: '~/.claude-earn.crop.code/' },
-        execution_mode: 'host'
+        account: { namespace: 'test-secondary' },
+        execution_mode: 'host',
+        machine_id: 'test-host'
       })
       expect(result).to.equal(
-        path.join(os.homedir(), '.claude-earn.crop.code/')
+        path.join(os.homedir(), '.claude-test-secondary/')
       )
     })
 
     it('returns null for container default /home/node/.claude/', () => {
       const result = resolve_account_config_dir({
         account: {
-          config_dir: undefined,
           container_config_dir: '/home/node/.claude/'
         },
         execution_mode: 'container'
@@ -106,7 +108,6 @@ describe('Claude Account Rotation', function () {
     it('returns absolute container path for non-default container_config_dir', () => {
       const result = resolve_account_config_dir({
         account: {
-          config_dir: undefined,
           container_config_dir: '/home/node/.claude-earn.crop.code'
         },
         execution_mode: 'container'
@@ -117,7 +118,6 @@ describe('Claude Account Rotation', function () {
     it('routes container_user execution_mode to container_config_dir', () => {
       const result = resolve_account_config_dir({
         account: {
-          config_dir: '~/.claude/',
           container_config_dir: '/home/node/.claude-earn.crop.code'
         },
         execution_mode: 'container_user'
@@ -125,17 +125,21 @@ describe('Claude Account Rotation', function () {
       expect(result).to.equal('/home/node/.claude-earn.crop.code')
     })
 
-    it('returns null when both config_dir and container_config_dir are null', () => {
-      const result_host = resolve_account_config_dir({
-        account: { config_dir: null, container_config_dir: null },
-        execution_mode: 'host'
+    it('returns null when host machine has no claude_paths entry', () => {
+      const result = resolve_account_config_dir({
+        account: { namespace: 'unknown' },
+        execution_mode: 'host',
+        machine_id: 'nonexistent-machine'
       })
-      const result_container = resolve_account_config_dir({
-        account: { config_dir: null, container_config_dir: null },
+      expect(result).to.be.null
+    })
+
+    it('returns null when container_config_dir is missing', () => {
+      const result = resolve_account_config_dir({
+        account: { container_config_dir: null },
         execution_mode: 'container'
       })
-      expect(result_host).to.be.null
-      expect(result_container).to.be.null
+      expect(result).to.be.null
     })
   })
 
@@ -238,7 +242,7 @@ describe('Claude Account Rotation', function () {
     it('should return highest priority account when none exhausted', async function () {
       if (!config.claude_accounts?.enabled) this.skip()
 
-      const account = await select_account({ execution_mode: 'host' })
+      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
 
       expect(account).to.not.be.null
       expect(account).to.have.property('namespace')
@@ -254,7 +258,7 @@ describe('Claude Account Rotation', function () {
       const primary = accounts.find((a) => a.priority === 1)
 
       await mark_account_exhausted(primary.namespace)
-      const account = await select_account({ execution_mode: 'host' })
+      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
 
       expect(account).to.not.be.null
       expect(account.namespace).to.not.equal(primary.namespace)
@@ -271,7 +275,7 @@ describe('Claude Account Rotation', function () {
       }
 
       try {
-        await select_account({ execution_mode: 'host' })
+        await select_account({ execution_mode: 'host', machine_id: 'test-host' })
         expect.fail('should have thrown')
       } catch (error) {
         expect(error).to.be.an.instanceOf(AllAccountsExhaustedError)
@@ -286,7 +290,7 @@ describe('Claude Account Rotation', function () {
     it('should resolve tilde in host config_dir to absolute path', async function () {
       if (!config.claude_accounts?.enabled) this.skip()
 
-      const account = await select_account({ execution_mode: 'host' })
+      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
 
       expect(account.config_dir).to.match(/^\//)
       expect(account.config_dir).to.not.include('~')
@@ -485,6 +489,7 @@ describe('Claude Account Rotation', function () {
 
       const account = await select_account({
         execution_mode: 'host',
+        machine_id: 'test-host',
         check_usage_fn: make_checker(responses)
       })
 
@@ -514,6 +519,7 @@ describe('Claude Account Rotation', function () {
       try {
         await select_account({
           execution_mode: 'host',
+          machine_id: 'test-host',
           check_usage_fn: make_checker(responses)
         })
         expect.fail('should have thrown AllAccountsExhaustedError')
@@ -547,6 +553,7 @@ describe('Claude Account Rotation', function () {
       try {
         await select_account({
           execution_mode: 'host',
+          machine_id: 'test-host',
           check_usage_fn: make_checker(responses)
         })
         expect.fail('should have thrown AllAccountsExhaustedError')
@@ -578,6 +585,7 @@ describe('Claude Account Rotation', function () {
 
       const account = await select_account({
         execution_mode: 'host',
+        machine_id: 'test-host',
         check_usage_fn: make_checker(responses)
       })
 
@@ -614,6 +622,7 @@ describe('Claude Account Rotation', function () {
 
       const account = await select_account({
         execution_mode: 'host',
+        machine_id: 'test-host',
         check_usage_fn: make_checker(responses)
       })
 
@@ -650,6 +659,7 @@ describe('Claude Account Rotation', function () {
       try {
         await select_account({
           execution_mode: 'host',
+          machine_id: 'test-host',
           check_usage_fn: checker
         })
       } catch (error) {

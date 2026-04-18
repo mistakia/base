@@ -2,6 +2,7 @@ import debug from 'debug'
 import path from 'path'
 import config from '#config'
 import os from 'os'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 
 import {
   check_account_usage,
@@ -28,9 +29,11 @@ const log = debug('claude:account-selector')
  * instead, which is a different file that lacks auth data. Returning null
  * for the default dir lets callers skip setting CLAUDE_CONFIG_DIR entirely.
  *
- * For container mode, the resolved_dir is a container path (e.g.
- * /home/node/.claude/) which won't match the host os.homedir(). path.basename
- * detects any path whose leaf directory is '.claude' regardless of parent.
+ * Host mode reads the path from
+ * `machine_registry[current_machine].claude_paths.host_config_dir[namespace]`
+ * so each machine maps namespaces to its own local paths. Container modes
+ * use `account.container_config_dir` (machine-independent; every container
+ * uses the same /home/node/.claude[-ns]/ convention).
  *
  * @param {Object} params
  * @param {Object} params.account - Account config object
@@ -39,12 +42,19 @@ const log = debug('claude:account-selector')
  */
 export const resolve_account_config_dir = ({
   account,
-  execution_mode = 'host'
+  execution_mode = 'host',
+  machine_id
 }) => {
-  const raw_dir =
-    execution_mode === 'container' || execution_mode === 'container_user'
-      ? account.container_config_dir
-      : account.config_dir
+  let raw_dir
+  if (execution_mode === 'container' || execution_mode === 'container_user') {
+    raw_dir = account.container_config_dir
+  } else {
+    const resolved_machine_id = machine_id ?? get_current_machine_id()
+    const host_paths =
+      config.machine_registry?.[resolved_machine_id]?.claude_paths
+        ?.host_config_dir
+    raw_dir = host_paths?.[account.namespace]
+  }
 
   if (raw_dir == null) return null
 
@@ -98,7 +108,8 @@ const NOTIFICATION_COOLDOWN_MS = 3600000
  */
 export const select_account = async ({
   execution_mode = 'host',
-  check_usage_fn = check_account_usage
+  check_usage_fn = check_account_usage,
+  machine_id
 } = {}) => {
   const accounts_config = config.claude_accounts
   if (!accounts_config?.enabled) {
@@ -199,7 +210,11 @@ export const select_account = async ({
 
   if (candidates.length > 0) {
     const { account } = candidates[0]
-    const config_dir = resolve_account_config_dir({ account, execution_mode })
+    const config_dir = resolve_account_config_dir({
+      account,
+      execution_mode,
+      machine_id
+    })
 
     log(
       'Selected account: %s (config_dir: %s)',

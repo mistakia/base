@@ -5,6 +5,7 @@
  */
 
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 import config from '#config'
 
 /**
@@ -33,24 +34,51 @@ export const CLAUDE_DEFAULT_OPTIONS = {
 }
 
 /**
- * Derive projects directories from all configured Claude accounts.
- * Reads `config.claude_accounts.accounts[].config_dir` and appends `/projects`.
- * Falls back to the single default when config is absent or disabled.
+ * Derive projects directories for every Claude account on the current machine.
  *
- * @returns {string[]} Array of projects directory paths (with ~ unexpanded)
+ * Reads `machine_registry[current_machine].claude_paths` to enumerate all
+ * host-side locations where Claude sessions are stored on THIS machine:
+ *
+ * - `host_config_dir[namespace]` (macbook): sessions written by host-mode
+ *   interactive claude
+ * - `admin_data_dir[namespace]`: sessions written by the admin container
+ * - `user_data_dirs[<user>][namespace]`: sessions written by per-user
+ *   containers (e.g. storage:arrin)
+ *
+ * Falls back to the single default when no machine-specific claude_paths
+ * are defined.
+ *
+ * @returns {string[]} Array of projects directory paths (~ unexpanded)
  */
 export function get_all_claude_projects_directories() {
-  const accounts = config.claude_accounts
-  if (
-    accounts?.enabled &&
-    Array.isArray(accounts.accounts) &&
-    accounts.accounts.length > 0
-  ) {
-    return accounts.accounts
-      .filter((acct) => acct.config_dir)
-      .map((acct) => `${acct.config_dir.replace(/\/$/, '')}/projects`)
+  const accounts_config = config.claude_accounts
+  const machine_id = get_current_machine_id()
+  const claude_paths = config.machine_registry?.[machine_id]?.claude_paths
+
+  if (!accounts_config?.enabled || !claude_paths) {
+    return [CLAUDE_DEFAULT_PATHS.claude_projects_directory]
   }
-  return [CLAUDE_DEFAULT_PATHS.claude_projects_directory]
+
+  const dirs = new Set()
+  const append_projects = (dir) => {
+    if (dir) dirs.add(`${dir.replace(/\/$/, '')}/projects`)
+  }
+
+  for (const dir of Object.values(claude_paths.host_config_dir || {})) {
+    append_projects(dir)
+  }
+  for (const dir of Object.values(claude_paths.admin_data_dir || {})) {
+    append_projects(dir)
+  }
+  for (const user_map of Object.values(claude_paths.user_data_dirs || {})) {
+    for (const dir of Object.values(user_map || {})) {
+      append_projects(dir)
+    }
+  }
+
+  return dirs.size > 0
+    ? [...dirs]
+    : [CLAUDE_DEFAULT_PATHS.claude_projects_directory]
 }
 
 /**

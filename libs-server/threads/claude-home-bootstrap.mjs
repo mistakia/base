@@ -15,6 +15,7 @@ import { homedir } from 'os'
 import debug from 'debug'
 
 import config from '#config'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 
 const log = debug('threads:claude-home-bootstrap')
 
@@ -45,6 +46,9 @@ const get_configured_accounts = () => {
  */
 const get_secondary_account_dirs = (user_dir) => {
   const accounts = get_configured_accounts()
+  const machine_id = get_current_machine_id()
+  const admin_data_dir =
+    config.machine_registry?.[machine_id]?.claude_paths?.admin_data_dir
   const results = []
 
   for (const account of accounts) {
@@ -58,7 +62,7 @@ const get_secondary_account_dirs = (user_dir) => {
       user_dir,
       basename(normalized).replace(/^\./, '')
     )
-    const admin_source = resolve_config_dir(account.config_dir)
+    const admin_source = resolve_config_dir(admin_data_dir?.[account.namespace])
     results.push({ account, user_account_dir, admin_source })
   }
 

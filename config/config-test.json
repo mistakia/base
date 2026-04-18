@@ -35,19 +35,51 @@
     "enabled": true,
     "file_watcher_enabled": false
   },
+  "machine_registry": {
+    "test-host": {
+      "hostname": "test-host",
+      "platform": "darwin",
+      "claude_paths": {
+        "host_config_dir": {
+          "test-primary": "~/.claude-test-primary/",
+          "test-secondary": "~/.claude-test-secondary/"
+        },
+        "admin_data_dir": {
+          "test-primary": "~/.base-container-data/claude-test-primary/",
+          "test-secondary": "~/.base-container-data/claude-test-secondary/"
+        }
+      }
+    },
+    "test-host-default": {
+      "hostname": "test-host-default",
+      "platform": "darwin",
+      "claude_paths": {
+        "host_config_dir": {
+          "test-primary": "~/.claude/"
+        }
+      }
+    },
+    "test-host-default-notrail": {
+      "hostname": "test-host-default-notrail",
+      "platform": "darwin",
+      "claude_paths": {
+        "host_config_dir": {
+          "test-primary": "~/.claude"
+        }
+      }
+    }
+  },
   "claude_accounts": {
     "enabled": true,
     "accounts": [
       {
         "namespace": "test-primary",
         "priority": 1,
-        "config_dir": "~/.claude-test-primary/",
         "container_config_dir": "/home/node/.claude-test-primary/"
       },
       {
         "namespace": "test-secondary",
         "priority": 2,
-        "config_dir": "~/.claude-test-secondary/",
         "container_config_dir": "/home/node/.claude-test-secondary/"
       }
     ]
