@@ -30,7 +30,7 @@ export function calculate_activity_score({
     activity_git_commits * W.git_commits +
     activity_git_files_changed * W.git_files_changed +
     Math.floor(activity_git_lines_changed / W.git_lines_changed_divisor) +
-    Math.floor(activity_token_usage / W.token_usage_divisor) +
+    Math.floor(Math.sqrt(activity_token_usage / W.token_usage_divisor)) +
     activity_thread_edits * W.thread_edits +
     Math.floor(activity_thread_lines_changed / W.thread_lines_changed_divisor) +
     tasks_completed * W.tasks_completed +

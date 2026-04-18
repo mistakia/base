@@ -57,7 +57,9 @@ function recalculate_filtered_score(entry, filter) {
       )
     case 'threads':
       return (
-        Math.floor((entry.activity_token_usage || 0) / W.token_usage_divisor) +
+        Math.floor(
+          Math.sqrt((entry.activity_token_usage || 0) / W.token_usage_divisor)
+        ) +
         (entry.activity_thread_edits || 0) * W.thread_edits +
         Math.floor(
           (entry.activity_thread_lines_changed || 0) /
@@ -86,7 +88,11 @@ const ActivityHeatmap = ({
     return heatmap_data.toJS()
   }, [heatmap_data])
 
-  // Calculate chart data and max score based on filter
+  // Calculate chart data and max score based on filter.
+  // visualMap max is capped at the 95th percentile of non-zero scores so that
+  // a single outlier day (e.g. a multi-million-token agentic session) does not
+  // compress every other day into the lightest shade. Outlier days still
+  // render as the darkest color because ECharts clips above-max values.
   const { chart_data, filtered_max_score, range_start, range_end } =
     useMemo(() => {
       const end = new Date()
@@ -102,16 +108,25 @@ const ActivityHeatmap = ({
         }
       }
 
-      let max_s = 0
-      const data = heatmap_data_js.map((entry) => {
-        const s = recalculate_filtered_score(entry, filter)
-        if (s > max_s) max_s = s
-        return [entry.date, s]
-      })
+      const data = heatmap_data_js.map((entry) => [
+        entry.date,
+        recalculate_filtered_score(entry, filter)
+      ])
+
+      const non_zero_scores = data
+        .map(([, s]) => s)
+        .filter((s) => s > 0)
+        .sort((a, b) => a - b)
+
+      let capped_max = 0
+      if (non_zero_scores.length > 0) {
+        const p95_index = Math.floor(non_zero_scores.length * 0.98)
+        capped_max = non_zero_scores[Math.min(p95_index, non_zero_scores.length - 1)]
+      }
 
       return {
         chart_data: data,
-        filtered_max_score: max_s,
+        filtered_max_score: capped_max,
         range_start: start.toISOString().split('T')[0],
         range_end: end.toISOString().split('T')[0]
       }
