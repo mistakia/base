@@ -500,7 +500,7 @@ class EmbeddedIndexManager {
         await set_repo_sync_state({ state: new_sync_state })
         await set_index_metadata({
           key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS,
-          value: null
+          value: 'false'
         })
 
         // Force checkpoint to persist all changes to disk.

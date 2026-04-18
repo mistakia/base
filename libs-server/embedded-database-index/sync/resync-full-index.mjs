@@ -228,7 +228,7 @@ export async function resync_full_index({ index_manager }) {
       // Clear rebuild_in_progress flag if it was set by an interrupted rebuild
       await set_index_metadata({
         key: INDEX_METADATA_KEYS.REBUILD_IN_PROGRESS,
-        value: null
+        value: 'false'
       })
       // Force checkpoint to persist metadata
       await checkpoint_sqlite()
