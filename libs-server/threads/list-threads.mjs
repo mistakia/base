@@ -52,9 +52,10 @@ export async function list_thread_ids({ user_base_directory } = {}) {
  */
 export async function get_thread_metadata({ thread_id, user_base_directory }) {
   const threads_dir = get_thread_base_directory({ user_base_directory })
+  const thread_dir = path.join(threads_dir, thread_id)
+  const metadata_path = path.join(thread_dir, 'metadata.json')
 
   try {
-    const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
     const metadata = await read_json_file({ file_path: metadata_path })
 
     const thread_summary = { ...metadata, thread_id }
@@ -65,6 +66,28 @@ export async function get_thread_metadata({ thread_id, user_base_directory }) {
 
     return thread_summary
   } catch (error) {
+    // metadata.json is the thread directory's lifecycle anchor. When it is
+    // absent, either (a) an import is actively writing into the directory --
+    // detect via .import.lock and skip -- or (b) the directory is an orphan
+    // that should be torn down by the next auto-commit sweep. In neither case
+    // do we want the resync reader to surface a failure.
+    if (error.code === 'ENOENT' || /ENOENT/.test(error.message)) {
+      const lock_exists = await fs
+        .access(path.join(thread_dir, '.import.lock'))
+        .then(() => true)
+        .catch(() => false)
+
+      if (lock_exists) {
+        log(`Thread ${thread_id} has active import lock, skipping`)
+        return { thread_id, thread_state: 'importing', _transient: true }
+      }
+
+      log(
+        `Thread ${thread_id} has no metadata.json (orphan); returning synthetic record`
+      )
+      return { thread_id, thread_state: 'orphaned', _orphaned: true }
+    }
+
     log(`Error reading thread ${thread_id}: ${error.message}`)
     return null
   }
@@ -114,6 +137,15 @@ export async function process_threads_in_batches({
         failed++
         processed++
         failed_thread_ids.push(`${thread_id} (no metadata)`)
+        continue
+      }
+
+      // Synthetic records returned by get_thread_metadata for transient
+      // (active import) or orphan (pending sweep) cases. Skip them rather
+      // than treat as failures -- the auto-commit orphan sweep will tear the
+      // directory down on its next run.
+      if (metadata._transient || metadata._orphaned) {
+        processed++
         continue
       }
 

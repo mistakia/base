@@ -73,49 +73,6 @@ async function create_thread_branch({ thread_id }) {
 }
 
 /**
- * Initialize a git repository in the memory directory
- *
- * @param {Object} params - Parameters
- * @param {string} params.memory_dir - Path to memory directory
- * @returns {Promise<void>}
- */
-async function initialize_memory_repository({ memory_dir }) {
-  log(`Initializing git repository in ${memory_dir}`)
-
-  // Initialize git repository using git_operations
-  await git_operations.git_init({
-    directory: memory_dir
-  })
-
-  // Create .gitignore file
-  const gitignore_content = `
-# Temporary files
-*.tmp
-*.temp
-.DS_Store
-
-# Large binary files
-*.bin
-*.dat
-`
-  await fs.writeFile(
-    path.join(memory_dir, '.gitignore'),
-    gitignore_content.trim(),
-    'utf-8'
-  )
-
-  // Initial commit
-  await git_operations.add_files({
-    worktree_path: memory_dir,
-    files_to_add: '.gitignore'
-  })
-  await git_operations.commit_changes({
-    worktree_path: memory_dir,
-    commit_message: 'Initialize thread memory repository'
-  })
-}
-
-/**
  * Build thread metadata for both standard and imported/external session threads
  * @param {Object} params - Metadata parameters
  * @param {string} params.thread_id
@@ -198,7 +155,6 @@ export function build_thread_metadata({
  * @param {string} [params.prompt_properties] Prompt properties for the workflow
  * @param {Array<string>} [params.tools=[]] Tools available for this thread
  * @param {boolean} [params.create_git_branches=false] Whether to create git branches and worktrees
- * @param {boolean} [params.create_memory_repository=false] Whether to initialize git repository in memory directory
  * @param {Object} [params.source] Source information (provider, session_id, etc.)
  * @param {Object} [params.additional_metadata={}] Additional metadata fields to include in thread metadata
  * @param {string} [params.created_at] Optional override for created_at timestamp (ISO string)
@@ -218,7 +174,6 @@ export default async function create_thread({
   prompt_properties = {},
   tools = [],
   create_git_branches = false,
-  create_memory_repository = false,
   source = null,
   additional_metadata = {},
   created_at = null,
@@ -342,16 +297,8 @@ export default async function create_thread({
     user_base_directory
   })
   const thread_dir = path.join(thread_base_directory, thread_id)
-  const memory_dir = path.join(thread_dir, 'memory')
   const raw_data_dir = path.join(thread_dir, 'raw-data')
-
-  await fs.mkdir(thread_dir, { recursive: true })
-  await fs.mkdir(memory_dir, { recursive: true })
-
-  // Create raw-data directory for external sessions
-  if (source) {
-    await fs.mkdir(raw_data_dir, { recursive: true })
-  }
+  const metadata_path = path.join(thread_dir, 'metadata.json')
 
   // Generate timestamps
   const now = new Date().toISOString()
@@ -360,7 +307,10 @@ export default async function create_thread({
   // If workflow defines tools, use those, otherwise use provided tools
   const final_tools = workflow_tools.length > 0 ? workflow_tools : tools
 
-  // Create metadata using shared builder
+  // Build metadata up front so it can be written as the first filesystem
+  // artifact inside thread_dir. metadata.json is the atomic lifecycle anchor
+  // for the directory -- no other files (raw-data/, timeline.jsonl) may exist
+  // without it, and its absence is the cross-machine deletion signal.
   const metadata = build_thread_metadata({
     thread_id,
     user_public_key,
@@ -377,6 +327,25 @@ export default async function create_thread({
     title,
     short_description
   })
+
+  await fs.mkdir(thread_dir, { recursive: true })
+
+  try {
+    await fs.writeFile(
+      metadata_path,
+      JSON.stringify(metadata, null, 2),
+      'utf-8'
+    )
+  } catch (error) {
+    // Tear down the freshly-created directory so no metadata-less shell survives
+    await fs.rm(thread_dir, { recursive: true, force: true }).catch(() => {})
+    throw error
+  }
+
+  // Create raw-data directory for external sessions (after metadata.json)
+  if (source) {
+    await fs.mkdir(raw_data_dir, { recursive: true })
+  }
 
   // Write the initial timeline entry atomically with thread creation when
   // provided. The file is otherwise created on first append by the caller;
@@ -409,31 +378,16 @@ export default async function create_thread({
       metadata.git_branch = `thread/${thread_id}`
       metadata.system_worktree_path = worktree_paths.system
       metadata.user_worktree_path = worktree_paths.user
+
+      // Rewrite metadata.json with the worktree paths now populated
+      await fs.writeFile(
+        metadata_path,
+        JSON.stringify(metadata, null, 2),
+        'utf-8'
+      )
     } catch (error) {
       log(`Failed to create git branches or worktrees: ${error.message}`)
       // Continue thread creation even if branch creation fails
-    }
-  }
-
-  // Write metadata to file
-  await fs.writeFile(
-    path.join(thread_dir, 'metadata.json'),
-    JSON.stringify(metadata, null, 2),
-    'utf-8'
-  )
-
-  // Initialize git repository in memory directory if requested
-  if (create_memory_repository) {
-    try {
-      await initialize_memory_repository({
-        memory_dir
-      })
-
-      // Add memory repo information to metadata
-      metadata.memory_repo_initialized = true
-    } catch (error) {
-      log(`Failed to initialize memory repository: ${error.message}`)
-      // Continue thread creation even if repo initialization fails
     }
   }
 

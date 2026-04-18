@@ -19,6 +19,7 @@ import {
 } from './session-count-utilities.mjs'
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
+import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
@@ -496,6 +497,22 @@ export const update_existing_thread = async (
     let metadata_changed
     let timeline_result
     try {
+      // metadata.json must be the first file in thread_dir. If it is already
+      // present this is a no-op on disk thanks to the hash-comparison short
+      // circuit; if it is missing (repair path), update_thread_metadata seeds
+      // a skeleton and writes a full record before anything else touches the
+      // directory.
+      metadata_changed = await update_thread_metadata(
+        thread_dir,
+        normalized_session,
+        { source_overrides }
+      )
+
+      // Enforce the lifecycle-anchor invariant before any sibling file is
+      // written. If metadata.json is still missing at this point the writer
+      // swallowed an error we need to surface loudly.
+      await assert_thread_metadata_present({ thread_dir })
+
       // Update raw data if provided
       if (raw_session_data) {
         const raw_data_dir = path.join(thread_dir, 'raw-data')
@@ -516,13 +533,6 @@ export const update_existing_thread = async (
           user_base_directory
         })
       }
-
-      // Update thread metadata
-      metadata_changed = await update_thread_metadata(
-        thread_dir,
-        normalized_session,
-        { source_overrides }
-      )
 
       // Always rebuild timeline from the full normalized session.
       timeline_result = await build_timeline_from_session(

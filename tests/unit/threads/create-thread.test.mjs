@@ -93,13 +93,14 @@ describe('create_thread', () => {
     expect(timeline).to.be.an('array')
     expect(timeline).to.be.empty
 
-    // Check memory directory
-    const memory_dir = path.join(thread_dir, 'memory')
+    // memory/ is not created -- the subdirectory was removed as unused; the
+    // thread directory should contain only metadata.json (+ raw-data/ for
+    // external sessions and timeline.jsonl once the first entry is appended).
     const memory_dir_exists = await fs
-      .access(memory_dir)
+      .access(path.join(thread_dir, 'memory'))
       .then(() => true)
       .catch(() => false)
-    expect(memory_dir_exists).to.be.true
+    expect(memory_dir_exists).to.be.false
 
     // Verify git branches were created in both repos
     const branch_name = `thread/${thread.thread_id}`

@@ -579,9 +579,15 @@ describe('Tool Extraction Integration Tests', () => {
     let temp_dir
 
     before(async () => {
-      // Create temporary directory for test files
+      // Create temporary directory for test files. metadata.json must exist
+      // before build_timeline_from_session is allowed to write a sibling
+      // timeline.jsonl -- it is the thread directory's lifecycle anchor.
       temp_dir = path.join(process.cwd(), 'tmp', 'tool-extraction-tests')
       await fs.mkdir(temp_dir, { recursive: true })
+      await fs.writeFile(
+        path.join(temp_dir, 'metadata.json'),
+        JSON.stringify({ thread_id: 'test-thread' })
+      )
     })
 
     after(async () => {

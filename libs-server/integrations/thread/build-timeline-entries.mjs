@@ -13,6 +13,7 @@ import {
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
+import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 
 const EPOCH_ISO = '1970-01-01T00:00:00.000Z'
 
@@ -45,6 +46,10 @@ export const build_timeline_from_session = async (
     log_debug(
       `Building timeline for thread ${thread_info.thread_id} from ${normalized_session.session_provider} session`
     )
+
+    // timeline.jsonl may only be written to a thread directory that already
+    // has its metadata.json lifecycle anchor in place.
+    await assert_thread_metadata_present({ thread_dir: thread_info.thread_dir })
 
     const timeline_entries = []
 

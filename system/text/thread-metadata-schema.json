@@ -137,10 +137,6 @@
       "type": ["string", "null"],
       "description": "Path to the Git worktree for the user repository"
     },
-    "memory_repo_initialized": {
-      "type": "boolean",
-      "description": "Whether the thread's memory directory has been initialized as a git repository"
-    },
     "message_count": {
       "type": "integer",
       "description": "Total number of messages in this thread"

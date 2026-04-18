@@ -5,10 +5,14 @@
 # Called by Claude Code sync-claude-session.sh hook or push-threads.sh
 #
 # Usage:
-#   auto-commit-threads.sh [--skip-lock] [thread_id]
+#   auto-commit-threads.sh [--skip-lock] [--no-sweep] [thread_id]
 #
 # Options:
 #   --skip-lock   Skip lock acquisition (caller already holds lock)
+#   --no-sweep    Skip the orphan-directory sweep (maintenance escape hatch)
+#
+# Environment:
+#   AUTO_COMMIT_THREADS_NO_SWEEP=1 equivalent to --no-sweep
 #
 # Behavior:
 # - Operates within the thread/ submodule (separate git repo)
@@ -17,15 +21,24 @@
 # - Creates a normal commit (not amend) for dual-machine compatibility
 # - Uses file locking to prevent concurrent execution
 # - Non-blocking: exits immediately if lock held (scheduled job will handle)
+# - Pre-stage orphan sweep: any thread/<id>/ directory whose metadata.json is
+#   absent AND not tracked in git HEAD AND has no .import.lock is rm -rf'd.
+#   metadata.json is the directory's lifecycle anchor; git rm metadata.json on
+#   any machine propagates to every machine's sweep on the next sync round.
 
 set -e
 
 # Parse arguments
 SKIP_LOCK=false
+NO_SWEEP=false
+if [ "${AUTO_COMMIT_THREADS_NO_SWEEP:-}" = "1" ]; then
+    NO_SWEEP=true
+fi
 THREAD_ID=""
 for arg in "$@"; do
     case "$arg" in
         --skip-lock) SKIP_LOCK=true ;;
+        --no-sweep) NO_SWEEP=true ;;
         *) THREAD_ID="$arg" ;;
     esac
 done
@@ -148,12 +161,71 @@ wait_for_git_index_lock() {
     fi
 }
 
+# Pre-stage orphan sweep: remove thread/<id>/ directories whose metadata.json
+# is absent AND not tracked in git HEAD AND has no .import.lock. This is the
+# tear-down half of the metadata-anchor lifecycle: git rm metadata.json on any
+# machine, sync, and the next sweep on every other machine garbage-collects
+# the gitignored raw-data/ and timeline.jsonl that would otherwise orphan in
+# place. Only directories whose names look like UUIDs are swept, to avoid
+# accidentally touching submodule metadata (.git, plans/, .gitignore, ...).
+UUID_GLOB='[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f]-[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]'
+
+sweep_orphan_dirs() {
+    local swept=0
+    local memory_removed=0
+    local id
+    for entry in $UUID_GLOB; do
+        # No matches: shell leaves the literal glob, which fails -d
+        [ -d "$entry" ] || continue
+        id="$entry"
+
+        # Clean up the unused memory/ subdirectory wherever it exists. It is
+        # no longer created by create_thread; this catches legacy directories.
+        if [ -d "$id/memory" ]; then
+            rm -rf "$id/memory"
+            memory_removed=$((memory_removed + 1))
+        fi
+
+        # Skip if metadata.json is present on disk -- thread is live
+        if [ -f "$id/metadata.json" ]; then
+            continue
+        fi
+        # Skip if an active import is mid-write
+        if [ -f "$id/.import.lock" ]; then
+            continue
+        fi
+        # Skip if metadata.json is tracked in git HEAD -- deletion not yet
+        # pulled, or a local-only removal we should not yet enforce
+        if git cat-file -e "HEAD:$id/metadata.json" 2>/dev/null; then
+            continue
+        fi
+        echo "Sweeping orphan thread directory: $id"
+        rm -rf "$id"
+        swept=$((swept + 1))
+    done
+    if [ "$swept" -gt 0 ]; then
+        echo "Swept $swept orphan thread directories"
+    fi
+    if [ "$memory_removed" -gt 0 ]; then
+        echo "Removed $memory_removed legacy memory/ subdirectories"
+    fi
+}
+
 # Perform git operations
 do_commit() {
     if [ -n "$THREAD_ID" ]; then
         # Specific thread mode: stage entire thread folder
         if [ ! -d "$THREAD_ID" ]; then
             echo "Thread directory not found: $THREAD_ID" >&2
+            return 0
+        fi
+
+        # Refuse to stage a thread dir that has no metadata.json. This
+        # normally means the thread was deleted upstream; the sweep above
+        # (or the next one) will tear the local directory down. Do not
+        # resurrect it in the index.
+        if [ ! -f "$THREAD_ID/metadata.json" ]; then
+            echo "Thread $THREAD_ID has no metadata.json, refusing to stage (deleted upstream or mid-delete)"
             return 0
         fi
 
@@ -212,6 +284,9 @@ do_commit() {
 }
 
 wait_for_git_index_lock
+if [ "$NO_SWEEP" = false ]; then
+    sweep_orphan_dirs
+fi
 do_commit
 
 # Push any unpushed commits (best-effort, bypasses sync_repo overhead)
