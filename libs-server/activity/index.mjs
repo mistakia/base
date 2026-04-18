@@ -1,14 +1,13 @@
 import debug from 'debug'
 
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { aggregate_git_activity } from './aggregate-git-activity.mjs'
-import { aggregate_task_activity } from './aggregate-task-activity.mjs'
 import { aggregate_thread_activity } from './aggregate-thread-activity.mjs'
 import { calculate_activity_score } from './calculate-activity-score.mjs'
 
 const log = debug('activity')
 
 export { aggregate_git_activity } from './aggregate-git-activity.mjs'
-export { aggregate_task_activity } from './aggregate-task-activity.mjs'
 export { aggregate_thread_activity } from './aggregate-thread-activity.mjs'
 export { calculate_activity_score } from './calculate-activity-score.mjs'
 
@@ -123,7 +122,7 @@ export async function get_activity_heatmap_data({ days = 365 } = {}) {
   const [git_activity, thread_activity, task_activity] = await Promise.all([
     aggregate_git_activity({ days }),
     aggregate_thread_activity({ days }),
-    aggregate_task_activity({ days })
+    embedded_index_manager.query_task_activity_aggregated({ days })
   ])
 
   const result = merge_activity_and_calculate_scores({

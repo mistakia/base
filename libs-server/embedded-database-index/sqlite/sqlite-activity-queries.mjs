@@ -136,6 +136,86 @@ export async function query_thread_activity_aggregated({ days = 365 } = {}) {
   }))
 }
 
+export async function query_task_activity_aggregated({ days = 365 } = {}) {
+  log('Querying task activity aggregated for last %d days', days)
+
+  const until_date = new Date()
+  const since_date = new Date()
+  since_date.setDate(since_date.getDate() - days)
+
+  const since_str = since_date.toISOString().split('T')[0]
+  const until_str = until_date.toISOString().split('T')[0]
+
+  const [creation_rows, completion_rows] = await Promise.all([
+    execute_sqlite_query({
+      query: `
+        SELECT date(created_at) as date, COUNT(*) as count
+        FROM entities
+        WHERE type = 'task' AND created_at >= ? AND created_at <= ?
+        GROUP BY date(created_at)
+      `,
+      parameters: [since_str, until_str]
+    }),
+    // Subquery materializes type='task' filter before JSON extraction to
+    // avoid json_extract running against non-task frontmatter (which can
+    // cause cast errors on incompatible structures).
+    execute_sqlite_query({
+      query: `
+        SELECT
+          date(finished_at_str) as date,
+          COUNT(*) as count
+        FROM (
+          SELECT json_extract(frontmatter, '$.finished_at') as finished_at_str
+          FROM entities
+          WHERE type = 'task' AND status = 'Completed'
+        ) task_completions
+        WHERE finished_at_str IS NOT NULL
+          AND date(finished_at_str) >= ?
+          AND date(finished_at_str) <= ?
+        GROUP BY date(finished_at_str)
+      `,
+      parameters: [since_str, until_str]
+    })
+  ])
+
+  const by_date = new Map()
+
+  const coerce_date = (value) =>
+    value instanceof Date
+      ? value.toISOString().split('T')[0]
+      : String(value).split('T')[0]
+
+  for (const row of creation_rows) {
+    const date = coerce_date(row.date)
+    by_date.set(date, {
+      date,
+      tasks_created: Number(row.count || 0),
+      tasks_completed: 0
+    })
+  }
+
+  for (const row of completion_rows) {
+    const date = coerce_date(row.date)
+    const existing = by_date.get(date)
+    if (existing) {
+      existing.tasks_completed = Number(row.count || 0)
+    } else {
+      by_date.set(date, {
+        date,
+        tasks_created: 0,
+        tasks_completed: Number(row.count || 0)
+      })
+    }
+  }
+
+  const result = Array.from(by_date.values()).sort((a, b) =>
+    a.date.localeCompare(b.date)
+  )
+
+  log('Aggregated task activity for %d days', result.length)
+  return result
+}
+
 // ---------------------------------------------------------------------------
 // activity_heatmap_daily table operations
 // ---------------------------------------------------------------------------

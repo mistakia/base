@@ -3,8 +3,7 @@ import debug from 'debug'
 
 import {
   get_activity_heatmap_data,
-  merge_activity_and_calculate_scores,
-  aggregate_task_activity
+  merge_activity_and_calculate_scores
 } from '#libs-server/activity/index.mjs'
 import {
   get_cached_activity_heatmap,
@@ -61,7 +60,7 @@ router.get('/heatmap', async (req, res) => {
       const [git_activity, thread_activity, task_activity] = await Promise.all([
         embedded_index_manager.query_git_activity_daily({ days }),
         embedded_index_manager.query_thread_activity_aggregated({ days }),
-        aggregate_task_activity({ days })
+        embedded_index_manager.query_task_activity_aggregated({ days })
       ])
 
       if (

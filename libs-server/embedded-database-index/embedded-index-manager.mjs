@@ -1014,6 +1014,12 @@ class EmbeddedIndexManager {
     )
   }
 
+  async query_task_activity_aggregated(params) {
+    return this._with_reader(() =>
+      this._backend.query_task_activity_aggregated(params)
+    )
+  }
+
   async query_heatmap_daily(params) {
     return this._with_reader(() => this._backend.query_heatmap_daily(params))
   }
