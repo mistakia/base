@@ -49,10 +49,12 @@ const log = debug('index-sync')
 const SERVER_LOCK_FILE = '.server-lock'
 
 const WAL_CHECKPOINT_INTERVAL_MS = 600000 // 10 minutes
+const GC_INTERVAL_MS = 300000 // 5 minutes — releases decommitted JSC arenas so RSS tracks real usage
 
 let is_running = false
 let metrics = null
 let wal_checkpoint_interval = null
+let gc_interval = null
 
 /**
  * Write server lock file to indicate the sync service is the active writer.
@@ -278,6 +280,13 @@ export const start_index_sync_service = async () => {
   }, WAL_CHECKPOINT_INTERVAL_MS)
   if (wal_checkpoint_interval.unref) wal_checkpoint_interval.unref()
 
+  if (typeof Bun !== 'undefined' && typeof Bun.gc === 'function') {
+    gc_interval = setInterval(() => {
+      Bun.gc(true)
+    }, GC_INTERVAL_MS)
+    if (gc_interval.unref) gc_interval.unref()
+  }
+
   is_running = true
   metrics.timing('startup', Date.now() - startup_start)
   log('Index sync service started')
@@ -298,6 +307,11 @@ export const stop_index_sync_service = async () => {
   if (wal_checkpoint_interval) {
     clearInterval(wal_checkpoint_interval)
     wal_checkpoint_interval = null
+  }
+
+  if (gc_interval) {
+    clearInterval(gc_interval)
+    gc_interval = null
   }
 
   if (metrics) {

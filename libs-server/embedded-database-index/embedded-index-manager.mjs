@@ -86,7 +86,7 @@ class EmbeddedIndexManager {
     // re-extraction when only metadata changes.
     // Cleared on rebuild and shutdown; evicts oldest entries when exceeding cap.
     this._timeline_sync_cache = new Map()
-    this._timeline_cache_max_size = 5000
+    this._timeline_cache_max_size = 200
 
     // Backend and fallback registration
     this._backend = sqlite_backend
