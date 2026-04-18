@@ -12,7 +12,6 @@ import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
 import { isMain } from '#libs-server/is-main.mjs'
-import { get_claude_config } from '#libs-server/integrations/claude/claude-config.mjs'
 import { get_cursor_config } from '#libs-server/integrations/cursor/cursor-config.mjs'
 import { build_chatgpt_filter } from '#libs-server/integrations/chatgpt/chatgpt-config.mjs'
 import { build_session_filter } from '#libs-server/integrations/thread/thread-integration-shared-config.mjs'
@@ -473,9 +472,9 @@ const main = async () => {
               default: 'claude'
             })
             .option('claude-projects-dir', {
-              describe: 'Claude projects directory',
-              type: 'string',
-              default: get_claude_config().claude_projects_directory
+              describe:
+                'Claude projects directory (overrides multi-account discovery from claude_accounts.accounts[])',
+              type: 'string'
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
@@ -560,9 +559,9 @@ const main = async () => {
               default: 'claude'
             })
             .option('claude-projects-dir', {
-              describe: 'Claude projects directory',
-              type: 'string',
-              default: get_claude_config().claude_projects_directory
+              describe:
+                'Claude projects directory (overrides multi-account discovery from claude_accounts.accounts[])',
+              type: 'string'
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
@@ -765,9 +764,9 @@ const main = async () => {
               default: 'claude'
             })
             .option('claude-projects-dir', {
-              describe: 'Claude projects directory',
-              type: 'string',
-              default: get_claude_config().claude_projects_directory
+              describe:
+                'Claude projects directory (overrides multi-account discovery from claude_accounts.accounts[])',
+              type: 'string'
             })
             .option('cursor-db-path', {
               describe: 'Cursor database path',
