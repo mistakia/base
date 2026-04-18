@@ -425,6 +425,7 @@ export async function* stream_claude_sessions({
       }
 
       const parent_session = sessions[0]
+      parent_session.parse_mode = 'full'
 
       // Apply filter if provided
       if (filter_session && !filter_session(parent_session)) {
@@ -442,6 +443,7 @@ export async function* stream_claude_sessions({
             await parse_claude_jsonl_file(agent_file_path)
           if (agent_session_list.length > 0) {
             const agent_session = agent_session_list[0]
+            agent_session.parse_mode = 'full'
 
             // Skip warm agents unless explicitly included
             if (
