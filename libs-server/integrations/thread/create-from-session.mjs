@@ -592,10 +592,22 @@ export const update_thread_metadata = async (
     const metadata_start = Date.now()
     const metadata_path = path.join(thread_dir, 'metadata.json')
 
-    // Read existing metadata
-    const existing_metadata = JSON.parse(
-      await fs.readFile(metadata_path, 'utf-8')
-    )
+    // Read existing metadata. When metadata.json is missing (e.g. a prior
+    // import crashed mid-write, or only raw-data/ + timeline.jsonl survived),
+    // seed with a minimal skeleton so the merge/write path below can bootstrap
+    // a fresh metadata file rather than silently no-op.
+    let existing_metadata
+    try {
+      existing_metadata = JSON.parse(
+        await fs.readFile(metadata_path, 'utf-8')
+      )
+    } catch (read_error) {
+      if (read_error.code !== 'ENOENT') throw read_error
+      existing_metadata = {
+        thread_id: path.basename(thread_dir),
+        created_at: new Date().toISOString()
+      }
+    }
 
     // Never downgrade a container_user thread. Once the container-aware
     // import path has stamped a thread with execution_mode='container_user',
