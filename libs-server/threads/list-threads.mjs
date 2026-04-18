@@ -100,6 +100,7 @@ export async function process_threads_in_batches({
   let synced = 0
   let failed = 0
   let processed = 0
+  const failed_thread_ids = []
 
   for (let i = 0; i < thread_ids.length; i += batch_size) {
     const batch_ids = thread_ids.slice(i, i + batch_size)
@@ -112,6 +113,7 @@ export async function process_threads_in_batches({
       if (!metadata) {
         failed++
         processed++
+        failed_thread_ids.push(`${thread_id} (no metadata)`)
         continue
       }
 
@@ -121,10 +123,12 @@ export async function process_threads_in_batches({
           synced++
         } else {
           failed++
+          failed_thread_ids.push(thread_id)
         }
       } catch (error) {
         log_fn('Error processing thread %s: %s', thread_id, error.message)
         failed++
+        failed_thread_ids.push(`${thread_id} (${error.message})`)
       }
       processed++
     }
@@ -142,7 +146,7 @@ export async function process_threads_in_batches({
     }
   }
 
-  return { synced, failed }
+  return { synced, failed, failed_thread_ids }
 }
 
 /**

@@ -95,7 +95,8 @@ export async function resync_full_index({ index_manager }) {
     entities_orphans_removed: 0,
     threads_synced: 0,
     threads_failed: 0,
-    threads_orphans_removed: 0
+    threads_orphans_removed: 0,
+    failed_entity_uris: []
   }
 
   try {
@@ -131,10 +132,12 @@ export async function resync_full_index({ index_manager }) {
             stats.entities_synced++
           } else {
             stats.entities_failed++
+            stats.failed_entity_uris.push(base_uri)
           }
         } catch (error) {
           log('Error syncing entity %s: %s', base_uri, error.message)
           stats.entities_failed++
+          stats.failed_entity_uris.push(`${base_uri} (${error.message})`)
         }
       }
     }
@@ -150,18 +153,20 @@ export async function resync_full_index({ index_manager }) {
     // Thread IDs are the filesystem set for orphan detection
     const filesystem_thread_ids = new Set(thread_ids)
 
-    const { synced, failed } = await process_threads_in_batches({
-      thread_ids,
-      sync_fn: ({ thread_id, metadata }) =>
-        index_manager.sync_thread({ thread_id, metadata }),
-      options: {
-        log_fn: log,
-        progress_label: 'Thread sync'
-      }
-    })
+    const { synced, failed, failed_thread_ids } =
+      await process_threads_in_batches({
+        thread_ids,
+        sync_fn: ({ thread_id, metadata }) =>
+          index_manager.sync_thread({ thread_id, metadata }),
+        options: {
+          log_fn: log,
+          progress_label: 'Thread sync'
+        }
+      })
 
     stats.threads_synced = synced
     stats.threads_failed = failed
+    stats.failed_thread_ids = failed_thread_ids
 
     // Phase 3: Remove orphan entities
     log('Phase 3: Removing orphan entities')
