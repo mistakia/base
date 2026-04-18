@@ -113,76 +113,76 @@ export const select_account = async ({
   }
 
   const threshold = accounts_config.utilization_threshold || 90
+
+  // Probe all accounts in parallel. Each resolves to a classification
+  // record; selection logic below preserves prior priority/score semantics.
+  const probes = await Promise.all(
+    accounts.map(async (account) => {
+      if (await is_account_auth_failed(account.namespace)) {
+        log('Account %s marked as auth_failed, skipping', account.namespace)
+        return { account, kind: 'exhausted', reason: 'auth_failed' }
+      }
+      if (await is_account_exhausted(account.namespace)) {
+        log('Account %s marked as exhausted, skipping', account.namespace)
+        return { account, kind: 'exhausted', reason: 'marked_exhausted' }
+      }
+
+      const cached = await get_cached_usage(account.namespace)
+      let usage = is_complete_usage(cached) ? cached : null
+
+      if (usage === null) {
+        const result = await check_usage_fn({
+          namespace: account.namespace,
+          org_uuid: account.org_uuid,
+          browser_profile: account.browser_profile
+        })
+        if (
+          result.error ||
+          result.utilization == null ||
+          !is_complete_usage(result.utilization)
+        ) {
+          log(
+            'live check unavailable for %s: %s',
+            account.namespace,
+            result.error || 'incomplete usage data'
+          )
+          return { account, kind: 'unscored' }
+        }
+        usage = result.utilization
+      }
+
+      if (classify_usage_result({ utilization: usage, threshold }) === 'over') {
+        log(
+          'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
+          account.namespace,
+          usage.five_hour?.utilization,
+          usage.seven_day?.utilization
+        )
+        return { account, kind: 'exhausted', reason: 'over_threshold' }
+      }
+
+      const score = compute_account_score(usage)
+      if (score !== null) {
+        log('Account %s score: %.3f', account.namespace, score)
+        return { account, kind: 'scored', score }
+      }
+      return { account, kind: 'unscored' }
+    })
+  )
+
   const exhausted_details = []
   const scored_candidates = []
   const unscored_candidates = []
-
-  for (const account of accounts) {
-    const auth_failed = await is_account_auth_failed(account.namespace)
-    if (auth_failed) {
-      log('Account %s marked as auth_failed, skipping', account.namespace)
+  for (const probe of probes) {
+    if (probe.kind === 'exhausted') {
       exhausted_details.push({
-        namespace: account.namespace,
-        reason: 'auth_failed'
+        namespace: probe.account.namespace,
+        reason: probe.reason
       })
-      continue
-    }
-
-    const exhausted = await is_account_exhausted(account.namespace)
-    if (exhausted) {
-      log('Account %s marked as exhausted, skipping', account.namespace)
-      exhausted_details.push({
-        namespace: account.namespace,
-        reason: 'marked_exhausted'
-      })
-      continue
-    }
-
-    const cached = await get_cached_usage(account.namespace)
-    let usage = is_complete_usage(cached) ? cached : null
-
-    if (usage === null) {
-      const result = await check_usage_fn({
-        namespace: account.namespace,
-        org_uuid: account.org_uuid,
-        browser_profile: account.browser_profile
-      })
-      if (
-        result.error ||
-        result.utilization == null ||
-        !is_complete_usage(result.utilization)
-      ) {
-        log(
-          'live check unavailable for %s: %s',
-          account.namespace,
-          result.error || 'incomplete usage data'
-        )
-        unscored_candidates.push({ account })
-        continue
-      }
-      usage = result.utilization
-    }
-
-    if (classify_usage_result({ utilization: usage, threshold }) === 'over') {
-      log(
-        'Account %s over threshold (5h: %d%%, 7d: %d%%), skipping',
-        account.namespace,
-        usage.five_hour?.utilization,
-        usage.seven_day?.utilization
-      )
-      exhausted_details.push({
-        namespace: account.namespace,
-        reason: 'over_threshold'
-      })
-      continue
-    }
-
-    const score = compute_account_score(usage)
-    if (score !== null) {
-      scored_candidates.push({ account, score })
-      log('Account %s score: %.3f', account.namespace, score)
+    } else if (probe.kind === 'scored') {
+      scored_candidates.push({ account: probe.account, score: probe.score })
     } else {
-      unscored_candidates.push({ account })
+      unscored_candidates.push({ account: probe.account })
     }
   }
 

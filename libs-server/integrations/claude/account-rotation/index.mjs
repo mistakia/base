@@ -1,5 +1,6 @@
 export {
   check_account_usage,
+  ensure_daemon_running,
   get_cached_usage,
   set_cached_usage,
   mark_account_exhausted,

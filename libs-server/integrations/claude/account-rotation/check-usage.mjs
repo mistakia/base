@@ -209,7 +209,7 @@ const exec_cloakbrowser = async (subcommand, args = [], options = {}) => {
  *
  * @param {string} browser_profile - Profile name
  */
-const ensure_daemon_running = async (browser_profile) => {
+export const ensure_daemon_running = async (browser_profile) => {
   try {
     await exec_cloakbrowser('status', ['--profile', browser_profile])
     log('Daemon already running for %s', browser_profile)
