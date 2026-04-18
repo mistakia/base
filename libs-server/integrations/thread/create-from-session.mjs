@@ -194,7 +194,7 @@ export const create_thread_from_session = async ({
   }
 }
 
-const save_raw_session_data = async ({
+export const save_raw_session_data = async ({
   raw_data_dir,
   session_provider,
   raw_session_data,
