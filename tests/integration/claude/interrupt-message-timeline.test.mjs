@@ -7,12 +7,14 @@ import { normalize_claude_session } from '#libs-server/integrations/claude/norma
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { create_temp_test_directory } from '#tests/utils/create-temp-test-directory.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 describe('Claude Interrupt Message Timeline Integration', () => {
   it('should create timeline entries with system type for interrupt messages', async () => {
     const temp_dir_obj = create_temp_test_directory()
     const thread_dir = path.join(temp_dir_obj.path, 'test-thread')
     await fs.mkdir(thread_dir, { recursive: true })
+    await seed_thread_metadata({ thread_dir, thread_id: 'test-thread-id' })
 
     // Create a Claude session with an interrupt message
     const claude_session = {
@@ -131,6 +133,7 @@ describe('Claude Interrupt Message Timeline Integration', () => {
     const temp_dir_obj = create_temp_test_directory()
     const thread_dir = path.join(temp_dir_obj.path, 'test-thread-mixed')
     await fs.mkdir(thread_dir, { recursive: true })
+    await seed_thread_metadata({ thread_dir, thread_id: 'mixed-test' })
 
     // Create a session with mixed message types including interrupts
     const claude_session = {

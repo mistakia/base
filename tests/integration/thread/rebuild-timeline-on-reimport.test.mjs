@@ -7,6 +7,7 @@ import { normalize_claude_session } from '#libs-server/integrations/claude/norma
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { create_temp_test_directory } from '#tests/utils/create-temp-test-directory.mjs'
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 // Lock in Component 1 of user:task/base/fix-thread-relation-pipeline-reliability.md:
 // re-importing a session with additional raw-data entries must produce a
@@ -17,6 +18,7 @@ describe('build_timeline_from_session re-import rebuild', () => {
     const temp_dir_obj = create_temp_test_directory()
     const thread_dir = path.join(temp_dir_obj.path, 'reimport-thread')
     await fs.mkdir(thread_dir, { recursive: true })
+    await seed_thread_metadata({ thread_dir, thread_id: 'reimport-thread' })
 
     const base_entries = [
       {

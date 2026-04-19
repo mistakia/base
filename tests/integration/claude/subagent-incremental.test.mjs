@@ -11,6 +11,7 @@ import { save_raw_session_data } from '#libs-server/integrations/thread/create-f
 import { generate_thread_id_from_session } from '#libs-server/threads/generate-thread-id-from-session.mjs'
 import { clear_sync_state } from '#libs-server/integrations/claude/sync-state.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 const make_entry = (uuid, index, type = 'user') => ({
   uuid,
@@ -49,6 +50,7 @@ const run_import = async ({ session_file, threads_root }) => {
     const thread_dir = path.join(threads_root, thread_id)
     const raw_data_dir = path.join(thread_dir, 'raw-data')
     await fs.mkdir(raw_data_dir, { recursive: true })
+    await seed_thread_metadata({ thread_dir, thread_id })
 
     const parse_mode = session.parse_mode
     const normalized = normalize_claude_session(session)

@@ -5,6 +5,7 @@ import os from 'os'
 
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 const THREAD_ID = '33333333-3333-3333-3333-333333333333'
 
@@ -38,6 +39,7 @@ describe('build_timeline_from_session parse_mode branching', function () {
 
   beforeEach(async () => {
     thread_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'build-timeline-'))
+    await seed_thread_metadata({ thread_dir, thread_id: THREAD_ID })
   })
 
   afterEach(async () => {

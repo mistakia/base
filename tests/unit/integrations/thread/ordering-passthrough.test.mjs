@@ -5,6 +5,7 @@ import os from 'os'
 
 import { normalize_claude_session } from '#libs-server/integrations/claude/normalize-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 const SESSION_ID = '11111111-1111-1111-1111-111111111111'
 const THREAD_ID = '22222222-2222-2222-2222-222222222222'
@@ -19,6 +20,7 @@ const read_entries = async (thread_dir) => {
 
 const write_timeline = async (normalized_session) => {
   const thread_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'ordering-'))
+  await seed_thread_metadata({ thread_dir, thread_id: THREAD_ID })
   await build_timeline_from_session(normalized_session, {
     thread_id: THREAD_ID,
     thread_dir

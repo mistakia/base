@@ -4,6 +4,7 @@ import path from 'path'
 import os from 'os'
 
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
+import { seed_thread_metadata } from '#tests/utils/index.mjs'
 
 const EPOCH_ISO = '1970-01-01T00:00:00.000Z'
 const THREAD_ID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
@@ -18,6 +19,7 @@ const read_entries = async (thread_dir) => {
 
 const build = async (messages) => {
   const thread_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'timestamp-sentinel-'))
+  await seed_thread_metadata({ thread_dir, thread_id: THREAD_ID })
   const normalized_session = {
     session_id: 'session-test',
     session_provider: 'claude',
