@@ -228,6 +228,21 @@ class EmbeddedIndexManager {
     return with_sqlite_reader({ database_path: sqlite_path }, fn)
   }
 
+  // Like _with_reader, but returns default_value when the sqlite file does
+  // not exist and no writer handle is open. Used by read-only aggregation
+  // queries that should degrade to an empty result in environments without
+  // a populated index (e.g., API integration tests).
+  _with_optional_reader(fn, default_value) {
+    if (is_sqlite_initialized()) {
+      return fn()
+    }
+    const { sqlite_path } = this.get_index_config()
+    if (!fs_sync.existsSync(sqlite_path)) {
+      return default_value
+    }
+    return with_sqlite_reader({ database_path: sqlite_path }, fn)
+  }
+
   /**
    * Get entity count from the embedded database.
    * Used to detect populated database for comparison.
@@ -1003,20 +1018,23 @@ class EmbeddedIndexManager {
   }
 
   async query_git_activity_daily(params) {
-    return this._with_reader(() =>
-      this._backend.query_git_activity_daily(params)
+    return this._with_optional_reader(
+      () => this._backend.query_git_activity_daily(params),
+      []
     )
   }
 
   async query_thread_activity_aggregated(params) {
-    return this._with_reader(() =>
-      this._backend.query_thread_activity_aggregated(params)
+    return this._with_optional_reader(
+      () => this._backend.query_thread_activity_aggregated(params),
+      []
     )
   }
 
   async query_task_activity_aggregated(params) {
-    return this._with_reader(() =>
-      this._backend.query_task_activity_aggregated(params)
+    return this._with_optional_reader(
+      () => this._backend.query_task_activity_aggregated(params),
+      []
     )
   }
 
