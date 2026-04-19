@@ -85,6 +85,36 @@ When unsure, prefer **Draft** -- it is better to refine a task than to attempt e
 - When in doubt, assign **Medium** and adjust based on feedback
 - Ask the user if priority is unclear from context
 
+### 2f: Date-Gated Continuation Prompts
+
+Use the task entity -- not a `scheduled-command` -- when the work is one-time and time-anchored. `scheduled-command` is for recurring or ongoing executions (cron-like); one-time, date-gated follow-ups belong in the task system so they surface through the same queries, status lifecycle, and relationships as every other unit of work.
+
+Apply this pattern when all three hold:
+
+- The work is a single verification, cleanup, or follow-up step tied to a specific moment (`24h after deploy`, `next billing cycle`, `after PR merges upstream`).
+- It is self-contained enough to execute from the task body without a live back-and-forth session.
+- Running it earlier than the anchor provides no value (premature), and running it much later still provides value (soft deadline, not hard).
+
+Frontmatter fields:
+
+- `status: Planned` -- the body is self-contained and actionable by an agent in a new context window.
+- `priority` -- inherit from the parent task that spawned the follow-up (do not invent a new priority).
+- `tags` -- inherit the parent's primary tag.
+- `snooze_until` -- ISO timestamp for when the reminder should resurface (the earliest point at which running it makes sense).
+- `finish_by` -- ISO timestamp for the soft deadline (typically `snooze_until` plus a reasonable grace window; the point after which the work is stale or pointless).
+- `relations` -- `relates [[...]]` back to the parent task; `succeeds [[...]]` to any sibling continuation tasks that must run before this one (e.g., 24h check precedes 30-day check).
+
+Body structure (four sections, in this order):
+
+1. **Context** -- what was deployed, relevant commit SHAs or entity IDs, parent-task reference. Enough for a cold reader to understand what triggered this follow-up without reading the parent.
+2. **Steps** -- exact shell commands or CLI invocations, copy-pasteable. Include fallbacks if the primary command may return empty.
+3. **Interpretation** -- a decision tree for each plausible outcome, including which observation to record on the parent, whether to close the parent task, and whether to file new follow-ups.
+4. **Key locations** -- absolute paths, SSH aliases, and related entity URIs for progressive disclosure. Let the executing session decide what to read; do not inline file contents.
+
+Naming: `verify-<subject>-<window>.md` (e.g., `-24h`, `-7d`, `-30d`) keeps related continuations sortable and greppable next to each other.
+
+The four-section body structure is recommended, not mandatory. For truly trivial continuations ("re-run X on date Y"), a single paragraph is fine; preserve the frontmatter fields regardless.
+
 ## Step 3: Create Entity
 
 - **Before creating, verify the target path does not already exist.** If a file exists at the path, inform the user and choose an alternative name to avoid overwriting existing work.
