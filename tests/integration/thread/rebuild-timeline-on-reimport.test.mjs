@@ -45,8 +45,10 @@ describe('build_timeline_from_session re-import rebuild', () => {
 
     const thread_info = { thread_id: 'reimport-thread', thread_dir }
 
+    const first_normalized = normalize_claude_session(first_session)
+    first_normalized.parse_mode = 'full'
     const first_result = await build_timeline_from_session(
-      normalize_claude_session(first_session),
+      first_normalized,
       thread_info
     )
     expect(first_result.entry_count).to.equal(2)
@@ -72,8 +74,10 @@ describe('build_timeline_from_session re-import rebuild', () => {
       metadata: { cwd: '/tmp', version: '1.0.0' }
     }
 
+    const second_normalized = normalize_claude_session(extended_session)
+    second_normalized.parse_mode = 'full'
     const second_result = await build_timeline_from_session(
-      normalize_claude_session(extended_session),
+      second_normalized,
       thread_info
     )
 
