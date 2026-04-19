@@ -125,7 +125,11 @@ export const parse_claude_jsonl_file = async (file_path) => {
     let primary_session_id = null
     const file_summaries = []
 
-    // Extract session ID from filename (Claude uses UUID format filenames)
+    // Extract session ID from filename (Claude uses UUID format filenames).
+    // When the caller passes a non-UUID filename via --session-file (e.g. a
+    // recovery run against thread/<id>/raw-data/claude-session.jsonl), the
+    // real session_id is rediscovered below from the first entry's sessionId
+    // field so source.session_id doesn't get clobbered with "claude-session".
     primary_session_id = path.basename(file_path, '.jsonl')
 
     // Collect all entries from the file
@@ -193,6 +197,23 @@ export const parse_claude_jsonl_file = async (file_path) => {
         session.metadata.user_type = entry.userType
       }
     })
+
+    // Recover the real session UUID from the first entry when the filename
+    // basename is not itself a UUID (recovery imports from raw-data/*.jsonl).
+    const uuid_re =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!uuid_re.test(primary_session_id)) {
+      const first_with_session = all_entries.find(
+        (e) => typeof e?.sessionId === 'string' && uuid_re.test(e.sessionId)
+      )
+      if (first_with_session) {
+        log_debug(
+          `Rewriting non-UUID session_id ${primary_session_id} -> ${first_with_session.sessionId} from entry sessionId`
+        )
+        primary_session_id = first_with_session.sessionId
+        session.session_id = primary_session_id
+      }
+    }
 
     // Sort entries by parse line number to preserve original file order
     session.entries.sort((a, b) => {

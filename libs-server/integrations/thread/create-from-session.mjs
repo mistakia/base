@@ -69,6 +69,52 @@ const stable_stringify_for_comparison = (
   return JSON.stringify(sort_object(obj))
 }
 
+/**
+ * Post-write integrity check for a thread directory.
+ *
+ * After create_thread_from_session or update_existing_thread returns, assert
+ * that metadata.json and timeline.jsonl are both on disk (and raw-data/ when
+ * raw session data was supplied). Catches the class of failure where an
+ * external actor (e.g. sync-all.sh stash_and_abort) has unlinked metadata.json
+ * between our writes and our return, so the orphan is surfaced immediately
+ * instead of silently waiting for the next backfill to notice.
+ */
+const verify_thread_directory_integrity = async ({
+  thread_dir,
+  expect_raw_data = false
+}) => {
+  const checks = [
+    { name: 'metadata.json', full: path.join(thread_dir, 'metadata.json') },
+    { name: 'timeline.jsonl', full: path.join(thread_dir, 'timeline.jsonl') }
+  ]
+  if (expect_raw_data) {
+    checks.push({ name: 'raw-data/', full: path.join(thread_dir, 'raw-data') })
+  }
+
+  const missing = []
+  for (const check of checks) {
+    try {
+      await fs.access(check.full)
+    } catch (error) {
+      if (error.code === 'ENOENT') {
+        missing.push(check.name)
+      } else {
+        throw error
+      }
+    }
+  }
+
+  if (missing.length > 0) {
+    const err = new Error(
+      `thread directory integrity check failed: ${thread_dir} is missing ${missing.join(', ')} after write`
+    )
+    err.code = 'THREAD_POST_WRITE_INTEGRITY'
+    err.thread_dir = thread_dir
+    err.missing = missing
+    throw err
+  }
+}
+
 export const create_thread_from_session = async ({
   normalized_session,
   user_public_key = config.user_public_key,
@@ -181,6 +227,11 @@ export const create_thread_from_session = async ({
     log_debug(
       `Created thread ${thread_result.thread_id} from ${normalized_session.session_provider} session ${normalized_session.session_id}`
     )
+
+    await verify_thread_directory_integrity({
+      thread_dir: thread_result.context_dir,
+      expect_raw_data: !!raw_session_data
+    })
 
     return {
       thread_id: thread_result.thread_id,
@@ -543,6 +594,11 @@ export const update_existing_thread = async (
     } finally {
       await import_lock.release()
     }
+
+    await verify_thread_directory_integrity({
+      thread_dir,
+      expect_raw_data: !!raw_session_data
+    })
 
     const files_modified = metadata_changed || timeline_result.timeline_modified
 
