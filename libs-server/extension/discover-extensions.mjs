@@ -122,6 +122,7 @@ function parse_extension_manifest(
     requires: attributes.requires || [],
     optional: attributes.optional || [],
     provided_capabilities,
+    subcommand_of: attributes.subcommand_of || null,
     has_commands,
     has_skills,
     extension_path,

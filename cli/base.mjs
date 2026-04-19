@@ -31,6 +31,10 @@ import {
   get_extension_paths
 } from '#libs-server/extension/discover-extensions.mjs'
 import { load_extension_providers } from '#libs-server/extension/load-extension-providers.mjs'
+import {
+  register_subcommand_contributor,
+  clear_subcommand_contributors
+} from '#libs-server/extension/register-subcommand-extensions.mjs'
 
 import * as entity_command from './base/entity.mjs'
 import * as relation_command from './base/relation.mjs'
@@ -61,6 +65,7 @@ import * as outdated_command from './base/outdated.mjs'
 import * as init_command from './initial-setup.mjs'
 
 const load_extensions = async (parser) => {
+  clear_subcommand_contributors()
   const config = (await import('#config')).default
   const extension_paths = get_extension_paths(config)
   if (extension_paths.length === 0) return
@@ -76,12 +81,22 @@ const load_extensions = async (parser) => {
     )
   }
 
-  // Register extension CLI commands
+  // Register extension CLI commands. Extensions with `subcommand_of` set
+  // contribute into an existing built-in command group via the subcommand
+  // contributor registry; all others register as top-level commands.
   for (const ext of extensions) {
     if (!ext.has_commands) continue
     try {
       const mod = await import(path.join(ext.extension_path, 'command.mjs'))
-      parser.command(mod)
+      if (ext.subcommand_of) {
+        register_subcommand_contributor({
+          group_name: ext.subcommand_of,
+          extension_name: ext.name,
+          module: mod
+        })
+      } else {
+        parser.command(mod)
+      }
     } catch (error) {
       console.error(
         `Warning: Failed to load extension "${ext.name}": ${error.message}`

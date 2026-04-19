@@ -80,6 +80,47 @@ async function handle_subcommand(argv) {
 
 This is identical to the pattern used by built-in commands in cli/base/.
 
+## Contributing Subcommands to Built-In Groups
+
+Extensions can plug subcommands into an existing built-in command group (for example `base thread`) instead of registering at the top level. This is useful when the implementation is user-specific (needs host/path config the base engine must not hardcode) but the UX belongs alongside a built-in group.
+
+Declare the target group in the manifest:
+
+```yaml
+---
+name: thread-ops
+type: extension
+subcommand_of: thread
+---
+```
+
+Export `subcommand_of` and a `register_subcommands(yargs)` function from `command.mjs` instead of the standard `command`/`builder`/`handler` triple:
+
+```javascript
+export const subcommand_of = 'thread'
+
+export function register_subcommands(yargs) {
+  return yargs.command(
+    'delete <thread_id>',
+    'Delete a thread authoritatively from primary and all peers',
+    (yargs) =>
+      yargs
+        .positional('thread_id', { type: 'string' })
+        .option('force', { type: 'boolean', default: false })
+        .option('dry-run', { type: 'boolean', default: false }),
+    handle_delete
+  )
+}
+```
+
+At startup, base pre-loads every contributor module and registers them with the subcommand contributor registry keyed by `subcommand_of`. Built-in command builders call `register_subcommand_extensions(yargs, '<group>')` during their builder phase to mount the contributions. The host built-in must opt in by importing and calling this helper; groups that have not opted in will ignore `subcommand_of` entries.
+
+Contract and limits:
+
+- The target group must exist as a built-in command and must opt in by calling `register_subcommand_extensions` in its builder.
+- Command name collisions between contributors are surfaced by yargs at parse time; the contributor's registration is wrapped in a try/catch and logged as a warning without aborting the CLI.
+- Only one of (`command`/`builder`/`handler`) or (`subcommand_of`/`register_subcommands`) should be exported per `command.mjs`; the two shapes are mutually exclusive.
+
 ## Writing Skills
 
 Skills use the same format as workflows: markdown with YAML frontmatter and task/context/instructions XML.

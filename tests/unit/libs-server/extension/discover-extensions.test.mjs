@@ -223,6 +223,33 @@ describe('discover_extensions', () => {
     expect(result[0].provided_capabilities).to.deep.equal(['valid-cap'])
   })
 
+  it('should parse subcommand_of from manifest frontmatter', () => {
+    const ext_dir = path.join(temp_dir, 'sub-ext')
+    fs.mkdirSync(ext_dir)
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: sub-ext\nsubcommand_of: thread\n---\n'
+    )
+    fs.writeFileSync(path.join(ext_dir, 'command.mjs'), '')
+
+    const result = discover_extensions([temp_dir])
+    expect(result).to.have.lengthOf(1)
+    expect(result[0].subcommand_of).to.equal('thread')
+  })
+
+  it('should default subcommand_of to null when absent', () => {
+    const ext_dir = path.join(temp_dir, 'top-ext')
+    fs.mkdirSync(ext_dir)
+    fs.writeFileSync(
+      path.join(ext_dir, 'extension.md'),
+      '---\nname: top-ext\n---\n'
+    )
+    fs.writeFileSync(path.join(ext_dir, 'command.mjs'), '')
+
+    const result = discover_extensions([temp_dir])
+    expect(result[0].subcommand_of).to.be.null
+  })
+
   it('should default requires and optional to empty arrays', () => {
     const ext_dir = path.join(temp_dir, 'defaults')
     fs.mkdirSync(ext_dir)

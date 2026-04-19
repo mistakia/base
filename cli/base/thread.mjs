@@ -14,6 +14,7 @@ import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilit
 import { thread_constants } from '#libs-shared'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { validate_timeline_schema } from '#libs-server/threads/validate-timeline-schema.mjs'
+import { register_subcommand_extensions } from '#libs-server/extension/register-subcommand-extensions.mjs'
 import { get_system_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
   flush_and_exit,
@@ -52,7 +53,7 @@ export const command = 'thread <command>'
 export const describe =
   'Thread operations (list, get, status, timeline, archive, analyze, validate)'
 
-export const builder = (yargs) =>
+const builder_builtin = (yargs) =>
   yargs
     .command(
       'list',
@@ -370,10 +371,15 @@ export const builder = (yargs) =>
           }),
       handle_validate
     )
-    .demandCommand(
-      1,
-      'Specify a subcommand: list, get, status, timeline, messages, stale, archive, analyze, or validate'
-    )
+
+export const builder = (yargs) => {
+  yargs = builder_builtin(yargs)
+  yargs = register_subcommand_extensions(yargs, 'thread')
+  return yargs.demandCommand(
+    1,
+    'Specify a subcommand: list, get, status, timeline, messages, stale, archive, analyze, validate, or an extension-contributed subcommand'
+  )
+}
 
 export const handler = () => {}
 
