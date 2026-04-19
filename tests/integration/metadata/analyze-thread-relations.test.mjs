@@ -98,11 +98,15 @@ describe('analyze-thread-relations integration', () => {
     expect(result.dry_run).to.be.true
   })
 
-  it('should skip already analyzed threads', async () => {
-    // Update metadata to include relations_analyzed_at
+  it('should re-analyze threads even when relations_analyzed_at is set', async () => {
+    // The relations_analyzed_at skip gate was intentionally removed
+    // (commit 3543c48d) so long-running threads pick up newly-added
+    // references. The timestamp now acts as a last-run marker rather than
+    // a short-circuit.
     const metadata_path = path.join(thread_dir, 'metadata.json')
     const metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
-    metadata.relations_analyzed_at = new Date().toISOString()
+    const previous_analyzed_at = new Date(Date.now() - 60_000).toISOString()
+    metadata.relations_analyzed_at = previous_analyzed_at
     await fs.writeFile(metadata_path, JSON.stringify(metadata, null, 2))
 
     const result = await analyze_thread_relations({
@@ -110,7 +114,15 @@ describe('analyze-thread-relations integration', () => {
       dry_run: false
     })
 
-    expect(result.status).to.equal('already_analyzed')
+    expect(result.status).to.equal('success')
+    expect(result.metadata_updated).to.equal(true)
+
+    const updated_metadata = JSON.parse(
+      await fs.readFile(metadata_path, 'utf-8')
+    )
+    expect(updated_metadata.relations_analyzed_at).to.not.equal(
+      previous_analyzed_at
+    )
   })
 
   it('should throw error for missing thread_id', async () => {
