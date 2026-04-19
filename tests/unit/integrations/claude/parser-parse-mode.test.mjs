@@ -41,7 +41,7 @@ describe('claude parser parse_mode decision table', function () {
   })
 
   afterEach(async () => {
-    await clear_sync_state({ session_id }).catch(() => {})
+    await clear_sync_state({ session_id: session_file }).catch(() => {})
     await fs.rm(work_dir, { recursive: true, force: true })
   })
 
@@ -57,7 +57,7 @@ describe('claude parser parse_mode decision table', function () {
     const size_before = (await fs.stat(session_file)).size
     // Stored offset is beyond current file size (simulates rotation/truncation)
     await save_sync_state({
-      session_id,
+      session_id: session_file,
       state: {
         byte_offset: size_before + 10_000,
         subagent_offsets: {},
@@ -74,7 +74,7 @@ describe('claude parser parse_mode decision table', function () {
     await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
     const file_size = (await fs.stat(session_file)).size
     await save_sync_state({
-      session_id,
+      session_id: session_file,
       state: {
         byte_offset: file_size,
         subagent_offsets: {},
@@ -90,7 +90,7 @@ describe('claude parser parse_mode decision table', function () {
     await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
     const file_size = (await fs.stat(session_file)).size
     await save_sync_state({
-      session_id,
+      session_id: session_file,
       state: {
         byte_offset: file_size,
         subagent_offsets: {},
@@ -115,7 +115,7 @@ describe('claude parser parse_mode decision table', function () {
 
     const parent_size = (await fs.stat(session_file)).size
     await save_sync_state({
-      session_id,
+      session_id: session_file,
       state: {
         byte_offset: parent_size,
         subagent_offsets: {},
@@ -140,7 +140,7 @@ describe('claude parser parse_mode decision table', function () {
     const parent_size = (await fs.stat(session_file)).size
     const agent_size = (await fs.stat(agent_file)).size
     await save_sync_state({
-      session_id,
+      session_id: session_file,
       state: {
         byte_offset: parent_size,
         subagent_offsets: {

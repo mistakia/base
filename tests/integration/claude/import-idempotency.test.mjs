@@ -91,7 +91,7 @@ describe('claude import idempotency (end-to-end)', function () {
   })
 
   afterEach(async () => {
-    await clear_sync_state({ session_id }).catch(() => {})
+    await clear_sync_state({ session_id: session_file }).catch(() => {})
     await fs.rm(work_dir, { recursive: true, force: true })
   })
 
@@ -114,7 +114,7 @@ describe('claude import idempotency (end-to-end)', function () {
     const entries_a = await read_timeline(parent_a.thread_dir)
 
     // Wipe sync-state, re-import from the full on-disk source bytes
-    await clear_sync_state({ session_id })
+    await clear_sync_state({ session_id: session_file })
     const threads_b = path.join(work_dir, 'threads-b')
     await fs.mkdir(threads_b, { recursive: true })
     const result_b = await run_import({ session_file, threads_root: threads_b })

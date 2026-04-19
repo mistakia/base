@@ -11,7 +11,8 @@ import {
 import {
   load_sync_state,
   save_sync_state,
-  clear_sync_state
+  clear_sync_state,
+  state_path_for_session
 } from '#libs-server/integrations/claude/sync-state.mjs'
 
 describe('Incremental JSONL Parse', function () {
@@ -199,10 +200,7 @@ describe('Incremental JSONL Parse', function () {
 
     it('should return null for malformed state file', async () => {
       const malformed_id = 'malformed-' + Date.now()
-      const state_path = path.join(
-        os.tmpdir(),
-        `claude-sync-state-${malformed_id}.json`
-      )
+      const state_path = state_path_for_session(malformed_id)
       await fs.writeFile(state_path, 'not valid json')
 
       const result = await load_sync_state({ session_id: malformed_id })
@@ -213,10 +211,7 @@ describe('Incremental JSONL Parse', function () {
 
     it('should return null for state missing byte_offset', async () => {
       const bad_id = 'bad-shape-' + Date.now()
-      const state_path = path.join(
-        os.tmpdir(),
-        `claude-sync-state-${bad_id}.json`
-      )
+      const state_path = state_path_for_session(bad_id)
       await fs.writeFile(state_path, JSON.stringify({ counts: {} }))
 
       const result = await load_sync_state({ session_id: bad_id })

@@ -80,7 +80,7 @@ describe('claude subagent incremental import', function () {
   let threads_root
   let session_id
   let session_file
-  const tracked_session_ids = []
+  const tracked_session_files = []
 
   beforeEach(async () => {
     work_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'subagent-incr-'))
@@ -88,13 +88,13 @@ describe('claude subagent incremental import', function () {
     await fs.mkdir(threads_root, { recursive: true })
     session_id = `session-${Date.now()}-${Math.floor(Math.random() * 1e6)}`
     session_file = path.join(work_dir, `${session_id}.jsonl`)
-    tracked_session_ids.length = 0
-    tracked_session_ids.push(session_id)
+    tracked_session_files.length = 0
+    tracked_session_files.push(path.resolve(session_file))
   })
 
   afterEach(async () => {
-    for (const id of tracked_session_ids) {
-      await clear_sync_state({ session_id: id }).catch(() => {})
+    for (const file of tracked_session_files) {
+      await clear_sync_state({ session_id: file }).catch(() => {})
     }
     await fs.rm(work_dir, { recursive: true, force: true })
   })
@@ -104,7 +104,6 @@ describe('claude subagent incremental import', function () {
     const subagents_dir = path.join(work_dir, session_id, 'subagents')
     await fs.mkdir(subagents_dir, { recursive: true })
     const agent_file = path.join(subagents_dir, 'agent-sub-a.jsonl')
-    tracked_session_ids.push('agent-sub-a')
     await fs.writeFile(agent_file, serialize([make_entry('a1', 1)]))
 
     const first = await run_import({ session_file, threads_root })
@@ -131,7 +130,6 @@ describe('claude subagent incremental import', function () {
     const subagents_dir = path.join(work_dir, session_id, 'subagents')
     await fs.mkdir(subagents_dir, { recursive: true })
     const agent_file = path.join(subagents_dir, 'agent-sub-r.jsonl')
-    tracked_session_ids.push('agent-sub-r')
     await fs.writeFile(
       agent_file,
       serialize([make_entry('r1', 1), make_entry('r2', 2, 'assistant')])
@@ -156,7 +154,7 @@ describe('claude subagent incremental import', function () {
     await fs.mkdir(fresh_threads_root, { recursive: true })
     const fresh_session_id = `session-fresh-${Date.now()}`
     const fresh_session_file = path.join(work_dir, `${fresh_session_id}.jsonl`)
-    tracked_session_ids.push(fresh_session_id)
+    tracked_session_files.push(path.resolve(fresh_session_file))
     await fs.writeFile(fresh_session_file, serialize([make_entry('p1', 1)]))
     const fresh_sub_dir = path.join(work_dir, fresh_session_id, 'subagents')
     await fs.mkdir(fresh_sub_dir, { recursive: true })
@@ -185,7 +183,6 @@ describe('claude subagent incremental import', function () {
     const subagents_dir = path.join(work_dir, session_id, 'subagents')
     await fs.mkdir(subagents_dir, { recursive: true })
     const agent_file = path.join(subagents_dir, 'agent-sub-late.jsonl')
-    tracked_session_ids.push('agent-sub-late')
     await fs.writeFile(
       agent_file,
       serialize([make_entry('la1', 1), make_entry('la2', 2, 'assistant')])

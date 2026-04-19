@@ -7,14 +7,25 @@
  * append-only source JSONL, so they are not persisted here. State
  * files live in os.tmpdir() and are ephemeral by design -- loss
  * degrades gracefully to a full parse on next sync.
+ *
+ * The helper hashes the caller-supplied identifier internally, so
+ * callers may pass any stable per-source key (absolute source path
+ * preferred) without worrying about filename collisions on disk.
  */
 
 import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
+import crypto from 'crypto'
 
-const state_path_for_session = (session_id) =>
-  path.join(os.tmpdir(), `claude-sync-state-${session_id}.json`)
+export const state_path_for_session = (session_id) => {
+  const digest = crypto
+    .createHash('sha256')
+    .update(session_id)
+    .digest('hex')
+    .slice(0, 16)
+  return path.join(os.tmpdir(), `claude-sync-state-${digest}.json`)
+}
 
 export const load_sync_state = async ({ session_id }) => {
   try {

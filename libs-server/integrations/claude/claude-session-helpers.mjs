@@ -178,18 +178,18 @@ export const find_claude_sessions_from_filesystem = async ({
 
   if (session_file) {
     log_debug(`Using direct session file path: ${session_file}`)
-    const session_id_from_file = path.basename(session_file, '.jsonl')
+    const sync_key = path.resolve(session_file)
 
     // Try incremental path
     const sync_state = await load_sync_state({
-      session_id: session_id_from_file
+      session_id: sync_key
     })
 
     let sessions
     if (sync_state) {
       sessions = await parse_session_file_incremental({
         session_file,
-        session_id: session_id_from_file,
+        session_id: sync_key,
         sync_state
       })
     }
@@ -208,12 +208,12 @@ export const find_claude_sessions_from_filesystem = async ({
         await build_and_save_initial_state({
           session_file,
           sessions,
-          session_id: session_id_from_file
+          session_id: sync_key
         })
       }
       log_perf(
         'find_sessions mode=full_parse session=%s total_ms=%d',
-        session_id_from_file,
+        sync_key,
         Date.now() - incr_start
       )
     }
@@ -777,7 +777,7 @@ const parse_session_file_incremental = async ({
   }
 
   const parent_session = {
-    session_id,
+    session_id: full_parent_session.session_id,
     entries: parent_result.entries,
     metadata: {
       file_path: session_file,

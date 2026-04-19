@@ -603,9 +603,21 @@ describe('Claude Session Streaming', function () {
     after(async () => {
       clear_registered_directories()
       // Clean up sync state files created by incremental parse
-      await clear_sync_state({ session_id: 'provider-parent-uuid' })
-      await clear_sync_state({ session_id: 'warm-parent-uuid' })
-      await clear_sync_state({ session_id: 'agent-orphan999' })
+      const provider_parent_file = path.resolve(
+        test_dir,
+        'provider-session-file/projects/-Users-provider/provider-parent-uuid.jsonl'
+      )
+      const orphan_agent_file = path.resolve(
+        test_dir,
+        'provider-orphan-agent/projects/-Users-orphan/agent-orphan999.jsonl'
+      )
+      const warm_parent_file = path.resolve(
+        test_dir,
+        'provider-warm-agent/projects/-Users-warm/warm-parent-uuid.jsonl'
+      )
+      await clear_sync_state({ session_id: provider_parent_file }).catch(() => {})
+      await clear_sync_state({ session_id: orphan_agent_file }).catch(() => {})
+      await clear_sync_state({ session_id: warm_parent_file }).catch(() => {})
     })
 
     it('should yield single merged session when session_file has subagents', async () => {
