@@ -230,6 +230,7 @@ do_commit() {
         fi
 
         # Stage all files in the thread folder (untracked + modified)
+        # Stages deletions too; if a defective deletion appears here, apply the batch-branch guard below.
         git add "$THREAD_ID/"
 
         # Check if there are any staged changes
@@ -258,11 +259,31 @@ do_commit() {
         fi
 
         # Stage modified metadata
-        modified_files=$(git diff --name-only -- '*/metadata.json' 2>/dev/null || true)
+        modified_files=$(git diff --name-only --diff-filter=M -- '*/metadata.json' 2>/dev/null || true)
 
         if [ -n "$modified_files" ]; then
             echo "Staging modified metadata..."
             echo "$modified_files" | xargs git add
+        fi
+
+        # Stage deleted metadata, but only when sibling bulk data is absent. A
+        # metadata.json deletion while raw-data/ or timeline.jsonl is still on
+        # disk indicates an upstream bug (e.g. a failed stash-pop) rather than
+        # a legitimate thread teardown; commit the deletion and the thread is
+        # silently lost on every other machine.
+        deleted_files=$(git diff --name-only --diff-filter=D -- '*/metadata.json' 2>/dev/null || true)
+
+        if [ -n "$deleted_files" ]; then
+            while IFS= read -r path; do
+                # $path is submodule-root-relative (GIT_WORK_TREE=$THREAD_DIR + cd above),
+                # so dirname yields <uuid>.
+                thread_dir=$(dirname "$path")
+                if [ -d "$thread_dir/raw-data" ] || [ -f "$thread_dir/timeline.jsonl" ]; then
+                    echo "refusing to stage deletion of $path: siblings present" >&2
+                    continue
+                fi
+                git rm --quiet "$path"
+            done <<< "$deleted_files"
         fi
 
         # Check if there are any staged changes
