@@ -418,7 +418,6 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
   'is_interrupt',
   'level',
   'unsupported_message_type',
-  'context_data',
   'original_type',
   'queue_operation',
   'permission_mode',
@@ -432,17 +431,26 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
 ])
 
 const SYSTEM_METADATA_STRING_MAX_LENGTH = 2048
+const SYSTEM_METADATA_TITLE_MAX_LENGTH = 256
 
-const truncate_redacted_string = (value) =>
-  value.length > SYSTEM_METADATA_STRING_MAX_LENGTH
-    ? value.slice(0, SYSTEM_METADATA_STRING_MAX_LENGTH) + ' [truncated]'
+const truncate_redacted_string = (
+  value,
+  max_length = SYSTEM_METADATA_STRING_MAX_LENGTH
+) =>
+  value.length > max_length
+    ? value.slice(0, max_length) + ' [truncated]'
     : value
 
 const redact_system_metadata = (metadata) => {
   if (!is_valid_object(metadata)) return metadata
   const redacted = {}
   for (const [key, value] of Object.entries(metadata)) {
-    if (SYSTEM_METADATA_PASSTHROUGH_KEYS.has(key)) {
+    if (key === 'title' && typeof value === 'string') {
+      redacted[key] = truncate_redacted_string(
+        value,
+        SYSTEM_METADATA_TITLE_MAX_LENGTH
+      )
+    } else if (SYSTEM_METADATA_PASSTHROUGH_KEYS.has(key)) {
       redacted[key] = value
     } else if (typeof value === 'string') {
       redacted[key] = truncate_redacted_string(redact_text_content(value))
@@ -456,6 +464,61 @@ const redact_system_metadata = (metadata) => {
     }
   }
   return redacted
+}
+
+const MESSAGE_METADATA_PASSTHROUGH_KEYS = new Set([
+  'model',
+  'request_id',
+  'usage',
+  'stop_reason',
+  'stop_sequence',
+  'is_meta',
+  'level',
+  'parse_line_number',
+  'toolUseID'
+])
+
+const redact_message_metadata = (metadata) => {
+  if (!is_valid_object(metadata)) return metadata
+  const redacted = {}
+  for (const [key, value] of Object.entries(metadata)) {
+    if (MESSAGE_METADATA_PASSTHROUGH_KEYS.has(key)) {
+      redacted[key] = value
+    } else if (typeof value === 'string') {
+      redacted[key] = truncate_redacted_string(redact_text_content(value))
+    } else if (is_valid_object(value) || Array.isArray(value)) {
+      redacted[key] = redact_object_values(value)
+    } else {
+      redacted[key] = value
+    }
+  }
+  return redacted
+}
+
+const MESSAGE_BLOCK_URL_KEYS = ['url', 'source', 'image_url']
+
+const redact_message_content_block = (block) => {
+  if (!is_valid_object(block)) return block
+  const redacted = {
+    ...block,
+    content: redact_text_content(block.content || '')
+  }
+  if (is_valid_object(block.metadata)) {
+    redacted.metadata = redact_object_values(block.metadata)
+  }
+  for (const key of MESSAGE_BLOCK_URL_KEYS) {
+    if (typeof block[key] === 'string') {
+      redacted[key] = redact_text_content(block[key])
+    }
+  }
+  return redacted
+}
+
+const redact_tool_result_array_element = (element) => {
+  if (element === null || element === undefined) return element
+  if (typeof element === 'string') return redact_text_content(element)
+  if (typeof element === 'object') return redact_object_values(element)
+  return element
 }
 
 /**
@@ -621,11 +684,15 @@ const redact_timeline_entry = (entry) => {
         if (typeof redacted_entry.content === 'string') {
           redacted_entry.content = redact_text_content(redacted_entry.content)
         } else if (Array.isArray(redacted_entry.content)) {
-          redacted_entry.content = redacted_entry.content.map((block) => ({
-            ...block,
-            content: redact_text_content(block.content || '')
-          }))
+          redacted_entry.content = redacted_entry.content.map(
+            redact_message_content_block
+          )
         }
+      }
+      if (redacted_entry.metadata) {
+        redacted_entry.metadata = redact_message_metadata(
+          redacted_entry.metadata
+        )
       }
       break
 
@@ -646,6 +713,10 @@ const redact_timeline_entry = (entry) => {
           redacted_entry.content.result = redact_text_content(
             redacted_entry.content.result
           )
+        } else if (Array.isArray(redacted_entry.content.result)) {
+          redacted_entry.content.result = redacted_entry.content.result.map(
+            redact_tool_result_array_element
+          )
         } else if (typeof redacted_entry.content.result === 'object') {
           redacted_entry.content.result = redact_object_values(
             redacted_entry.content.result
@@ -656,10 +727,17 @@ const redact_timeline_entry = (entry) => {
         redacted_entry.content.error = redact_text_content(
           redacted_entry.content.error
         )
-      } else if (redacted_entry.content?.error?.message) {
-        redacted_entry.content.error.message = redact_text_content(
-          redacted_entry.content.error.message
-        )
+      } else if (is_valid_object(redacted_entry.content?.error)) {
+        if (typeof redacted_entry.content.error.message === 'string') {
+          redacted_entry.content.error = {
+            ...redacted_entry.content.error,
+            message: redact_text_content(redacted_entry.content.error.message)
+          }
+        } else {
+          redacted_entry.content.error = redact_object_values(
+            redacted_entry.content.error
+          )
+        }
       }
       break
 
@@ -687,6 +765,9 @@ const redact_timeline_entry = (entry) => {
               : redacted_entry.content.signature
           }
         }
+      }
+      if (redacted_entry.metadata) {
+        redacted_entry.metadata = redact_object_values(redacted_entry.metadata)
       }
       break
   }
