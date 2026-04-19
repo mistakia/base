@@ -17,9 +17,9 @@ describe('Activity Aggregation', () => {
 
       const score = calculate_activity_score(metrics)
 
-      // Expected: (5 * 10) + (10 * 2) + (500 / 100) + (5000 / 1000) + (3 * 5) + (200 / 50)
-      // = 50 + 20 + 5 + 5 + 15 + 4 = 99
-      expect(score).to.equal(99)
+      // Expected: (5 * 10) + (10 * 2) + floor(500/100) + floor(sqrt(5000/1000)) + (3 * 5) + floor(200/50)
+      // = 50 + 20 + 5 + 2 + 15 + 4 = 96
+      expect(score).to.equal(96)
     })
 
     it('should handle zero values for all metrics', () => {
@@ -77,8 +77,8 @@ describe('Activity Aggregation', () => {
       }
 
       const score = calculate_activity_score(metrics)
-      // Math.floor(3500 / 1000) = 3
-      expect(score).to.equal(3)
+      // Math.floor(Math.sqrt(3500 / 1000)) = floor(sqrt(3.5)) = 1
+      expect(score).to.equal(1)
     })
 
     it('should calculate score with only thread edits', () => {
@@ -123,9 +123,9 @@ describe('Activity Aggregation', () => {
       }
 
       const score = calculate_activity_score(metrics)
-      // (100 * 10) + (50 * 2) + (10000 / 100) + (50000 / 1000) + (20 * 5) + (1000 / 50)
-      // = 1000 + 100 + 100 + 50 + 100 + 20 = 1370
-      expect(score).to.equal(1370)
+      // (100 * 10) + (50 * 2) + floor(10000/100) + floor(sqrt(50000/1000)) + (20 * 5) + floor(1000/50)
+      // = 1000 + 100 + 100 + 7 + 100 + 20 = 1327
+      expect(score).to.equal(1327)
     })
 
     it('should handle partial metrics', () => {
@@ -135,8 +135,8 @@ describe('Activity Aggregation', () => {
       }
 
       const score = calculate_activity_score(metrics)
-      // (2 * 10) + (2000 / 1000) = 20 + 2 = 22
-      expect(score).to.equal(22)
+      // (2 * 10) + floor(sqrt(2000/1000)) = 20 + 1 = 21
+      expect(score).to.equal(21)
     })
 
     it('should verify weighting formula matches documentation', () => {
@@ -151,9 +151,9 @@ describe('Activity Aggregation', () => {
       }
 
       const score = calculate_activity_score(metrics)
-      // (3 * 10) + (8 * 2) + Math.floor(250 / 100) + Math.floor(15000 / 1000) + (12 * 5)
-      // = 30 + 16 + 2 + 15 + 60 = 123
-      expect(score).to.equal(123)
+      // (3 * 10) + (8 * 2) + Math.floor(250 / 100) + Math.floor(Math.sqrt(15000 / 1000)) + (12 * 5)
+      // = 30 + 16 + 2 + 3 + 60 = 111
+      expect(score).to.equal(111)
     })
   })
 })

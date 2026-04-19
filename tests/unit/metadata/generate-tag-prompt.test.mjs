@@ -154,8 +154,9 @@ describe('generate-tag-prompt', () => {
         tags: sample_tags
       })
 
-      expect(result).to.include('"tags"')
-      expect(result).to.include('"reasoning"')
+      expect(result).to.include('"primary"')
+      expect(result).to.include('"secondary"')
+      expect(result).to.include('"rationale"')
       expect(result).to.include('```json')
     })
 
@@ -165,7 +166,7 @@ describe('generate-tag-prompt', () => {
         tags: sample_tags
       })
 
-      expect(result).to.include(`0-${TAG_CONSTRAINTS.MAX_TAGS}`)
+      expect(result).to.match(/up to \d+ secondary tags/)
     })
   })
 
