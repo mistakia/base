@@ -7,7 +7,12 @@ const log = debug('metadata:title-prompt')
 // mirroring the version-gating pattern used by tag classification.
 // v1 (2026-04-12): initial extraction from parse-analysis-output.mjs with
 // multi-message context support and Ollama JSON schema enforcement.
-const TITLE_PROMPT_VERSION = 1
+// v2 (2026-04-19): removed few-shot examples. Low-signal sessions (meta-only
+// messages that slipped past the filter) were producing titles that echoed
+// the example text (e.g. "Trey McBride Week 9") regardless of actual intent.
+// Input filtering is now the first line of defense; the prompt describes
+// constraints abstractly instead of demonstrating them with concrete names.
+const TITLE_PROMPT_VERSION = 2
 
 // Production model for title generation. Selected in the 2026-04-12 cross-
 // model survey on the 25-case metadata benchmark: devstral-small-2:24b scored
@@ -51,22 +56,17 @@ export const generate_title_prompt = ({ user_message }) => {
 ${user_message}
 """
 
-CRITICAL rules for globally unique titles:
-- EXTRACT specific entities: player names, URLs, dates, week numbers, thread IDs, file paths
-- For workflow invocations: include the unique parameters (thread_id short hash, player name, week number)
-- NEVER use generic titles like "Execute workflow", "Analyze thread", "Run analysis"
-- Include disambiguating context that makes this instance unique
-- If the block contains multiple topics, pick the one that produces concrete work output
-
-Examples:
-- "@workflow/analyze-and-update-thread.md thread_id: 9d82cecf-34c3-5ad6" -> "Update metadata for thread 9d82cecf"
-- "@workflow/find-market-selections.md player: Trey McBride, week: 9" -> "Find Trey McBride market selections Week 9"
-- "debug data view https://xo.football/u/cb3031028178" -> "Debug data view cb303102 duplicate rows"
-- "profile Theodore Johnson with/without Malik Nabers" -> "Profile Theodore Johnson usage without Malik Nabers"
+Rules for globally unique titles:
+- Extract specific entities present in the input: names, URLs, dates, numbers, identifiers, file paths, workflow names.
+- For workflow invocations, include the unique parameters that appear in the input (short IDs, names, numbers).
+- Do not use generic titles like "Execute workflow", "Analyze thread", or "Run analysis".
+- Include disambiguating context from the input that makes this instance unique.
+- If the block contains multiple topics, pick the one that produces concrete work output.
+- Only use entities that literally appear in the input. Do not invent names, numbers, or identifiers. If the input contains no substantive request, return a short, faithful summary of what it actually says rather than fabricating a topic.
 
 JSON response:
-- "title": Under 100 chars with specific identifiers
-- "short_description": 1-2 sentences under 200 chars
+- "title": Under 100 chars with specific identifiers drawn from the input.
+- "short_description": 1-2 sentences under 200 chars.
 
 \`\`\`json
 {

@@ -23,14 +23,19 @@ const log = debug('metadata:analyze')
 // ============================================================================
 
 const ANALYSIS_CONFIG = {
-  // Skip messages that are just warmup greetings or slash commands (not substantive)
+  // Skip messages that carry no user intent. Claude Code injects
+  // `<local-command-caveat>` and `<local-command-stdout>` wrappers around
+  // slash-command invocations; without filtering these the model receives
+  // only meta-chrome and fabricates titles from the prompt's own examples.
   WARMUP_PATTERNS: [
     /^warmup$/i,
     /^test$/i,
     /^hello$/i,
     /^hi$/i,
-    // Slash commands like /clear, /help
-    /^<command-name>\/\w+<\/command-name>/i
+    /^<command-name>\/\w+<\/command-name>/i,
+    /^<local-command-caveat>/i,
+    /^<local-command-stdout>/i,
+    /^<command-message>/i
   ]
 }
 
@@ -49,9 +54,12 @@ export const extract_first_user_message = (timeline) => {
     return null
   }
 
-  // Find user messages
+  // Find user messages, excluding meta entries (caveats, command plumbing)
   const user_messages = timeline.filter(
-    (entry) => entry.type === 'message' && entry.role === 'user'
+    (entry) =>
+      entry.type === 'message' &&
+      entry.role === 'user' &&
+      !entry.metadata?.is_meta
   )
 
   // Filter out warmup/test messages
@@ -102,7 +110,10 @@ export const extract_user_messages = (
   }
 
   const user_messages = timeline.filter(
-    (entry) => entry.type === 'message' && entry.role === 'user'
+    (entry) =>
+      entry.type === 'message' &&
+      entry.role === 'user' &&
+      !entry.metadata?.is_meta
   )
 
   const extracted = []

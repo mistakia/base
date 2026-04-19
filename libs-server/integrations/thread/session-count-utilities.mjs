@@ -133,13 +133,30 @@ function extract_text_from_message_content(content) {
   return ''
 }
 
+// Messages that carry no user intent and must not be surfaced as titles or fed
+// to the metadata LLM. Claude Code injects `<local-command-caveat>` and
+// `<command-name>/...` wrappers around local slash commands; those strings are
+// meta-chrome, not prompts.
+const NON_SUBSTANTIVE_PATTERNS = [
+  /^warmup$/i,
+  /^test$/i,
+  /^hello$/i,
+  /^hi$/i,
+  /^<command-name>\/\w+<\/command-name>/i,
+  /^<local-command-caveat>/i,
+  /^<local-command-stdout>/i,
+  /^<command-message>/i
+]
+
 /**
- * Check if content represents a warmup message
+ * Check if content represents a non-substantive message (warmup, slash
+ * command, or Claude Code local-command wrapper).
  * @param {string} text - Text content to check
- * @returns {boolean} True if this is a warmup message
+ * @returns {boolean} True if this is not a real user prompt
  */
 function is_warmup_message(text) {
-  return text.toLowerCase() === 'warmup'
+  const trimmed = text.trim()
+  return NON_SUBSTANTIVE_PATTERNS.some((pattern) => pattern.test(trimmed))
 }
 
 /**
@@ -156,6 +173,12 @@ export function extract_initial_user_prompt_from_messages({ messages }) {
   for (const message of messages) {
     // Skip non-user messages and system/interrupt messages
     if (message.type !== 'message' || message.role !== 'user') {
+      continue
+    }
+
+    // Skip meta messages (Claude Code injects caveats and local command
+    // plumbing with isMeta=true; they carry no user intent).
+    if (message.metadata?.is_meta) {
       continue
     }
 
