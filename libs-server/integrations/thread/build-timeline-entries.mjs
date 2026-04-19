@@ -176,12 +176,6 @@ const convert_message_to_timeline_entry = ({
     'timestamp',
     'parent_id',
     'ordering',
-    // Legacy field support for backward compatibility
-    'tool_name',
-    'parameters',
-    'result',
-    'tool_id',
-    'execution_status',
     'thinking_type',
     'system_type'
   ]
@@ -258,14 +252,10 @@ const convert_message_to_timeline_entry = ({
         ...base_entry,
         type: 'tool_call',
         content: {
-          tool_name: message.content?.tool_name || message.tool_name,
-          tool_parameters:
-            message.content?.tool_parameters || message.parameters,
-          tool_call_id: message.content?.tool_call_id || message.tool_id,
-          execution_status:
-            message.content?.execution_status ||
-            message.execution_status ||
-            'pending'
+          tool_name: message.content?.tool_name,
+          tool_parameters: message.content?.tool_parameters,
+          tool_call_id: message.content?.tool_call_id,
+          execution_status: message.content?.execution_status ?? 'pending'
         },
         metadata: {
           ...message.metadata
@@ -277,9 +267,9 @@ const convert_message_to_timeline_entry = ({
         ...base_entry,
         type: 'tool_result',
         content: {
-          tool_call_id: message.content?.tool_call_id || message.tool_id,
-          result: message.content?.result || message.result,
-          error: message.content?.error || message.error || null
+          tool_call_id: message.content?.tool_call_id,
+          result: message.content?.result,
+          error: message.content?.error ?? null
         },
         metadata: {
           ...message.metadata
@@ -430,12 +420,6 @@ const format_message_content = (content) => {
                   media_type: item.metadata?.media_type || 'image/*',
                   ...item.metadata
                 }
-              }
-            case 'tool_call':
-              return {
-                type: 'tool_use',
-                content: `Tool: ${item.tool_name}\nParameters: ${JSON.stringify(item.parameters, null, 2)}`,
-                metadata: { tool_name: item.tool_name, tool_id: item.tool_id }
               }
             default:
               log_timeline_unsupported(
