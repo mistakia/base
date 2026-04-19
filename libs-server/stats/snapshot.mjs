@@ -13,6 +13,7 @@ import { collect_task_metrics } from './collector/task-collector.mjs'
 import { collect_schedule_metrics } from './collector/schedule-collector.mjs'
 import { collect_knowledge_base_metrics } from './collector/knowledge-base-health-collector.mjs'
 import { collect_content_growth_metrics } from './collector/content-growth-collector.mjs'
+import { collect_timeline_backstop_metrics } from './collector/timeline-backstop-collector.mjs'
 import { upsert_metrics } from './database.mjs'
 
 const log = debug('stats:snapshot')
@@ -24,7 +25,8 @@ const CORE_COLLECTORS = {
   tasks: collect_task_metrics,
   schedules: collect_schedule_metrics,
   knowledge_base: collect_knowledge_base_metrics,
-  content_growth: collect_content_growth_metrics
+  content_growth: collect_content_growth_metrics,
+  timeline_backstop: collect_timeline_backstop_metrics
 }
 
 /**

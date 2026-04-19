@@ -9,6 +9,7 @@ import {
 } from '#tests/utils/index.mjs'
 import timeline_fixtures from '#tests/fixtures/threads/timeline-entries.json' with { type: 'json' }
 import { read_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
+import { read_and_reset_timeline_backstop_counter } from '#libs-server/threads/timeline-backstop-counter.mjs'
 
 describe('add_timeline_entry', () => {
   let test_user
@@ -200,6 +201,42 @@ describe('add_timeline_entry', () => {
     } catch (error) {
       expect(error).to.be.an('error')
     }
+  })
+
+  it('should increment the backstop counter when schema_version is missing', async () => {
+    read_and_reset_timeline_backstop_counter()
+
+    const assistant_message = timeline_fixtures.find(
+      (f) => f.name === 'assistant_message'
+    ).entry
+    expect(assistant_message.schema_version).to.be.undefined
+
+    await add_timeline_entry({
+      thread_id: test_thread.thread_id,
+      entry: assistant_message
+    })
+
+    expect(read_and_reset_timeline_backstop_counter()).to.equal(1)
+
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
+    expect(timeline[0].schema_version).to.equal(2)
+  })
+
+  it('should not increment the backstop counter when schema_version is provided', async () => {
+    read_and_reset_timeline_backstop_counter()
+
+    const user_message = timeline_fixtures.find(
+      (f) => f.name === 'user_message'
+    ).entry
+    expect(user_message.schema_version).to.equal(2)
+
+    await add_timeline_entry({
+      thread_id: test_thread.thread_id,
+      entry: user_message
+    })
+
+    expect(read_and_reset_timeline_backstop_counter()).to.equal(0)
   })
 
   it('should handle non-existent thread gracefully', async () => {

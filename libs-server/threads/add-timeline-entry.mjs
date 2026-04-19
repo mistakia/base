@@ -9,6 +9,7 @@ import {
 } from '#libs-server/threads/timeline/index.mjs'
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { increment_timeline_backstop_counter } from '#libs-server/threads/timeline-backstop-counter.mjs'
 
 const log = debug('threads:timeline')
 
@@ -153,7 +154,8 @@ export default async function add_timeline_entry({ thread_id, entry }) {
   // one. Validate explicitly-provided versions are positive integers.
   if (new_entry.schema_version === undefined) {
     new_entry.schema_version = TIMELINE_SCHEMA_VERSION
-    log(
+    increment_timeline_backstop_counter()
+    console.warn(
       `schema_version backstop: stamped v${TIMELINE_SCHEMA_VERSION} on ${new_entry.type} entry for thread ${thread_id}`
     )
   } else if (
