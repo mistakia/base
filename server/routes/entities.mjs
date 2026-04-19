@@ -13,7 +13,7 @@ import {
   add_tags_to_entity,
   remove_tags_from_entity
 } from '#libs-server/tag/filesystem/manage-entity-tags.mjs'
-import { sync_thread_tags_to_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs'
+import { write_thread_sync_request } from '#libs-server/embedded-database-index/sync/thread-sync-ipc.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
 import { check_permission } from '#server/middleware/permission/index.mjs'
@@ -443,9 +443,8 @@ router.post('/tags', async (req, res) => {
       if (!remove_result.success) {
         // Sync thread tags from the add result before returning error
         if (last_tag_result && last_tag_result.thread_id) {
-          await sync_thread_tags_to_sqlite({
-            thread_id: last_tag_result.thread_id,
-            tag_base_uris: last_tag_result.updated_tags
+          await write_thread_sync_request({
+            thread_id: last_tag_result.thread_id
           })
         }
         return res.status(500).json({ error: remove_result.error })
@@ -457,9 +456,8 @@ router.post('/tags', async (req, res) => {
 
     // Sync thread tags to SQLite when operating on a thread entity
     if (last_tag_result && last_tag_result.thread_id) {
-      await sync_thread_tags_to_sqlite({
-        thread_id: last_tag_result.thread_id,
-        tag_base_uris: last_tag_result.updated_tags
+      await write_thread_sync_request({
+        thread_id: last_tag_result.thread_id
       })
     }
 
