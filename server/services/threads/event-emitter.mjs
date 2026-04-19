@@ -114,26 +114,49 @@ const create_truncated_entry = (entry) => {
 
     case 'tool_call': {
       const tool_name = entry.content?.tool_name
-      const tool_input =
-        entry.content?.tool_parameters || entry.content?.input || {}
+      const tool_input = entry.content?.tool_parameters || {}
       truncated.content = {
         tool_name,
-        ...(entry.content?.tool_parameters
-          ? {
-              tool_parameters: extract_minimal_tool_input({
-                tool_name,
-                tool_input
-              })
-            }
-          : {
-              input: extract_minimal_tool_input({ tool_name, tool_input })
-            })
+        tool_parameters: extract_minimal_tool_input({ tool_name, tool_input })
       }
       break
     }
 
     case 'tool_result':
       truncated.content = { error: Boolean(entry.content?.error) }
+      break
+
+    case 'system': {
+      if (entry.system_type !== undefined) {
+        truncated.system_type = entry.system_type
+      }
+      const { metadata } = entry
+      if (metadata) {
+        const forwarded = {}
+        if (metadata.thread_lifecycle !== undefined)
+          forwarded.thread_lifecycle = metadata.thread_lifecycle
+        if (metadata.is_interrupt !== undefined)
+          forwarded.is_interrupt = metadata.is_interrupt
+        if (metadata.level !== undefined) forwarded.level = metadata.level
+        if (metadata.from_state !== undefined)
+          forwarded.from_state = metadata.from_state
+        if (metadata.to_state !== undefined)
+          forwarded.to_state = metadata.to_state
+        if (Object.keys(forwarded).length > 0) {
+          truncated.metadata = forwarded
+        }
+      }
+      if (typeof entry.content === 'string') {
+        truncated.content =
+          entry.content.length > TRUNCATED_CONTENT_MAX_LENGTH
+            ? entry.content.substring(0, TRUNCATED_CONTENT_MAX_LENGTH)
+            : entry.content
+      }
+      break
+    }
+
+    case 'thinking':
+      truncated.content = ''
       break
 
     default:

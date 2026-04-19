@@ -35,4 +35,60 @@ describe('content-redactor system metadata', () => {
     expect(entry.metadata.details.endsWith(' [truncated]')).to.equal(true)
     expect(entry.metadata.details.length).to.be.lessThan(long_details.length)
   })
+
+  it('should pass through state_change structural metadata and redact reason', () => {
+    const thread = {
+      thread_id: 't2',
+      timeline: [
+        {
+          id: 'e2',
+          timestamp: 't',
+          type: 'system',
+          system_type: 'state_change',
+          content: 'active -> archived: user alice@example.com finished',
+          metadata: {
+            from_state: 'active',
+            to_state: 'archived',
+            thread_lifecycle: true,
+            reason: 'completed by alice@example.com (call 415-555-1234)'
+          }
+        }
+      ]
+    }
+
+    const redacted = redact_thread_data(thread)
+    const entry = redacted.timeline[0]
+
+    expect(entry.system_type).to.equal('state_change')
+    expect(entry.metadata.from_state).to.equal('active')
+    expect(entry.metadata.to_state).to.equal('archived')
+    expect(entry.metadata.thread_lifecycle).to.equal(true)
+    expect(entry.metadata.reason).to.not.include('alice@example.com')
+    expect(entry.metadata.reason).to.not.include('415-555-1234')
+  })
+
+  it('should redact bare-string error on tool_result entries', () => {
+    const thread = {
+      thread_id: 't3',
+      timeline: [
+        {
+          id: 'e3',
+          timestamp: 't',
+          type: 'tool_result',
+          content: {
+            tool_call_id: 'tc-1',
+            error: 'fetch failed for alice@example.com at 415-555-1234'
+          }
+        }
+      ]
+    }
+
+    const redacted = redact_thread_data(thread)
+    const entry = redacted.timeline[0]
+
+    expect(entry.content.tool_call_id).to.equal('tc-1')
+    expect(typeof entry.content.error).to.equal('string')
+    expect(entry.content.error).to.not.include('alice@example.com')
+    expect(entry.content.error).to.not.include('415-555-1234')
+  })
 })

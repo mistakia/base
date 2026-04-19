@@ -142,10 +142,9 @@ const get_event_summary = (timeline_event) => {
       }
       return role === 'user' ? 'User message' : 'Assistant response'
     }
-    case 'tool_call':
-    case 'tool_use': {
+    case 'tool_call': {
       const tool_name = content?.tool_name
-      const tool_params = content?.tool_parameters || content?.input || {}
+      const tool_params = content?.tool_parameters || {}
       return get_tool_summary(tool_name, tool_params)
     }
     case 'tool_result':
@@ -168,8 +167,6 @@ const get_event_summary = (timeline_event) => {
         ? truncate(content, 80)
         : 'System message'
     }
-    case 'completion':
-      return 'Completed'
     default:
       return type
   }

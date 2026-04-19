@@ -419,11 +419,6 @@ const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
   'level',
   'unsupported_message_type',
   'context_data',
-  // Structural keys on system entries materialized from previously-dropped
-  // claude raw event types (queue-operation, file-history-snapshot,
-  // permission-mode, attachment, last-prompt, custom-title, agent-name).
-  // These are non-sensitive descriptors of session lifecycle facts; redacting
-  // them would erase the discriminator the UI uses to label and group events.
   'original_type',
   'queue_operation',
   'permission_mode',
@@ -657,7 +652,11 @@ const redact_timeline_entry = (entry) => {
           )
         }
       }
-      if (redacted_entry.content?.error?.message) {
+      if (typeof redacted_entry.content?.error === 'string') {
+        redacted_entry.content.error = redact_text_content(
+          redacted_entry.content.error
+        )
+      } else if (redacted_entry.content?.error?.message) {
         redacted_entry.content.error.message = redact_text_content(
           redacted_entry.content.error.message
         )

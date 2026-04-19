@@ -73,10 +73,7 @@ export const group_tool_entries = (timeline_events) => {
         timeline_event,
         index
       })
-    } else if (
-      timeline_event.type === 'tool_call' ||
-      timeline_event.type === 'tool_use'
-    ) {
+    } else if (timeline_event.type === 'tool_call') {
       // Direct tool call entry
       const tool_call_id =
         timeline_event.content?.tool_call_id ||
@@ -101,9 +98,7 @@ export const group_tool_entries = (timeline_events) => {
       }
     } else if (timeline_event.type === 'tool_result') {
       // Tool result entry
-      const tool_call_id =
-        timeline_event.content?.tool_call_id ||
-        timeline_event.content?.tool_use_id
+      const tool_call_id = timeline_event.content?.tool_call_id
 
       if (tool_call_id && pending_tool_calls.has(tool_call_id)) {
         // Found matching tool call
