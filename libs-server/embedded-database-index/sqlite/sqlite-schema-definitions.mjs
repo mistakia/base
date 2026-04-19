@@ -76,7 +76,9 @@ CREATE TABLE IF NOT EXISTS threads (
   visibility_analyzed_at TEXT,
   archived_at TEXT,
   archive_reason TEXT,
-  external_session_id TEXT
+  external_session_id TEXT,
+  has_continuation_prompt INTEGER,
+  continuation_prompt_count INTEGER
 )
 `
 

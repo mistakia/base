@@ -20,6 +20,7 @@ import {
 import { build_timeline_from_session } from './build-timeline-entries.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
+import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
@@ -549,6 +550,17 @@ export const update_existing_thread = async (
       log_debug(
         `Updated thread ${thread_id} (${timeline_result.entry_count} timeline entries; metadata: ${metadata_changed ? 'changed' : 'unchanged'}, timeline: ${timeline_result.timeline_modified ? 'changed' : 'unchanged'})`
       )
+      // Re-queue relation analysis so cached continuation-signal flags and
+      // relations reflect the updated timeline. Without this, re-imports that
+      // append new assistant turns with continuation prompts would leave
+      // has_continuation_prompt stale and be filtered out of future pools.
+      try {
+        await queue_relation_analysis(thread_id)
+      } catch (error) {
+        log(
+          `Failed to queue relation analysis for re-imported thread ${thread_id}: ${error.message}`
+        )
+      }
     } else {
       log_debug(
         `No changes detected for thread ${thread_id}, files not modified`

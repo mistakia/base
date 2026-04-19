@@ -24,6 +24,14 @@ import {
 } from '#libs-server/threads/list-threads.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
 import { extract_timeline_references_separated } from './extract-timeline-references.mjs'
+import {
+  has_continuation_signal,
+  count_continuation_prompts
+} from './continuation-signal.mjs'
+import {
+  execute_sqlite_query,
+  is_sqlite_initialized
+} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('metadata:analyze-relations')
 
@@ -61,7 +69,7 @@ const CONTINUATION_WINDOW_DAYS = 14
 const CONTINUATION_SHINGLE_K = 8
 const CONTINUATION_MIN_SHINGLES = 20
 const CONTINUATION_THRESHOLD = 0.3
-const CONTINUATION_SLOW_RUN_WARN_MS = 10000
+const CONTINUATION_SLOW_RUN_WARN_MS = 15000
 const CONTINUATION_FS_CONCURRENCY = 32
 const MS_PER_DAY = 86400000
 
@@ -164,43 +172,97 @@ export async function detect_continuation_source({
   const prompt = extract_first_user_prompt({ timeline })
   if (!prompt) return []
 
+  // Fast-path gate: if the analyzed thread's first user prompt contains none
+  // of the continuation-signal vocabulary, the thread cannot be a continuation
+  // of another. Exits in <1ms and avoids any candidate enumeration.
+  if (!has_continuation_signal(prompt)) return []
+
   const candidate_shingles = build_shingles({ text: prompt })
   if (candidate_shingles.size < CONTINUATION_MIN_SHINGLES) return []
 
   const analyzed_created_ms = new Date(analyzed_created_at).getTime()
   if (Number.isNaN(analyzed_created_ms)) return []
 
-  const all_ids = await list_thread_ids({ user_base_directory })
-  const candidate_ids = all_ids.filter((id) => id !== thread_id)
+  // Track which candidates survived metadata pass with the cached flag missing,
+  // so the per-candidate stage can apply the fallback timeline-read short-circuit.
+  const missing_flag_ids = new Set()
 
-  const window_candidates = []
-  await map_with_concurrency(
-    candidate_ids,
-    CONTINUATION_FS_CONCURRENCY,
-    async (candidate_id) => {
-      const metadata = await get_thread_metadata({
-        thread_id: candidate_id,
-        user_base_directory
-      })
-      if (!metadata) return
+  // Prefer an index-backed pool query when available: one SQL round-trip
+  // replaces a readdir plus thousands of metadata.json reads. Fall back to the
+  // filesystem walk when the index is not initialised (test fixtures that
+  // stand up a temp user_base_directory, fresh installs before first sync) or
+  // when the caller passed an explicit user_base_directory that may differ
+  // from the indexed one.
+  const use_index =
+    !user_base_directory && typeof is_sqlite_initialized === 'function' &&
+    is_sqlite_initialized()
 
-      const source_created_ms = metadata.created_at
-        ? new Date(metadata.created_at).getTime()
-        : NaN
-      if (Number.isNaN(source_created_ms)) return
-      if (source_created_ms > analyzed_created_ms) return
+  let window_candidates = []
 
-      const source_updated_ms = metadata.updated_at
-        ? new Date(metadata.updated_at).getTime()
-        : source_created_ms
-      const window_end_ms =
-        (Number.isNaN(source_updated_ms) ? source_created_ms : source_updated_ms) +
-        CONTINUATION_WINDOW_DAYS * MS_PER_DAY
-      if (window_end_ms < analyzed_created_ms) return
+  if (use_index) {
+    const window_start_iso = new Date(
+      analyzed_created_ms - CONTINUATION_WINDOW_DAYS * MS_PER_DAY
+    ).toISOString()
+    const analyzed_created_iso = new Date(analyzed_created_ms).toISOString()
 
-      window_candidates.push(candidate_id)
+    const rows = await execute_sqlite_query({
+      query: `
+        SELECT thread_id, has_continuation_prompt
+        FROM threads
+        WHERE thread_id != ?
+          AND (has_continuation_prompt IS NULL OR has_continuation_prompt = 1)
+          AND created_at IS NOT NULL
+          AND created_at <= ?
+          AND COALESCE(updated_at, created_at) >= ?
+      `,
+      parameters: [thread_id, analyzed_created_iso, window_start_iso]
+    })
+
+    for (const row of rows) {
+      if (row.has_continuation_prompt == null) {
+        missing_flag_ids.add(row.thread_id)
+      }
+      window_candidates.push(row.thread_id)
     }
-  )
+  } else {
+    const all_ids = await list_thread_ids({ user_base_directory })
+    const candidate_ids = all_ids.filter((id) => id !== thread_id)
+
+    await map_with_concurrency(
+      candidate_ids,
+      CONTINUATION_FS_CONCURRENCY,
+      async (candidate_id) => {
+        const metadata = await get_thread_metadata({
+          thread_id: candidate_id,
+          user_base_directory
+        })
+        if (!metadata) return
+
+        if (metadata.has_continuation_prompt === false) return
+        if (metadata.has_continuation_prompt !== true) {
+          missing_flag_ids.add(candidate_id)
+        }
+
+        const source_created_ms = metadata.created_at
+          ? new Date(metadata.created_at).getTime()
+          : NaN
+        if (Number.isNaN(source_created_ms)) return
+        if (source_created_ms > analyzed_created_ms) return
+
+        const source_updated_ms = metadata.updated_at
+          ? new Date(metadata.updated_at).getTime()
+          : source_created_ms
+        const window_end_ms =
+          (Number.isNaN(source_updated_ms)
+            ? source_created_ms
+            : source_updated_ms) +
+          CONTINUATION_WINDOW_DAYS * MS_PER_DAY
+        if (window_end_ms < analyzed_created_ms) return
+
+        window_candidates.push(candidate_id)
+      }
+    )
+  }
 
   const matches = []
   await map_with_concurrency(
@@ -219,9 +281,20 @@ export async function detect_continuation_source({
         return
       }
 
-      const source_shingles = build_shingles({
-        text: extract_assistant_text({ timeline: source_timeline })
-      })
+      const source_text = extract_assistant_text({ timeline: source_timeline })
+
+      // Fallback short-circuit for pre-backfill candidates: apply the same
+      // count-based test that the cached-flag writer uses, so both paths drop
+      // the same threads. Candidates with the cached flag already passed the
+      // metadata-pass filter and skip this check.
+      if (
+        missing_flag_ids.has(candidate_id) &&
+        count_continuation_prompts(source_text) === 0
+      ) {
+        return
+      }
+
+      const source_shingles = build_shingles({ text: source_text })
       const coverage = score_continuation_coverage({
         candidate_shingles,
         source_shingles
@@ -393,6 +466,13 @@ export async function analyze_thread_relations({
   const file_base_uris = file_references.map((ref) => ref.base_uri)
   const directory_base_uris = directory_references.map((ref) => ref.base_uri)
 
+  // Compute cached continuation-signal flags from the analyzed thread's own
+  // assistant text. These cache values let future analyzer runs prefilter this
+  // thread as a candidate during the metadata pass without reading its timeline.
+  const assistant_text = extract_assistant_text({ timeline })
+  const continuation_prompt_count = count_continuation_prompts(assistant_text)
+  const has_continuation_prompt = continuation_prompt_count > 0
+
   // Prepare result
   const result = {
     thread_id,
@@ -406,6 +486,8 @@ export async function analyze_thread_relations({
     file_references: file_base_uris,
     directory_references: directory_base_uris,
     continuation_matches,
+    has_continuation_prompt,
+    continuation_prompt_count,
     dry_run
   }
 
@@ -415,6 +497,8 @@ export async function analyze_thread_relations({
       relations: entity_relations,
       file_references: file_base_uris,
       directory_references: directory_base_uris,
+      has_continuation_prompt,
+      continuation_prompt_count,
       relations_analyzed_at: new Date().toISOString()
     }
 

@@ -226,6 +226,14 @@
       "format": "date-time",
       "description": "Timestamp when relation cleanup was last performed (ISO 8601)"
     },
+    "has_continuation_prompt": {
+      "type": "boolean",
+      "description": "True when the thread's assistant output contains at least one continuation prompt (see libs-server/metadata/continuation-signal.mjs for the signal vocabulary). Used by analyze-thread-relations to prefilter candidate source threads without reading their timelines."
+    },
+    "continuation_prompt_count": {
+      "type": "integer",
+      "description": "Number of distinct continuation prompts in the thread's assistant output (counted fenced blocks plus standalone Continuation: line prefixes). See libs-server/metadata/continuation-signal.mjs."
+    },
     "session_status": {
       "type": ["string", "null"],
       "enum": ["queued", "starting", "active", "idle", "completed", "failed", null],

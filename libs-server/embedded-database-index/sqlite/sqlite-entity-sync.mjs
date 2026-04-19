@@ -45,7 +45,9 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
     visibility_analyzed_at,
     archived_at,
     archive_reason,
-    external_session_id
+    external_session_id,
+    has_continuation_prompt,
+    continuation_prompt_count
   } = thread_data
 
   const primary_model =
@@ -72,8 +74,8 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
       latest_event_timestamp, latest_event_type, latest_event_data,
       edit_count, lines_changed, file_references, directory_references,
       public_read, visibility_analyzed_at, archived_at, archive_reason,
-      external_session_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      external_session_id, has_continuation_prompt, continuation_prompt_count
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (thread_id) DO UPDATE SET
       title = excluded.title,
       short_description = excluded.short_description,
@@ -108,7 +110,9 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
       visibility_analyzed_at = excluded.visibility_analyzed_at,
       archived_at = excluded.archived_at,
       archive_reason = excluded.archive_reason,
-      external_session_id = excluded.external_session_id
+      external_session_id = excluded.external_session_id,
+      has_continuation_prompt = excluded.has_continuation_prompt,
+      continuation_prompt_count = excluded.continuation_prompt_count
   `
 
   try {
@@ -149,7 +153,9 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
         visibility_analyzed_at ?? null,
         archived_at ?? null,
         archive_reason ?? null,
-        external_session_id ?? null
+        external_session_id ?? null,
+        has_continuation_prompt == null ? null : has_continuation_prompt ? 1 : 0,
+        continuation_prompt_count ?? null
       ]
     })
     log('Thread upserted: %s', thread_id)

@@ -26,7 +26,8 @@ async function write_thread({
   thread_id,
   created_at,
   updated_at,
-  timeline
+  timeline,
+  extra_metadata
 }) {
   const thread_dir = path.join(user_base_directory, 'thread', thread_id)
   await fs.mkdir(thread_dir, { recursive: true })
@@ -38,7 +39,8 @@ async function write_thread({
         user_public_key: '0'.repeat(64),
         thread_state: 'active',
         created_at,
-        updated_at: updated_at || created_at
+        updated_at: updated_at || created_at,
+        ...(extra_metadata || {})
       },
       null,
       2
@@ -191,8 +193,8 @@ describe('detect-thread-continuation', () => {
       // Build a prompt with >=20 unique 8-word shingles so the min-shingles
       // floor is satisfied and overlap is unambiguous.
       const tokens = Array.from({ length: 40 }, (_, i) => `tok${i}`).join(' ')
-      const wrap_up_prompt = `continue the prior work. ${tokens}`
-      const assistant_source_text = `Here is the continuation prompt you should paste:\n\n${wrap_up_prompt}\n\nGood luck.`
+      const wrap_up_prompt = `continuation prompt -- continue the prior work. ${tokens}`
+      const assistant_source_text = `Here is the prompt you should paste:\n\n~~~\n${wrap_up_prompt}\n~~~\n\nGood luck.`
 
       const analyzed_id = '11111111-1111-4111-8111-111111111111'
       const in_window_id = '22222222-2222-4222-8222-222222222222'
@@ -260,6 +262,84 @@ describe('detect-thread-continuation', () => {
       expect(matches).to.have.lengthOf(1)
       expect(matches[0].source_thread_id).to.equal(in_window_id)
       expect(matches[0].coverage).to.be.greaterThan(0.3)
+    })
+
+    it('returns empty when prompt has no continuation signal (fast-path gate)', async () => {
+      const user_base_directory = user_dir.path
+      const no_signal_id = '77777777-7777-4777-8777-777777777777'
+      // Long prompt without any signal vocabulary should short-circuit
+      // before candidate enumeration via the fast-path gate.
+      const tokens = Array.from({ length: 40 }, (_, i) => `word${i}`).join(' ')
+
+      const matches = await detect_continuation_source({
+        thread_id: no_signal_id,
+        timeline: [{ type: 'message', role: 'user', content: tokens }],
+        analyzed_created_at: '2026-04-10T00:00:00.000Z',
+        user_base_directory
+      })
+
+      expect(matches).to.deep.equal([])
+    })
+
+    it('prefilter drops has_continuation_prompt=false, keeps true and missing', async () => {
+      const user_base_directory = path.join(user_dir.path, 'prefilter')
+      await fs.mkdir(user_base_directory, { recursive: true })
+
+      const tokens = Array.from({ length: 40 }, (_, i) => `pf${i}`).join(' ')
+      const wrap_up_prompt = `continuation prompt: ${tokens}`
+      const assistant_source_text = `Here is the prompt:\n\n~~~\nKey locations\n${wrap_up_prompt}\n~~~\n`
+
+      const analyzed_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+      const flag_true_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+      const flag_false_id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+      const flag_missing_id = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+
+      const analyzed_created_at = '2026-04-10T00:00:00.000Z'
+
+      await write_thread({
+        user_base_directory,
+        thread_id: analyzed_id,
+        created_at: analyzed_created_at,
+        timeline: [
+          { type: 'message', role: 'user', content: wrap_up_prompt }
+        ]
+      })
+
+      for (const { id, flag } of [
+        { id: flag_true_id, flag: true },
+        { id: flag_false_id, flag: false },
+        { id: flag_missing_id, flag: undefined }
+      ]) {
+        const extra =
+          flag === undefined ? undefined : { has_continuation_prompt: flag }
+        await write_thread({
+          user_base_directory,
+          thread_id: id,
+          created_at: '2026-04-01T00:00:00.000Z',
+          updated_at: '2026-04-05T00:00:00.000Z',
+          extra_metadata: extra,
+          timeline: [
+            { type: 'message', role: 'user', content: 'start' },
+            {
+              type: 'message',
+              role: 'assistant',
+              content: assistant_source_text
+            }
+          ]
+        })
+      }
+
+      const matches = await detect_continuation_source({
+        thread_id: analyzed_id,
+        timeline: [{ type: 'message', role: 'user', content: wrap_up_prompt }],
+        analyzed_created_at,
+        user_base_directory
+      })
+
+      const matched_ids = matches.map((m) => m.source_thread_id).sort()
+      expect(matched_ids).to.deep.equal(
+        [flag_true_id, flag_missing_id].sort()
+      )
     })
 
     it('returns empty when prompt is too short', async () => {

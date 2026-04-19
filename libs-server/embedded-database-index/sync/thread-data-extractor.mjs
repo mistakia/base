@@ -247,7 +247,15 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     visibility_analyzed_at: metadata.visibility_analyzed_at || null,
     archived_at: metadata.archived_at || null,
     archive_reason: metadata.archive_reason || null,
-    external_session_id
+    external_session_id,
+    has_continuation_prompt:
+      typeof metadata.has_continuation_prompt === 'boolean'
+        ? metadata.has_continuation_prompt
+        : null,
+    continuation_prompt_count:
+      typeof metadata.continuation_prompt_count === 'number'
+        ? metadata.continuation_prompt_count
+        : null
   }
 }
 
