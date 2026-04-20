@@ -89,6 +89,28 @@ const get_normal_styles = {
     backgroundColor: 'transparent',
     padding: '24px 0'
   },
+  '& .code-block-wrapper': {
+    position: 'relative',
+    '&:hover .code-copy-button, & .code-copy-button:focus-visible': {
+      opacity: 1
+    }
+  },
+  '& .code-copy-button': {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    padding: '4px 6px',
+    background: COLORS.surface,
+    border: `1px solid ${COLORS.code_border}`,
+    borderRadius: '4px',
+    cursor: 'pointer',
+    color: 'var(--color-text-secondary)',
+    opacity: 0,
+    transition: 'opacity 0.15s, color 0.15s',
+    display: 'inline-flex',
+    alignItems: 'center',
+    '&:hover': { color: 'var(--color-primary)' }
+  },
   '& pre:has(code.language-prompt)': {
     backgroundColor: '#fff',
     border: '1px solid var(--color-border)',
@@ -254,6 +276,24 @@ const MarkdownViewer = ({ content, is_redacted }) => {
         setTimeout(() => {
           anchor_link.innerHTML = original_html
           anchor_link.style.color = ''
+        }, 1500)
+        return
+      }
+
+      const copy_button = event.target.closest('button[data-copy-code]')
+      if (copy_button) {
+        event.preventDefault()
+        const wrapper = copy_button.closest('.code-block-wrapper')
+        const code_el = wrapper && wrapper.querySelector('pre code')
+        if (!code_el) return
+        navigator.clipboard.writeText(code_el.textContent)
+        const original_html = copy_button.innerHTML
+        copy_button.innerHTML =
+          '<svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 010 1.06l-7.25 7.25a.75.75 0 01-1.06 0L2.22 9.28a.75.75 0 011.06-1.06L6 10.94l6.72-6.72a.75.75 0 011.06 0z"/></svg>'
+        copy_button.style.color = 'var(--color-primary)'
+        setTimeout(() => {
+          copy_button.innerHTML = original_html
+          copy_button.style.color = ''
         }, 1500)
         return
       }
