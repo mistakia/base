@@ -7,6 +7,9 @@
  * (Claude Code, Cursor) into Base execution threads with complete timeline preservation.
  */
 
+import fs_sync from 'fs'
+import os from 'os'
+import path from 'path'
 import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
@@ -601,6 +604,12 @@ const main = async () => {
               describe: 'Import from specific JSONL file path (absolute path)',
               type: 'string'
             })
+            .option('allow-raw-data-fallback', {
+              describe:
+                'Allow importing from a thread/<id>/raw-data/claude-session.jsonl even if the canonical Claude source file still exists (recovery-only escape hatch). Without this flag, the canonical source under ~/.claude/projects/.../<session>.jsonl is preferred when present.',
+              type: 'boolean',
+              default: false
+            })
             .option('from-date', {
               describe: 'Import sessions from date (YYYY-MM-DD)',
               type: 'string'
@@ -649,6 +658,84 @@ const main = async () => {
                 throw new Error(
                   '--from-date and --from-days are mutually exclusive'
                 )
+              }
+
+              // Prefer the canonical Claude source over a raw-data copy.
+              // When --session-file points at thread/<id>/raw-data/claude-session.jsonl
+              // but the original ~/.claude/projects/.../<session>.jsonl still
+              // exists, refuse unless --allow-raw-data-fallback is explicitly
+              // passed. The canonical file is append-only and contains
+              // authoritative bytes; raw-data is a downstream copy that can
+              // drift (missing leading entries from the deferred-sync-state
+              // bug, accumulated duplicates from delta appends, merged
+              // subagent entries, etc.).
+              if (
+                argv.provider === 'claude' &&
+                argv.sessionFile &&
+                !argv.allowRawDataFallback
+              ) {
+                const sf = String(argv.sessionFile)
+                const is_raw_data_path =
+                  sf.includes('/raw-data/') &&
+                  sf.endsWith('claude-session.jsonl')
+                if (is_raw_data_path) {
+                  // Peek the first lines to recover the canonical sessionId
+                  // and cwd, then look for the canonical source file.
+                  let canonical_source = null
+                  try {
+                    const head = fs_sync
+                      .readFileSync(sf, 'utf-8')
+                      .split('\n')
+                      .slice(0, 20)
+                    const uuid_re = /^[0-9a-f-]{36}$/i
+                    let found_session_id = null
+                    let found_cwd = null
+                    for (const line of head) {
+                      if (!line.trim()) continue
+                      try {
+                        const entry = JSON.parse(line)
+                        if (
+                          !found_session_id &&
+                          typeof entry?.sessionId === 'string' &&
+                          uuid_re.test(entry.sessionId)
+                        ) {
+                          found_session_id = entry.sessionId
+                        }
+                        if (!found_cwd && typeof entry?.cwd === 'string') {
+                          found_cwd = entry.cwd
+                        }
+                        if (found_session_id && found_cwd) break
+                      } catch {
+                        /* skip malformed */
+                      }
+                    }
+                    if (found_session_id) {
+                      const home = os.homedir()
+                      const cwd = found_cwd || process.cwd()
+                      const project_dir = String(cwd).replace(/\//g, '-')
+                      canonical_source = path.join(
+                        home,
+                        '.claude',
+                        'projects',
+                        project_dir,
+                        `${found_session_id}.jsonl`
+                      )
+                    }
+                  } catch {
+                    /* unreadable -- allow import to proceed */
+                  }
+                  if (
+                    canonical_source &&
+                    fs_sync.existsSync(canonical_source)
+                  ) {
+                    throw new Error(
+                      `Refusing to import from raw-data copy when canonical Claude source still exists:\n` +
+                        `  raw-data: ${sf}\n` +
+                        `  canonical: ${canonical_source}\n` +
+                        `Re-run with --session-file pointing at the canonical source, or pass --allow-raw-data-fallback to override (recovery only, when the canonical file is gone).`
+                    )
+                  }
+                }
               }
 
               // Compute fromDate from fromDays if provided
