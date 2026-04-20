@@ -60,8 +60,6 @@ describe('claude sync-state collision', function () {
     await clear_sync_state({ session_id: path_a })
 
     expect(await load_sync_state({ session_id: path_a })).to.be.null
-    expect(await load_sync_state({ session_id: path_b })).to.deep.equal(
-      state_b
-    )
+    expect(await load_sync_state({ session_id: path_b })).to.deep.equal(state_b)
   })
 })

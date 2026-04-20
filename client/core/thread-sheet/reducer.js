@@ -60,10 +60,7 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
 
       return initial_state
         .set('active_sheet', sheet_key)
-        .setIn(
-          ['sheet_data', sheet_key],
-          Map({ session_id })
-        )
+        .setIn(['sheet_data', sheet_key], Map({ session_id }))
     }
 
     // When a session gains a thread_id, transition any open session sheet

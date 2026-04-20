@@ -13,9 +13,7 @@
  * Usage: bun scripts/verify-continuation-pool-prefilter.mjs
  */
 
-import {
-  detect_continuation_source
-} from '#libs-server/metadata/analyze-thread-relations.mjs'
+import { detect_continuation_source } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import {
   list_thread_ids,
@@ -77,7 +75,9 @@ async function metadata_pool_size_fs({ analyzed_id, analyzed_created_at }) {
       ? new Date(metadata.updated_at).getTime()
       : source_created_ms
     const window_end_ms =
-      (Number.isNaN(source_updated_ms) ? source_created_ms : source_updated_ms) +
+      (Number.isNaN(source_updated_ms)
+        ? source_created_ms
+        : source_updated_ms) +
       CONTINUATION_WINDOW_DAYS * MS_PER_DAY
     if (window_end_ms < analyzed_created_ms) continue
 

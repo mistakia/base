@@ -69,8 +69,7 @@ const ThreadTimelineView = () => {
     )
   }
 
-  const timeline_to_display =
-    thread_data && thread_data.get('timeline')
+  const timeline_to_display = thread_data && thread_data.get('timeline')
   const metadata = thread_data
   const has_timeline_entries =
     Array.isArray(timeline_to_display) && timeline_to_display.length > 0

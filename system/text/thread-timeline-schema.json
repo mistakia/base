@@ -18,13 +18,7 @@
       },
       "type": {
         "type": "string",
-        "enum": [
-          "message",
-          "tool_call",
-          "tool_result",
-          "thinking",
-          "system"
-        ],
+        "enum": ["message", "tool_call", "tool_result", "thinking", "system"],
         "description": "Type of timeline entry (5 primitives)"
       },
       "schema_version": {

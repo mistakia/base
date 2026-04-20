@@ -415,11 +415,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       new_state = reinject_optimistic_entry_if_needed(new_state, thread_id)
 
       // Also update the thread in the basic threads list if it exists
-      new_state = update_thread_in_basic_list(
-        new_state,
-        thread_id,
-        thread_data
-      )
+      new_state = update_thread_in_basic_list(new_state, thread_id, thread_data)
 
       return new_state
     }
@@ -665,7 +661,11 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           created_at: now,
           _optimistic: true
         }
-        new_state = append_timeline_entry(new_state, thread_id, optimistic_entry)
+        new_state = append_timeline_entry(
+          new_state,
+          thread_id,
+          optimistic_entry
+        )
       }
 
       return new_state

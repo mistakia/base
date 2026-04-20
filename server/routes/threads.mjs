@@ -755,8 +755,7 @@ router.post('/create-session', async (req, res) => {
       job_id: job.id,
       queue_position: job.queue_position,
       status: 'queued',
-      message:
-        'Thread created and Claude CLI session queued.'
+      message: 'Thread created and Claude CLI session queued.'
     })
   } catch (error) {
     log(`Error creating thread session: ${error.message}`)
@@ -778,76 +777,78 @@ router.post('/create-session', async (req, res) => {
 
 // Lightweight session status update endpoint
 // Used by hook scripts to report session lifecycle transitions
-router.put('/:thread_id/session-status', require_hook_auth, async (req, res) => {
-  try {
-    const { session_status, session_id } = req.body
-    const { thread_id } = req.params
+router.put(
+  '/:thread_id/session-status',
+  require_hook_auth,
+  async (req, res) => {
+    try {
+      const { session_status, session_id } = req.body
+      const { thread_id } = req.params
 
-    if (!session_status) {
-      return res
-        .status(400)
-        .json({ error: 'session_status is required' })
-    }
+      if (!session_status) {
+        return res.status(400).json({ error: 'session_status is required' })
+      }
 
-    const valid_statuses = [
-      'queued',
-      'starting',
-      'active',
-      'idle',
-      'completed',
-      'failed'
-    ]
-    if (!valid_statuses.includes(session_status)) {
-      return res
-        .status(400)
-        .json({ error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}` })
-    }
+      const valid_statuses = [
+        'queued',
+        'starting',
+        'active',
+        'idle',
+        'completed',
+        'failed'
+      ]
+      if (!valid_statuses.includes(session_status)) {
+        return res
+          .status(400)
+          .json({
+            error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}`
+          })
+      }
 
-    // Build patches for targeted field merge
-    const patches = { session_status }
+      // Build patches for targeted field merge
+      const patches = { session_status }
 
-    // Set source on SessionStart when session_id is provided
-    if (session_id) {
-      const { readFile } = await import('fs/promises')
-      const user_base_directory = get_user_base_directory()
-      const thread_base_directory = get_thread_base_directory({
-        user_base_directory
-      })
-      const metadata_path = `${thread_base_directory}/${thread_id}/metadata.json`
-      try {
-        const raw = await readFile(metadata_path, 'utf-8')
-        const existing = JSON.parse(raw)
-        if (!existing.source?.session_id) {
-          patches.source = {
-            ...(existing.source || {}),
-            provider: 'claude',
-            session_id
+      // Set source on SessionStart when session_id is provided
+      if (session_id) {
+        const { readFile } = await import('fs/promises')
+        const user_base_directory = get_user_base_directory()
+        const thread_base_directory = get_thread_base_directory({
+          user_base_directory
+        })
+        const metadata_path = `${thread_base_directory}/${thread_id}/metadata.json`
+        try {
+          const raw = await readFile(metadata_path, 'utf-8')
+          const existing = JSON.parse(raw)
+          if (!existing.source?.session_id) {
+            patches.source = {
+              ...(existing.source || {}),
+              provider: 'claude',
+              session_id
+            }
           }
+        } catch {
+          return res.status(404).json({ error: 'Thread not found' })
         }
+      }
+
+      let metadata
+      try {
+        metadata = await patch_thread_metadata({ thread_id, patches })
       } catch {
         return res.status(404).json({ error: 'Thread not found' })
       }
+
+      // Emit directly for immediate client feedback (bypass 2s watcher debounce)
+      emit_thread_updated(metadata)
+
+      log(`Thread ${thread_id}: session_status updated to '${session_status}'`)
+
+      res.json({ success: true })
+    } catch (error) {
+      handle_errors(res, error, 'updating session status')
     }
-
-    let metadata
-    try {
-      metadata = await patch_thread_metadata({ thread_id, patches })
-    } catch {
-      return res.status(404).json({ error: 'Thread not found' })
-    }
-
-    // Emit directly for immediate client feedback (bypass 2s watcher debounce)
-    emit_thread_updated(metadata)
-
-    log(
-      `Thread ${thread_id}: session_status updated to '${session_status}'`
-    )
-
-    res.json({ success: true })
-  } catch (error) {
-    handle_errors(res, error, 'updating session status')
   }
-})
+)
 
 // Resume existing Claude session with new message
 router.post('/:thread_id/resume', async (req, res) => {
@@ -1049,14 +1050,17 @@ const sync_rate_limit = new Map()
 const SYNC_RATE_LIMIT_MS = 1800
 
 // Periodic sweep: remove stale rate-limit entries every 5 minutes
-setInterval(() => {
-  const now = Date.now()
-  for (const [key, timestamp] of sync_rate_limit) {
-    if (now - timestamp > SYNC_RATE_LIMIT_MS) {
-      sync_rate_limit.delete(key)
+setInterval(
+  () => {
+    const now = Date.now()
+    for (const [key, timestamp] of sync_rate_limit) {
+      if (now - timestamp > SYNC_RATE_LIMIT_MS) {
+        sync_rate_limit.delete(key)
+      }
     }
-  }
-}, 5 * 60 * 1000).unref()
+  },
+  5 * 60 * 1000
+).unref()
 
 // Sync user session from container hooks
 router.post('/sync-user-session', async (req, res) => {

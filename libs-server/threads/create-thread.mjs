@@ -273,9 +273,7 @@ export default async function create_thread({
   // 2. Deterministic UUIDv5 from source.session_id (external session import)
   // 3. Random UUIDv4 (native workflow threads)
   if (thread_id) {
-    log(
-      `Creating pre-created thread ${thread_id} for user ${user_public_key}`
-    )
+    log(`Creating pre-created thread ${thread_id} for user ${user_public_key}`)
   } else if (is_external_session) {
     thread_id = generate_thread_id_from_session({
       session_id: source.session_id,

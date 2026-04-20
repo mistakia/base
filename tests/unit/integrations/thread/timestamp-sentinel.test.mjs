@@ -18,7 +18,9 @@ const read_entries = async (thread_dir) => {
 }
 
 const build = async (messages) => {
-  const thread_dir = await fs.mkdtemp(path.join(os.tmpdir(), 'timestamp-sentinel-'))
+  const thread_dir = await fs.mkdtemp(
+    path.join(os.tmpdir(), 'timestamp-sentinel-')
+  )
   await seed_thread_metadata({ thread_dir, thread_id: THREAD_ID })
   const normalized_session = {
     session_id: 'session-test',

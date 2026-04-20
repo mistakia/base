@@ -199,9 +199,7 @@ export const find_claude_sessions_from_filesystem = async ({
       const incr_start = Date.now()
       sessions = await parse_session_with_subagents(session_file)
       for (const s of sessions) s.parse_mode = 'full'
-      log_debug(
-        `Full parse: ${sessions.length} sessions from ${session_file}`
-      )
+      log_debug(`Full parse: ${sessions.length} sessions from ${session_file}`)
 
       // Build and save initial sync state for next invocation
       if (sessions.length > 0) {
@@ -858,7 +856,9 @@ const parse_session_file_incremental = async ({
         }
       }
     } catch (error) {
-      log(`Failed to incrementally parse subagent ${agent_file}: ${error.message}`)
+      log(
+        `Failed to incrementally parse subagent ${agent_file}: ${error.message}`
+      )
     }
   }
 

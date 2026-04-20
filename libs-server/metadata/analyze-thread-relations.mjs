@@ -76,13 +76,16 @@ const MS_PER_DAY = 86400000
 async function map_with_concurrency(items, concurrency, fn) {
   const results = new Array(items.length)
   let next = 0
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
-    while (true) {
-      const index = next++
-      if (index >= items.length) return
-      results[index] = await fn(items[index], index)
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (true) {
+        const index = next++
+        if (index >= items.length) return
+        results[index] = await fn(items[index], index)
+      }
     }
-  })
+  )
   await Promise.all(workers)
   return results
 }
@@ -194,7 +197,8 @@ export async function detect_continuation_source({
   // when the caller passed an explicit user_base_directory that may differ
   // from the indexed one.
   const use_index =
-    !user_base_directory && typeof is_sqlite_initialized === 'function' &&
+    !user_base_directory &&
+    typeof is_sqlite_initialized === 'function' &&
     is_sqlite_initialized()
 
   let window_candidates = []
@@ -446,11 +450,7 @@ export async function analyze_thread_relations({
   })
   const continuation_ms = Date.now() - t_continuation_start
   if (continuation_ms > CONTINUATION_SLOW_RUN_WARN_MS) {
-    log(
-      'continuation detection slow: %dms for %s',
-      continuation_ms,
-      thread_id
-    )
+    log('continuation detection slow: %dms for %s', continuation_ms, thread_id)
   }
 
   for (const match of continuation_matches) {

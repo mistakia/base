@@ -12,13 +12,19 @@
 
 const subcommand_contributors_by_group = new Map()
 
-export function register_subcommand_contributor({ group_name, extension_name, module: mod }) {
+export function register_subcommand_contributor({
+  group_name,
+  extension_name,
+  module: mod
+}) {
   if (!group_name || typeof group_name !== 'string') return
   if (!mod || typeof mod.register_subcommands !== 'function') return
   if (!subcommand_contributors_by_group.has(group_name)) {
     subcommand_contributors_by_group.set(group_name, [])
   }
-  subcommand_contributors_by_group.get(group_name).push({ extension_name, module: mod })
+  subcommand_contributors_by_group
+    .get(group_name)
+    .push({ extension_name, module: mod })
 }
 
 // Called by load_extensions at the top of each CLI invocation to prevent

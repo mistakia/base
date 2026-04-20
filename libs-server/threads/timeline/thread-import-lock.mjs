@@ -26,7 +26,8 @@ const acquire_file_lock = async ({ lock_path }) => {
 }
 
 export const acquire_thread_import_lock = async ({ thread_dir }) => {
-  if (!thread_dir) throw new Error('acquire_thread_import_lock: thread_dir required')
+  if (!thread_dir)
+    throw new Error('acquire_thread_import_lock: thread_dir required')
   const lock_path = path.join(thread_dir, LOCK_FILENAME)
 
   const previous = in_process_chains.get(lock_path) || Promise.resolve()

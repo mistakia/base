@@ -23,8 +23,10 @@ export function deterministic_timeline_entry_id({
   // eslint-disable-next-line no-unused-vars
   sequence = ''
 }) {
-  if (!thread_id) throw new Error('deterministic_timeline_entry_id: thread_id required')
-  if (!timestamp) throw new Error('deterministic_timeline_entry_id: timestamp required')
+  if (!thread_id)
+    throw new Error('deterministic_timeline_entry_id: thread_id required')
+  if (!timestamp)
+    throw new Error('deterministic_timeline_entry_id: timestamp required')
   if (!type) throw new Error('deterministic_timeline_entry_id: type required')
   if (!source_uuid && !discriminator) {
     throw new Error(
@@ -32,7 +34,15 @@ export function deterministic_timeline_entry_id({
     )
   }
 
-  const ts = timestamp instanceof Date ? timestamp.toISOString() : String(timestamp)
-  const key = [thread_id, ts, type, system_type, source_uuid, discriminator].join('|')
+  const ts =
+    timestamp instanceof Date ? timestamp.toISOString() : String(timestamp)
+  const key = [
+    thread_id,
+    ts,
+    type,
+    system_type,
+    source_uuid,
+    discriminator
+  ].join('|')
   return uuidv5(key, TIMELINE_ENTRY_NAMESPACE)
 }

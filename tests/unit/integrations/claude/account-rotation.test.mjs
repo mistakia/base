@@ -242,7 +242,10 @@ describe('Claude Account Rotation', function () {
     it('should return highest priority account when none exhausted', async function () {
       if (!config.claude_accounts?.enabled) this.skip()
 
-      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
+      const account = await select_account({
+        execution_mode: 'host',
+        machine_id: 'test-host'
+      })
 
       expect(account).to.not.be.null
       expect(account).to.have.property('namespace')
@@ -258,7 +261,10 @@ describe('Claude Account Rotation', function () {
       const primary = accounts.find((a) => a.priority === 1)
 
       await mark_account_exhausted(primary.namespace)
-      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
+      const account = await select_account({
+        execution_mode: 'host',
+        machine_id: 'test-host'
+      })
 
       expect(account).to.not.be.null
       expect(account.namespace).to.not.equal(primary.namespace)
@@ -275,7 +281,10 @@ describe('Claude Account Rotation', function () {
       }
 
       try {
-        await select_account({ execution_mode: 'host', machine_id: 'test-host' })
+        await select_account({
+          execution_mode: 'host',
+          machine_id: 'test-host'
+        })
         expect.fail('should have thrown')
       } catch (error) {
         expect(error).to.be.an.instanceOf(AllAccountsExhaustedError)
@@ -290,7 +299,10 @@ describe('Claude Account Rotation', function () {
     it('should resolve tilde in host config_dir to absolute path', async function () {
       if (!config.claude_accounts?.enabled) this.skip()
 
-      const account = await select_account({ execution_mode: 'host', machine_id: 'test-host' })
+      const account = await select_account({
+        execution_mode: 'host',
+        machine_id: 'test-host'
+      })
 
       expect(account.config_dir).to.match(/^\//)
       expect(account.config_dir).to.not.include('~')
@@ -366,9 +378,9 @@ describe('Claude Account Rotation', function () {
     const threshold = 90
 
     it('returns unmeasurable for null utilization', () => {
-      expect(
-        classify_usage_result({ utilization: null, threshold })
-      ).to.equal('unmeasurable')
+      expect(classify_usage_result({ utilization: null, threshold })).to.equal(
+        'unmeasurable'
+      )
     })
 
     it('returns unmeasurable when five_hour.utilization missing', () => {
@@ -467,7 +479,12 @@ describe('Claude Account Rotation', function () {
       return async ({ namespace }) => {
         const response = responses[namespace]
         if (!response) {
-          return { available: false, utilization: null, cached: false, error: 'unknown' }
+          return {
+            available: false,
+            utilization: null,
+            cached: false,
+            error: 'unknown'
+          }
         }
         return response
       }

@@ -472,7 +472,8 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
         system_type: 'status',
         metadata: {
           original_type: 'file-history-snapshot',
-          snapshot_message_id: entry.snapshot?.messageId || entry.messageId || null,
+          snapshot_message_id:
+            entry.snapshot?.messageId || entry.messageId || null,
           is_snapshot_update: !!entry.isSnapshotUpdate,
           file_count
         }

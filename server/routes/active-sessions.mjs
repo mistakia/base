@@ -269,7 +269,6 @@ router.get('/:session_id', async (req, res) => {
  * Register a new active session (called by SessionStart hook)
  */
 router.post('/', require_hook_auth, async (req, res) => {
-
   const { log } = req.app.locals
   const {
     session_id,
@@ -381,7 +380,6 @@ router.post('/', require_hook_auth, async (req, res) => {
  * Called by UserPromptSubmit, PostToolUse (status=active) and Stop (status=idle) hooks
  */
 router.put('/:session_id', require_hook_auth, async (req, res) => {
-
   const { log } = req.app.locals
   const { session_id } = req.params
   const {

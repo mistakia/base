@@ -145,9 +145,7 @@ const SessionCard = ({ item }) => {
             {item.status}
           </span>
         )}
-        <span className='session-card__title'>
-          {item.title || 'Untitled'}
-        </span>
+        <span className='session-card__title'>{item.title || 'Untitled'}</span>
         <span className='session-card__time'>
           {created_time && created_time !== updated_time ? (
             <>

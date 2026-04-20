@@ -87,7 +87,9 @@ export const get_thread_cost_display = createSelector(
     const thread_metadata = thread_data.toJS ? thread_data.toJS() : thread_data
     const models = models_data.toJS ? models_data.toJS() : models_data
 
-    return format_cost_for_display(calculate_thread_cost(thread_metadata, models))
+    return format_cost_for_display(
+      calculate_thread_cost(thread_metadata, models)
+    )
   }
 )
 

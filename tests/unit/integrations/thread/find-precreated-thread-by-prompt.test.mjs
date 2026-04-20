@@ -8,7 +8,10 @@ import { process_single_session } from '#libs-server/integrations/thread/create-
 
 const make_uuid = () => crypto.randomUUID()
 
-const make_provider = (session_id, { prompt = 'Implement the feature' } = {}) => ({
+const make_provider = (
+  session_id,
+  { prompt = 'Implement the feature' } = {}
+) => ({
   name: 'claude',
   get_session_id: () => session_id,
   normalize_session: (raw) => ({
@@ -21,7 +24,11 @@ const make_provider = (session_id, { prompt = 'Implement the feature' } = {}) =>
             role: 'user',
             content: [{ type: 'text', text: prompt }]
           },
-          { type: 'message', role: 'assistant', content: [{ type: 'text', text: 'OK' }] }
+          {
+            type: 'message',
+            role: 'assistant',
+            content: [{ type: 'text', text: 'OK' }]
+          }
         ]
       : [],
     metadata: {

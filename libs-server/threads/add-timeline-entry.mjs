@@ -64,10 +64,7 @@ export const entry_validators = {
   tool_result: (entry) => {
     if (!entry.content?.tool_call_id)
       throw new Error('tool_result entry must have tool_call_id')
-    if (
-      entry.content.result === undefined &&
-      entry.content.error === undefined
-    )
+    if (entry.content.result === undefined && entry.content.error === undefined)
       throw new Error('tool_result entry must have result or error')
   },
 

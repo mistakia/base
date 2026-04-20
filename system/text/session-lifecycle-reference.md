@@ -39,16 +39,16 @@ Throughout this document, Claude CLI is used as the reference implementation. Ha
 
 ## Architecture Components
 
-| Component                                            | Role                                                             |
-| ---------------------------------------------------- | ---------------------------------------------------------------- |
-| **Client**                                           | Submits prompt, receives thread_id + job_id, tracks via WebSocket |
-| **Base API** (PM2: `base-api`)                       | REST endpoints + WebSocket server, manages thread state          |
-| **BullMQ Queue** (Redis)                             | Job queue for session creation with concurrency control          |
-| **AI Harness** (e.g. Claude CLI)                     | Spawned process that executes the prompt                         |
-| **Hook Scripts**                                     | Fire during harness lifecycle, report state to API               |
-| **Redis Store**                                      | Active session records with TTL (legacy sessions without THREAD_ID) |
+| Component                                            | Role                                                                                                                            |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Client**                                           | Submits prompt, receives thread_id + job_id, tracks via WebSocket                                                               |
+| **Base API** (PM2: `base-api`)                       | REST endpoints + WebSocket server, manages thread state                                                                         |
+| **BullMQ Queue** (Redis)                             | Job queue for session creation with concurrency control                                                                         |
+| **AI Harness** (e.g. Claude CLI)                     | Spawned process that executes the prompt                                                                                        |
+| **Hook Scripts**                                     | Fire during harness lifecycle, report state to API                                                                              |
+| **Redis Store**                                      | Active session records with TTL (legacy sessions without THREAD_ID)                                                             |
 | **Thread Watcher** (chokidar)                        | Filesystem watcher that detects thread file and timeline changes; maintains in-memory metadata cache with reverse session index |
-| **Metadata Queue** (PM2: `metadata-queue-processor`) | Async title/description generation via Ollama                    |
+| **Metadata Queue** (PM2: `metadata-queue-processor`) | Async title/description generation via Ollama                                                                                   |
 
 ### API Dual-Target
 
@@ -496,12 +496,12 @@ No sheet key transitions are needed -- the thread_id is stable from the start.
 
 The thread-first architecture simplifies correlation. The `thread_id` is known from submission time, eliminating the previous three-map correlation flow (job_id -> session_id -> thread_id).
 
-| Identifier          | Source                              | Available When                  | Purpose                                                    |
-| ------------------- | ----------------------------------- | ------------------------------- | ---------------------------------------------------------- |
-| `thread_id`         | `crypto.randomUUID()` at submission | From create-session response    | Primary identity for the session throughout its lifecycle  |
-| `job_id`            | `crypto.randomUUID()` at submission | From create-session response    | BullMQ job correlation, stored in thread metadata          |
-| `session_id`        | AI harness session UUID             | From SessionStart hook          | Identifies the harness session, written to thread metadata |
-| `source.session_id` | Thread metadata                     | After SessionStart fires        | Links thread back to the harness session_id                |
+| Identifier          | Source                              | Available When               | Purpose                                                    |
+| ------------------- | ----------------------------------- | ---------------------------- | ---------------------------------------------------------- |
+| `thread_id`         | `crypto.randomUUID()` at submission | From create-session response | Primary identity for the session throughout its lifecycle  |
+| `job_id`            | `crypto.randomUUID()` at submission | From create-session response | BullMQ job correlation, stored in thread metadata          |
+| `session_id`        | AI harness session UUID             | From SessionStart hook       | Identifies the harness session, written to thread metadata |
+| `source.session_id` | Thread metadata                     | After SessionStart fires     | Links thread back to the harness session_id                |
 
 ### Correlation Flow
 
@@ -520,17 +520,17 @@ thread_id (client has this from create-session response)
 
 ## Timing Characteristics
 
-| Event                                    | Typical Delay After Previous                                                     |
-| ---------------------------------------- | -------------------------------------------------------------------------------- |
-| create-session response (with thread_id) | < 1 second (thread created synchronously before response)                        |
-| THREAD_CREATED (watcher detection)       | ~500ms after create-session (thread watcher detects metadata.json)               |
-| BullMQ job pickup                        | 0-30 seconds (depends on queue)                                                  |
-| THREAD_UPDATED (session_status: starting)| Immediate on job pickup                                                          |
-| Harness startup                          | 2-5 seconds (varies by harness)                                                  |
-| THREAD_UPDATED (session_status: active)  | Immediate after SessionStart hook fires                                          |
-| Periodic thread updates (PostToolUse)    | Every ~2s during active tool use (throttled sync, when THREAD_ID set; 30s otherwise) |
-| THREAD_UPDATED (session_status: completed)| After all SessionEnd hooks complete                                             |
-| THREAD_UPDATED (with generated title)    | Seconds to minutes (async Ollama)                                                |
+| Event                                      | Typical Delay After Previous                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------------------------ |
+| create-session response (with thread_id)   | < 1 second (thread created synchronously before response)                            |
+| THREAD_CREATED (watcher detection)         | ~500ms after create-session (thread watcher detects metadata.json)                   |
+| BullMQ job pickup                          | 0-30 seconds (depends on queue)                                                      |
+| THREAD_UPDATED (session_status: starting)  | Immediate on job pickup                                                              |
+| Harness startup                            | 2-5 seconds (varies by harness)                                                      |
+| THREAD_UPDATED (session_status: active)    | Immediate after SessionStart hook fires                                              |
+| Periodic thread updates (PostToolUse)      | Every ~2s during active tool use (throttled sync, when THREAD_ID set; 30s otherwise) |
+| THREAD_UPDATED (session_status: completed) | After all SessionEnd hooks complete                                                  |
+| THREAD_UPDATED (with generated title)      | Seconds to minutes (async Ollama)                                                    |
 
 ## Client State Machine
 
@@ -598,15 +598,15 @@ On WebSocket reconnect, the client should:
 
 ### Missed Event Scenarios
 
-| Missed Event                | Recovery                                                                              |
-| --------------------------- | ------------------------------------------------------------------------------------- |
-| THREAD_CREATED              | Thread appears in GET /api/threads; session_status indicates lifecycle stage           |
-| THREAD_UPDATED              | GET /api/threads/<id> returns current metadata including session_status                |
-| THREAD_TIMELINE_ENTRY_ADDED | Subscribe to thread after reconnect; fetch timeline via REST                          |
-| THREAD_JOB_FAILED           | Thread metadata has session_status: "failed"; visible in GET /api/threads              |
-| ACTIVE_SESSION_STARTED      | Legacy: GET /api/active-sessions will include it (non-thread-first sessions only)     |
-| ACTIVE_SESSION_UPDATED      | Legacy: GET /api/active-sessions returns current state                                |
-| ACTIVE_SESSION_ENDED        | Legacy: Session absent from GET /api/active-sessions; client infers ended             |
+| Missed Event                | Recovery                                                                          |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| THREAD_CREATED              | Thread appears in GET /api/threads; session_status indicates lifecycle stage      |
+| THREAD_UPDATED              | GET /api/threads/<id> returns current metadata including session_status           |
+| THREAD_TIMELINE_ENTRY_ADDED | Subscribe to thread after reconnect; fetch timeline via REST                      |
+| THREAD_JOB_FAILED           | Thread metadata has session_status: "failed"; visible in GET /api/threads         |
+| ACTIVE_SESSION_STARTED      | Legacy: GET /api/active-sessions will include it (non-thread-first sessions only) |
+| ACTIVE_SESSION_UPDATED      | Legacy: GET /api/active-sessions returns current state                            |
+| ACTIVE_SESSION_ENDED        | Legacy: Session absent from GET /api/active-sessions; client infers ended         |
 
 ### Stale State Detection
 
@@ -626,12 +626,12 @@ Any AI harness integration must make these HTTP calls at the appropriate lifecyc
 
 When `THREAD_ID` is set (thread-first sessions):
 
-| Lifecycle Point | HTTP Call                                           | Required Fields                          |
-| --------------- | --------------------------------------------------- | ---------------------------------------- |
-| Session start   | `PUT /api/threads/:thread_id/session-status`        | `session_status: "active"`, `session_id` |
-| Activity/turn   | `PUT /api/threads/:thread_id/session-status`        | `session_status: "active"`               |
-| Idle/waiting    | `PUT /api/threads/:thread_id/session-status`        | `session_status: "idle"`                 |
-| Session end     | `PUT /api/threads/:thread_id/session-status`        | `session_status: "completed"`            |
+| Lifecycle Point | HTTP Call                                    | Required Fields                          |
+| --------------- | -------------------------------------------- | ---------------------------------------- |
+| Session start   | `PUT /api/threads/:thread_id/session-status` | `session_status: "active"`, `session_id` |
+| Activity/turn   | `PUT /api/threads/:thread_id/session-status` | `session_status: "active"`               |
+| Idle/waiting    | `PUT /api/threads/:thread_id/session-status` | `session_status: "idle"`                 |
+| Session end     | `PUT /api/threads/:thread_id/session-status` | `session_status: "completed"`            |
 
 When `THREAD_ID` is not set (legacy/manual sessions):
 

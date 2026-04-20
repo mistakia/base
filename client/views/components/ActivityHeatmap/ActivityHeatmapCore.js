@@ -121,7 +121,8 @@ const ActivityHeatmap = ({
       let capped_max = 0
       if (non_zero_scores.length > 0) {
         const p95_index = Math.floor(non_zero_scores.length * 0.98)
-        capped_max = non_zero_scores[Math.min(p95_index, non_zero_scores.length - 1)]
+        capped_max =
+          non_zero_scores[Math.min(p95_index, non_zero_scores.length - 1)]
       }
 
       return {

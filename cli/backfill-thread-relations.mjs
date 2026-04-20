@@ -14,12 +14,14 @@
  *   bun cli/backfill-thread-relations.mjs --dry-run          # Preview without changes
  *   bun cli/backfill-thread-relations.mjs --limit 100        # Process only first 100
  *   bun cli/backfill-thread-relations.mjs --update-entities  # Re-process to add back-references to entities
+ *   bun cli/backfill-thread-relations.mjs --stale-before 2026-04-18T20:55Z --exclude-active-sessions
  */
 
 import fs from 'fs/promises'
 import path from 'path'
 import { spawn } from 'child_process'
 import config from '#config'
+import { get_all_active_sessions } from '#server/services/active-sessions/active-session-store.mjs'
 
 if (!process.env.USER_BASE_DIRECTORY) {
   console.error(
@@ -53,7 +55,20 @@ const options = {
   // `--update-entities` mode via `force: options.force || options.updateEntities`.
   force: getArg('force', false),
   syncKuzu: getArg('sync-kuzu', false),
+  staleBefore: getArg('stale-before', ''),
+  excludeActiveSessions: getArg('exclude-active-sessions', false),
   help: getArg('help', false) || getArg('h', false)
+}
+
+if (options.staleBefore) {
+  const parsed = new Date(options.staleBefore)
+  if (Number.isNaN(parsed.getTime())) {
+    console.error(
+      `Error: --stale-before value "${options.staleBefore}" is not a valid ISO timestamp`
+    )
+    process.exit(1)
+  }
+  options.staleBeforeMs = parsed.getTime()
 }
 
 if (options.help) {
@@ -72,6 +87,8 @@ Options:
   --update-entities  Re-process analyzed threads to add back-references to entities
   --force            Force re-analysis of already-analyzed threads
   --sync-kuzu        Sync threads to KuzuDB after analysis
+  --stale-before <iso>        Include threads whose relations_analyzed_at is before this ISO timestamp
+  --exclude-active-sessions   Skip threads currently registered as active sessions
   --help, -h         Show this help message
 
 Examples:
@@ -134,7 +151,8 @@ async function findThreadsNeedingAnalysis() {
           thread_id: entry.name,
           title: metadata.title || '(untitled)',
           state: metadata.thread_state || 'unknown',
-          updated_at: metadata.updated_at
+          updated_at: metadata.updated_at,
+          relations_analyzed_at: metadata.relations_analyzed_at || null
         })
       } catch (err) {
         if (options.verbose) {
@@ -157,6 +175,23 @@ async function findThreadsNeedingAnalysis() {
   })
 
   return threads
+}
+
+function filterStaleThreads(threads, cutoffMs) {
+  return threads.filter((t) => {
+    if (!t.relations_analyzed_at) return true
+    const ts = Date.parse(t.relations_analyzed_at)
+    return Number.isNaN(ts) || ts < cutoffMs
+  })
+}
+
+async function loadActiveSessionThreadIds() {
+  const sessions = await get_all_active_sessions()
+  const ids = new Set()
+  for (const s of sessions) {
+    if (s && s.thread_id) ids.add(s.thread_id)
+  }
+  return ids
 }
 
 /**
@@ -343,6 +378,33 @@ async function main() {
     ? await findThreadsNeedingEntityUpdate()
     : await findThreadsNeedingAnalysis()
 
+  // Filter to stale threads (analyzed before the given cutoff or never analyzed).
+  // Threads whose relations_analyzed_at is at/after the cutoff are skipped so
+  // we do not thrash already-fresh analyses.
+  if (options.staleBeforeMs != null && !options.updateEntities) {
+    const before = threadsToProcess.length
+    threadsToProcess = filterStaleThreads(
+      threadsToProcess,
+      options.staleBeforeMs
+    )
+    console.log(
+      `Stale filter (<${options.staleBefore}): ${before} -> ${threadsToProcess.length}`
+    )
+  }
+
+  // Drop threads that are currently registered as active sessions so a bulk
+  // sweep does not race metadata writes against a live session.
+  if (options.excludeActiveSessions) {
+    const before = threadsToProcess.length
+    const active_ids = await loadActiveSessionThreadIds()
+    threadsToProcess = threadsToProcess.filter(
+      (t) => !active_ids.has(t.thread_id)
+    )
+    console.log(
+      `Active-session exclude: ${before} -> ${threadsToProcess.length} (${active_ids.size} active)`
+    )
+  }
+
   // Apply limit if specified
   if (options.limit > 0) {
     threadsToProcess = threadsToProcess.slice(0, options.limit)
@@ -453,7 +515,9 @@ async function main() {
   }
 }
 
-main().catch((err) => {
-  console.error('Fatal error:', err)
-  process.exit(1)
-})
+main()
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error('Fatal error:', err)
+    process.exit(1)
+  })

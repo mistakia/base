@@ -29,7 +29,9 @@ const patch_thread_metadata = async ({ thread_id, patches }) => {
   Object.assign(metadata, patches, { updated_at: new Date().toISOString() })
 
   await writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
-  log(`Thread ${thread_id}: patched fields [${Object.keys(patches).join(', ')}]`)
+  log(
+    `Thread ${thread_id}: patched fields [${Object.keys(patches).join(', ')}]`
+  )
   return metadata
 }
 

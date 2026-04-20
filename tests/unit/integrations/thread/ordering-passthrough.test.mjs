@@ -129,7 +129,11 @@ describe('ordering passthrough and composite sequence', () => {
           role: 'user',
           timestamp: new Date('2026-04-18T12:00:00.000Z'),
           content: 'hello',
-          ordering: { sequence: 50000, source_uuid: 'src-uuid-1', parent_id: null }
+          ordering: {
+            sequence: 50000,
+            source_uuid: 'src-uuid-1',
+            parent_id: null
+          }
         }
       ],
       metadata: {}
@@ -168,7 +172,10 @@ describe('ordering passthrough and composite sequence', () => {
 
     const entries = await write_timeline(normalized_session)
     expect(entries[0].ordering).to.deep.equal({ sequence: 0, parent_id: null })
-    expect(entries[1].ordering).to.deep.equal({ sequence: 1, parent_id: 'msg-a' })
+    expect(entries[1].ordering).to.deep.equal({
+      sequence: 1,
+      parent_id: 'msg-a'
+    })
   })
 
   it('delta re-parse produces identical ordering.sequence values for same source lines', () => {
@@ -203,9 +210,15 @@ describe('ordering passthrough and composite sequence', () => {
       metadata: {}
     })
 
-    const full_second = full.messages.find((m) => m.ordering.source_uuid === 'u2')
-    const delta_second = delta.messages.find((m) => m.ordering.source_uuid === 'u2')
-    expect(full_second.ordering.sequence).to.equal(delta_second.ordering.sequence)
+    const full_second = full.messages.find(
+      (m) => m.ordering.source_uuid === 'u2'
+    )
+    const delta_second = delta.messages.find(
+      (m) => m.ordering.source_uuid === 'u2'
+    )
+    expect(full_second.ordering.sequence).to.equal(
+      delta_second.ordering.sequence
+    )
     expect(full_second.ordering.sequence).to.equal(2 * 10000)
   })
 

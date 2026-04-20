@@ -32,7 +32,10 @@ if (!THREAD_DIR) {
 
 const parse_raw_session_file = async (file_path) => {
   const stream = fs.createReadStream(file_path)
-  const reader = readline.createInterface({ input: stream, crlfDelay: Infinity })
+  const reader = readline.createInterface({
+    input: stream,
+    crlfDelay: Infinity
+  })
   let line_count = 0
   const all_entries = []
   const file_summaries = []
@@ -97,7 +100,11 @@ const failures = []
 for (const tid of thread_dirs) {
   const thread_path = path.join(THREAD_DIR, tid)
   const metadata_path = path.join(thread_path, 'metadata.json')
-  const raw_session_path = path.join(thread_path, 'raw-data', 'claude-session.jsonl')
+  const raw_session_path = path.join(
+    thread_path,
+    'raw-data',
+    'claude-session.jsonl'
+  )
   const timeline_path = path.join(thread_path, 'timeline.jsonl')
   if (!fs.existsSync(metadata_path)) continue
   scanned++
@@ -115,7 +122,8 @@ for (const tid of thread_dirs) {
 
   let normalized
   try {
-    const { entries, file_summaries } = await parse_raw_session_file(raw_session_path)
+    const { entries, file_summaries } =
+      await parse_raw_session_file(raw_session_path)
     // Pre-filter: if no materialized raw types are present, skip the heavy
     // normalize step entirely.
     const has_target = entries.some((e) => MATERIALIZED_RAW_TYPES.has(e.type))
@@ -131,7 +139,8 @@ for (const tid of thread_dirs) {
   }
 
   // Existing timeline content (preserved unchanged).
-  const { lines: existing_lines, ids: existing_ids } = read_timeline(timeline_path)
+  const { lines: existing_lines, ids: existing_ids } =
+    read_timeline(timeline_path)
   const existing_entries = []
   for (const line of existing_lines) {
     if (!line.trim()) continue

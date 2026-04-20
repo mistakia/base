@@ -256,7 +256,12 @@ function parse_bash_command(command) {
     // `bun script.mjs` / `node script.mjs` / `python3 script.py` etc.
     // The script path is the first non-flag token with a script extension,
     // treated as a read (we are executing its code).
-    if (cmd === 'bun' || cmd === 'node' || cmd === 'python' || cmd === 'python3') {
+    if (
+      cmd === 'bun' ||
+      cmd === 'node' ||
+      cmd === 'python' ||
+      cmd === 'python3'
+    ) {
       for (let i = 1; i < tokens.length; i++) {
         const token = tokens[i]
         if (token.startsWith('-')) continue
@@ -338,7 +343,10 @@ export function extract_from_bash_commands({ timeline }) {
       [/base\s+entity\s+create\s+["']?((?:user|sys):[^\s"']+)/, 'create'],
       [/base\s+entity\s+update\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
       [/base\s+entity\s+observe\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
-      [/base\s+entity\s+visibility\s+set\s+["']?((?:user|sys):[^\s"']+)/, 'modify'],
+      [
+        /base\s+entity\s+visibility\s+set\s+["']?((?:user|sys):[^\s"']+)/,
+        'modify'
+      ],
       [/base\s+entity\s+get\s+["']?((?:user|sys):[^\s"']+)/, 'read'],
       [/base\s+entity\s+tree\s+["']?((?:user|sys):[^\s"']+)/, 'read']
     ]

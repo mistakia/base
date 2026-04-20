@@ -158,7 +158,11 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
         archived_at ?? null,
         archive_reason ?? null,
         external_session_id ?? null,
-        has_continuation_prompt == null ? null : has_continuation_prompt ? 1 : 0,
+        has_continuation_prompt == null
+          ? null
+          : has_continuation_prompt
+            ? 1
+            : 0,
         continuation_prompt_count ?? null
       ]
     })
@@ -903,7 +907,11 @@ export async function sync_entities_aliases_batch({ entity_aliases }) {
   const all_alias_tuples = []
   const now = new Date().toISOString()
 
-  for (const { entity_base_uri, entity_id, alias_base_uris } of entity_aliases) {
+  for (const {
+    entity_base_uri,
+    entity_id,
+    alias_base_uris
+  } of entity_aliases) {
     if (!entity_base_uri) continue
     if (!entity_id) {
       if (Array.isArray(alias_base_uris) && alias_base_uris.length > 0) {

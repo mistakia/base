@@ -106,7 +106,12 @@ const validate_thread = async ({
   return { thread_id, entries, invalid, errors }
 }
 
-const run_workers = async ({ thread_ids, worker_fn, fail_fast, on_progress }) => {
+const run_workers = async ({
+  thread_ids,
+  worker_fn,
+  fail_fast,
+  on_progress
+}) => {
   const N = Math.min(os.cpus().length, 8)
   const queue = thread_ids.slice()
   const results = []

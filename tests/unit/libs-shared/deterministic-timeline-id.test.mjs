@@ -13,7 +13,9 @@ describe('deterministic_timeline_entry_id', () => {
 
   it('returns a uuid v5 string', () => {
     const id = deterministic_timeline_entry_id(base)
-    expect(id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(id).to.match(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+    )
   })
 
   it('is deterministic for identical input', () => {
@@ -24,38 +26,58 @@ describe('deterministic_timeline_entry_id', () => {
 
   it('accepts a Date timestamp and matches the iso-string form', () => {
     const date = new Date(base.timestamp)
-    expect(deterministic_timeline_entry_id({ ...base, timestamp: date })).to.equal(
-      deterministic_timeline_entry_id(base)
-    )
+    expect(
+      deterministic_timeline_entry_id({ ...base, timestamp: date })
+    ).to.equal(deterministic_timeline_entry_id(base))
   })
 
   it('produces distinct ids for different thread_id', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, thread_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb' })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      thread_id: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+    })
     expect(a).to.not.equal(b)
   })
 
   it('produces distinct ids for different timestamp', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, timestamp: '2026-04-17T05:00:00.001Z' })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      timestamp: '2026-04-17T05:00:00.001Z'
+    })
     expect(a).to.not.equal(b)
   })
 
   it('produces distinct ids for different source_uuid', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, source_uuid: 'src-uuid-2' })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      source_uuid: 'src-uuid-2'
+    })
     expect(a).to.not.equal(b)
   })
 
   it('produces distinct ids for different system_type', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, system_type: 'configuration' })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      system_type: 'configuration'
+    })
     expect(a).to.not.equal(b)
   })
 
   it('uses the discriminator to disambiguate when other fields collide', () => {
-    const a = deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: 'a' })
-    const b = deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: 'b' })
+    const a = deterministic_timeline_entry_id({
+      ...base,
+      source_uuid: '',
+      discriminator: 'a'
+    })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      source_uuid: '',
+      discriminator: 'b'
+    })
     expect(a).to.not.equal(b)
   })
 
@@ -67,19 +89,29 @@ describe('deterministic_timeline_entry_id', () => {
 
   it('throws when both source_uuid and discriminator are empty', () => {
     expect(() =>
-      deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: '' })
+      deterministic_timeline_entry_id({
+        ...base,
+        source_uuid: '',
+        discriminator: ''
+      })
     ).to.throw(/source_uuid or discriminator/)
   })
 
   it('throws when thread_id missing', () => {
-    expect(() => deterministic_timeline_entry_id({ ...base, thread_id: undefined })).to.throw(/thread_id required/)
+    expect(() =>
+      deterministic_timeline_entry_id({ ...base, thread_id: undefined })
+    ).to.throw(/thread_id required/)
   })
 
   it('throws when timestamp missing', () => {
-    expect(() => deterministic_timeline_entry_id({ ...base, timestamp: undefined })).to.throw(/timestamp required/)
+    expect(() =>
+      deterministic_timeline_entry_id({ ...base, timestamp: undefined })
+    ).to.throw(/timestamp required/)
   })
 
   it('throws when type missing', () => {
-    expect(() => deterministic_timeline_entry_id({ ...base, type: undefined })).to.throw(/type required/)
+    expect(() =>
+      deterministic_timeline_entry_id({ ...base, type: undefined })
+    ).to.throw(/type required/)
   })
 })

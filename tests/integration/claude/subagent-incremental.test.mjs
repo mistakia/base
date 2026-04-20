@@ -29,7 +29,8 @@ const make_entry = (uuid, index, type = 'user') => ({
         }
 })
 
-const serialize = (entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+const serialize = (entries) =>
+  entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
 
 const read_timeline = async (thread_dir) => {
   const raw = await fs.readFile(path.join(thread_dir, 'timeline.jsonl'), 'utf8')
@@ -70,7 +71,12 @@ const run_import = async ({ session_file, threads_root }) => {
     } finally {
       await lock.release()
     }
-    results.push({ session_id: session.session_id, thread_id, thread_dir, parse_mode })
+    results.push({
+      session_id: session.session_id,
+      thread_id,
+      thread_dir,
+      parse_mode
+    })
   }
   return results
 }
@@ -114,13 +120,18 @@ describe('claude subagent incremental import', function () {
     const first_agent_entries = await read_timeline(agent_result.thread_dir)
     expect(first_agent_entries.length).to.be.greaterThan(0)
 
-    await fs.appendFile(agent_file, serialize([make_entry('a2', 2, 'assistant')]))
+    await fs.appendFile(
+      agent_file,
+      serialize([make_entry('a2', 2, 'assistant')])
+    )
 
     const second = await run_import({ session_file, threads_root })
     const agent_delta = second.find((r) => r.session_id === 'agent-sub-a')
     expect(agent_delta.parse_mode).to.equal('delta')
     const second_agent_entries = await read_timeline(agent_result.thread_dir)
-    expect(second_agent_entries.length).to.be.greaterThan(first_agent_entries.length)
+    expect(second_agent_entries.length).to.be.greaterThan(
+      first_agent_entries.length
+    )
     const first_ids = new Set(first_agent_entries.map((e) => e.id))
     for (const id of first_ids) {
       expect(second_agent_entries.some((e) => e.id === id)).to.equal(true)

@@ -227,9 +227,7 @@ export async function move_entity_filesystem({
         )
           ? entity_result.entity_properties.aliases
           : []
-        const next_aliases = existing_aliases.includes(
-          source_resolved.base_uri
-        )
+        const next_aliases = existing_aliases.includes(source_resolved.base_uri)
           ? existing_aliases
           : [...existing_aliases, source_resolved.base_uri]
 

@@ -103,7 +103,9 @@ export const generate_volume_mounts = async ({
     }
 
     // Determine container target path
-    const container_target = target || (isAbsolute(source) ? source : join(container_user_base_path, source))
+    const container_target =
+      target ||
+      (isAbsolute(source) ? source : join(container_user_base_path, source))
     const mount_mode = mode === 'rw' ? 'cached' : 'ro'
     mounts.push(`${host_source}:${container_target}:${mount_mode}`)
   }

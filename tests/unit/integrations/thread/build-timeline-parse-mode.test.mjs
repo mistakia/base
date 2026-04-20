@@ -59,7 +59,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(session, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(session, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
     const entries = await read_entries(thread_dir)
     expect(entries).to.have.lengthOf(1)
     expect(entries[0].id).to.equal('m1')
@@ -78,7 +81,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(first, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(first, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
     const timeline_path = path.join(thread_dir, 'timeline.jsonl')
     const before_ino = (await fs.stat(timeline_path)).ino
 
@@ -94,7 +100,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(second, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(second, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
     const after_ino = (await fs.stat(timeline_path)).ino
     expect(after_ino).to.equal(before_ino)
 
@@ -115,7 +124,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(full, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(full, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
 
     const delta = make_session({
       parse_mode: 'delta',
@@ -129,7 +141,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(delta, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(delta, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
 
     const entries = await read_entries(thread_dir)
     expect(entries.map((e) => e.id)).to.deep.equal(['m1', 'm2'])
@@ -148,7 +163,10 @@ describe('build_timeline_from_session parse_mode branching', function () {
         })
       ]
     })
-    await build_timeline_from_session(full, { thread_id: THREAD_ID, thread_dir })
+    await build_timeline_from_session(full, {
+      thread_id: THREAD_ID,
+      thread_dir
+    })
 
     const delta = make_session({ parse_mode: 'delta', messages: [] })
     const result = await build_timeline_from_session(delta, {

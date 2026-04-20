@@ -956,8 +956,10 @@ class EmbeddedIndexManager {
       // back-reference queries surface thread sources alongside entities.
       if (result.sqlite_synced) {
         try {
-          const { relations: relation_targets, file_references: file_reference_targets } =
-            extract_thread_reference_targets({ metadata })
+          const {
+            relations: relation_targets,
+            file_references: file_reference_targets
+          } = extract_thread_reference_targets({ metadata })
           await sync_thread_references_to_sqlite({
             thread_id,
             relation_targets,

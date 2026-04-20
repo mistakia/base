@@ -330,7 +330,9 @@ const save_claude_raw_data = async ({
     })
     // Release the entries array itself
     raw_data.entries = null
-    log_debug(`Saved Claude JSONL data to ${jsonl_file} (parse_mode=${parse_mode})`)
+    log_debug(
+      `Saved Claude JSONL data to ${jsonl_file} (parse_mode=${parse_mode})`
+    )
   }
 
   // Save session metadata
@@ -587,10 +589,10 @@ export const update_existing_thread = async (
       }
 
       // Always rebuild timeline from the full normalized session.
-      timeline_result = await build_timeline_from_session(
-        normalized_session,
-        { thread_dir, thread_id }
-      )
+      timeline_result = await build_timeline_from_session(normalized_session, {
+        thread_dir,
+        thread_id
+      })
     } finally {
       await import_lock.release()
     }
@@ -676,9 +678,7 @@ export const update_thread_metadata = async (
     // a fresh metadata file rather than silently no-op.
     let existing_metadata
     try {
-      existing_metadata = JSON.parse(
-        await fs.readFile(metadata_path, 'utf-8')
-      )
+      existing_metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
     } catch (read_error) {
       if (read_error.code !== 'ENOENT') throw read_error
       existing_metadata = {
@@ -726,8 +726,7 @@ export const update_thread_metadata = async (
       ? {
           input_tokens: precomputed.input_tokens,
           output_tokens: precomputed.output_tokens,
-          cache_creation_input_tokens:
-            precomputed.cache_creation_input_tokens,
+          cache_creation_input_tokens: precomputed.cache_creation_input_tokens,
           cache_read_input_tokens: precomputed.cache_read_input_tokens
         }
       : aggregate_token_counts(normalized_session.metadata || {})

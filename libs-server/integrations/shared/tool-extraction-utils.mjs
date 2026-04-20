@@ -296,7 +296,10 @@ export const extract_tool_interactions = (
             is_extracted_tool: true
           },
           block_index: index,
-          line_number: parent_entry.line_number ?? parent_entry.provider_data?.line_number ?? 0,
+          line_number:
+            parent_entry.line_number ??
+            parent_entry.provider_data?.line_number ??
+            0,
           source_uuid: parent_entry.uuid || parent_entry.id || ''
         })
 
@@ -325,7 +328,10 @@ export const extract_tool_interactions = (
             is_extracted_tool: true
           },
           block_index: index,
-          line_number: parent_entry.line_number ?? parent_entry.provider_data?.line_number ?? 0,
+          line_number:
+            parent_entry.line_number ??
+            parent_entry.provider_data?.line_number ??
+            0,
           source_uuid: parent_entry.uuid || parent_entry.id || ''
         })
 

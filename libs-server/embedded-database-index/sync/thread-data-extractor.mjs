@@ -283,7 +283,11 @@ export function extract_thread_reference_targets({ metadata }) {
   )
     .map((entry) => {
       if (typeof entry === 'string') return entry
-      if (entry && typeof entry === 'object' && typeof entry.base_uri === 'string')
+      if (
+        entry &&
+        typeof entry === 'object' &&
+        typeof entry.base_uri === 'string'
+      )
         return entry.base_uri
       return null
     })

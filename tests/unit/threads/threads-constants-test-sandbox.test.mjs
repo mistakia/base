@@ -19,7 +19,9 @@ describe('threads-constants test sandbox guard', function () {
   it('throws under NODE_ENV=test when user_base_directory is outside tmp roots', () => {
     process.env.NODE_ENV = 'test'
     expect(() =>
-      get_thread_base_directory({ user_base_directory: '/Users/someone/user-base' })
+      get_thread_base_directory({
+        user_base_directory: '/Users/someone/user-base'
+      })
     ).to.throw(/Refusing to resolve thread base directory under NODE_ENV=test/)
   })
 

@@ -87,7 +87,9 @@ describe('save_raw_session_data parse_mode branching (claude)', function () {
 
   it('concurrent writes serialize under the import lock', async () => {
     const run_locked = async ({ parse_mode, entries }) => {
-      const lock = await acquire_thread_import_lock({ thread_dir: raw_data_dir })
+      const lock = await acquire_thread_import_lock({
+        thread_dir: raw_data_dir
+      })
       try {
         await run({ parse_mode, entries })
       } finally {

@@ -6,9 +6,7 @@ import { Link } from 'react-router-dom'
 import { List } from 'immutable'
 
 import { active_sessions_actions } from '@core/active-sessions/actions'
-import {
-  get_active_sessions_count
-} from '@core/active-sessions/selectors'
+import { get_active_sessions_count } from '@core/active-sessions/selectors'
 import { get_can_create_threads, get_app } from '@core/app/selectors.js'
 import SessionCard from './SessionCard.js'
 import normalize_thread from './normalize-thread.js'

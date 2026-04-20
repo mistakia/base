@@ -1098,7 +1098,7 @@ async function handle_threads(argv) {
     const threads = await query(
       () => fetch_entity_threads_from_api(argv),
       async () => {
-          return embedded_index_manager.find_threads_relating_to({
+        return embedded_index_manager.find_threads_relating_to({
           base_uri: argv.base_uri,
           relation_type: argv['relation-type'] || null,
           limit: argv.limit,
@@ -1594,7 +1594,7 @@ async function handle_tree(argv) {
 
     const fetch_project_entities = async (tag_uri) => {
       const direct_fallback = async () => {
-          const entities = await embedded_index_manager.query_entities({
+        const entities = await embedded_index_manager.query_entities({
           filters: [{ column_id: 'tags', operator: 'IN', value: [tag_uri] }],
           limit: 1000,
           offset: 0

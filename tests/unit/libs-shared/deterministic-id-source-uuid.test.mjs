@@ -19,7 +19,10 @@ describe('deterministic_timeline_entry_id (source-intrinsic key)', () => {
 
   it('produces a different id for a different source_uuid', () => {
     const a = deterministic_timeline_entry_id(base)
-    const b = deterministic_timeline_entry_id({ ...base, source_uuid: 'src-uuid-2' })
+    const b = deterministic_timeline_entry_id({
+      ...base,
+      source_uuid: 'src-uuid-2'
+    })
     expect(a).to.not.equal(b)
   })
 
@@ -31,7 +34,11 @@ describe('deterministic_timeline_entry_id (source-intrinsic key)', () => {
 
   it('throws when both source_uuid and discriminator are empty', () => {
     expect(() =>
-      deterministic_timeline_entry_id({ ...base, source_uuid: '', discriminator: '' })
+      deterministic_timeline_entry_id({
+        ...base,
+        source_uuid: '',
+        discriminator: ''
+      })
     ).to.throw(/source_uuid or discriminator/)
   })
 

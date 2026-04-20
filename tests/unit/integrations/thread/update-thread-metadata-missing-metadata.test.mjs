@@ -28,7 +28,9 @@ describe('update_thread_metadata missing metadata.json bootstrap', function () {
 
   beforeEach(async function () {
     thread_id = '3fb842ea-8233-596c-a146-2719c188810f'
-    const root = await fs.mkdtemp(path.join(os.tmpdir(), 'thread-meta-missing-'))
+    const root = await fs.mkdtemp(
+      path.join(os.tmpdir(), 'thread-meta-missing-')
+    )
     thread_dir = path.join(root, thread_id)
     await fs.mkdir(path.join(thread_dir, 'raw-data'), { recursive: true })
     await fs.writeFile(

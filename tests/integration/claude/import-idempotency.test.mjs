@@ -29,7 +29,8 @@ const make_entry = (uuid, index, type = 'user') => ({
         }
 })
 
-const serialize = (entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+const serialize = (entries) =>
+  entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
 
 const read_timeline = async (thread_dir) => {
   const raw = await fs.readFile(path.join(thread_dir, 'timeline.jsonl'), 'utf8')

@@ -90,10 +90,7 @@ describe('Thread-First Creation Flow', () => {
           path.join(thread_dir, 'timeline.jsonl'),
           'utf-8'
         )
-        const timeline_entries = timeline_raw
-          .trim()
-          .split('\n')
-          .map(JSON.parse)
+        const timeline_entries = timeline_raw.trim().split('\n').map(JSON.parse)
         expect(timeline_entries).to.have.lengthOf(1)
         expect(timeline_entries[0].type).to.equal('message')
         expect(timeline_entries[0].role).to.equal('user')
@@ -122,10 +119,7 @@ describe('Thread-First Creation Flow', () => {
           response.body.thread_id
         )
         const metadata = JSON.parse(
-          await fs.readFile(
-            path.join(thread_dir, 'metadata.json'),
-            'utf-8'
-          )
+          await fs.readFile(path.join(thread_dir, 'metadata.json'), 'utf-8')
         )
 
         expect(metadata.prompt_snippet).to.have.lengthOf(200)

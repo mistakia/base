@@ -25,7 +25,8 @@ const make_entry = (uuid, index) => ({
         }
 })
 
-const serialize = (entries) => entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+const serialize = (entries) =>
+  entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
 
 describe('claude parser parse_mode decision table', function () {
   this.timeout(10000)
@@ -46,8 +47,13 @@ describe('claude parser parse_mode decision table', function () {
   })
 
   it('parent, no sync state -> parse_mode === full', async () => {
-    await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    await fs.writeFile(
+      session_file,
+      serialize([make_entry('u1', 1), make_entry('u2', 2)])
+    )
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     expect(sessions).to.have.lengthOf(1)
     expect(sessions[0].parse_mode).to.equal('full')
   })
@@ -65,13 +71,18 @@ describe('claude parser parse_mode decision table', function () {
       }
     })
 
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     expect(sessions).to.have.lengthOf(1)
     expect(sessions[0].parse_mode).to.equal('full')
   })
 
   it('parent, size == stored_offset -> session omitted from result', async () => {
-    await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
+    await fs.writeFile(
+      session_file,
+      serialize([make_entry('u1', 1), make_entry('u2', 2)])
+    )
     const file_size = (await fs.stat(session_file)).size
     await save_sync_state({
       session_id: session_file,
@@ -82,12 +93,17 @@ describe('claude parser parse_mode decision table', function () {
       }
     })
 
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     expect(sessions).to.deep.equal([])
   })
 
   it('parent, size > stored_offset -> parse_mode === delta', async () => {
-    await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
+    await fs.writeFile(
+      session_file,
+      serialize([make_entry('u1', 1), make_entry('u2', 2)])
+    )
     const file_size = (await fs.stat(session_file)).size
     await save_sync_state({
       session_id: session_file,
@@ -100,13 +116,18 @@ describe('claude parser parse_mode decision table', function () {
 
     await fs.appendFile(session_file, serialize([make_entry('u3', 3)]))
 
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     expect(sessions).to.have.lengthOf(1)
     expect(sessions[0].parse_mode).to.equal('delta')
   })
 
   it('subagent with offset === 0 -> parse_mode === full', async () => {
-    await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
+    await fs.writeFile(
+      session_file,
+      serialize([make_entry('u1', 1), make_entry('u2', 2)])
+    )
 
     const subagents_dir = path.join(work_dir, session_id, 'subagents')
     await fs.mkdir(subagents_dir, { recursive: true })
@@ -123,14 +144,19 @@ describe('claude parser parse_mode decision table', function () {
       }
     })
 
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     const agent = sessions.find((s) => s.session_id === 'agent-sub-1')
     expect(agent, 'agent session returned').to.exist
     expect(agent.parse_mode).to.equal('full')
   })
 
   it('subagent with offset > 0 and new bytes -> parse_mode === delta', async () => {
-    await fs.writeFile(session_file, serialize([make_entry('u1', 1), make_entry('u2', 2)]))
+    await fs.writeFile(
+      session_file,
+      serialize([make_entry('u1', 1), make_entry('u2', 2)])
+    )
 
     const subagents_dir = path.join(work_dir, session_id, 'subagents')
     await fs.mkdir(subagents_dir, { recursive: true })
@@ -153,7 +179,9 @@ describe('claude parser parse_mode decision table', function () {
     // Append new bytes to the subagent file
     await fs.appendFile(agent_file, serialize([make_entry('a2', 2)]))
 
-    const sessions = await find_claude_sessions_from_filesystem({ session_file })
+    const sessions = await find_claude_sessions_from_filesystem({
+      session_file
+    })
     const agent = sessions.find((s) => s.session_id === 'agent-sub-1')
     expect(agent, 'agent session returned').to.exist
     expect(agent.parse_mode).to.equal('delta')

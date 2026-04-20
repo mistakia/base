@@ -86,7 +86,10 @@ function active_sessions_reducer(
           )
         }
         if (session.context_percentage !== undefined) {
-          updated = updated.set('context_percentage', session.context_percentage)
+          updated = updated.set(
+            'context_percentage',
+            session.context_percentage
+          )
         }
         updated = updated.set('last_activity_at', new Date().toISOString())
         return state.setIn(['session_data', session.session_id], updated)
@@ -187,7 +190,9 @@ describe('ephemeral active-sessions reducer', function () {
 
       const sess1 = state.getIn(['session_data', 'sess-1'])
       expect(sess1.get('thread_id')).to.equal('thread-a')
-      expect(sess1.get('latest_timeline_event')).to.deep.equal({ text: 'hello' })
+      expect(sess1.get('latest_timeline_event')).to.deep.equal({
+        text: 'hello'
+      })
       expect(sess1.get('context_percentage')).to.equal(42)
       expect(sess1.get('last_activity_at')).to.equal('2026-04-12T10:00:00Z')
 

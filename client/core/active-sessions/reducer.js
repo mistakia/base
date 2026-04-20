@@ -103,7 +103,10 @@ export function active_sessions_reducer(
           )
         }
         if (session.context_percentage !== undefined) {
-          updated = updated.set('context_percentage', session.context_percentage)
+          updated = updated.set(
+            'context_percentage',
+            session.context_percentage
+          )
         }
         updated = updated.set('last_activity_at', new Date().toISOString())
         return state.setIn(['session_data', session.session_id], updated)

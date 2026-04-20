@@ -163,11 +163,7 @@ export function start_index_sync_watcher({
             })
         })
         if (sync_result && sync_result.success === false) {
-          log(
-            'Failed to sync entity to index (%s): %s',
-            entity_type,
-            base_uri
-          )
+          log('Failed to sync entity to index (%s): %s', entity_type, base_uri)
           record_failure(
             'watcher_entity_sync_failed',
             `entity_sync type=${entity_type} base_uri=${base_uri} reason=${sync_result.error || 'unknown'}`,

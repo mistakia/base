@@ -29,7 +29,10 @@ describe('get_thread_metadata self-heal', function () {
     const thread_id = '3fb842ea-8233-596c-a146-2719c188810f'
     const thread_dir = path.join(user_base, 'thread', thread_id)
     await fs.mkdir(path.join(thread_dir, 'raw-data'), { recursive: true })
-    await fs.writeFile(path.join(thread_dir, 'raw-data', 'claude-session.jsonl'), '')
+    await fs.writeFile(
+      path.join(thread_dir, 'raw-data', 'claude-session.jsonl'),
+      ''
+    )
 
     const metadata = await get_thread_metadata({
       thread_id,
@@ -92,15 +95,16 @@ describe('get_thread_metadata self-heal', function () {
     await fs.mkdir(orphan_dir, { recursive: true })
 
     let synced_calls = 0
-    const { synced, failed, failed_thread_ids } = await process_threads_in_batches({
-      thread_ids: [live_id, orphan_id],
-      sync_fn: async () => {
-        synced_calls++
-        return { success: true }
-      },
-      user_base_directory: user_base,
-      options: { log_fn: () => {} }
-    })
+    const { synced, failed, failed_thread_ids } =
+      await process_threads_in_batches({
+        thread_ids: [live_id, orphan_id],
+        sync_fn: async () => {
+          synced_calls++
+          return { success: true }
+        },
+        user_base_directory: user_base,
+        options: { log_fn: () => {} }
+      })
 
     expect(synced).to.equal(1)
     expect(failed).to.equal(0)

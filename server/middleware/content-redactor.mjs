@@ -746,7 +746,9 @@ const redact_timeline_entry = (entry) => {
         redacted_entry.content = redact_text_content(redacted_entry.content)
       }
       if (redacted_entry.metadata) {
-        redacted_entry.metadata = redact_system_metadata(redacted_entry.metadata)
+        redacted_entry.metadata = redact_system_metadata(
+          redacted_entry.metadata
+        )
       }
       break
 

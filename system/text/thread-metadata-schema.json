@@ -236,7 +236,15 @@
     },
     "session_status": {
       "type": ["string", "null"],
-      "enum": ["queued", "starting", "active", "idle", "completed", "failed", null],
+      "enum": [
+        "queued",
+        "starting",
+        "active",
+        "idle",
+        "completed",
+        "failed",
+        null
+      ],
       "description": "Current session lifecycle status for web-client-initiated sessions"
     },
     "prompt_snippet": {

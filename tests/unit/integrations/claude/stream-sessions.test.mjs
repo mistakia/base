@@ -615,7 +615,9 @@ describe('Claude Session Streaming', function () {
         test_dir,
         'provider-warm-agent/projects/-Users-warm/warm-parent-uuid.jsonl'
       )
-      await clear_sync_state({ session_id: provider_parent_file }).catch(() => {})
+      await clear_sync_state({ session_id: provider_parent_file }).catch(
+        () => {}
+      )
       await clear_sync_state({ session_id: orphan_agent_file }).catch(() => {})
       await clear_sync_state({ session_id: warm_parent_file }).catch(() => {})
     })

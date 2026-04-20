@@ -206,7 +206,9 @@ describe('claude normalize-session unsupported-type materialization', () => {
         line_number: 1
       }
     ])
-    expect(without_uuid_a.messages[0].id).to.equal(without_uuid_b.messages[0].id)
+    expect(without_uuid_a.messages[0].id).to.equal(
+      without_uuid_b.messages[0].id
+    )
     expect(without_uuid_a.messages[0].id).to.match(/^[0-9a-f-]{36}$/)
   })
 })

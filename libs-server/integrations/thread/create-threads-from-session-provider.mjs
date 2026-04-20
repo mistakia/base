@@ -92,9 +92,8 @@ const find_precreated_thread_by_prompt = async ({
   user_base_directory,
   session_id
 }) => {
-  const { get_thread_base_directory } = await import(
-    '#libs-server/threads/threads-constants.mjs'
-  )
+  const { get_thread_base_directory } =
+    await import('#libs-server/threads/threads-constants.mjs')
   const threads_dir = get_thread_base_directory({ user_base_directory })
 
   const RACE_WINDOW_MS = 5 * 60 * 1000
@@ -144,9 +143,8 @@ const find_precreated_thread_by_prompt = async ({
 
   // Pass 2: normalize session to extract initial prompt for comparison.
   // This is deferred until we know candidates exist to avoid unnecessary work.
-  const { extract_initial_user_prompt_from_messages } = await import(
-    '#libs-server/integrations/thread/session-count-utilities.mjs'
-  )
+  const { extract_initial_user_prompt_from_messages } =
+    await import('#libs-server/integrations/thread/session-count-utilities.mjs')
   const normalized = session_provider.normalize_session(raw_session)
   const initial_prompt = extract_initial_user_prompt_from_messages({
     messages: normalized.messages
@@ -404,9 +402,8 @@ export const process_single_session = async ({
   // When known_thread_id is set, skip deterministic check_thread_exists lookup
   // and update the pre-created thread directly
   if (known_thread_id) {
-    const { get_thread_base_directory } = await import(
-      '#libs-server/threads/threads-constants.mjs'
-    )
+    const { get_thread_base_directory } =
+      await import('#libs-server/threads/threads-constants.mjs')
     const thread_dir = path.join(
       get_thread_base_directory({ user_base_directory }),
       known_thread_id
@@ -489,14 +486,12 @@ export const process_single_session = async ({
   // misses pre-created threads that were later linked to this session by the
   // SessionStart hook.
   try {
-    const { find_thread_for_session } = await import(
-      '#libs-server/active-sessions/session-thread-matcher.mjs'
-    )
+    const { find_thread_for_session } =
+      await import('#libs-server/active-sessions/session-thread-matcher.mjs')
     const existing_thread_id = await find_thread_for_session({ session_id })
     if (existing_thread_id) {
-      const { get_thread_base_directory } = await import(
-        '#libs-server/threads/threads-constants.mjs'
-      )
+      const { get_thread_base_directory } =
+        await import('#libs-server/threads/threads-constants.mjs')
       const existing_thread_dir = path.join(
         get_thread_base_directory({ user_base_directory }),
         existing_thread_id

@@ -62,7 +62,10 @@ describe('Incremental JSONL Parse', function () {
   describe('parse_claude_jsonl_from_offset', () => {
     it('should return only entries after byte offset', async () => {
       const file_path = path.join(test_dir, 'offset-test.jsonl')
-      const initial_entries = [make_entry('user', 1), make_entry('assistant', 2)]
+      const initial_entries = [
+        make_entry('user', 1),
+        make_entry('assistant', 2)
+      ]
       const initial_content = await write_jsonl(file_path, initial_entries)
       const offset = Buffer.byteLength(initial_content)
 

@@ -203,7 +203,9 @@ export const analyze_thread_for_metadata = async ({
     thread.short_description &&
     thread.title_prompt_version === TITLE_PROMPT_VERSION
   ) {
-    log(`Thread ${thread_id} already has metadata at v${TITLE_PROMPT_VERSION}, skipping`)
+    log(
+      `Thread ${thread_id} already has metadata at v${TITLE_PROMPT_VERSION}, skipping`
+    )
     return {
       thread_id,
       status: 'skipped',

@@ -731,7 +731,9 @@ async function handle_validate(argv) {
   try {
     const user_base_dir = process.env.USER_BASE_DIRECTORY
     if (!user_base_dir) {
-      console.error('Error: USER_BASE_DIRECTORY environment variable is not set.')
+      console.error(
+        'Error: USER_BASE_DIRECTORY environment variable is not set.'
+      )
       flush_and_exit(2)
       return
     }

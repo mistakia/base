@@ -300,9 +300,7 @@ describe('detect-thread-continuation', () => {
         user_base_directory,
         thread_id: analyzed_id,
         created_at: analyzed_created_at,
-        timeline: [
-          { type: 'message', role: 'user', content: wrap_up_prompt }
-        ]
+        timeline: [{ type: 'message', role: 'user', content: wrap_up_prompt }]
       })
 
       for (const { id, flag } of [
@@ -337,9 +335,7 @@ describe('detect-thread-continuation', () => {
       })
 
       const matched_ids = matches.map((m) => m.source_thread_id).sort()
-      expect(matched_ids).to.deep.equal(
-        [flag_true_id, flag_missing_id].sort()
-      )
+      expect(matched_ids).to.deep.equal([flag_true_id, flag_missing_id].sort())
     })
 
     it('returns empty when prompt is too short', async () => {

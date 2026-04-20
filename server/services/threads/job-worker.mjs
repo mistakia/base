@@ -548,7 +548,10 @@ const handle_job_failed = async (job, error) => {
 
   // Update thread session_status to 'failed'
   if (job.data.thread_id) {
-    await update_thread_session_status({ thread_id: job.data.thread_id, session_status: 'failed' })
+    await update_thread_session_status({
+      thread_id: job.data.thread_id,
+      session_status: 'failed'
+    })
   }
 
   emit_thread_job_failed({
@@ -564,7 +567,10 @@ const handle_job_active = async (job) => {
   log(`Job ${job.id}: active`)
   if (job.data.thread_id) {
     // Update thread session_status to 'starting' before spawning CLI
-    await update_thread_session_status({ thread_id: job.data.thread_id, session_status: 'starting' })
+    await update_thread_session_status({
+      thread_id: job.data.thread_id,
+      session_status: 'starting'
+    })
 
     emit_thread_job_started({
       job_id: job.id,

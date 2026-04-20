@@ -205,12 +205,7 @@ const FloatingSessionsPanel = () => {
                 user_public_key &&
                 thread.user_public_key &&
                 thread.user_public_key !== user_public_key
-              return (
-                <SessionCard
-                  key={thread.thread_id}
-                  item={normalized}
-                />
-              )
+              return <SessionCard key={thread.thread_id} item={normalized} />
             })}
 
             {thread_items.length === 0 && (

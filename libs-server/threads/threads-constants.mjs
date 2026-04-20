@@ -5,12 +5,7 @@ import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 // Roots considered safe for thread I/O under NODE_ENV=test. Includes the
 // platform tmpdir and the literal /tmp / /private/tmp paths (macOS symlink)
 // because config/config-test.json points user_base_directory at /tmp/...
-const TEST_SAFE_ROOTS = [
-  os.tmpdir(),
-  '/tmp',
-  '/private/tmp',
-  '/var/folders'
-]
+const TEST_SAFE_ROOTS = [os.tmpdir(), '/tmp', '/private/tmp', '/var/folders']
 
 const is_under_safe_test_root = (absolute_path) => {
   const resolved = path.resolve(absolute_path)
@@ -75,7 +70,10 @@ export function get_thread_base_directory({ user_base_directory } = {}) {
   // A test that tries to read or write a production thread/ directory is a
   // bug -- it will leak synthetic fixtures into real history. Refuse loudly
   // at the boundary instead of silently corrupting user data.
-  if (process.env.NODE_ENV === 'test' && !is_under_safe_test_root(base_directory)) {
+  if (
+    process.env.NODE_ENV === 'test' &&
+    !is_under_safe_test_root(base_directory)
+  ) {
     throw new Error(
       `Refusing to resolve thread base directory under NODE_ENV=test: ` +
         `${base_directory} is not under a tmp root (${TEST_SAFE_ROOTS.join(', ')}). ` +

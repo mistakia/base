@@ -59,11 +59,7 @@ const tokenize = (text) =>
     .filter((t) => t.length > 0)
 
 const normalize_keyword = (text) =>
-  (text || '')
-    .toLowerCase()
-    .replace(/[-_]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
+  (text || '').toLowerCase().replace(/[-_]/g, ' ').replace(/\s+/g, ' ').trim()
 
 const compute_keyword_recall = (title, expected_keywords, keyword_aliases) => {
   if (!Array.isArray(expected_keywords) || expected_keywords.length === 0) {
@@ -83,7 +79,10 @@ const compute_keyword_recall = (title, expected_keywords, keyword_aliases) => {
       haystack_normalized.includes(kw_normalized) ||
       aliases.some((alias) => {
         const a = alias.toLowerCase()
-        return haystack_raw.includes(a) || haystack_normalized.includes(normalize_keyword(alias))
+        return (
+          haystack_raw.includes(a) ||
+          haystack_normalized.includes(normalize_keyword(alias))
+        )
       })
 
     if (found) {
@@ -123,11 +122,22 @@ const compute_rouge1_f1 = (generated, expected) => {
   return (2 * precision * recall) / (precision + recall)
 }
 
-const score_case = ({ generated_title, expected_title, expected_keywords, keyword_aliases }) => {
+const score_case = ({
+  generated_title,
+  expected_title,
+  expected_keywords,
+  keyword_aliases
+}) => {
   const length_ok = Boolean(
-    generated_title && generated_title.length > 0 && generated_title.length <= MAX_TITLE_LENGTH
+    generated_title &&
+    generated_title.length > 0 &&
+    generated_title.length <= MAX_TITLE_LENGTH
   )
-  const keyword = compute_keyword_recall(generated_title, expected_keywords, keyword_aliases)
+  const keyword = compute_keyword_recall(
+    generated_title,
+    expected_keywords,
+    keyword_aliases
+  )
   const rouge1_f1 = compute_rouge1_f1(generated_title, expected_title)
   const keyword_recall = keyword.recall ?? 0
   const composite = 0.6 * keyword_recall + 0.4 * rouge1_f1
@@ -226,7 +236,9 @@ const evaluate_model = async ({ model, cases, verbose }) => {
         console.log(`    expected: ${test_case.expected_title}`)
         console.log(`    generated: ${generated_title}`)
         if (scores.keyword_missed.length > 0) {
-          console.log(`    missed keywords: ${scores.keyword_missed.join(', ')}`)
+          console.log(
+            `    missed keywords: ${scores.keyword_missed.join(', ')}`
+          )
         }
       }
     }
@@ -234,17 +246,21 @@ const evaluate_model = async ({ model, cases, verbose }) => {
 
   const valid = results.filter((r) => !r.error && r.generated_title)
   const mean = (arr, getter) =>
-    arr.length === 0 ? 0 : arr.reduce((sum, r) => sum + getter(r), 0) / arr.length
+    arr.length === 0
+      ? 0
+      : arr.reduce((sum, r) => sum + getter(r), 0) / arr.length
 
   const aggregate = {
     model,
     total_cases: cases.length,
     successful_cases: valid.length,
     error_cases: results.length - valid.length,
-    avg_composite: Math.round(mean(valid, (r) => r.scores.composite) * 1000) / 1000,
+    avg_composite:
+      Math.round(mean(valid, (r) => r.scores.composite) * 1000) / 1000,
     avg_keyword_recall:
       Math.round(mean(valid, (r) => r.scores.keyword_recall) * 1000) / 1000,
-    avg_rouge1_f1: Math.round(mean(valid, (r) => r.scores.rouge1_f1) * 1000) / 1000,
+    avg_rouge1_f1:
+      Math.round(mean(valid, (r) => r.scores.rouge1_f1) * 1000) / 1000,
     length_compliance:
       valid.length === 0
         ? 0

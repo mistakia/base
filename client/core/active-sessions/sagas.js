@@ -44,10 +44,7 @@ export function* handle_thread_auto_subscribe({ payload }) {
 
   if (ACTIVE_SESSION_STATUSES.has(session_status)) {
     yield call(() => subscribe_to_thread(thread_id))
-  } else if (
-    session_status === 'completed' ||
-    session_status === 'failed'
-  ) {
+  } else if (session_status === 'completed' || session_status === 'failed') {
     yield call(() => unsubscribe_from_thread(thread_id))
   }
 }

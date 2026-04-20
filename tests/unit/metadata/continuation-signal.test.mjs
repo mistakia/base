@@ -18,15 +18,17 @@ describe('continuation-signal', () => {
     })
 
     it('returns false for text with no signal', () => {
-      expect(has_continuation_signal('just a regular message about nothing'))
-        .to.be.false
+      expect(has_continuation_signal('just a regular message about nothing')).to
+        .be.false
     })
 
     it('detects each vocabulary entry', () => {
       for (const entry of CONTINUATION_SIGNAL_PATTERNS) {
         const wrapped = `prefix ${entry} suffix`
-        expect(has_continuation_signal(wrapped), `missing detection for: ${entry}`)
-          .to.be.true
+        expect(
+          has_continuation_signal(wrapped),
+          `missing detection for: ${entry}`
+        ).to.be.true
       }
     })
 
@@ -66,8 +68,7 @@ describe('continuation-signal', () => {
     })
 
     it('counts multiple fenced blocks separately', () => {
-      const text =
-        '~~~\nKey locations\n~~~\n\nthen\n\n~~~\nRemaining work\n~~~'
+      const text = '~~~\nKey locations\n~~~\n\nthen\n\n~~~\nRemaining work\n~~~'
       expect(count_continuation_prompts(text)).to.equal(2)
     })
 
@@ -82,8 +83,7 @@ describe('continuation-signal', () => {
     })
 
     it('combines fence and outside-fence prefix occurrences', () => {
-      const text =
-        '~~~\nKey locations\n~~~\n\nContinuation: resume task\n'
+      const text = '~~~\nKey locations\n~~~\n\nContinuation: resume task\n'
       expect(count_continuation_prompts(text)).to.equal(2)
     })
 

@@ -88,7 +88,9 @@ describe('process_single_session - known_thread_id routing', function () {
     user_base_directory = temp_repo.user_path
 
     // Ensure the thread directory root exists
-    await fs.mkdir(path.join(user_base_directory, 'thread'), { recursive: true })
+    await fs.mkdir(path.join(user_base_directory, 'thread'), {
+      recursive: true
+    })
   })
 
   afterEach(async function () {

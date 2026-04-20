@@ -85,7 +85,6 @@ if (process.env.pm_id !== undefined) {
 const logger = debug('server')
 debug.enable(process.env.DEBUG || 'server,api')
 
-
 // Pre-warm git status cache BEFORE server starts accepting connections.
 // This eliminates 600ms+ cold start delay on first git status request.
 try {
@@ -319,9 +318,7 @@ try {
       })
       logger('Entity change IPC watcher started')
     } catch (ipc_error) {
-      logger(
-        `Failed to start entity change IPC watcher: ${ipc_error.message}`
-      )
+      logger(`Failed to start entity change IPC watcher: ${ipc_error.message}`)
     }
 
     logger('All watchers initialized')

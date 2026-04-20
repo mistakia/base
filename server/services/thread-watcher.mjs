@@ -423,13 +423,14 @@ const handle_metadata_added = async (file_path) => {
   await initialize_timeline_tracking_for_new_thread(thread_id, thread_dir)
 
   // Queue for AI title generation if no AI-generated title exists
-  if (
-    !metadata.title_prompt_version &&
-    metadata.thread_state !== 'archived'
-  ) {
-    await fs.appendFile(METADATA_QUEUE_FILE_PATH, thread_id + '\n').catch((err) => {
-      log(`Failed to queue thread ${thread_id} for metadata analysis: ${err.message}`)
-    })
+  if (!metadata.title_prompt_version && metadata.thread_state !== 'archived') {
+    await fs
+      .appendFile(METADATA_QUEUE_FILE_PATH, thread_id + '\n')
+      .catch((err) => {
+        log(
+          `Failed to queue thread ${thread_id} for metadata analysis: ${err.message}`
+        )
+      })
   }
 
   // Notify index sync hooks (debounced by thread_id)
@@ -465,9 +466,13 @@ const handle_metadata_changed = async (file_path) => {
     !metadata.title_prompt_version &&
     metadata.thread_state !== 'archived'
   ) {
-    await fs.appendFile(METADATA_QUEUE_FILE_PATH, metadata.thread_id + '\n').catch((err) => {
-      log(`Failed to queue thread ${metadata.thread_id} for metadata analysis: ${err.message}`)
-    })
+    await fs
+      .appendFile(METADATA_QUEUE_FILE_PATH, metadata.thread_id + '\n')
+      .catch((err) => {
+        log(
+          `Failed to queue thread ${metadata.thread_id} for metadata analysis: ${err.message}`
+        )
+      })
   }
 
   // Notify index sync hooks (debounced by thread_id)

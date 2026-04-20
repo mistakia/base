@@ -20,9 +20,7 @@ import { hideBin } from 'yargs/helpers'
 import { list_thread_ids } from '#libs-server/threads/list-threads.mjs'
 import { read_thread_data } from '#libs-server/threads/thread-utils.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
-import {
-  extract_assistant_text
-} from '#libs-server/metadata/analyze-thread-relations.mjs'
+import { extract_assistant_text } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { count_continuation_prompts } from '#libs-server/metadata/continuation-signal.mjs'
 
 const log = debug('backfill:continuation-signal')
@@ -83,7 +81,8 @@ async function main() {
         }
       })
       updated++
-      if (argv.verbose) log('updated %s: has=%s count=%d', thread_id, has, count)
+      if (argv.verbose)
+        log('updated %s: has=%s count=%d', thread_id, has, count)
     } catch (error) {
       errors++
       log('error %s: %s', thread_id, error.message)

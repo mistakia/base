@@ -21,7 +21,10 @@ const normalize_thread = (thread) => {
     status = 'running'
   } else if (thread.session_status === 'idle') {
     status = 'idle'
-  } else if (thread.session_status === 'queued' || thread.session_status === 'starting') {
+  } else if (
+    thread.session_status === 'queued' ||
+    thread.session_status === 'starting'
+  ) {
     status = thread.session_status
   } else if (thread.session_status === 'failed') {
     status = 'failed'

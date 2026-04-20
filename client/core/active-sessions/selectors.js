@@ -59,4 +59,3 @@ export function get_active_sessions_loading(state) {
 export function get_active_sessions_error(state) {
   return get_active_sessions_state(state).get('error')
 }
-
