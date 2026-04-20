@@ -864,14 +864,20 @@ const parse_session_file_incremental = async ({
 
   const working_directory =
     parent_session.metadata.cwd || sync_state.working_directory || null
-  await save_sync_state({
+  // Defer save: attach pending sync state to the parent session. The caller
+  // commits it via commit_pending_sync_state(session) only after the thread
+  // writer has succeeded (build_timeline_from_session + integrity check).
+  // Saving eagerly here would advance the byte_offset even on failed writes,
+  // causing the next invocation to skip the entries that never made it to
+  // timeline.jsonl.
+  parent_session._pending_sync_state = {
     session_id,
     state: {
       byte_offset: parent_result.new_byte_offset,
       subagent_offsets: new_subagent_offsets,
       working_directory
     }
-  })
+  }
 
   const total_ms = Date.now() - incr_start
   log_perf(
@@ -890,8 +896,12 @@ const parse_session_file_incremental = async ({
 }
 
 /**
- * Build and save initial sync state after a full parse.
- * Called on first sync for a session (no existing state file).
+ * Build initial sync state after a full parse and attach it to the parent
+ * session as pending. Called on first sync for a session (no existing state
+ * file). The state is NOT persisted here -- the caller commits it via
+ * commit_pending_sync_state(session) only after the thread writer has
+ * succeeded. Saving eagerly here would leave the next invocation resuming
+ * past entries that never reached timeline.jsonl if the write failed.
  */
 const build_and_save_initial_state = async ({
   session_file,
@@ -926,16 +936,33 @@ const build_and_save_initial_state = async ({
       }
     }
 
-    await save_sync_state({
+    parent_session._pending_sync_state = {
       session_id,
       state: {
         byte_offset: file_stat.size,
         subagent_offsets,
         working_directory
       }
-    })
-    log_debug(`Saved initial sync state for session ${session_id}`)
+    }
+    log_debug(`Prepared initial sync state for session ${session_id}`)
   } catch (error) {
-    log(`Failed to save initial sync state: ${error.message}`)
+    log(`Failed to prepare initial sync state: ${error.message}`)
   }
+}
+
+/**
+ * Commit any pending sync state attached to a session by the parser.
+ *
+ * Called by the thread writer after build_timeline_from_session and
+ * verify_thread_directory_integrity have both succeeded. Idempotent:
+ * clears the pending handle after saving so repeat calls are no-ops.
+ * Callers that experience a write failure should simply not call this
+ * (or call clear_sync_state) so the next invocation re-parses the same
+ * byte range.
+ */
+export const commit_pending_sync_state = async (session) => {
+  const pending = session?._pending_sync_state
+  if (!pending) return
+  session._pending_sync_state = null
+  await save_sync_state(pending)
 }

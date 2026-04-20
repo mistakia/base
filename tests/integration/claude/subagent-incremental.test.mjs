@@ -4,7 +4,10 @@ import fs from 'fs/promises'
 import path from 'path'
 import os from 'os'
 
-import { find_claude_sessions_from_filesystem } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
+import {
+  commit_pending_sync_state,
+  find_claude_sessions_from_filesystem
+} from '#libs-server/integrations/claude/claude-session-helpers.mjs'
 import { normalize_claude_session } from '#libs-server/integrations/claude/normalize-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { save_raw_session_data } from '#libs-server/integrations/thread/create-from-session.mjs'
@@ -71,6 +74,7 @@ const run_import = async ({ session_file, threads_root }) => {
     } finally {
       await lock.release()
     }
+    await commit_pending_sync_state(session)
     results.push({
       session_id: session.session_id,
       thread_id,

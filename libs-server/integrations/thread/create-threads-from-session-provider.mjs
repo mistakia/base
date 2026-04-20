@@ -24,6 +24,7 @@ import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-s
 import { ChatGPTSessionProvider } from '#libs-server/integrations/chatgpt/chatgpt-session-provider.mjs'
 import { PiSessionProvider } from '#libs-server/integrations/pi/pi-session-provider.mjs'
 import {
+  commit_pending_sync_state,
   is_agent_session,
   is_warm_session
 } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
@@ -587,14 +588,19 @@ const create_new_session_thread = async ({
     source_overrides
   })
 
-  // Raw entries were nulled during write, release session wrapper
-  raw_session = null
-
   // Build timeline entries (uses normalized_session only)
   const timeline_result = await build_timeline_from_session(
     normalized_session,
     thread_result
   )
+
+  // Timeline write succeeded -- safe to advance the provider's parse cursor.
+  // If any step above threw, this call is skipped and the next invocation
+  // re-parses the same byte range instead of silently losing entries.
+  await commit_pending_sync_state(raw_session)
+
+  // Raw entries were nulled during write, release session wrapper
+  raw_session = null
 
   // Release large objects to help GC
   normalized_session = null
@@ -642,6 +648,10 @@ const update_existing_session_thread = async ({
     raw_session_data: raw_session,
     source_overrides
   })
+
+  // Timeline write + integrity check succeeded inside update_existing_thread --
+  // safe to advance the provider's parse cursor.
+  await commit_pending_sync_state(raw_session)
 
   // Release large objects to help GC
   normalized_session = null
