@@ -13,6 +13,7 @@ import {
   is_sqlite_initialized
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/index.mjs'
+import { resolve_entity_by_base_uri } from '#libs-server/entity/filesystem/resolve-entity-by-base-uri.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 
@@ -33,18 +34,11 @@ export async function get_database_entity({ name, base_uri }) {
 
   log('Getting database entity: %s', name || base_uri)
 
-  // If base_uri provided, read directly from filesystem
+  // If base_uri provided, read directly from filesystem (with alias fallback
+  // so a renamed database entity still resolves via its previous base_uri)
   if (base_uri) {
     try {
-      const absolute_path = resolve_base_uri(base_uri)
-      if (!absolute_path) {
-        log('Could not resolve base_uri: %s', base_uri)
-        return null
-      }
-      const result = await read_entity_from_filesystem({
-        absolute_path
-      })
-      // read_entity_from_filesystem returns { success, entity_properties, entity_content }
+      const result = await resolve_entity_by_base_uri({ base_uri })
       const entity = result?.entity_properties
       if (entity && entity.type === 'database') {
         return entity

@@ -6,7 +6,11 @@
 
 import debug from 'debug'
 
-import { execute_sqlite_run } from './sqlite-database-client.mjs'
+import {
+  execute_sqlite_run,
+  execute_sqlite_query,
+  with_sqlite_transaction
+} from './sqlite-database-client.mjs'
 
 const log = debug('embedded-index:sqlite:sync')
 
@@ -256,6 +260,225 @@ export async function sync_entity_relations_to_sqlite({
   }
 }
 
+export async function sync_entity_content_wikilinks_to_sqlite({
+  source_base_uri,
+  target_base_uris
+}) {
+  if (!source_base_uri) {
+    return
+  }
+
+  const unique_targets = [
+    ...new Set(
+      (target_base_uris || []).filter(
+        (target) => typeof target === 'string' && target.length > 0
+      )
+    )
+  ]
+
+  log(
+    'Syncing %d content wikilinks for entity: %s',
+    unique_targets.length,
+    source_base_uri
+  )
+
+  await with_sqlite_transaction(async () => {
+    await execute_sqlite_run({
+      query: 'DELETE FROM entity_content_wikilinks WHERE source_base_uri = ?',
+      parameters: [source_base_uri]
+    })
+
+    if (unique_targets.length > 0) {
+      const placeholders = unique_targets.map(() => '(?, ?)').join(', ')
+      const parameters = unique_targets.flatMap((target) => [
+        source_base_uri,
+        target
+      ])
+
+      await execute_sqlite_run({
+        query: `INSERT INTO entity_content_wikilinks (source_base_uri, target_base_uri)
+                VALUES ${placeholders}
+                ON CONFLICT DO NOTHING`,
+        parameters
+      })
+    }
+  })
+}
+
+export async function sync_entities_content_wikilinks_batch({
+  entity_wikilinks
+}) {
+  if (!entity_wikilinks || entity_wikilinks.length === 0) return
+
+  const source_base_uris = entity_wikilinks.map((ew) => ew.source_base_uri)
+
+  const pairs = []
+  for (const { source_base_uri, target_base_uris } of entity_wikilinks) {
+    if (!target_base_uris) continue
+    const unique_targets = [
+      ...new Set(
+        target_base_uris.filter((t) => typeof t === 'string' && t.length > 0)
+      )
+    ]
+    for (const target of unique_targets) {
+      pairs.push([source_base_uri, target])
+    }
+  }
+
+  await with_sqlite_transaction(async () => {
+    for (let i = 0; i < source_base_uris.length; i += BATCH_CHUNK_SIZE) {
+      const chunk = source_base_uris.slice(i, i + BATCH_CHUNK_SIZE)
+      const placeholders = chunk.map(() => '?').join(', ')
+      await execute_sqlite_run({
+        query: `DELETE FROM entity_content_wikilinks WHERE source_base_uri IN (${placeholders})`,
+        parameters: chunk
+      })
+    }
+
+    for (let i = 0; i < pairs.length; i += BATCH_CHUNK_SIZE) {
+      const chunk = pairs.slice(i, i + BATCH_CHUNK_SIZE)
+      const placeholders = chunk.map(() => '(?, ?)').join(', ')
+      const parameters = chunk.flat()
+      await execute_sqlite_run({
+        query: `INSERT INTO entity_content_wikilinks (source_base_uri, target_base_uri)
+                VALUES ${placeholders}
+                ON CONFLICT DO NOTHING`,
+        parameters
+      })
+    }
+  })
+}
+
+function compute_unique_aliases({ alias_base_uris, entity_base_uri }) {
+  return [
+    ...new Set(
+      (alias_base_uris || []).filter(
+        (alias) =>
+          typeof alias === 'string' &&
+          alias.length > 0 &&
+          alias !== entity_base_uri
+      )
+    )
+  ]
+}
+
+export async function sync_entity_aliases_to_sqlite({
+  entity_base_uri,
+  entity_id,
+  alias_base_uris
+}) {
+  if (!entity_base_uri) return
+  if (!entity_id) {
+    if (Array.isArray(alias_base_uris) && alias_base_uris.length > 0) {
+      log(
+        'Skipping alias sync for %s: entity_id missing on entity with %d aliases',
+        entity_base_uri,
+        alias_base_uris.length
+      )
+    }
+    return
+  }
+
+  const unique_aliases = compute_unique_aliases({
+    alias_base_uris,
+    entity_base_uri
+  })
+
+  log(
+    'Syncing %d aliases for entity: %s',
+    unique_aliases.length,
+    entity_base_uri
+  )
+
+  await with_sqlite_transaction(async () => {
+    // Multi-hop coverage: keep current_base_uri in sync on all rows for this
+    // entity_id, even aliases recorded by earlier moves
+    await execute_sqlite_run({
+      query:
+        'UPDATE entity_aliases SET current_base_uri = ? WHERE entity_id = ?',
+      parameters: [entity_base_uri, entity_id]
+    })
+
+    if (unique_aliases.length > 0) {
+      const placeholders = unique_aliases.map(() => '?').join(', ')
+      await execute_sqlite_run({
+        query: `DELETE FROM entity_aliases WHERE entity_id = ? AND alias_base_uri NOT IN (${placeholders})`,
+        parameters: [entity_id, ...unique_aliases]
+      })
+
+      const now = new Date().toISOString()
+      const insert_placeholders = unique_aliases
+        .map(() => '(?, ?, ?, ?)')
+        .join(', ')
+      const parameters = unique_aliases.flatMap((alias) => [
+        alias,
+        entity_base_uri,
+        entity_id,
+        now
+      ])
+
+      await execute_sqlite_run({
+        query: `INSERT INTO entity_aliases (alias_base_uri, current_base_uri, entity_id, recorded_at)
+                VALUES ${insert_placeholders}
+                ON CONFLICT(alias_base_uri) DO UPDATE SET
+                  current_base_uri = excluded.current_base_uri,
+                  entity_id = excluded.entity_id`,
+        parameters
+      })
+    } else {
+      await execute_sqlite_run({
+        query: 'DELETE FROM entity_aliases WHERE entity_id = ?',
+        parameters: [entity_id]
+      })
+    }
+  })
+}
+
+export async function sync_thread_references_to_sqlite({
+  thread_id,
+  relation_targets,
+  file_reference_targets
+}) {
+  if (!thread_id) return
+
+  log('Syncing references for thread: %s', thread_id)
+
+  const tuples = []
+  const seen = new Set()
+  for (const target of relation_targets || []) {
+    if (typeof target !== 'string' || !target) continue
+    const key = `metadata.relations|${target}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    tuples.push([thread_id, target, 'metadata.relations'])
+  }
+  for (const target of file_reference_targets || []) {
+    if (typeof target !== 'string' || !target) continue
+    const key = `metadata.file_references|${target}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    tuples.push([thread_id, target, 'metadata.file_references'])
+  }
+
+  await with_sqlite_transaction(async () => {
+    await execute_sqlite_run({
+      query: 'DELETE FROM thread_references WHERE thread_id = ?',
+      parameters: [thread_id]
+    })
+
+    if (tuples.length > 0) {
+      const placeholders = tuples.map(() => '(?, ?, ?)').join(', ')
+      const parameters = tuples.flat()
+      await execute_sqlite_run({
+        query: `INSERT INTO thread_references (thread_id, target_base_uri, location)
+                VALUES ${placeholders}
+                ON CONFLICT DO NOTHING`,
+        parameters
+      })
+    }
+  })
+}
+
 export async function sync_thread_tags_to_sqlite({ thread_id, tag_base_uris }) {
   if (!thread_id) {
     return
@@ -423,37 +646,66 @@ export async function delete_entity_from_sqlite({ entity_id, base_uri }) {
   log('Deleting entity from SQLite: %s', entity_id || base_uri)
 
   try {
+    let resolved_entity_id = entity_id
     let resolved_base_uri = base_uri
-    if (!resolved_base_uri && entity_id) {
-      const { execute_sqlite_query } =
-        await import('./sqlite-database-client.mjs')
-      const results = await execute_sqlite_query({
-        query: 'SELECT base_uri FROM entities WHERE entity_id = ?',
-        parameters: [entity_id]
-      })
-      resolved_base_uri = results[0]?.base_uri
 
-      if (!resolved_base_uri) {
-        log('Entity not found with entity_id: %s, skipping deletion', entity_id)
-        return
+    if (!resolved_entity_id && resolved_base_uri) {
+      const rows = await execute_sqlite_query({
+        query: 'SELECT entity_id FROM entities WHERE base_uri = ?',
+        parameters: [resolved_base_uri]
+      })
+      resolved_entity_id = rows[0]?.entity_id
+      if (!resolved_entity_id) {
+        // Stale base_uri: try alias table to recover entity_id
+        const alias_rows = await execute_sqlite_query({
+          query:
+            'SELECT entity_id FROM entity_aliases WHERE alias_base_uri = ? LIMIT 1',
+          parameters: [resolved_base_uri]
+        })
+        resolved_entity_id = alias_rows[0]?.entity_id
       }
     }
 
-    await execute_sqlite_run({
-      query: 'DELETE FROM entities WHERE base_uri = ?',
-      parameters: [resolved_base_uri]
-    })
+    if (!resolved_base_uri && resolved_entity_id) {
+      const rows = await execute_sqlite_query({
+        query: 'SELECT base_uri FROM entities WHERE entity_id = ?',
+        parameters: [resolved_entity_id]
+      })
+      resolved_base_uri = rows[0]?.base_uri
+    }
 
-    await execute_sqlite_run({
-      query: 'DELETE FROM entity_tags WHERE entity_base_uri = ?',
-      parameters: [resolved_base_uri]
-    })
-    await execute_sqlite_run({
-      query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
-      parameters: [resolved_base_uri]
-    })
+    if (!resolved_base_uri && !resolved_entity_id) {
+      log('Entity not found for deletion: %s', entity_id || base_uri)
+      return
+    }
 
-    log('Entity deleted: %s', resolved_base_uri)
+    if (resolved_base_uri) {
+      await execute_sqlite_run({
+        query: 'DELETE FROM entities WHERE base_uri = ?',
+        parameters: [resolved_base_uri]
+      })
+      await execute_sqlite_run({
+        query: 'DELETE FROM entity_tags WHERE entity_base_uri = ?',
+        parameters: [resolved_base_uri]
+      })
+      await execute_sqlite_run({
+        query: 'DELETE FROM entity_relations WHERE source_base_uri = ?',
+        parameters: [resolved_base_uri]
+      })
+      await execute_sqlite_run({
+        query: 'DELETE FROM entity_content_wikilinks WHERE source_base_uri = ?',
+        parameters: [resolved_base_uri]
+      })
+    }
+
+    if (resolved_entity_id) {
+      await execute_sqlite_run({
+        query: 'DELETE FROM entity_aliases WHERE entity_id = ?',
+        parameters: [resolved_entity_id]
+      })
+    }
+
+    log('Entity deleted: %s', resolved_base_uri || resolved_entity_id)
   } catch (error) {
     log('Error deleting entity: %s', error.message)
     throw error
@@ -639,6 +891,82 @@ export async function sync_entities_relations_batch({ entity_relations }) {
     'Batch synced %d relations for %d entities',
     all_relation_tuples.length,
     source_base_uris.length
+  )
+}
+
+export async function sync_entities_aliases_batch({ entity_aliases }) {
+  if (!entity_aliases || entity_aliases.length === 0) return
+
+  log('Batch syncing aliases for %d entities', entity_aliases.length)
+
+  const prepared = []
+  const all_alias_tuples = []
+  const now = new Date().toISOString()
+
+  for (const { entity_base_uri, entity_id, alias_base_uris } of entity_aliases) {
+    if (!entity_base_uri) continue
+    if (!entity_id) {
+      if (Array.isArray(alias_base_uris) && alias_base_uris.length > 0) {
+        log(
+          'Skipping alias sync for %s: entity_id missing on entity with %d aliases',
+          entity_base_uri,
+          alias_base_uris.length
+        )
+      }
+      continue
+    }
+    const unique_aliases = compute_unique_aliases({
+      alias_base_uris,
+      entity_base_uri
+    })
+    prepared.push({ entity_base_uri, entity_id, unique_aliases })
+    for (const alias of unique_aliases) {
+      all_alias_tuples.push([alias, entity_base_uri, entity_id, now])
+    }
+  }
+
+  await with_sqlite_transaction(async () => {
+    for (const { entity_base_uri, entity_id, unique_aliases } of prepared) {
+      await execute_sqlite_run({
+        query:
+          'UPDATE entity_aliases SET current_base_uri = ? WHERE entity_id = ?',
+        parameters: [entity_base_uri, entity_id]
+      })
+
+      if (unique_aliases.length > 0) {
+        const placeholders = unique_aliases.map(() => '?').join(', ')
+        await execute_sqlite_run({
+          query: `DELETE FROM entity_aliases WHERE entity_id = ? AND alias_base_uri NOT IN (${placeholders})`,
+          parameters: [entity_id, ...unique_aliases]
+        })
+      } else {
+        await execute_sqlite_run({
+          query: 'DELETE FROM entity_aliases WHERE entity_id = ?',
+          parameters: [entity_id]
+        })
+      }
+    }
+
+    for (let i = 0; i < all_alias_tuples.length; i += BATCH_CHUNK_SIZE) {
+      const chunk = all_alias_tuples.slice(i, i + BATCH_CHUNK_SIZE)
+      const placeholders = chunk.map(() => '(?, ?, ?, ?)').join(', ')
+      const parameters = chunk.flat()
+
+      await execute_sqlite_run({
+        query: `INSERT INTO entity_aliases (alias_base_uri, current_base_uri, entity_id, recorded_at)
+                VALUES ${placeholders}
+                ON CONFLICT(alias_base_uri) DO UPDATE SET
+                  current_base_uri = excluded.current_base_uri,
+                  entity_id = excluded.entity_id`,
+        parameters
+      })
+    }
+  })
+
+  log(
+    'Batch synced %d alias rows for %d entities',
+    all_alias_tuples.length,
+    entity_aliases.length
   )
 }
 

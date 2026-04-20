@@ -51,6 +51,25 @@ export function extract_relations_from_entity({ entity_properties }) {
   return parsed_relations
 }
 
+export function extract_content_wikilinks_from_entity_metadata({
+  formatted_entity_metadata
+}) {
+  const references = formatted_entity_metadata?.references
+  if (!Array.isArray(references)) return []
+  return references
+    .map((ref) => ref?.base_uri)
+    .filter((base_uri) => typeof base_uri === 'string' && base_uri.length > 0)
+}
+
+export function extract_aliases_from_entity({ entity_properties }) {
+  if (!entity_properties || !Array.isArray(entity_properties.aliases)) {
+    return []
+  }
+  return entity_properties.aliases.filter(
+    (alias) => typeof alias === 'string' && alias.length > 0
+  )
+}
+
 export function extract_tag_index_data({ entity_properties, file_info = {} }) {
   if (!entity_properties || entity_properties.type !== 'tag') {
     return null

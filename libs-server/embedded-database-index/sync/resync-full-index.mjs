@@ -25,6 +25,7 @@ import {
   get_repository_head_sha
 } from './repository-discovery.mjs'
 import { ENTITY_DIRECTORIES } from './index-sync-filters.mjs'
+import { extract_content_wikilinks_from_entity_metadata } from './entity-data-extractor.mjs'
 import {
   list_thread_ids,
   process_threads_in_batches
@@ -125,6 +126,10 @@ export async function resync_full_index({ index_manager }) {
           const result = await index_manager.sync_entity({
             base_uri,
             entity_data: entity.entity_properties,
+            content_wikilink_targets:
+              extract_content_wikilinks_from_entity_metadata({
+                formatted_entity_metadata: entity.formatted_entity_metadata
+              }),
             skip_ipc: true
           })
 

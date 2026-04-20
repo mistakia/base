@@ -1,6 +1,5 @@
 import debug from 'debug'
-import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
-import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { resolve_entity_by_base_uri } from '#libs-server/entity/filesystem/resolve-entity-by-base-uri.mjs'
 import { check_user_permission } from '#server/middleware/permission/index.mjs'
 
 const log = debug('server:entity-resolver')
@@ -17,12 +16,10 @@ export async function resolve_entity_from_path({ file_path, user_public_key }) {
   try {
     log(`Resolving entity from path: ${file_path}`)
 
-    // Convert relative path to absolute using base-uri system
+    // Convert relative path to base_uri; resolver follows alias fallback so
+    // stale links keep rendering after an entity is moved
     const base_uri = `user:${file_path}`
-    const absolute_path = resolve_base_uri(base_uri)
-
-    // Use established entity reading function
-    const result = await read_entity_from_filesystem({ absolute_path })
+    const result = await resolve_entity_by_base_uri({ base_uri })
 
     if (!result.success) {
       log(`Entity file not found or invalid: ${file_path}`)

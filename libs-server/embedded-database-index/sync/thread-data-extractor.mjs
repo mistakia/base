@@ -12,6 +12,8 @@ import {
   extract_timeline_metrics_streaming,
   accumulate_edit_metrics_from_event
 } from '#libs-server/threads/timeline/index.mjs'
+import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
+import { is_valid_base_uri } from '#libs-shared/relation-validator.mjs'
 
 const log = debug('embedded-index:sync:thread')
 
@@ -256,6 +258,45 @@ export function extract_thread_index_data({ thread_id, metadata }) {
       typeof metadata.continuation_prompt_count === 'number'
         ? metadata.continuation_prompt_count
         : null
+  }
+}
+
+export function extract_thread_reference_targets({ metadata }) {
+  if (!metadata) return { relations: [], file_references: [] }
+
+  const auto_relations = Array.isArray(metadata.relations)
+    ? metadata.relations
+    : []
+  const user_relations = Array.isArray(metadata.user_relations)
+    ? metadata.user_relations
+    : []
+  const relation_targets = []
+  for (const entry of [...auto_relations, ...user_relations]) {
+    const parsed = parse_relation_entry(entry)
+    if (parsed?.base_uri) {
+      relation_targets.push(parsed.base_uri)
+    }
+  }
+
+  const file_reference_targets = (
+    Array.isArray(metadata.file_references) ? metadata.file_references : []
+  )
+    .map((entry) => {
+      if (typeof entry === 'string') return entry
+      if (entry && typeof entry === 'object' && typeof entry.base_uri === 'string')
+        return entry.base_uri
+      return null
+    })
+    .filter(
+      (base_uri) =>
+        typeof base_uri === 'string' &&
+        base_uri.length > 0 &&
+        is_valid_base_uri({ base_uri })
+    )
+
+  return {
+    relations: relation_targets,
+    file_references: file_reference_targets
   }
 }
 

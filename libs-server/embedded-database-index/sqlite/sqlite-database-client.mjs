@@ -101,6 +101,23 @@ export async function execute_sqlite_run({ query, parameters = [] }) {
   }
 }
 
+export async function with_sqlite_transaction(fn) {
+  const db = get_active_database()
+  db.exec('BEGIN')
+  try {
+    const result = await fn()
+    db.exec('COMMIT')
+    return result
+  } catch (error) {
+    try {
+      db.exec('ROLLBACK')
+    } catch {
+      // ROLLBACK can fail if the transaction already aborted; ignore
+    }
+    throw error
+  }
+}
+
 export async function close_sqlite_connection() {
   if (sqlite_database) {
     sqlite_database.close()

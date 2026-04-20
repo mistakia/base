@@ -138,6 +138,48 @@ CREATE TABLE IF NOT EXISTS entity_relations (
 )
 `
 
+const ENTITY_ALIASES_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS entity_aliases (
+  alias_base_uri TEXT PRIMARY KEY,
+  current_base_uri TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  recorded_at TEXT NOT NULL
+)
+`
+
+const ENTITY_ALIASES_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_entity_aliases_entity_id ON entity_aliases(entity_id)',
+  'CREATE INDEX IF NOT EXISTS idx_entity_aliases_current ON entity_aliases(current_base_uri)'
+]
+
+const ENTITY_CONTENT_WIKILINKS_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS entity_content_wikilinks (
+  source_base_uri TEXT NOT NULL,
+  target_base_uri TEXT NOT NULL,
+  PRIMARY KEY (source_base_uri, target_base_uri)
+)
+`
+
+const ENTITY_CONTENT_WIKILINKS_INDEXES = [
+  // PRIMARY KEY (source_base_uri, target_base_uri) already serves source-prefix
+  // lookups; only a separate target index is needed for reverse lookups.
+  'CREATE INDEX IF NOT EXISTS idx_entity_content_wikilinks_target ON entity_content_wikilinks(target_base_uri)'
+]
+
+const THREAD_REFERENCES_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS thread_references (
+  thread_id TEXT NOT NULL,
+  target_base_uri TEXT NOT NULL,
+  location TEXT NOT NULL,
+  PRIMARY KEY (thread_id, target_base_uri, location)
+)
+`
+
+const THREAD_REFERENCES_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_thread_references_thread ON thread_references(thread_id)',
+  'CREATE INDEX IF NOT EXISTS idx_thread_references_target ON thread_references(target_base_uri)'
+]
+
 const ENTITY_EMBEDDINGS_TABLE_SCHEMA = `
 CREATE TABLE IF NOT EXISTS entity_embeddings (
   base_uri TEXT NOT NULL,
@@ -286,6 +328,30 @@ export async function create_sqlite_schema() {
     }
     log('Entity relations indexes created')
 
+    await execute_sqlite_run({ query: ENTITY_ALIASES_TABLE_SCHEMA })
+    log('Entity aliases table created')
+
+    for (const index_sql of ENTITY_ALIASES_INDEXES) {
+      await execute_sqlite_run({ query: index_sql })
+    }
+    log('Entity aliases indexes created')
+
+    await execute_sqlite_run({ query: ENTITY_CONTENT_WIKILINKS_TABLE_SCHEMA })
+    log('Entity content wikilinks table created')
+
+    for (const index_sql of ENTITY_CONTENT_WIKILINKS_INDEXES) {
+      await execute_sqlite_run({ query: index_sql })
+    }
+    log('Entity content wikilinks indexes created')
+
+    await execute_sqlite_run({ query: THREAD_REFERENCES_TABLE_SCHEMA })
+    log('Thread references table created')
+
+    for (const index_sql of THREAD_REFERENCES_INDEXES) {
+      await execute_sqlite_run({ query: index_sql })
+    }
+    log('Thread references indexes created')
+
     await execute_sqlite_run({ query: INDEX_METADATA_TABLE_SCHEMA })
     log('Index metadata table created')
 
@@ -351,6 +417,13 @@ export async function drop_sqlite_schema() {
 
     // Drop data tables
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS entity_relations' })
+    await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS entity_aliases' })
+    await execute_sqlite_run({
+      query: 'DROP TABLE IF EXISTS entity_content_wikilinks'
+    })
+    await execute_sqlite_run({
+      query: 'DROP TABLE IF EXISTS thread_references'
+    })
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS entity_tags' })
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS thread_tags' })
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS threads' })

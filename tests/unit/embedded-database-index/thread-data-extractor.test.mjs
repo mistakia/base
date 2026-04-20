@@ -2,7 +2,10 @@
 
 import { expect } from 'chai'
 
-import { extract_edit_metrics_from_timeline } from '#libs-server/embedded-database-index/sync/thread-data-extractor.mjs'
+import {
+  extract_edit_metrics_from_timeline,
+  extract_thread_reference_targets
+} from '#libs-server/embedded-database-index/sync/thread-data-extractor.mjs'
 
 describe('thread-data-extractor', () => {
   describe('extract_edit_metrics_from_timeline', () => {
@@ -154,6 +157,41 @@ describe('thread-data-extractor', () => {
       })
 
       expect(result.edit_count).to.equal(1)
+    })
+  })
+
+  describe('extract_thread_reference_targets', () => {
+    it('returns empty arrays for missing metadata', () => {
+      const result = extract_thread_reference_targets({ metadata: null })
+      expect(result.relations).to.deep.equal([])
+      expect(result.file_references).to.deep.equal([])
+    })
+
+    it('parses relation entries and collects file_references', () => {
+      const result = extract_thread_reference_targets({
+        metadata: {
+          relations: ['modifies [[user:task/a.md]]'],
+          user_relations: ['relates_to [[user:text/b.md]]'],
+          file_references: ['user:task/c.md', { base_uri: 'user:text/d.md' }]
+        }
+      })
+      expect(result.relations).to.deep.equal([
+        'user:task/a.md',
+        'user:text/b.md'
+      ])
+      expect(result.file_references).to.deep.equal([
+        'user:task/c.md',
+        'user:text/d.md'
+      ])
+    })
+
+    it('filters out invalid base_uris in file_references', () => {
+      const result = extract_thread_reference_targets({
+        metadata: {
+          file_references: ['not-a-uri', '', null, 'user:task/ok.md']
+        }
+      })
+      expect(result.file_references).to.deep.equal(['user:task/ok.md'])
     })
   })
 })

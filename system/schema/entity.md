@@ -5,6 +5,8 @@ description: The entity schema that all other types inherit from - a thing that 
 base_uri: sys:system/schema/entity.md
 created_at: '2025-08-16T17:56:08.203Z'
 entity_id: 570cd4c2-cd4d-4a9e-acb6-6e6855b50db5
+observations:
+  - '[pattern] Added optional aliases array for move-preservation; written by base entity move only.'
 properties:
   - name: entity_id
     type: string
@@ -73,8 +75,19 @@ properties:
     type: datetime
     required: false
     description: Date when the item was archived
+  - name: aliases
+    type: array
+    items:
+      type: string
+    required: false
+    description: >-
+      Former base_uris of this entity, preserved when the file is moved. Written only by `base
+      entity move` (never by hand) so path-based references to old locations continue to resolve via
+      the alias index.
+relations:
+  - relates [[sys:system/guideline/reference-preservation.md]]
 type_name: entity
-updated_at: '2026-01-05T19:25:18.083Z'
+updated_at: '2026-04-20T05:31:26.905Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -120,3 +133,15 @@ relations:
   - 'depends_on [[sys:system/schema/database]]'
   - 'assigned_to [[user:schema/person/jane-doe]]'
 ```
+
+## Aliases
+
+Optional array of former `base_uri` values for an entity. The list is written exclusively by `base entity move`: each move appends the immediate previous `base_uri`, producing a git-visible forwarding trail across any number of renames or relocations. Entries MUST NOT be added or edited by hand.
+
+```yaml
+aliases:
+  - 'user:task/old-location.md'
+  - 'user:task/intermediate-location.md'
+```
+
+The aliases field is the canonical source of truth for move history; the `entity_aliases` table in `embedded-index.db` is a derived projection that drives alias-based reference resolution.

@@ -31,19 +31,27 @@ import {
   delete_entity_from_sqlite,
   sync_entity_tags_to_sqlite,
   sync_entity_relations_to_sqlite,
+  sync_entity_aliases_to_sqlite,
+  sync_entity_content_wikilinks_to_sqlite,
+  sync_thread_references_to_sqlite,
   sync_thread_tags_to_sqlite,
   upsert_entities_batch,
   sync_entities_tags_batch,
   sync_entities_relations_batch,
+  sync_entities_aliases_batch,
+  sync_entities_content_wikilinks_batch,
   BATCH_CHUNK_SIZE
 } from './sqlite/sqlite-entity-sync.mjs'
 import {
   extract_unified_entity_data,
   extract_tags_from_entity,
-  extract_relations_from_entity
+  extract_relations_from_entity,
+  extract_aliases_from_entity,
+  extract_content_wikilinks_from_entity_metadata
 } from './sync/entity-data-extractor.mjs'
 import {
   extract_thread_index_data,
+  extract_thread_reference_targets,
   read_and_extract_latest_event
 } from './sync/thread-data-extractor.mjs'
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
@@ -560,6 +568,8 @@ class EmbeddedIndexManager {
         const entity_batch = []
         const tags_batch = []
         const relations_batch = []
+        const aliases_batch = []
+        const wikilinks_batch = []
 
         for (const entity of chunk) {
           try {
@@ -571,6 +581,11 @@ class EmbeddedIndexManager {
               continue
             }
 
+            const content_wikilink_targets =
+              extract_content_wikilinks_from_entity_metadata({
+                formatted_entity_metadata: entity.formatted_entity_metadata
+              })
+
             const unified_entity_data = extract_unified_entity_data({
               entity_properties: entity_data
             })
@@ -578,6 +593,9 @@ class EmbeddedIndexManager {
               entity_properties: entity_data
             })
             const relations = extract_relations_from_entity({
+              entity_properties: entity_data
+            })
+            const alias_base_uris = extract_aliases_from_entity({
               entity_properties: entity_data
             })
 
@@ -594,6 +612,21 @@ class EmbeddedIndexManager {
               source_base_uri: base_uri,
               relations
             })
+
+            if (unified_entity_data?.entity_id) {
+              aliases_batch.push({
+                entity_base_uri: base_uri,
+                entity_id: unified_entity_data.entity_id,
+                alias_base_uris
+              })
+            }
+
+            if (content_wikilink_targets.length > 0) {
+              wikilinks_batch.push({
+                source_base_uri: base_uri,
+                target_base_uris: content_wikilink_targets
+              })
+            }
           } catch (error) {
             log('Error preparing entity for batch: %s', error.message)
             failed++
@@ -606,6 +639,10 @@ class EmbeddedIndexManager {
           await sync_entities_tags_batch({ entity_tags: tags_batch })
           await sync_entities_relations_batch({
             entity_relations: relations_batch
+          })
+          await sync_entities_aliases_batch({ entity_aliases: aliases_batch })
+          await sync_entities_content_wikilinks_batch({
+            entity_wikilinks: wikilinks_batch
           })
           synced += entity_batch.length
         } catch (error) {
@@ -624,7 +661,12 @@ class EmbeddedIndexManager {
    * Sync an entity to the embedded database
    * @returns {{ success: boolean, sqlite_synced: boolean }}
    */
-  async sync_entity({ base_uri, entity_data, skip_ipc = false }) {
+  async sync_entity({
+    base_uri,
+    entity_data,
+    content_wikilink_targets,
+    skip_ipc = false
+  }) {
     const result = { success: true, sqlite_synced: false }
 
     if (!this.initialized) {
@@ -643,6 +685,9 @@ class EmbeddedIndexManager {
     const relations = extract_relations_from_entity({
       entity_properties: entity_data
     })
+    const alias_base_uris = extract_aliases_from_entity({
+      entity_properties: entity_data
+    })
 
     if (this.sqlite_ready) {
       try {
@@ -659,6 +704,17 @@ class EmbeddedIndexManager {
           source_base_uri: base_uri,
           relations
         })
+        await sync_entity_aliases_to_sqlite({
+          entity_base_uri: base_uri,
+          entity_id: unified_entity_data?.entity_id,
+          alias_base_uris
+        })
+        if (content_wikilink_targets) {
+          await sync_entity_content_wikilinks_to_sqlite({
+            source_base_uri: base_uri,
+            target_base_uris: content_wikilink_targets
+          })
+        }
         result.sqlite_synced = true
         if (this._metrics) {
           this._metrics.increment('entity_syncs')
@@ -896,6 +952,22 @@ class EmbeddedIndexManager {
         }
       }
 
+      // Sync thread-metadata references (relations + file_references) so
+      // back-reference queries surface thread sources alongside entities.
+      if (result.sqlite_synced) {
+        try {
+          const { relations: relation_targets, file_references: file_reference_targets } =
+            extract_thread_reference_targets({ metadata })
+          await sync_thread_references_to_sqlite({
+            thread_id,
+            relation_targets,
+            file_reference_targets
+          })
+        } catch (error) {
+          log('Error syncing thread references: %s', error.message)
+        }
+      }
+
       // Sync thread tags (outside main try-catch to not affect thread sync result)
       // Always sync when metadata.tags is an array so that clearing tags removes stale rows.
       if (result.sqlite_synced && Array.isArray(metadata?.tags)) {
@@ -944,6 +1016,16 @@ class EmbeddedIndexManager {
         log('Thread relations deleted: %s', thread_id)
       } catch (error) {
         log('Error deleting thread relations: %s', error.message)
+      }
+
+      // Clean up thread references
+      try {
+        await execute_sqlite_run({
+          query: 'DELETE FROM thread_references WHERE thread_id = ?',
+          parameters: [thread_id]
+        })
+      } catch (error) {
+        log('Error deleting thread references: %s', error.message)
       }
     }
   }

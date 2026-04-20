@@ -11,6 +11,7 @@ import { list_entities } from '#cli/entity-list.mjs'
 import { move_entity_filesystem } from '#libs-server/entity/filesystem/move-entity-filesystem.mjs'
 import { process_repositories_from_filesystem } from '#libs-server/repository/filesystem/process-filesystem-repository.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import {
   parse_time_period_date,
   parse_time_period_ms,
@@ -462,6 +463,33 @@ export const builder = (yargs) =>
       handle_convert
     )
     .command(
+      'references <base_uri>',
+      'List all sources (entities + threads) that reference a given base_uri',
+      (yargs) =>
+        yargs
+          .positional('base_uri', {
+            describe: 'Target base_uri to find inbound references for',
+            type: 'string'
+          })
+          .option('json', {
+            describe: 'Output as a flat JSON array',
+            type: 'boolean',
+            default: false
+          }),
+      handle_references
+    )
+    .command(
+      'validate-references',
+      'Detect dangling references (entity relations, tags, content wikilinks, thread metadata)',
+      (yargs) =>
+        yargs.option('json', {
+          describe: 'Output as JSON',
+          type: 'boolean',
+          default: false
+        }),
+      handle_validate_references
+    )
+    .command(
       'share <base_uri>',
       'Generate a share link for an entity',
       (yargs) =>
@@ -487,7 +515,7 @@ export const builder = (yargs) =>
     )
     .demandCommand(
       1,
-      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, convert, threads, visibility, or share'
+      'Specify a subcommand: create, list, get, update, observe, tree, move, validate, validate-references, references, convert, threads, visibility, or share'
     )
 
 export const handler = () => {}
@@ -1735,6 +1763,183 @@ async function handle_share(argv) {
     } else {
       console.log(share_url)
     }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_references(argv) {
+  let exit_code = 0
+  try {
+    const { base_uri } = argv
+    if (!base_uri) {
+      throw new Error('base_uri is required')
+    }
+    await embedded_index_manager.initialize()
+
+    const [relations, tags, content_wikilinks, thread_refs, aliases] =
+      await Promise.all([
+        execute_sqlite_query({
+          query: `SELECT source_base_uri, relation_type, context
+                  FROM entity_relations WHERE target_base_uri = ?`,
+          parameters: [base_uri]
+        }),
+        execute_sqlite_query({
+          query: `SELECT entity_base_uri FROM entity_tags WHERE tag_base_uri = ?`,
+          parameters: [base_uri]
+        }),
+        execute_sqlite_query({
+          query: `SELECT source_base_uri FROM entity_content_wikilinks
+                  WHERE target_base_uri = ?`,
+          parameters: [base_uri]
+        }),
+        execute_sqlite_query({
+          query: `SELECT thread_id, location FROM thread_references
+                  WHERE target_base_uri = ?`,
+          parameters: [base_uri]
+        }),
+        execute_sqlite_query({
+          query: `SELECT alias_base_uri, current_base_uri FROM entity_aliases
+                  WHERE current_base_uri = ?`,
+          parameters: [base_uri]
+        })
+      ])
+
+    const rows = [
+      ...relations.map((r) => ({
+        source: r.source_base_uri,
+        source_kind: 'relation',
+        relation_type: r.relation_type || null,
+        context: r.context || null,
+        location: null
+      })),
+      ...tags.map((r) => ({
+        source: r.entity_base_uri,
+        source_kind: 'tag',
+        relation_type: null,
+        context: null,
+        location: null
+      })),
+      ...content_wikilinks.map((r) => ({
+        source: r.source_base_uri,
+        source_kind: 'content-wikilink',
+        relation_type: null,
+        context: null,
+        location: null
+      })),
+      ...thread_refs.map((r) => ({
+        source: `user:thread/${r.thread_id}`,
+        source_kind: 'thread-metadata',
+        relation_type: null,
+        context: null,
+        location: r.location || null
+      })),
+      ...aliases.map((r) => ({
+        source: r.alias_base_uri,
+        source_kind: 'alias',
+        relation_type: null,
+        context: null,
+        location: null
+      }))
+    ]
+
+    if (argv.json) {
+      console.log(JSON.stringify(rows, null, 2))
+    } else {
+      const groups = {
+        relation: [],
+        tag: [],
+        'content-wikilink': [],
+        'thread-metadata': [],
+        alias: []
+      }
+      for (const row of rows) groups[row.source_kind].push(row)
+
+      const order = [
+        'relation',
+        'tag',
+        'content-wikilink',
+        'thread-metadata',
+        'alias'
+      ]
+      let total = 0
+      for (const kind of order) {
+        const group_rows = groups[kind]
+        if (group_rows.length === 0) continue
+        total += group_rows.length
+        console.log(`${kind} (${group_rows.length})`)
+        for (const row of group_rows) {
+          const detail = [
+            row.relation_type ? `type=${row.relation_type}` : null,
+            row.location ? `location=${row.location}` : null
+          ]
+            .filter(Boolean)
+            .join(' ')
+          console.log(`  ${row.source}${detail ? `  ${detail}` : ''}`)
+        }
+      }
+      if (total === 0) {
+        console.log(`No inbound references for ${base_uri}`)
+      }
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_validate_references(argv) {
+  let exit_code = 0
+  try {
+    await embedded_index_manager.initialize()
+
+    const dangling_sql = `
+      WITH known_uris AS (
+        SELECT base_uri AS uri FROM entities
+        UNION SELECT alias_base_uri AS uri FROM entity_aliases
+      ),
+      link_sources AS (
+        SELECT 'relation' AS source_kind, source_base_uri AS source, target_base_uri AS target, relation_type AS detail
+        FROM entity_relations
+        UNION ALL
+        SELECT 'tag' AS source_kind, entity_base_uri AS source, tag_base_uri AS target, NULL AS detail
+        FROM entity_tags
+        UNION ALL
+        SELECT 'content-wikilink' AS source_kind, source_base_uri AS source, target_base_uri AS target, NULL AS detail
+        FROM entity_content_wikilinks
+        UNION ALL
+        SELECT 'thread-metadata' AS source_kind, 'user:thread/' || thread_id AS source, target_base_uri AS target, location AS detail
+        FROM thread_references
+      )
+      SELECT source_kind, source, target, detail
+      FROM link_sources
+      WHERE target NOT IN (SELECT uri FROM known_uris)
+      ORDER BY source_kind, source
+    `
+
+    const dangling = await execute_sqlite_query({ query: dangling_sql })
+
+    if (argv.json) {
+      console.log(JSON.stringify(dangling, null, 2))
+    } else if (dangling.length === 0) {
+      console.log('No dangling references.')
+    } else {
+      console.log(`Dangling references: ${dangling.length}`)
+      let current_kind = null
+      for (const row of dangling) {
+        if (row.source_kind !== current_kind) {
+          current_kind = row.source_kind
+          console.log(`\n${current_kind}`)
+        }
+        const detail = row.detail ? `  (${row.detail})` : ''
+        console.log(`  ${row.source} -> ${row.target}${detail}`)
+      }
+    }
+
+    if (dangling.length > 0) exit_code = 1
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 1

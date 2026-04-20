@@ -75,6 +75,7 @@ export async function* stream_entity_file_chunks({
 
         chunk.push({
           entity_properties: entity_result.entity_properties,
+          formatted_entity_metadata: entity_result.formatted_entity_metadata,
           file_info
         })
 

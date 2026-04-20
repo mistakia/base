@@ -14,6 +14,7 @@ import debug from 'debug'
 
 import config from '#config'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
+import { extract_content_wikilinks_from_entity_metadata } from './entity-data-extractor.mjs'
 import { checkpoint_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import {
   set_index_metadata,
@@ -106,7 +107,10 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
 
     await index_manager.sync_entity({
       base_uri,
-      entity_data: result.entity_properties
+      entity_data: result.entity_properties,
+      content_wikilink_targets: extract_content_wikilinks_from_entity_metadata({
+        formatted_entity_metadata: result.formatted_entity_metadata
+      })
     })
     log('Synced: %s', base_uri)
     return { action: 'synced' }

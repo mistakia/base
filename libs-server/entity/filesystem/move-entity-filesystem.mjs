@@ -219,10 +219,24 @@ export async function move_entity_filesystem({
           )
         }
 
-        // Write entity to destination
+        // Write entity to destination, appending the source base_uri to
+        // aliases so path-based references to the old location continue to
+        // resolve through the alias index
+        const existing_aliases = Array.isArray(
+          entity_result.entity_properties.aliases
+        )
+          ? entity_result.entity_properties.aliases
+          : []
+        const next_aliases = existing_aliases.includes(
+          source_resolved.base_uri
+        )
+          ? existing_aliases
+          : [...existing_aliases, source_resolved.base_uri]
+
         const updated_properties = {
           ...entity_result.entity_properties,
-          base_uri: destination_resolved.base_uri
+          base_uri: destination_resolved.base_uri,
+          aliases: next_aliases
         }
 
         txn.register_new_file(destination_resolved.absolute_path)

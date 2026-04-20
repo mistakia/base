@@ -17,6 +17,7 @@ import {
   extract_entity_type_from_path
 } from './index-file-watcher.mjs'
 import { extract_thread_id_from_path } from './index-sync-filters.mjs'
+import { extract_content_wikilinks_from_entity_metadata } from './entity-data-extractor.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
   write_thread_sync_request,
@@ -155,7 +156,11 @@ export function start_index_sync_watcher({
 
         const sync_result = await embedded_index_manager.sync_entity({
           base_uri,
-          entity_data: result.entity_properties
+          entity_data: result.entity_properties,
+          content_wikilink_targets:
+            extract_content_wikilinks_from_entity_metadata({
+              formatted_entity_metadata: result.formatted_entity_metadata
+            })
         })
         if (sync_result && sync_result.success === false) {
           log(
