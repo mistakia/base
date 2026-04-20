@@ -5,19 +5,23 @@
  * Auto-detects the machine and applies appropriate settings.
  *
  * Usage:
- *   pm2 start pm2.config.js
- *   pm2 start pm2.config.js --only base-api
+ *   pm2 start pm2.config.mjs
+ *   pm2 start pm2.config.mjs --only base-api
  *
  * Setup for boot persistence:
  *   pm2 startup
- *   pm2 start pm2.config.js
+ *   pm2 start pm2.config.mjs
  *   pm2 save
  */
 
-const fs = require('fs')
-const os = require('os')
-const path = require('path')
+import fs from 'node:fs'
+import os from 'node:os'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 
+import { collect_extension_pm2_services } from './libs-server/extension/collect-pm2-services.mjs'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const home_dir = os.homedir()
 const logs_dir = process.env.PM2_LOGS_DIR || path.join(home_dir, 'logs')
 
@@ -124,6 +128,11 @@ function app(name, script, { log_prefix, env: extra_env, ...rest } = {}) {
   }
 }
 
+function decorate_extension_app(descriptor) {
+  const { name, script, env: extra_env, log_prefix, ...rest } = descriptor
+  return app(name, script, { log_prefix, env: extra_env, ...rest })
+}
+
 // Services to run on this machine. Defaults to all services if not configured.
 const machine_services = machine_config.services || [
   'base-api',
@@ -134,7 +143,7 @@ const machine_services = machine_config.services || [
   'transcription-service'
 ]
 
-const all_defined_apps = [
+const builtin_apps = [
   app('base-api', 'services/server-pm2.cjs', {
     watch: ['build/bundle-manifest.json'],
     watch_delay: 1000,
@@ -189,10 +198,19 @@ const all_defined_apps = [
   )
 ]
 
-const all_apps = all_defined_apps.filter((a) =>
-  machine_services.includes(a.name)
+const extension_descriptors = collect_extension_pm2_services({
+  user_base_directory
+})
+const extension_apps = extension_descriptors.map(decorate_extension_app)
+
+const all_defined_apps = [...builtin_apps, ...extension_apps]
+
+// Extension-contributed apps already self-filter via their `machines` field,
+// so include them unconditionally. Builtin apps still go through machine_services.
+const extension_names = new Set(extension_apps.map((a) => a.name))
+const all_apps = all_defined_apps.filter(
+  (a) => extension_names.has(a.name) || machine_services.includes(a.name)
 )
 
-module.exports = {
-  apps: all_apps.filter(Boolean)
-}
+export const apps = all_apps.filter(Boolean)
+export default { apps }

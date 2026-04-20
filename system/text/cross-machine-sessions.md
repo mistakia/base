@@ -42,7 +42,7 @@ Execution mode is available for:
 Each machine is identified via hostname matching against the `machine_registry` in config, with platform-based fallback. Machine identity determines:
 
 - Which scheduled commands run on this machine (via `run_on_machines` field)
-- Machine-specific service configuration (SSL, ports) injected by `pm2.config.js`
+- Machine-specific service configuration (SSL, ports) injected by `pm2.config.mjs`
 
 Use `base machine` to inspect the current machine's identity and registry.
 

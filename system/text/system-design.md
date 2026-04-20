@@ -102,7 +102,7 @@ Multiple machines can run Base services concurrently against their own user-base
 
 - **Machine identity**: `base machine` shows the current machine ID, hostname, platform, and registry config. Machine ID is resolved by `libs-server/schedule/machine-identity.mjs`.
 - **Scheduled commands**: Support a `run_on_machines` field to restrict execution to specific machines. Commands without this field run on all machines.
-- **Service configuration**: `pm2.config.js` reads machine registry to inject machine-specific environment variables (SSL, ports) before services start.
+- **Service configuration**: `pm2.config.mjs` reads machine registry to inject machine-specific environment variables (SSL, ports) before services start.
 
 #### 3.3 Data Synchronization
 

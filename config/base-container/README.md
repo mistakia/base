@@ -24,7 +24,7 @@ config/base-container/
   config.<machine>.env          # Per-machine env for container hooks
 
 repository/active/base/
-  pm2.config.js               # Unified PM2 config for all 6 services (auto-detects machine)
+  pm2.config.mjs               # Unified PM2 config for all 6 services (auto-detects machine)
 ```
 
 ## Service Management (PM2)

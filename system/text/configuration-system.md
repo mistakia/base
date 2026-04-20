@@ -101,7 +101,7 @@ Machine identity is used by the schedule processor for machine-specific schedule
 
 ## Environment Variable Injection
 
-`pm2.config.js` auto-detects the current machine and injects environment variables before services start:
+`pm2.config.mjs` auto-detects the current machine and injects environment variables before services start:
 
 ### User-Base Directory Resolution
 
@@ -130,7 +130,7 @@ Set for all PM2 services:
 | -------------------------- | ---------------- | -------------------------------------- |
 | `USER_BASE_DIRECTORY`      | Resolution chain | User data directory path               |
 | `CONFIG_ENCRYPTION_KEY`    | process.env      | Decryption key for config values       |
-| `CONTAINER_USER_BASE_PATH` | pm2.config.js    | User-base path inside Docker container |
+| `CONTAINER_USER_BASE_PATH` | pm2.config.mjs    | User-base path inside Docker container |
 | `GIT_SSH_COMMAND`          | Computed         | SSH command with user config file      |
 | `DEBUG_COLORS`             | Hardcoded        | Disabled for log readability           |
 
@@ -200,5 +200,5 @@ DEBUG=config:loader node ...
 | `config/index.mjs`                          | Config loading, merging, and export        |
 | `config/config.json`                        | Base defaults                              |
 | `config/config-test.json`                   | Test mode config                           |
-| `pm2.config.js`                             | PM2 service definitions with env injection |
+| `pm2.config.mjs`                             | PM2 service definitions with env injection |
 | `libs-server/schedule/machine-identity.mjs` | Machine identity resolution                |

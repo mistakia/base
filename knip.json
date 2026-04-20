@@ -8,7 +8,7 @@
     "server/services/relation-analysis-queue-processor.mjs",
     "cli/**/*.mjs",
     "webpack/*.mjs",
-    "pm2.config.js",
+    "pm2.config.mjs",
     "tests/**/*.mjs"
   ],
   "project": [

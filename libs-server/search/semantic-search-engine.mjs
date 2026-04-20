@@ -7,7 +7,7 @@
 
 import debug from 'debug'
 
-import { embed_texts } from '#libs-server/content-review/ollama-client.mjs'
+import { embed_texts } from '#libs-server/llm/ollama-client.mjs'
 import { search_similar } from '#libs-server/embedded-database-index/sqlite/sqlite-embedding-queries.mjs'
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 

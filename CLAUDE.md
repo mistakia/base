@@ -181,11 +181,11 @@ The config system uses a two-tier loading strategy: base defaults + user-base ov
 
 ### Machine Identity
 
-Machine-specific configuration (SSL, ports, transcription args) is resolved via `machine_registry` in the user-base config. The `pm2.config.js` reads machine_registry directly from user-base config.json to set environment variables before services start.
+Machine-specific configuration (SSL, ports, transcription args) is resolved via `machine_registry` in the user-base config. The `pm2.config.mjs` reads machine_registry directly from user-base config.json to set environment variables before services start.
 
 ### Env Var Injection
 
-`pm2.config.js` auto-detects the current machine by matching `os.hostname()` against `machine_registry` entries and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
+`pm2.config.mjs` auto-detects the current machine by matching `os.hostname()` against `machine_registry` entries and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
 
 ### Core vs Extension Boundary
 
