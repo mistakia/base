@@ -798,11 +798,9 @@ router.put(
         'failed'
       ]
       if (!valid_statuses.includes(session_status)) {
-        return res
-          .status(400)
-          .json({
-            error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}`
-          })
+        return res.status(400).json({
+          error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}`
+        })
       }
 
       // Build patches for targeted field merge

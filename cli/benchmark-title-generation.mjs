@@ -23,7 +23,6 @@ import path from 'path'
 
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
-import debug from 'debug'
 
 import {
   add_directory_cli_options,
@@ -37,8 +36,6 @@ import {
   TITLE_PROMPT_VERSION,
   TITLE_OUTPUT_SCHEMA
 } from '#libs-server/metadata/generate-title-prompt.mjs'
-
-const log = debug('cli:benchmark-title')
 
 const MAX_TITLE_LENGTH = 100
 

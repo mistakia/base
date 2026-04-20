@@ -313,9 +313,12 @@ export const start_index_sync_service = async () => {
   }, WAL_CHECKPOINT_INTERVAL_MS)
   if (wal_checkpoint_interval.unref) wal_checkpoint_interval.unref()
 
-  if (typeof Bun !== 'undefined' && typeof Bun.gc === 'function') {
+  if (
+    typeof globalThis.Bun !== 'undefined' &&
+    typeof globalThis.Bun.gc === 'function'
+  ) {
     gc_interval = setInterval(() => {
-      Bun.gc(true)
+      globalThis.Bun.gc(true)
     }, GC_INTERVAL_MS)
     if (gc_interval.unref) gc_interval.unref()
   }

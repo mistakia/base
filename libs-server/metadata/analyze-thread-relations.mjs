@@ -201,7 +201,7 @@ export async function detect_continuation_source({
     typeof is_sqlite_initialized === 'function' &&
     is_sqlite_initialized()
 
-  let window_candidates = []
+  const window_candidates = []
 
   if (use_index) {
     const window_start_iso = new Date(

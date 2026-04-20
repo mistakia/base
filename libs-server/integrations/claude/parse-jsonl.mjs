@@ -1,6 +1,5 @@
 import { createReadStream, existsSync } from 'fs'
-import { stat as fs_stat } from 'fs/promises'
-import { readdir } from 'fs/promises'
+import { stat as fs_stat, readdir } from 'fs/promises'
 import { createInterface } from 'readline'
 import path from 'path'
 import debug from 'debug'

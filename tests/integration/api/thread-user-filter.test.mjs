@@ -18,10 +18,10 @@ import {
 } from '#tests/utils/index.mjs'
 import {
   initialize_sqlite_client,
-  close_sqlite_connection
+  close_sqlite_connection,
+  execute_sqlite_run
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { create_sqlite_schema } from '#libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs'
-import { execute_sqlite_run } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 describe('Thread user_public_key filter', () => {
   let user_a

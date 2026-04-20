@@ -34,10 +34,7 @@ import {
   parse_tag_analysis_response,
   TAG_OUTPUT_SCHEMA
 } from '#libs-server/metadata/generate-tag-prompt.mjs'
-import {
-  extract_first_user_message,
-  extract_user_messages
-} from '#libs-server/metadata/analyze-thread.mjs'
+import { extract_user_messages } from '#libs-server/metadata/analyze-thread.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
 import config from '#config'

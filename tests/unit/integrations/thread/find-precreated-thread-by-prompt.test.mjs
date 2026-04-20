@@ -162,13 +162,11 @@ describe('find_precreated_thread_by_prompt (tertiary dedup)', function () {
 
   it('should return null without normalizing session when no candidates exist', async function () {
     const session_id = `test-session-${make_uuid()}`
-    let normalize_called = false
 
     const provider = {
       name: 'claude',
       get_session_id: () => session_id,
       normalize_session: (raw) => {
-        normalize_called = true
         return {
           session_id: raw.session_id,
           session_provider: 'claude',
@@ -188,9 +186,6 @@ describe('find_precreated_thread_by_prompt (tertiary dedup)', function () {
       get_models_from_session: async () => ['claude-opus-4-6'],
       get_inference_provider: () => 'anthropic'
     }
-
-    // Reset flag after provider construction (get_session_id may have been called)
-    normalize_called = false
 
     let reason = null
     try {

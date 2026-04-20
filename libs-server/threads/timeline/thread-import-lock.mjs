@@ -49,16 +49,20 @@ export const acquire_thread_import_lock = async ({ thread_dir }) => {
   }
 
   const release = async () => {
+    let unlink_error = null
     try {
       await handle.close()
     } finally {
       try {
         await fs.unlink(lock_path)
       } catch (error) {
-        if (error.code !== 'ENOENT') throw error
+        if (error.code !== 'ENOENT') unlink_error = error
       } finally {
         release_resolve()
       }
+    }
+    if (unlink_error) {
+      throw unlink_error
     }
   }
 
