@@ -896,12 +896,9 @@ class EmbeddedIndexManager {
         }
       }
 
-      // Sync thread tags if present (outside main try-catch to not affect thread sync result)
-      if (
-        result.sqlite_synced &&
-        Array.isArray(metadata?.tags) &&
-        metadata.tags.length > 0
-      ) {
+      // Sync thread tags (outside main try-catch to not affect thread sync result)
+      // Always sync when metadata.tags is an array so that clearing tags removes stale rows.
+      if (result.sqlite_synced && Array.isArray(metadata?.tags)) {
         try {
           await sync_thread_tags_to_sqlite({
             thread_id,
