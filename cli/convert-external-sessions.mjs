@@ -687,7 +687,8 @@ const main = async () => {
                       .readFileSync(sf, 'utf-8')
                       .split('\n')
                       .slice(0, 20)
-                    const uuid_re = /^[0-9a-f-]{36}$/i
+                    const uuid_re =
+                      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
                     let found_session_id = null
                     let found_cwd = null
                     for (const line of head) {
