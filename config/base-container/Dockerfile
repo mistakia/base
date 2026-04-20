@@ -134,10 +134,12 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/validate-user-command.s
 RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-$(dpkg --print-architecture)" -o /usr/local/bin/gosu \
     && chmod +x /usr/local/bin/gosu
 
-# Drop to the node user by default. The entrypoint.sh detects non-root via
-# `id -u` and falls through the gosu guard, so this is safe — gosu is only
-# invoked when the process starts as root (e.g., `docker exec` without -u).
-USER node
+# No USER directive: the entrypoint must run as root to write ssh-wrapper into
+# /usr/local/bin/, chown credentials, and manage the SSH agent socket. It drops
+# to node via `exec gosu node` at the end. Adding `USER node` causes the
+# entrypoint to start as node and breaks those root-phase steps. The
+# `docker exec` foot-gun (exec-as-root by default) is instead mitigated by
+# explicit `-u node` on every call site plus a pre-commit hook guard.
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["tail", "-f", "/dev/null"]
