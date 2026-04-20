@@ -1,5 +1,6 @@
 import express from 'express'
 import multer from 'multer'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import { promises as fs } from 'fs'
 import path from 'path'
 import os from 'os'
@@ -136,7 +137,7 @@ router.post('/', upload.single('audio'), async (req, res) => {
     } else {
       res.status(500).json({
         error: 'Transcription failed',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
   } finally {

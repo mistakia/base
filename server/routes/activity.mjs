@@ -1,4 +1,5 @@
 import express from 'express'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import debug from 'debug'
 
 import {
@@ -93,7 +94,7 @@ router.get('/heatmap', async (req, res) => {
     log(`Error fetching activity heatmap: ${error.message}`)
     res.status(500).json({
       error: 'Failed to fetch activity heatmap data',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -140,7 +141,7 @@ router.get('/entities', async (req, res) => {
     log(`Error fetching entity activity: ${error.message}`)
     res.status(500).json({
       error: 'Failed to fetch entity activity data',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -164,7 +165,7 @@ router.post('/rebuild-heatmap', async (req, res) => {
     log(`Error rebuilding activity heatmap: ${error.message}`)
     res.status(500).json({
       error: 'Failed to rebuild activity heatmap',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -209,7 +210,7 @@ router.get('/task-stats', async (req, res) => {
     log(`Error fetching task stats: ${error.message}`)
     res.status(500).json({
       error: 'Failed to fetch task stats',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

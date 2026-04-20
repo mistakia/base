@@ -1,4 +1,5 @@
 import express from 'express'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import { process_physical_item_table_request } from '#server/lib/physical-items/process-physical-item-table-request.mjs'
 
 const router = express.Router({ mergeParams: true })
@@ -33,7 +34,7 @@ router.post('/table', async (req, res) => {
     log('Error processing physical items table request:', error)
     res.status(500).json({
       error: 'Failed to process physical items table request',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

@@ -1,5 +1,6 @@
 import express from 'express'
 import debug from 'debug'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 
 import config from '#config'
 import { require_auth } from '#server/middleware/jwt-parser.mjs'
@@ -74,7 +75,7 @@ router.use(require_auth, async (req, res) => {
     } else {
       res.status(500).json({
         error: 'Finance proxy error',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
   }

@@ -1,5 +1,6 @@
 import express from 'express'
 import debug from 'debug'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 
 import {
   HTTP_MAX_AGE,
@@ -121,7 +122,7 @@ router.post('/table', async (req, res) => {
     log('Error processing tasks table request:', error)
     res.status(500).json({
       error: 'Failed to process tasks table request',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

@@ -1,5 +1,6 @@
 import express from 'express'
 import debug from 'debug'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 
 import {
   attach_permission_context,
@@ -415,7 +416,7 @@ router.get('/', async (req, res) => {
 
     res.status(500).json({
       error: 'Search failed',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -488,7 +489,7 @@ router.get('/recent', async (req, res) => {
 
     res.status(500).json({
       error: 'Failed to get recent files',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

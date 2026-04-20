@@ -1,5 +1,6 @@
 import express from 'express'
 import debug from 'debug'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import crypto from 'crypto'
 import path from 'path'
 
@@ -270,7 +271,7 @@ router.post('/webhooks', async (req, res) => {
 
     return res.status(500).json({
       error: 'Internal Server Error',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

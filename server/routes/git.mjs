@@ -1,4 +1,5 @@
 import express from 'express'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import path from 'path'
 import fs from 'fs/promises'
 import debug from 'debug'
@@ -661,7 +662,7 @@ router.get('/status', require_repo_read_permission, async (req, res) => {
     log('Error getting git status:', error.message)
     res.status(500).json({
       error: 'Failed to get repository status',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -959,7 +960,7 @@ router.get('/status/all', async (req, res) => {
     log('Error getting all repo statuses:', error.message)
     res.status(500).json({
       error: 'Failed to get repository statuses',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1007,7 +1008,7 @@ router.get('/diff', require_repo_read_permission, async (req, res) => {
     log('Error getting git diff:', error.message)
     res.status(500).json({
       error: 'Failed to get diff',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1054,7 +1055,7 @@ router.get('/file-content', require_repo_read_permission, async (req, res) => {
     log('Error getting file content:', error.message)
     res.status(500).json({
       error: 'Failed to get file content',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1120,7 +1121,7 @@ router.get('/file-at-ref', require_repo_read_permission, async (req, res) => {
     log('Error getting file at ref:', error.message)
     res.status(500).json({
       error: 'Failed to get file at ref',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1203,7 +1204,7 @@ router.post('/stage', require_repo_write_permission, async (req, res) => {
     log('Error staging files:', error.message)
     res.status(500).json({
       error: 'Failed to stage files',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1252,7 +1253,7 @@ router.post('/unstage', require_repo_write_permission, async (req, res) => {
     log('Error unstaging files:', error.message)
     res.status(500).json({
       error: 'Failed to unstage files',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1301,7 +1302,7 @@ router.post('/discard', require_repo_write_permission, async (req, res) => {
     log('Error discarding changes:', error.message)
     res.status(500).json({
       error: 'Failed to discard changes',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1330,7 +1331,7 @@ router.post('/commit', require_repo_write_permission, async (req, res) => {
     log('Error committing:', error.message)
     res.status(500).json({
       error: 'Failed to commit',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1356,13 +1357,13 @@ router.post(
       if (error.message === 'No staged changes found') {
         return res.status(400).json({
           error: 'No staged changes found',
-          message: error.message
+          message: safe_error_message(error)
         })
       }
 
       res.status(500).json({
         error: 'Failed to generate commit message',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
   }
@@ -1390,7 +1391,7 @@ router.post('/pull', require_repo_write_permission, async (req, res) => {
     log('Error pulling:', error.message)
     res.status(500).json({
       error: 'Failed to pull',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1423,7 +1424,7 @@ router.post('/push', require_repo_write_permission, async (req, res) => {
     log('Error pushing:', error.message)
     res.status(500).json({
       error: 'Failed to push',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1469,7 +1470,7 @@ router.get('/conflicts', require_repo_read_permission, async (req, res) => {
     log('Error getting conflicts:', error.message)
     res.status(500).json({
       error: 'Failed to get conflicts',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1522,7 +1523,7 @@ router.get(
       log('Error getting conflict versions:', error.message)
       res.status(500).json({
         error: 'Failed to get conflict versions',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
   }
@@ -1587,7 +1588,7 @@ router.post(
       log('Error resolving conflict:', error.message)
       res.status(500).json({
         error: 'Failed to resolve conflict',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
   }
@@ -1618,7 +1619,7 @@ router.post('/abort-merge', require_repo_write_permission, async (req, res) => {
     log('Error aborting merge:', error.message)
     res.status(500).json({
       error: 'Failed to abort merge',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -1701,7 +1702,7 @@ router.get('/repo-info', async (req, res) => {
     log('Error getting repo info:', error.message)
     res.status(500).json({
       error: 'Failed to get repository info',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

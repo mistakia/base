@@ -1,4 +1,5 @@
 import express from 'express'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import debug from 'debug'
 
 import {
@@ -219,7 +220,7 @@ router.get('/', async (req, res) => {
     log('Error listing active sessions:', error)
     res.status(500).json({
       error: 'Failed to list active sessions',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -259,7 +260,7 @@ router.get('/:session_id', async (req, res) => {
     log(`Error getting active session ${session_id}:`, error)
     res.status(500).json({
       error: 'Failed to get active session',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -369,7 +370,7 @@ router.post('/', require_hook_auth, async (req, res) => {
     log(`Error registering active session ${session_id}:`, error)
     res.status(500).json({
       error: 'Failed to register active session',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -501,7 +502,7 @@ router.put('/:session_id', require_hook_auth, async (req, res) => {
     log(`Error updating active session ${session_id}:`, error)
     res.status(500).json({
       error: 'Failed to update active session',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })
@@ -539,7 +540,7 @@ router.delete('/:session_id', require_hook_auth, async (req, res) => {
     log(`Error removing active session ${session_id}:`, error)
     res.status(500).json({
       error: 'Failed to remove active session',
-      message: error.message
+      message: safe_error_message(error)
     })
   }
 })

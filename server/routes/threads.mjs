@@ -1,5 +1,6 @@
 import express from 'express'
 import debug from 'debug'
+import { safe_error_message } from '#server/utils/error-response.mjs'
 
 import config from '#config'
 import {
@@ -110,7 +111,7 @@ function handle_validation_error(error) {
       status: 400,
       response: {
         error: error.message,
-        message: error.message
+        message: safe_error_message(error)
       }
     }
   }
@@ -339,7 +340,7 @@ router.get('/', async (req, res) => {
         log('Thread relation query failed: %s', error.message)
         return res.status(500).json({
           error: 'Failed to query thread relations',
-          message: error.message
+          message: safe_error_message(error)
         })
       }
     }
@@ -767,7 +768,7 @@ router.post('/create-session', async (req, res) => {
     ) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
 
@@ -1035,7 +1036,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     ) {
       return res.status(400).json({
         error: 'Invalid request',
-        message: error.message
+        message: safe_error_message(error)
       })
     }
 
