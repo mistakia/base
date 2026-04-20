@@ -228,10 +228,19 @@ case "${1:-}" in
         ;;
     build)
         echo "Building container image ($MACHINE)..."
+        # Export host UID/GID so compose can pass them as build args to the
+        # Dockerfile, ensuring the node user inside the container matches the
+        # host user and avoids bind-mount ownership mismatches.
+        export HOST_UID="${HOST_UID:-$(id -u)}"
+        export HOST_GID="${HOST_GID:-$(id -g)}"
+        echo "  HOST_UID=$HOST_UID HOST_GID=$HOST_GID"
         compose_cmd build
         ;;
     rebuild)
         echo "Rebuilding container image from scratch ($MACHINE)..."
+        export HOST_UID="${HOST_UID:-$(id -u)}"
+        export HOST_GID="${HOST_GID:-$(id -g)}"
+        echo "  HOST_UID=$HOST_UID HOST_GID=$HOST_GID"
         compose_cmd build --no-cache
         ;;
     claude)
