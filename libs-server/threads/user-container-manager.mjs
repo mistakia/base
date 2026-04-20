@@ -91,7 +91,7 @@ export const wait_for_container_ready = async ({
   while (Date.now() - start < effective_timeout) {
     try {
       const { stdout } = await execAsync(
-        `docker exec ${container_name} cat /tmp/entrypoint-ready 2>/dev/null`
+        `docker exec -u node ${container_name} cat /tmp/entrypoint-ready 2>/dev/null`
       )
       if (stdout !== undefined) {
         log(`${container_name} is ready`)
