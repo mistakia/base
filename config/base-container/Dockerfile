@@ -1,5 +1,48 @@
 FROM node:22-slim
 
+# Build args for UID/GID alignment with the host user.
+# The upstream node:22-slim image ships the "node" user at UID/GID 1000.
+# Accept overrides so the container user matches the invoking host user,
+# avoiding ownership mismatches on bind-mounted volumes.
+ARG HOST_UID=1000
+ARG HOST_GID=1000
+
+# Remap the "node" user/group to HOST_UID/HOST_GID.
+# Strategy:
+#   1. If HOST_GID != 1000, rename group 1000 -> node-old to free the name,
+#      then create group "node" at HOST_GID (or adopt it if it exists).
+#   2. If HOST_UID != 1000, rename user 1000 -> node-old to free the name,
+#      then create user "node" at HOST_UID in group "node".
+#   3. Re-chown /home/node to the new IDs.
+# When HOST_UID == 1000 this entire block is a no-op (no-op usermod/groupmod).
+RUN set -eux; \
+    CURRENT_GID=$(id -g node); \
+    CURRENT_UID=$(id -u node); \
+    TARGET_GID=${HOST_GID}; \
+    TARGET_UID=${HOST_UID}; \
+    if [ "$TARGET_GID" != "$CURRENT_GID" ]; then \
+        groupmod -n node-old node; \
+        if getent group "$TARGET_GID" > /dev/null 2>&1; then \
+            EXISTING_GROUP=$(getent group "$TARGET_GID" | cut -d: -f1); \
+            groupmod -n node "$EXISTING_GROUP"; \
+        else \
+            groupadd -g "$TARGET_GID" node; \
+        fi; \
+    fi; \
+    if [ "$TARGET_UID" != "$CURRENT_UID" ]; then \
+        usermod -l node-old node; \
+        if getent passwd "$TARGET_UID" > /dev/null 2>&1; then \
+            EXISTING_USER=$(getent passwd "$TARGET_UID" | cut -d: -f1); \
+            userdel "$EXISTING_USER"; \
+        fi; \
+        useradd -u "$TARGET_UID" -g node -d /home/node -s /bin/bash -M node; \
+    else \
+        if [ "$TARGET_GID" != "$CURRENT_GID" ]; then \
+            usermod -g node node; \
+        fi; \
+    fi; \
+    chown -R node:node /home/node
+
 # Install system packages and build tools
 # python3, make, g++ needed by node-gyp for native modules (e.g. sharp)
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -90,6 +133,11 @@ RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/validate-user-command.s
 # Install gosu for dropping privileges in entrypoint
 RUN curl -fsSL "https://github.com/tianon/gosu/releases/download/1.17/gosu-$(dpkg --print-architecture)" -o /usr/local/bin/gosu \
     && chmod +x /usr/local/bin/gosu
+
+# Drop to the node user by default. The entrypoint.sh detects non-root via
+# `id -u` and falls through the gosu guard, so this is safe — gosu is only
+# invoked when the process starts as root (e.g., `docker exec` without -u).
+USER node
 
 ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 CMD ["tail", "-f", "/dev/null"]
