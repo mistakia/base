@@ -310,16 +310,39 @@ const save_claude_raw_data = async ({
   if (raw_data.entries && Array.isArray(raw_data.entries)) {
     const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
     const flags = parse_mode === 'full' ? 'w' : 'a'
+
+    // In delta mode, overlapping re-parses (e.g. after a sync-state reset or
+    // race) would otherwise append duplicate lines. Read existing uuids first
+    // and skip entries already on disk.
+    const existing_uuids = new Set()
+    if (flags === 'a') {
+      try {
+        const existing = await fs.readFile(jsonl_file, 'utf-8')
+        for (const line of existing.split('\n')) {
+          if (!line) continue
+          try {
+            const parsed = JSON.parse(line)
+            if (parsed.uuid) existing_uuids.add(parsed.uuid)
+          } catch {
+            // Skip unparseable lines
+          }
+        }
+      } catch (error) {
+        if (error.code !== 'ENOENT') throw error
+      }
+    }
+
     await new Promise((resolve, reject) => {
       const write_stream = createWriteStream(jsonl_file, { flags })
       write_stream.on('error', reject)
       write_stream.on('finish', resolve)
       for (let i = 0; i < raw_data.entries.length; i++) {
-        const line = JSON.stringify(raw_data.entries[i])
-        // Release entry after serializing to progressively free memory
-        // for large sessions (entries already normalized, no longer needed)
+        const entry = raw_data.entries[i]
+        // Drop the array reference as we go to progressively free memory
+        // for large sessions (entries already normalized, no longer needed).
         raw_data.entries[i] = null
-        write_stream.write(line + '\n')
+        if (entry && entry.uuid && existing_uuids.has(entry.uuid)) continue
+        write_stream.write(JSON.stringify(entry) + '\n')
       }
       write_stream.end()
     })
