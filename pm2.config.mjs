@@ -212,5 +212,9 @@ const all_apps = all_defined_apps.filter(
   (a) => extension_names.has(a.name) || machine_services.includes(a.name)
 )
 
+// PM2 loads this file via CJS `require()` and reads `module.exports.apps`.
+// An ESM `export default { apps }` becomes `module.exports.default.apps` under
+// CJS interop, which PM2 does not unwrap. Exporting `apps` as a named export
+// makes it visible at the top level.
 export const apps = all_apps.filter(Boolean)
 export default { apps }
