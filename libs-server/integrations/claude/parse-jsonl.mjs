@@ -114,7 +114,18 @@ export const parse_claude_jsonl_file = async (file_path) => {
     const parse_start = Date.now()
     log_debug(`Parsing Claude JSONL file: ${file_path}`)
 
-    const file_stream = createReadStream(file_path)
+    // Stat BEFORE opening the stream so we can cap the read and report the
+    // exact byte position that was consumed. Claude session files are
+    // append-only while a session is live, so capping at the pre-parse size
+    // means any bytes appended during the parse are deferred to the next
+    // invocation rather than being half-read (which would leave byte_offset
+    // beyond what was actually parsed and silently skip the gap).
+    const file_stat = await fs_stat(file_path)
+    const end_byte_offset = file_stat.size
+
+    const file_stream = createReadStream(file_path, {
+      end: end_byte_offset > 0 ? end_byte_offset - 1 : 0
+    })
     const line_reader = createInterface({
       input: file_stream,
       crlfDelay: Infinity
@@ -178,6 +189,7 @@ export const parse_claude_jsonl_file = async (file_path) => {
     const session = {
       session_id: primary_session_id,
       entries: all_entries,
+      end_byte_offset,
       metadata: {
         file_path,
         file_summaries

@@ -7,8 +7,6 @@
 
 import debug from 'debug'
 import path from 'path'
-import { stat as fs_stat } from 'fs/promises'
-
 import {
   parse_all_claude_files,
   parse_session_with_subagents,
@@ -827,14 +825,15 @@ const parse_session_file_incremental = async ({
           all_sessions.push(...agent_sessions)
           any_new_subagent_data = true
         }
-        // Record offset so next invocation uses incremental reads
-        try {
-          const agent_stat = await fs_stat(agent_file)
+        // Record the parse-time end offset captured by parse_claude_jsonl_file
+        // so the next invocation resumes exactly where we stopped reading.
+        // Re-statting here would race against concurrent appends to the
+        // subagent file (same class of bug as the parent initial-state race).
+        const parsed = agent_sessions[0]
+        if (parsed && typeof parsed.end_byte_offset === 'number') {
           new_subagent_offsets[agent_basename] = {
-            byte_offset: agent_stat.size
+            byte_offset: parsed.end_byte_offset
           }
-        } catch {
-          // File vanished between parse and stat -- skip offset tracking
         }
       } else if (agent_result.entries.length > 0) {
         // Build agent session from incremental entries
@@ -909,22 +908,32 @@ const build_and_save_initial_state = async ({
   session_id
 }) => {
   try {
-    const file_stat = await fs_stat(session_file)
     const parent_session = sessions[0]
 
-    // Build subagent offsets
+    // Use the byte offset captured by the parser at the moment the stream
+    // was opened. Re-statting here would race against concurrent writes to
+    // the live session file: if Claude appended bytes between parse
+    // completion and this stat, the recorded offset would exceed what was
+    // actually parsed and the next invocation would skip the gap (silent
+    // data loss).
+    const parent_end_offset = parent_session.end_byte_offset
+    if (typeof parent_end_offset !== 'number') {
+      log(
+        `build_and_save_initial_state: parent session missing end_byte_offset for ${session_id}`
+      )
+      return
+    }
+
+    // Build subagent offsets from their sibling sessions (which carry their
+    // own end_byte_offset from the same parser). Subagent files the parser
+    // didn't see (e.g. created after the subagent scan) are left unrecorded
+    // so the next invocation discovers them as new.
     const subagent_offsets = {}
-    const subagent_files = await find_subagent_session_files({
-      parent_session_file: session_file
-    })
-    for (const agent_file of subagent_files) {
-      try {
-        const agent_stat = await fs_stat(agent_file)
-        subagent_offsets[path.basename(agent_file)] = {
-          byte_offset: agent_stat.size
-        }
-      } catch {
-        // Skip files that vanished
+    for (const session of sessions.slice(1)) {
+      const agent_file = session.metadata?.file_path
+      if (!agent_file || typeof session.end_byte_offset !== 'number') continue
+      subagent_offsets[path.basename(agent_file)] = {
+        byte_offset: session.end_byte_offset
       }
     }
 
@@ -939,7 +948,7 @@ const build_and_save_initial_state = async ({
     parent_session._pending_sync_state = {
       session_id,
       state: {
-        byte_offset: file_stat.size,
+        byte_offset: parent_end_offset,
         subagent_offsets,
         working_directory
       }
