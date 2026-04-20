@@ -26,6 +26,7 @@ import {
   ensure_raw_url,
   validate_raw_response
 } from '#libs-server/utils/raw-fetch.mjs'
+import { install_seeds } from './base/seed.mjs'
 
 // In compiled Bun binaries, import.meta.url resolves to /$bunfs/root/...
 // (Bun's virtual filesystem), producing invalid paths on Windows and
@@ -628,6 +629,14 @@ export const handler = async (argv) => {
     }
     process.exitCode = 1
     return
+  }
+
+  const { copied: seeded_files } = install_seeds({
+    system_base_directory: BASE_DIR,
+    user_base_directory: base_path
+  })
+  for (const rel of seeded_files) {
+    summary.files_created.push(rel)
   }
 
   // Generate owner identity and set user_public_key in config

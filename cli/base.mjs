@@ -49,6 +49,7 @@ import * as identity_command from './base/identity.mjs'
 import * as role_command from './base/role.mjs'
 import * as permission_command from './base/permission.mjs'
 import * as setup_command from './base/setup.mjs'
+import * as seed_command from './base/seed.mjs'
 import * as review_command from './base/review.mjs'
 import * as index_command from './base/index.mjs'
 import * as machine_command from './base/machine.mjs'
@@ -149,6 +150,7 @@ const main = async () => {
     .command(role_command)
     .command(permission_command)
     .command(setup_command)
+    .command(seed_command)
     .command(review_command)
     .command(index_command)
     .command(machine_command)

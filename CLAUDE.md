@@ -195,8 +195,8 @@ the user-base directory using the same two-layer pattern established for config,
 workflows, and guidelines:
 
 - Config: base `config/config.json` provides defaults, user-base overlays
-- Workflows: base `system/workflow/` provides core, user-base `workflow/` extends
-- Guidelines: base `system/guideline/` provides core, user-base `guideline/` extends
+- Workflows: base `system/workflow/` is the install seed; `base init` copies entries into user-base `workflow/` where they become the canonical runtime entities. The seed directory is scanner-excluded so seed files do not register as sys: entities.
+- Guidelines: same seed-and-install model as workflows; base `system/guideline/` -> user-base `guideline/`.
 - CLI scripts: base `cli/` provides core tools, user-base `cli/` adds user scripts
 - Extensions: user-base `extension/` provides convention-based CLI extensions
 - Container config: base provides generic Dockerfile/compose, user-base overrides per machine

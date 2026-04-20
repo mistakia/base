@@ -15,6 +15,15 @@ import { load_entity_scan_config } from '#libs-server/entity/filesystem/entity-s
 
 const log = debug('markdown:scanner:filesystem')
 
+// Files under system/{workflow,guideline}/ in the base repo are install-time
+// seeds copied to user-base by `base seed install`, not runtime sys entities.
+// Excluded only from the system-dir scan so user-base content under a
+// coincidentally-named system/ path is unaffected.
+const BASE_SEED_MIRROR_EXCLUSIONS = [
+  'system/workflow/**',
+  'system/guideline/**'
+]
+
 /**
  * Get list of markdown files from the filesystem recursively, including separate user repositories
  * @param {Object} params - Parameters
@@ -50,13 +59,18 @@ export async function list_markdown_files_in_filesystem({
     for (const { base_directory, name } of directories) {
       if (!base_directory) continue
 
+      const scoped_exclude_patterns =
+        name === 'system'
+          ? [...BASE_SEED_MIRROR_EXCLUSIONS, ...merged_exclude_patterns]
+          : merged_exclude_patterns
+
       // Process files from this directory
       const directory_files = await list_files_recursive({
         directory: base_directory,
         file_extension: '.md',
         absolute_paths: false,
         include_path_patterns,
-        exclude_path_patterns: merged_exclude_patterns
+        exclude_path_patterns: scoped_exclude_patterns
       })
 
       // Add files from this directory
