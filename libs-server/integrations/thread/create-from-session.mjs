@@ -79,7 +79,7 @@ const stable_stringify_for_comparison = (
  * between our writes and our return, so the orphan is surfaced immediately
  * instead of silently waiting for the next backfill to notice.
  */
-const verify_thread_directory_integrity = async ({
+export const verify_thread_directory_integrity = async ({
   thread_dir,
   expect_raw_data = false
 }) => {
@@ -227,11 +227,6 @@ export const create_thread_from_session = async ({
     log_debug(
       `Created thread ${thread_result.thread_id} from ${normalized_session.session_provider} session ${normalized_session.session_id}`
     )
-
-    await verify_thread_directory_integrity({
-      thread_dir: thread_result.context_dir,
-      expect_raw_data: !!raw_session_data
-    })
 
     return {
       thread_id: thread_result.thread_id,

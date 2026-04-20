@@ -15,7 +15,8 @@ import config from '#config'
 import {
   create_thread_from_session,
   check_thread_exists,
-  update_existing_thread
+  update_existing_thread,
+  verify_thread_directory_integrity
 } from '#libs-server/integrations/thread/create-from-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
@@ -593,6 +594,11 @@ const create_new_session_thread = async ({
     normalized_session,
     thread_result
   )
+
+  await verify_thread_directory_integrity({
+    thread_dir: thread_result.thread_dir,
+    expect_raw_data: !!raw_session
+  })
 
   // Timeline write succeeded -- safe to advance the provider's parse cursor.
   // If any step above threw, this call is skipped and the next invocation
