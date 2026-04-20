@@ -29,7 +29,7 @@ The Base system includes several PM2-managed background services that enable aut
 | `metadata-queue-processor` | Analyzes thread metadata using local Ollama models               | File-based queue    |
 | `transcription-service`    | Audio transcription processing                                   | On-demand           |
 
-All services are configured in `pm2.config.js`. The `cli-queue-worker` requires Redis.
+All services are configured in `pm2.config.mjs`. The `cli-queue-worker` requires Redis.
 
 ## Scheduled Command System
 
@@ -173,13 +173,13 @@ base database sync <name>             # Create/update table from schema
 Services run on multiple machines simultaneously. Machine-specific behavior is controlled by:
 
 - **Machine identity**: Resolved from `machine_registry` in config via hostname matching. See `libs-server/schedule/machine-identity.mjs`.
-- **Environment injection**: `pm2.config.js` detects the current machine and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
+- **Environment injection**: `pm2.config.mjs` detects the current machine and injects machine-specific env vars (SSL_ENABLED, SSL_KEY_PATH, SSL_CERT_PATH, SERVER_PORT).
 - **Schedule filtering**: Scheduled commands support a `run_on_machines` field (array of machine IDs). Commands without this field run on all machines; commands with it only run on listed machines.
 - **Machine info**: `base machine` CLI command shows current machine identity, platform, and registry config.
 
 ## Service Management
 
-All services are configured in `pm2.config.js`. Use `base-container.sh` for orchestration:
+All services are configured in `pm2.config.mjs`. Use `base-container.sh` for orchestration:
 
 ```bash
 base-container.sh start          # Start all PM2 services

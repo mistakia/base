@@ -10,7 +10,7 @@ BASE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 USER_BASE_DIR="${USER_BASE_DIRECTORY:-$(cd "$BASE_DIR/../.." && pwd)}"
 BASE_COMPOSE_DIR="$BASE_DIR/config/base-container"
 USER_COMPOSE_DIR="$USER_BASE_DIR/config/base-container"
-PM2_CONFIG="$BASE_DIR/pm2.config.js"
+PM2_CONFIG="$BASE_DIR/pm2.config.mjs"
 
 # Auto-detect machine
 detect_machine() {

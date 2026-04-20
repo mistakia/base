@@ -41,7 +41,7 @@ export async function run_classification({
 
   // Dynamic imports from base repo
   const { call_ollama } =
-    await import('#libs-server/content-review/ollama-client.mjs')
+    await import('#libs-server/llm/ollama-client.mjs')
   const { get_database_entity } =
     await import('#libs-server/database/get-database-entity.mjs')
   const { get_storage_adapter } =

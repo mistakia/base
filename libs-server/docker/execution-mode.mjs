@@ -22,7 +22,7 @@ export const DOCKER_CONTAINER_NAME = 'base-container'
  * to this path inside their respective containers.
  *
  * Set via CONTAINER_USER_BASE_PATH environment variable in docker-compose
- * and pm2.config.js.
+ * and pm2.config.mjs.
  */
 if (!process.env.CONTAINER_USER_BASE_PATH) {
   throw new Error('CONTAINER_USER_BASE_PATH environment variable is not set')

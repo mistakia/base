@@ -4,7 +4,7 @@ import path from 'path'
 import debug from 'debug'
 import frontMatter from 'front-matter'
 
-import { call_ollama } from './ollama-client.mjs'
+import { call_ollama } from '#libs-server/llm/ollama-client.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import { scan_file_content } from './pattern-scanner.mjs'

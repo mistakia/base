@@ -1,5 +1,5 @@
 import config from '#config'
-import { call_ollama } from './ollama-client.mjs'
+import { call_ollama } from '#libs-server/llm/ollama-client.mjs'
 import { run_opencode_cli } from './opencode-cli-client.mjs'
 
 const DEFAULT_MODEL = config.opencode?.default_model || 'ollama/qwen2.5:72b'
