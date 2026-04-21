@@ -1,8 +1,8 @@
 /**
  * Orchestrator unit tests covering dedupe, pagination, and post-permission
- * `total` semantics. Uses an in-memory SQLite fixture. Permission is stubbed
- * to allow all entity_uris so the orchestrator logic can be exercised in
- * isolation from the rules layer.
+ * `total` semantics (total === results.length). Uses an in-memory SQLite
+ * fixture. Permission is stubbed so the orchestrator logic can be exercised
+ * in isolation from the rules layer.
  */
 
 import { expect } from 'chai'
@@ -95,17 +95,16 @@ describe('search orchestrator', function () {
     expect(sources).to.include('thread_timeline')
   })
 
-  it('reports total as the filtered+ranked candidate count', async () => {
+  it('reports total as the post-permission result count', async () => {
     const result = await orchestrator_search({
       permission_filter_fn: allow_all,
       query: 'alpha',
       sources: ['entity']
     })
-    // allow_all permits everything, so total equals the number returned.
     expect(result.total).to.equal(result.results.length)
   })
 
-  it('reports total >= results.length so pagination can detect more pages', async () => {
+  it('total equals results.length even when pagination truncates', async () => {
     const result = await orchestrator_search({
       permission_filter_fn: allow_all,
       query: 'term',
@@ -113,8 +112,19 @@ describe('search orchestrator', function () {
       limit: 1,
       offset: 0
     })
-    expect(result.total).to.be.at.least(result.results.length)
-    expect(result.total).to.equal(2)
+    expect(result.total).to.equal(result.results.length)
+    expect(result.total).to.equal(1)
+  })
+
+  it('total drops when permission denies results on the page', async () => {
+    const deny_all = async () => []
+    const result = await orchestrator_search({
+      permission_filter_fn: deny_all,
+      query: 'alpha',
+      sources: ['entity']
+    })
+    expect(result.results).to.have.lengthOf(0)
+    expect(result.total).to.equal(0)
   })
 
   it('respects limit and offset for pagination', async () => {

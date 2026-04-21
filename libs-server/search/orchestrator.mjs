@@ -206,8 +206,5 @@ export async function search({
     matches: hit.matches
   }))
 
-  // `total` reflects the filtered+ranked candidate count so paginating
-  // callers know whether more pages exist. `results.length` may be smaller
-  // when permission denies entries in the current page.
-  return { query, total: ranked.length, results }
+  return { query, total: results.length, results }
 }

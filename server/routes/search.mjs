@@ -1,21 +1,14 @@
 import express from 'express'
 import debug from 'debug'
-import { safe_error_message } from '#server/utils/error-response.mjs'
 
+import { safe_error_message } from '#server/utils/error-response.mjs'
 import {
   attach_permission_context,
   check_permissions_batch
 } from '#server/middleware/permission/index.mjs'
 import { apply_redaction_interceptor } from '#server/middleware/permissions.mjs'
-import {
-  create_base_uri_from_path,
-  resolve_base_uri,
-  parse_base_uri
-} from '#libs-server/base-uri/base-uri-utilities.mjs'
-import { unified_search } from '#libs-server/search/unified-search-engine.mjs'
-import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
-import { search_file_contents_with_context } from '#libs-server/search/ripgrep-file-search.mjs'
-import { search_semantic } from '#libs-server/search/semantic-search-engine.mjs'
+import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilities.mjs'
+import { search as orchestrator_search } from '#libs-server/search/orchestrator.mjs'
 import {
   get_recent_entity_files,
   get_recent_files_config
@@ -25,13 +18,17 @@ import { load_search_config } from '#libs-server/search/search-config.mjs'
 const router = express.Router()
 const log = debug('api:search')
 
-/**
- * Parse and validate a positive integer query parameter
- *
- * @param {string} value - Query parameter value
- * @param {string} param_name - Parameter name for error messages
- * @returns {{ value: number|undefined, error: string|null }}
- */
+const VALID_SOURCES = [
+  'entity',
+  'thread_metadata',
+  'thread_timeline',
+  'path',
+  'semantic'
+]
+
+router.use(attach_permission_context())
+router.use(apply_redaction_interceptor())
+
 function parse_positive_int_param(value, param_name) {
   if (!value) return { value: undefined, error: null }
   const parsed = parseInt(value, 10)
@@ -44,95 +41,58 @@ function parse_positive_int_param(value, param_name) {
   return { value: parsed, error: null }
 }
 
-// Apply permission middleware to all search routes
-router.use(attach_permission_context())
-router.use(apply_redaction_interceptor())
-
-/**
- * Filter search results based on user permissions
- *
- * @param {Array<Object>} results - Search results to filter
- * @param {string|null} user_public_key - User's public key
- * @returns {Promise<Array<Object>>} Filtered results
- */
-async function filter_results_by_permission(results, user_public_key) {
-  if (!results || results.length === 0) {
-    return []
+function parse_non_negative_int_param(value, param_name) {
+  if (!value) return { value: undefined, error: null }
+  const parsed = parseInt(value, 10)
+  if (isNaN(parsed) || parsed < 0) {
+    return {
+      value: undefined,
+      error: `${param_name} must be a non-negative integer`
+    }
   }
+  return { value: parsed, error: null }
+}
 
-  // Collect all resource paths for batch permission checking
-  // Use pre-computed base_uri when available (semantic search), otherwise derive from absolute_path
-  const resource_paths = results
-    .map((result) => {
-      if (result.base_uri) {
-        return result.base_uri
-      }
-      if (result.absolute_path) {
-        return create_base_uri_from_path(result.absolute_path)
-      }
-      return null
-    })
-    .filter(Boolean)
-
-  if (resource_paths.length === 0) {
-    return results
-  }
-
-  // Batch check permissions
-  const permission_results = await check_permissions_batch({
-    user_public_key,
-    resource_paths
+function reject_repeated_param(res, param_name, raw_value) {
+  if (!Array.isArray(raw_value)) return false
+  res.status(400).json({
+    error: `Parameter '${param_name}' must be a single CSV value, not repeated. Use '?${param_name}=a,b' instead of '?${param_name}=a&${param_name}=b'.`,
+    param: param_name
   })
+  return true
+}
 
-  // Filter results based on permissions
-  const filtered_results = []
-
-  for (let i = 0; i < results.length; i++) {
-    const result = results[i]
-
-    if (!result.absolute_path) {
-      // If no absolute path, include the result (may be external or special)
-      filtered_results.push(result)
-      continue
-    }
-
-    const resource_path =
-      result.base_uri || create_base_uri_from_path(result.absolute_path)
-    const permission = permission_results[resource_path]
-
-    // Include result only if permission explicitly allows read access
-    if (permission?.read?.allowed === true) {
-      filtered_results.push(result)
-    }
-  }
-
-  return filtered_results
+function parse_csv_list(value) {
+  if (!value) return null
+  return value
+    .split(',')
+    .map((t) => t.trim())
+    .filter(Boolean)
 }
 
 /**
  * GET /api/search
  *
- * Search across files, threads, and entities
+ * Unified source-first search over entities and threads.
  *
  * Query parameters:
- *   - q (required): Search query
- *   - mode: 'paths' (fast, filename search) or 'full' (content search, default)
- *   - directory: Directory scope for paths mode
- *   - types: Comma-separated list of result types (files, threads, entities)
- *   - limit: Maximum results (default 20, max 100)
+ *   q       (required)  Search query.
+ *   source              CSV of sources (entity, thread_metadata, thread_timeline, path, semantic).
+ *                       Default is config.sources.enabled_by_default.
+ *   type                CSV of entity types to filter on (task, workflow, thread, ...).
+ *   tag                 CSV of tag base_uris.
+ *   status              CSV of status values.
+ *   path                Glob against entity_uri.
+ *   limit               Positive integer, capped by search.max_limit.
+ *   offset              Non-negative integer.
+ *
+ * All list params are CSV-only. Repeated-param form (?type=a&type=b) returns 400.
+ * Response shape: { query, total, results[] } where total === results.length.
  */
 router.get('/', async (req, res) => {
   try {
     const query = req.query.q
-    const mode = req.query.mode || 'full'
-    const directory = req.query.directory || null
-    const types_param = req.query.types
-    const limit_param = req.query.limit
-    const entity_types_param = req.query.entity_types
-    const tags_param = req.query.tags
-    const exclude_param = req.query.exclude
 
-    // Validate required query parameter
     if (!query || !query.trim()) {
       return res.status(400).json({
         error: 'Search query is required',
@@ -140,280 +100,72 @@ router.get('/', async (req, res) => {
       })
     }
 
-    // Validate mode
-    const valid_modes = ['paths', 'full', 'content', 'semantic']
-    if (!valid_modes.includes(mode)) {
-      return res.status(400).json({
-        error: `Invalid mode. Must be one of: ${valid_modes.join(', ')}`,
-        param: 'mode'
-      })
+    for (const param of ['source', 'type', 'tag', 'status', 'path']) {
+      if (reject_repeated_param(res, param, req.query[param])) return
     }
 
-    // Parse types
-    let types = ['files', 'threads', 'entities', 'directories']
-    if (types_param) {
-      types = types_param
-        .split(',')
-        .map((t) => t.trim())
-        .filter(Boolean)
-      const valid_types = ['files', 'threads', 'entities', 'directories']
-      const invalid_types = types.filter((t) => !valid_types.includes(t))
-      if (invalid_types.length > 0) {
+    const source_list = parse_csv_list(req.query.source)
+    if (source_list) {
+      const invalid = source_list.filter((s) => !VALID_SOURCES.includes(s))
+      if (invalid.length > 0) {
         return res.status(400).json({
-          error: `Invalid types: ${invalid_types.join(', ')}. Valid types: files, threads, entities, directories`,
-          param: 'types'
+          error: `Invalid source values: ${invalid.join(', ')}. Valid: ${VALID_SOURCES.join(', ')}`,
+          param: 'source'
         })
       }
     }
 
-    // Parse and validate limit
     const search_config = await load_search_config()
-    let limit = search_config.search?.default_limit || 20
+    const default_limit = search_config.search?.default_limit || 20
+    const max_limit = search_config.search?.max_limit || 100
 
-    if (limit_param) {
-      limit = parseInt(limit_param, 10)
-      if (isNaN(limit) || limit < 1) {
-        return res.status(400).json({
-          error: 'Limit must be a positive integer',
-          param: 'limit'
-        })
-      }
-      limit = Math.min(limit, search_config.search?.max_limit || 100)
+    const limit_result = parse_positive_int_param(req.query.limit, 'limit')
+    if (limit_result.error) {
+      return res.status(400).json({ error: limit_result.error, param: 'limit' })
     }
+    const limit = Math.min(limit_result.value || default_limit, max_limit)
 
-    // Parse comma-separated filter parameters
-    const parse_csv_param = (value) =>
-      value
-        ? value
-            .split(',')
-            .map((t) => t.trim())
-            .filter(Boolean)
-        : null
-
-    const entity_types = parse_csv_param(entity_types_param)
-    const tags = parse_csv_param(tags_param)
-    const exclude = parse_csv_param(exclude_param)
-
-    // When entity_types includes 'thread', ensure threads are in result types
-    if (
-      entity_types &&
-      entity_types.includes('thread') &&
-      !types.includes('threads')
-    ) {
-      types.push('threads')
-    }
-
-    log(
-      `Search request: q="${query}", mode=${mode}, types=${types.join(',')}, limit=${limit}`
+    const offset_result = parse_non_negative_int_param(
+      req.query.offset,
+      'offset'
     )
+    if (offset_result.error) {
+      return res
+        .status(400)
+        .json({ error: offset_result.error, param: 'offset' })
+    }
+    const offset = offset_result.value || 0
 
-    // Get user public key for permission checking
+    const filters = {
+      type: parse_csv_list(req.query.type),
+      tag: parse_csv_list(req.query.tag),
+      status: parse_csv_list(req.query.status),
+      path: req.query.path || null
+    }
+
     const user_public_key = req.user?.user_public_key || null
 
-    // Entity type filter helper (shared across all modes)
-    // For semantic results: filter by `type` field
-    // For content/file results: filter by first path segment
-    const apply_entity_types_filter = (results_list) => {
-      if (!entity_types || entity_types.length === 0) return results_list
-      const type_set = new Set(entity_types)
-      return results_list.filter((item) => {
-        // Semantic results have a `type` field
-        if (item.type && type_set.has(item.type)) return true
-        // File-based results: check first path segment
-        const path = item.file_path || item.relative_path || ''
-        const first_segment = path.replace(/^\.\//, '').split('/')[0]
-        return type_set.has(first_segment)
-      })
-    }
+    log(
+      'search q="%s" sources=%s type=%s limit=%d offset=%d',
+      query,
+      source_list ? source_list.join(',') : 'default',
+      filters.type ? filters.type.join(',') : 'any',
+      limit,
+      offset
+    )
 
-    // Exclude filter helper (shared across all modes)
-    const apply_exclude_filter = (results_list) => {
-      if (!exclude || exclude.length === 0) return results_list
-      const exclude_lower = exclude.map((t) => t.toLowerCase())
-      return results_list.filter((item) => {
-        const title = (item.title || '').toLowerCase()
-        const path = (item.file_path || item.relative_path || '').toLowerCase()
-        return !exclude_lower.some(
-          (term) => title.includes(term) || path.includes(term)
-        )
-      })
-    }
+    const response = await orchestrator_search({
+      query,
+      sources: source_list || undefined,
+      filters,
+      limit,
+      offset,
+      user_public_key
+    })
 
-    // Content search mode
-    if (mode === 'content') {
-      const content_results = await search_file_contents_with_context({
-        query,
-        directory,
-        max_results: limit
-      })
-
-      let filtered_content = await filter_results_by_permission(
-        content_results.map((r) => ({ ...r, absolute_path: r.file_path })),
-        user_public_key
-      )
-      filtered_content = apply_entity_types_filter(filtered_content)
-      filtered_content = apply_exclude_filter(filtered_content)
-
-      return res.json({
-        content_results: filtered_content,
-        ...(user_public_key ? { total: filtered_content.length } : {}),
-        mode: 'content'
-      })
-    }
-
-    // Semantic search mode
-    if (mode === 'semantic') {
-      const { results: semantic_results, available } = await search_semantic({
-        query,
-        limit
-      })
-
-      let filtered_semantic = await filter_results_by_permission(
-        semantic_results,
-        user_public_key
-      )
-      filtered_semantic = apply_entity_types_filter(filtered_semantic)
-      filtered_semantic = apply_exclude_filter(filtered_semantic)
-
-      return res.json({
-        semantic_results: filtered_semantic,
-        ...(user_public_key ? { total: filtered_semantic.length } : {}),
-        available,
-        mode: 'semantic'
-      })
-    }
-
-    // In full mode, query entities from SQLite directly instead of path-based scoring
-    let sqlite_entity_results = null
-    let unified_types = [...types]
-
-    if (mode === 'full' && types.includes('entities')) {
-      const sqlite_ready = embedded_index_manager.is_ready()
-
-      if (sqlite_ready) {
-        // Build SQLite filters for entity_types and tags
-        const sqlite_filters = []
-        if (entity_types && entity_types.length > 0) {
-          const non_thread_types = entity_types.filter((t) => t !== 'thread')
-          if (non_thread_types.length > 0) {
-            sqlite_filters.push({
-              column_id: 'type',
-              operator: 'IN',
-              value: non_thread_types
-            })
-          }
-        }
-        if (tags && tags.length > 0) {
-          sqlite_filters.push({
-            column_id: 'tags',
-            operator: 'IN',
-            value: tags
-          })
-        }
-
-        const per_type_limit = Math.max(1, Math.ceil(limit / types.length))
-
-        try {
-          const db_results = await embedded_index_manager.query_entities({
-            filters: sqlite_filters,
-            search: query,
-            limit: per_type_limit
-          })
-
-          // Only use SQLite results if we got matches; otherwise let unified_search handle entities
-          if (db_results.length > 0) {
-            // Shape results to match expected entity result format
-            sqlite_entity_results = db_results.map((entity) => {
-              const absolute_path = resolve_base_uri(entity.base_uri)
-              const file_path = parse_base_uri(entity.base_uri).path
-              return {
-                file_path,
-                absolute_path,
-                base_uri: entity.base_uri,
-                category: 'entity',
-                type: 'entity',
-                title: entity.title,
-                description: entity.description
-              }
-            })
-
-            // Remove entities from unified_search types since SQLite handles them
-            unified_types = unified_types.filter((t) => t !== 'entities')
-          }
-        } catch (err) {
-          log(
-            'SQLite entity search failed, falling back to path scoring: %s',
-            err.message
-          )
-          // Fall through to unified_search with entities included
-        }
-      }
-    }
-
-    // Perform default search (paths or full mode)
-    // Skip unified_search entirely when SQLite handled all requested types
-    const search_results =
-      mode === 'full' && unified_types.length === 0
-        ? {
-            mode: 'full',
-            query,
-            files: [],
-            threads: [],
-            entities: [],
-            directories: [],
-            total: 0
-          }
-        : await unified_search({
-            query,
-            mode,
-            directory,
-            types: unified_types,
-            limit
-          })
-
-    // Merge SQLite entity results if available
-    if (sqlite_entity_results) {
-      search_results.entities = sqlite_entity_results
-    }
-
-    const full_result_types = ['files', 'threads', 'entities', 'directories']
-
-    // Filter results by permission and apply exclude filter
-    if (mode === 'paths') {
-      search_results.results = apply_exclude_filter(
-        await filter_results_by_permission(
-          search_results.results,
-          user_public_key
-        )
-      )
-      if (user_public_key) {
-        search_results.total = search_results.results.length
-      } else {
-        delete search_results.total
-      }
-    } else {
-      for (const type of full_result_types) {
-        search_results[type] = apply_exclude_filter(
-          await filter_results_by_permission(
-            search_results[type],
-            user_public_key
-          )
-        )
-      }
-      if (user_public_key) {
-        search_results.total = full_result_types.reduce(
-          (sum, type) => sum + search_results[type].length,
-          0
-        )
-      } else {
-        delete search_results.total
-      }
-    }
-
-    res.json(search_results)
+    res.json(response)
   } catch (error) {
-    log('Search error:', error.message)
-
+    log('search error: %s', error.message)
     res.status(500).json({
       error: 'Search failed',
       message: safe_error_message(error)
@@ -424,11 +176,7 @@ router.get('/', async (req, res) => {
 /**
  * GET /api/search/recent
  *
- * Get recently modified entity files
- *
- * Query parameters:
- *   - hours: Time window in hours (default from config)
- *   - limit: Maximum results (default from config)
+ * Recently modified entity files (unchanged from legacy route).
  */
 router.get('/recent', async (req, res) => {
   try {
@@ -446,47 +194,47 @@ router.get('/recent', async (req, res) => {
     const limit = limit_result.value
 
     log(
-      `Recent files request: hours=${hours || 'default'}, limit=${limit || 'default'}`
+      'recent files hours=%s limit=%s',
+      hours || 'default',
+      limit || 'default'
     )
 
-    // Get user public key for permission checking
     const user_public_key = req.user?.user_public_key || null
 
-    // Get recent files from filesystem
     const recent_files = await get_recent_entity_files({ hours, limit })
-
-    // Convert to results with base URIs for permission checking
     const results_with_uris = recent_files.map((file) => ({
       ...file,
       base_uri: create_base_uri_from_path(file.absolute_path),
       modified: file.mtime.toISOString()
     }))
 
-    // Filter by permissions
-    const filtered_results = await filter_results_by_permission(
-      results_with_uris,
-      user_public_key
+    const resource_paths = results_with_uris.map((r) => r.base_uri)
+    const permission_results = await check_permissions_batch({
+      user_public_key,
+      resource_paths
+    })
+
+    const filtered = results_with_uris.filter(
+      (file) => permission_results[file.base_uri]?.read?.allowed === true
     )
 
-    // Get config for response
     const recent_config = await get_recent_files_config()
 
     res.json({
-      results: filtered_results.map((file) => ({
+      results: filtered.map((file) => ({
         file_path: file.relative_path,
         base_uri: file.base_uri,
         modified: file.modified,
         entity_type: file.entity_type
       })),
-      ...(user_public_key ? { total: filtered_results.length } : {}),
+      ...(user_public_key ? { total: filtered.length } : {}),
       config: {
         hours: hours || recent_config.hours,
         limit: limit || recent_config.limit
       }
     })
   } catch (error) {
-    log('Recent files error:', error.message)
-
+    log('recent files error: %s', error.message)
     res.status(500).json({
       error: 'Failed to get recent files',
       message: safe_error_message(error)
