@@ -381,7 +381,7 @@ describe('detect-thread-continuation', () => {
     })
 
     it('accepts relation matching the schema regex', async () => {
-      const relation_string = `continued_from [[user:thread/${source_id}.md]]`
+      const relation_string = `continued_from [[user:thread/${source_id}]]`
       expect(relation_string).to.match(THREAD_RELATION_REGEX)
 
       await update_thread_metadata({

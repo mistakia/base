@@ -454,7 +454,7 @@ export async function analyze_thread_relations({
   }
 
   for (const match of continuation_matches) {
-    const base_uri = `user:thread/${match.source_thread_id}.md`
+    const base_uri = `user:thread/${match.source_thread_id}`
     if (!is_valid_base_uri({ base_uri })) {
       log(`Skipping invalid continuation base_uri: ${base_uri}`)
       continue
