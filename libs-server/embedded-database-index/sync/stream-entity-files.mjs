@@ -24,7 +24,7 @@ const log = debug('embedded-index:sync:stream-entity-files')
  * @param {Object} params
  * @param {string[]} params.entity_directories - Directory names to scan (e.g., ['task', 'tag'])
  * @param {number} [params.chunk_size=100] - Number of entities per yielded chunk
- * @yields {Array<{ entity_properties: Object, file_info: Object }>}
+ * @yields {Array<{ entity_properties: Object, entity_content: string, formatted_entity_metadata: Object, file_info: Object }>}
  */
 export async function* stream_entity_file_chunks({
   entity_directories,
@@ -75,6 +75,7 @@ export async function* stream_entity_file_chunks({
 
         chunk.push({
           entity_properties: entity_result.entity_properties,
+          entity_content: entity_result.entity_content,
           formatted_entity_metadata: entity_result.formatted_entity_metadata,
           file_info
         })

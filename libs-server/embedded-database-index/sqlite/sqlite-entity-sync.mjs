@@ -561,6 +561,7 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
 
   const title = frontmatter?.title || null
   const description = frontmatter?.description || null
+  const body = typeof entity_data.body === 'string' ? entity_data.body : null
   const status = frontmatter?.status || null
   const priority = frontmatter?.priority || null
   const archived = frontmatter?.archived ? 1 : 0
@@ -576,15 +577,16 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
 
   const query = `
     INSERT INTO entities (
-      base_uri, entity_id, type, title, description, status, priority,
+      base_uri, entity_id, type, title, description, body, status, priority,
       archived, public_read, visibility_analyzed_at,
       user_public_key, created_at, updated_at, archived_at, frontmatter
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (base_uri) DO UPDATE SET
       entity_id = excluded.entity_id,
       type = excluded.type,
       title = excluded.title,
       description = excluded.description,
+      body = excluded.body,
       status = excluded.status,
       priority = excluded.priority,
       archived = excluded.archived,
@@ -603,6 +605,7 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
     type,
     title,
     description,
+    body,
     status,
     priority,
     archived,
@@ -740,7 +743,7 @@ export async function upsert_entities_batch({ entities }) {
     }
 
     const placeholders = chunk
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
 
     const parameters = chunk.flatMap((entity_data) => {
@@ -753,6 +756,7 @@ export async function upsert_entities_batch({ entities }) {
         type,
         frontmatter?.title || null,
         frontmatter?.description || null,
+        typeof entity_data.body === 'string' ? entity_data.body : null,
         frontmatter?.status || null,
         frontmatter?.priority || null,
         frontmatter?.archived ? 1 : 0,
@@ -773,7 +777,7 @@ export async function upsert_entities_batch({ entities }) {
     await execute_sqlite_run({
       query: `
         INSERT INTO entities (
-          base_uri, entity_id, type, title, description, status, priority,
+          base_uri, entity_id, type, title, description, body, status, priority,
           archived, public_read, visibility_analyzed_at,
           user_public_key, created_at, updated_at, archived_at, frontmatter
         ) VALUES ${placeholders}
@@ -782,6 +786,7 @@ export async function upsert_entities_batch({ entities }) {
           type = excluded.type,
           title = excluded.title,
           description = excluded.description,
+          body = excluded.body,
           status = excluded.status,
           priority = excluded.priority,
           archived = excluded.archived,

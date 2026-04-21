@@ -25,7 +25,8 @@ const log = debug('search:semantic')
 export async function search_semantic({
   query,
   limit = 20,
-  similarity_threshold = 0.3
+  similarity_threshold = 0.3,
+  signal
 }) {
   if (!query || !query.trim()) {
     return { results: [], available: true }
@@ -35,9 +36,13 @@ export async function search_semantic({
 
   let query_embedding
   try {
-    const { embeddings } = await embed_texts({ texts: [query] })
+    const { embeddings } = await embed_texts({ texts: [query], signal })
     query_embedding = embeddings[0]
   } catch (error) {
+    if (error.name === 'AbortError') {
+      log('Semantic search aborted')
+      return { results: [], available: true, aborted: true }
+    }
     log('Ollama unavailable for semantic search: %s', error.message)
     return { results: [], available: false }
   }

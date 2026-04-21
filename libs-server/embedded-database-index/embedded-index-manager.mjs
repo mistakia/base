@@ -57,6 +57,11 @@ import {
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
 import { backfill_git_activity_from_scratch } from './sync/sync-git-activity.mjs'
 import { resync_full_index } from './sync/resync-full-index.mjs'
+import { migrate_to_v8 } from './sqlite/migrations/migrate-to-v8.mjs'
+import {
+  sync_thread_timeline,
+  delete_thread_timeline
+} from './sync/sync-thread-timeline.mjs'
 import {
   get_index_metadata,
   set_index_metadata,
@@ -293,9 +298,34 @@ class EmbeddedIndexManager {
       }
 
       if (!schema_matches) {
-        log('Schema version mismatch, performing reset and rebuild')
-        await this._reset_and_rebuild_index_internal()
-        return
+        const stored_version_for_migration = await get_index_metadata({
+          key: INDEX_METADATA_KEYS.SCHEMA_VERSION
+        }).catch(() => null)
+
+        if (stored_version_for_migration == null) {
+          log('No stored schema version, performing reset and rebuild')
+          await this._reset_and_rebuild_index_internal()
+          return
+        }
+
+        log(
+          'Schema version mismatch (%s -> %s), attempting in-place migration',
+          stored_version_for_migration,
+          CURRENT_SCHEMA_VERSION
+        )
+        try {
+          await migrate_to_v8({
+            user_base_directory: config.user_base_directory
+          })
+          log('Migration succeeded, continuing startup sync')
+        } catch (error) {
+          log(
+            'Migration failed (%s), falling back to reset and rebuild',
+            error.message
+          )
+          await this._reset_and_rebuild_index_internal()
+          return
+        }
       }
 
       // Check if a previous rebuild was interrupted (e.g., OOM kill).
@@ -587,7 +617,8 @@ class EmbeddedIndexManager {
               })
 
             const unified_entity_data = extract_unified_entity_data({
-              entity_properties: entity_data
+              entity_properties: entity_data,
+              entity_content: entity.entity_content
             })
             const tag_base_uris = extract_tags_from_entity({
               entity_properties: entity_data
@@ -664,6 +695,7 @@ class EmbeddedIndexManager {
   async sync_entity({
     base_uri,
     entity_data,
+    entity_content = null,
     content_wikilink_targets,
     skip_ipc = false
   }) {
@@ -677,7 +709,8 @@ class EmbeddedIndexManager {
     const start = Date.now()
 
     const unified_entity_data = extract_unified_entity_data({
-      entity_properties: entity_data
+      entity_properties: entity_data,
+      entity_content
     })
     const tag_base_uris = extract_tags_from_entity({
       entity_properties: entity_data
@@ -889,6 +922,20 @@ class EmbeddedIndexManager {
           latest_event_data = await read_and_extract_latest_event({
             thread_id
           })
+
+          // Timeline changed (or first sync): refresh thread_timeline rows.
+          // The _timeline_sync_cache is the single source of truth for
+          // changedness; sync_thread_timeline does not maintain its own cache.
+          try {
+            await sync_thread_timeline({ thread_id })
+          } catch (timeline_error) {
+            log(
+              'Error syncing thread_timeline for %s: %s',
+              thread_id,
+              timeline_error.message
+            )
+          }
+
           this._timeline_sync_cache.set(thread_id, {
             size: timeline_size,
             mtime: timeline_mtime,
@@ -1002,6 +1049,8 @@ class EmbeddedIndexManager {
     if (this.sqlite_ready) {
       try {
         await delete_thread_from_sqlite({ thread_id })
+        await delete_thread_timeline({ thread_id })
+        this._timeline_sync_cache.delete(thread_id)
         if (this._metrics) this._metrics.increment('thread_deletes')
       } catch (error) {
         log('Error removing thread from SQLite: %s', error.message)
