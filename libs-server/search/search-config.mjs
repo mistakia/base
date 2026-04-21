@@ -28,6 +28,16 @@ const DEFAULT_CONFIG = {
     include_hidden: false,
     follow_symlinks: false
   },
+  sources: {
+    enabled_by_default: [
+      'entity',
+      'thread_metadata',
+      'thread_timeline',
+      'path'
+    ],
+    per_source_candidate_cap: 100,
+    semantic_timeout_ms: 2000
+  },
   result_types: {
     files: {
       enabled: true,
@@ -35,8 +45,7 @@ const DEFAULT_CONFIG = {
     },
     threads: {
       enabled: true,
-      search_metadata: true,
-      search_timeline: true
+      search_metadata: true
     },
     entities: {
       enabled: true,
