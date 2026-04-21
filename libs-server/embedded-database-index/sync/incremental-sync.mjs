@@ -108,6 +108,7 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
     await index_manager.sync_entity({
       base_uri,
       entity_data: result.entity_properties,
+      entity_content: result.entity_content,
       content_wikilink_targets: extract_content_wikilinks_from_entity_metadata({
         formatted_entity_metadata: result.formatted_entity_metadata
       })

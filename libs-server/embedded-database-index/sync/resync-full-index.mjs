@@ -126,6 +126,7 @@ export async function resync_full_index({ index_manager }) {
           const result = await index_manager.sync_entity({
             base_uri,
             entity_data: entity.entity_properties,
+            entity_content: entity.entity_content,
             content_wikilink_targets:
               extract_content_wikilinks_from_entity_metadata({
                 formatted_entity_metadata: entity.formatted_entity_metadata

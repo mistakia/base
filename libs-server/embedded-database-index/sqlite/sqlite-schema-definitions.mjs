@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS entities (
   type TEXT NOT NULL,
   title TEXT,
   description TEXT,
+  body TEXT,
   status TEXT,
   priority TEXT,
   archived INTEGER DEFAULT 0,
@@ -228,14 +229,20 @@ const ENTITY_RELATIONS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_relations_type ON entity_relations(relation_type)'
 ]
 
+// FTS5 tokenizer: treat hyphen and underscore as in-word characters so
+// queries like `nano-community` tokenize equivalently to `nano community`.
+const FTS_TOKENIZER = `tokenize = 'unicode61 tokenchars ''-_'''`
+
 // FTS5 virtual tables for full-text search
 const ENTITIES_FTS_TABLE = `
 CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
   base_uri UNINDEXED,
   title,
   description,
+  body,
   content=entities,
-  content_rowid=rowid
+  content_rowid=rowid,
+  ${FTS_TOKENIZER}
 )
 `
 
@@ -245,25 +252,49 @@ CREATE VIRTUAL TABLE IF NOT EXISTS threads_fts USING fts5(
   title,
   short_description,
   content=threads,
-  content_rowid=rowid
+  content_rowid=rowid,
+  ${FTS_TOKENIZER}
+)
+`
+
+const THREAD_TIMELINE_TABLE_SCHEMA = `
+CREATE TABLE IF NOT EXISTS thread_timeline (
+  thread_id TEXT NOT NULL,
+  turn_index INTEGER NOT NULL,
+  turn_text TEXT NOT NULL,
+  first_timestamp TEXT,
+  PRIMARY KEY (thread_id, turn_index)
+)
+`
+
+const THREAD_TIMELINE_INDEXES = [
+  'CREATE INDEX IF NOT EXISTS idx_thread_timeline_thread ON thread_timeline(thread_id)'
+]
+
+const THREAD_TIMELINE_FTS_TABLE = `
+CREATE VIRTUAL TABLE IF NOT EXISTS thread_timeline_fts USING fts5(
+  turn_text,
+  content=thread_timeline,
+  content_rowid=rowid,
+  ${FTS_TOKENIZER}
 )
 `
 
 // Triggers to keep FTS tables in sync with content tables
 const ENTITIES_FTS_TRIGGERS = [
   `CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
-    INSERT INTO entities_fts(rowid, base_uri, title, description)
-    VALUES (new.rowid, new.base_uri, new.title, new.description);
+    INSERT INTO entities_fts(rowid, base_uri, title, description, body)
+    VALUES (new.rowid, new.base_uri, new.title, new.description, new.body);
   END`,
   `CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
-    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description)
-    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description);
+    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, body)
+    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.body);
   END`,
   `CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
-    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description)
-    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description);
-    INSERT INTO entities_fts(rowid, base_uri, title, description)
-    VALUES (new.rowid, new.base_uri, new.title, new.description);
+    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, body)
+    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.body);
+    INSERT INTO entities_fts(rowid, base_uri, title, description, body)
+    VALUES (new.rowid, new.base_uri, new.title, new.description, new.body);
   END`
 ]
 
@@ -283,6 +314,36 @@ const THREADS_FTS_TRIGGERS = [
     VALUES (new.rowid, new.thread_id, new.title, new.short_description);
   END`
 ]
+
+const THREAD_TIMELINE_FTS_TRIGGERS = [
+  `CREATE TRIGGER IF NOT EXISTS thread_timeline_ai AFTER INSERT ON thread_timeline BEGIN
+    INSERT INTO thread_timeline_fts(rowid, turn_text)
+    VALUES (new.rowid, new.turn_text);
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS thread_timeline_ad AFTER DELETE ON thread_timeline BEGIN
+    INSERT INTO thread_timeline_fts(thread_timeline_fts, rowid, turn_text)
+    VALUES ('delete', old.rowid, old.turn_text);
+  END`,
+  `CREATE TRIGGER IF NOT EXISTS thread_timeline_au AFTER UPDATE ON thread_timeline BEGIN
+    INSERT INTO thread_timeline_fts(thread_timeline_fts, rowid, turn_text)
+    VALUES ('delete', old.rowid, old.turn_text);
+    INSERT INTO thread_timeline_fts(rowid, turn_text)
+    VALUES (new.rowid, new.turn_text);
+  END`
+]
+
+// Named schema constants for use by migration functions that need to
+// recreate FTS5 tables and triggers atomically.
+export const SCHEMA_SQL = {
+  ENTITIES_FTS_TABLE,
+  THREADS_FTS_TABLE,
+  THREAD_TIMELINE_TABLE_SCHEMA,
+  THREAD_TIMELINE_INDEXES,
+  THREAD_TIMELINE_FTS_TABLE,
+  ENTITIES_FTS_TRIGGERS,
+  THREADS_FTS_TRIGGERS,
+  THREAD_TIMELINE_FTS_TRIGGERS
+}
 
 export async function create_sqlite_schema() {
   log('Creating SQLite schema')
@@ -392,6 +453,22 @@ export async function create_sqlite_schema() {
     }
     log('Threads FTS triggers created')
 
+    await execute_sqlite_run({ query: THREAD_TIMELINE_TABLE_SCHEMA })
+    log('Thread timeline table created')
+
+    for (const index_sql of THREAD_TIMELINE_INDEXES) {
+      await execute_sqlite_run({ query: index_sql })
+    }
+    log('Thread timeline indexes created')
+
+    await execute_sqlite_run({ query: THREAD_TIMELINE_FTS_TABLE })
+    log('Thread timeline FTS5 table created')
+
+    for (const trigger_sql of THREAD_TIMELINE_FTS_TRIGGERS) {
+      await execute_sqlite_run({ query: trigger_sql })
+    }
+    log('Thread timeline FTS triggers created')
+
     log('SQLite schema creation complete')
   } catch (error) {
     log('Error creating SQLite schema: %s', error.message)
@@ -410,10 +487,23 @@ export async function drop_sqlite_schema() {
     await execute_sqlite_run({ query: 'DROP TRIGGER IF EXISTS threads_ai' })
     await execute_sqlite_run({ query: 'DROP TRIGGER IF EXISTS threads_ad' })
     await execute_sqlite_run({ query: 'DROP TRIGGER IF EXISTS threads_au' })
+    await execute_sqlite_run({
+      query: 'DROP TRIGGER IF EXISTS thread_timeline_ai'
+    })
+    await execute_sqlite_run({
+      query: 'DROP TRIGGER IF EXISTS thread_timeline_ad'
+    })
+    await execute_sqlite_run({
+      query: 'DROP TRIGGER IF EXISTS thread_timeline_au'
+    })
 
     // Drop FTS tables
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS entities_fts' })
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS threads_fts' })
+    await execute_sqlite_run({
+      query: 'DROP TABLE IF EXISTS thread_timeline_fts'
+    })
+    await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS thread_timeline' })
 
     // Drop data tables
     await execute_sqlite_run({ query: 'DROP TABLE IF EXISTS entity_relations' })

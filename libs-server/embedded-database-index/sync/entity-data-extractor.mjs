@@ -88,11 +88,13 @@ export function extract_tag_index_data({ entity_properties, file_info = {} }) {
  *
  * @param {Object} params - Parameters
  * @param {Object} params.entity_properties - Entity frontmatter properties
+ * @param {string} [params.entity_content] - Raw entity body text (frontmatter stripped)
  * @param {Object} [params.file_info] - File metadata
  * @returns {Object|null} Entity data for unified table sync
  */
 export function extract_unified_entity_data({
   entity_properties,
+  entity_content = null,
   file_info = {}
 }) {
   if (!entity_properties) {
@@ -112,6 +114,7 @@ export function extract_unified_entity_data({
     base_uri,
     entity_id,
     type,
+    body: typeof entity_content === 'string' ? entity_content : null,
     frontmatter: entity_properties,
     user_public_key: entity_properties.user_public_key
   }

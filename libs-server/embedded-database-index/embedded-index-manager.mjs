@@ -587,7 +587,8 @@ class EmbeddedIndexManager {
               })
 
             const unified_entity_data = extract_unified_entity_data({
-              entity_properties: entity_data
+              entity_properties: entity_data,
+              entity_content: entity.entity_content
             })
             const tag_base_uris = extract_tags_from_entity({
               entity_properties: entity_data
@@ -664,6 +665,7 @@ class EmbeddedIndexManager {
   async sync_entity({
     base_uri,
     entity_data,
+    entity_content = null,
     content_wikilink_targets,
     skip_ipc = false
   }) {
@@ -677,7 +679,8 @@ class EmbeddedIndexManager {
     const start = Date.now()
 
     const unified_entity_data = extract_unified_entity_data({
-      entity_properties: entity_data
+      entity_properties: entity_data,
+      entity_content
     })
     const tag_base_uris = extract_tags_from_entity({
       entity_properties: entity_data
