@@ -31,8 +31,9 @@ export function create_sync_metrics({ get_sqlite_ready, get_cache_size }) {
   let dump_interval = null
   let heartbeat_interval = null
 
-  function increment(name) {
-    counters.set(name, (counters.get(name) || 0) + 1)
+  function increment(name, delta = 1) {
+    if (delta === 0) return
+    counters.set(name, (counters.get(name) || 0) + delta)
   }
 
   function timing(name, duration_ms) {
@@ -87,7 +88,7 @@ export function create_sync_metrics({ get_sqlite_ready, get_cache_size }) {
 
     const uptime_s = Math.round((Date.now() - start_time) / 1000)
 
-    const line = `[metrics] entity_syncs=${c('entity_syncs')} entity_deletes=${c('entity_deletes')} thread_syncs=${c('thread_syncs')} thread_deletes=${c('thread_deletes')} reconciliations=${c('reconciliations')} errors=${c('sync_errors')} avg_entity_sync_ms=${avg('entity_sync')} avg_thread_sync_ms=${avg('thread_sync')} avg_reconciliation_ms=${avg('reconciliation')} cache_hits=${c('cache_hits')} cache_misses=${c('cache_misses')} cache_size=${g('cache_size')} watcher_events=${c('watcher_events_total')} fsevents_errors=${c('fsevents_errors')} watcher_entity_read_failed=${c('watcher_entity_read_failed')} watcher_entity_sync_failed=${c('watcher_entity_sync_failed')} watcher_entity_delete_failed=${c('watcher_entity_delete_failed')} watcher_thread_sync_failed=${c('watcher_thread_sync_failed')} watcher_thread_delete_failed=${c('watcher_thread_delete_failed')} reconciliation_files=${g('reconciliation_files')} ipc_syncs=${c('ipc_syncs_processed')} ipc_deletes=${c('ipc_deletes_processed')} ipc_timeouts=${c('ipc_timeouts')} queue_depth=${g('ipc_queue_depth')} overflow_events=${c('ipc_overflow_events')} uptime_s=${uptime_s}`
+    const line = `[metrics] entity_syncs=${c('entity_syncs')} entity_deletes=${c('entity_deletes')} thread_syncs=${c('thread_syncs')} thread_deletes=${c('thread_deletes')} reconciliations=${c('reconciliations')} reconcile_missing=${c('reconcile_missing')} reconcile_drift=${c('reconcile_drift')} reconcile_orphans=${c('reconcile_orphans')} reconcile_errors=${c('reconcile_errors')} parse_unexpected_failures=${c('parse_unexpected_failures')} errors=${c('sync_errors')} avg_entity_sync_ms=${avg('entity_sync')} avg_thread_sync_ms=${avg('thread_sync')} avg_reconciliation_ms=${avg('reconciliation')} cache_hits=${c('cache_hits')} cache_misses=${c('cache_misses')} cache_size=${g('cache_size')} watcher_events=${c('watcher_events_total')} fsevents_errors=${c('fsevents_errors')} watcher_entity_read_failed=${c('watcher_entity_read_failed')} watcher_entity_sync_failed=${c('watcher_entity_sync_failed')} watcher_entity_delete_failed=${c('watcher_entity_delete_failed')} watcher_thread_sync_failed=${c('watcher_thread_sync_failed')} watcher_thread_delete_failed=${c('watcher_thread_delete_failed')} reconciliation_files=${g('reconciliation_files')} ipc_syncs=${c('ipc_syncs_processed')} ipc_deletes=${c('ipc_deletes_processed')} ipc_timeouts=${c('ipc_timeouts')} queue_depth=${g('ipc_queue_depth')} overflow_events=${c('ipc_overflow_events')} uptime_s=${uptime_s}`
 
     console.error(line)
 

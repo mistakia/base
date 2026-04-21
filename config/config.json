@@ -158,5 +158,11 @@
     "container_ready_timeout_ms": 60000,
     "default_deny_bash_patterns": ["curl *", "wget *", "nc *", "ssh *", "sudo *", "docker *", "rm -rf *"],
     "browser_home": ""
+  },
+  "embedded_index": {
+    "reconcile": {
+      "interval_ms": 180000,
+      "startup_delay_ms": 30000
+    }
   }
 }
