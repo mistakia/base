@@ -40,11 +40,15 @@ export async function discover_repositories({ repo_path }) {
 
       // Parse submodule status line
       // Format: [+-U ]<sha> <path> [(description)]
-      // - prefix: not initialized
+      // - prefix: not initialized or inactive (submodule.<path>.active=false)
       // + prefix: checked out to different commit than recorded
       // U prefix: merge conflicts
       // space prefix: normal
-      const match = line.match(/^[\s+-U]?([a-f0-9]+)\s+(\S+)/)
+      if (line.startsWith('-')) {
+        log('Skipping inactive submodule: %s', line.trim())
+        continue
+      }
+      const match = line.match(/^[\s+U]?([a-f0-9]+)\s+(\S+)/)
 
       if (match) {
         const [, , submodule_path] = match

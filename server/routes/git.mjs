@@ -261,8 +261,25 @@ const get_known_repositories = async () => {
   // Detect git submodules by parsing .gitmodules files (fast, no shell command)
   try {
     const submodule_paths = await parse_gitmodules_recursive(user_base_dir)
-    for (const relative_path of submodule_paths) {
-      potential_repos.push(path.join(user_base_dir, relative_path))
+    const active_checks = await Promise.all(
+      submodule_paths.map(async (relative_path) => {
+        try {
+          const { stdout } = await execute_shell_command(
+            `git config --get submodule.${relative_path}.active`,
+            { cwd: user_base_dir }
+          )
+          return stdout.trim() !== 'false'
+        } catch {
+          return true
+        }
+      })
+    )
+    for (let i = 0; i < submodule_paths.length; i++) {
+      if (!active_checks[i]) {
+        log(`Skipping inactive submodule: ${submodule_paths[i]}`)
+        continue
+      }
+      potential_repos.push(path.join(user_base_dir, submodule_paths[i]))
     }
   } catch (error) {
     log('Failed to parse .gitmodules:', error.message)
