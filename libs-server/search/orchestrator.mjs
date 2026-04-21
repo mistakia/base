@@ -167,7 +167,9 @@ export async function search({
   filters = {},
   limit = 20,
   offset = 0,
-  user_public_key = null
+  user_public_key = null,
+  // Injected for tests; production callers should rely on the default.
+  permission_filter_fn = permission_filter
 }) {
   const config = await load_search_config()
   const sources_config = config.sources || {}
@@ -201,7 +203,7 @@ export async function search({
   const ranked = rank({ hits: with_metadata })
 
   const page = ranked.slice(offset, offset + limit)
-  const permitted = await permission_filter({ hits: page, user_public_key })
+  const permitted = await permission_filter_fn({ hits: page, user_public_key })
 
   const results = permitted.map((hit) => ({
     entity_uri: hit.entity_uri,
