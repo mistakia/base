@@ -71,9 +71,12 @@ export const execute_command = async ({
     if (execution_mode === 'container') {
       // Container mode: spawn via docker exec
       // Translate host path to container path (host user-base -> CONTAINER_USER_BASE_PATH)
-      // Use bash -c to run the command string inside the container
-      // detached: true ensures the process survives if the parent is killed
+      // Wrap with `timeout` so the in-container kernel enforces the deadline
+      // even if the outer docker-exec client's SIGKILL fails to propagate
+      // (e.g. a blocked child reparents to container PID 1).
       const container_cwd = translate_to_container_path(working_directory)
+      const timeout_seconds = Math.max(1, Math.ceil(timeout_ms / 1000))
+      const kill_after_seconds = Math.max(1, Math.ceil(KILL_TIMEOUT_MS / 1000))
       child = spawn(
         'docker',
         [
@@ -83,6 +86,9 @@ export const execute_command = async ({
           '-w',
           container_cwd,
           DOCKER_CONTAINER_NAME,
+          'timeout',
+          `--kill-after=${kill_after_seconds}s`,
+          `${timeout_seconds}s`,
           'bash',
           '-c',
           command
