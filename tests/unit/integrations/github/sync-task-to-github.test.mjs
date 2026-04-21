@@ -59,7 +59,7 @@ describe('sync_task_to_github', () => {
 
   it('should skip when entity has no github_project_item_id', async () => {
     const result = await sync_task_to_github({
-      entity_properties: { external_id: 'github:test-owner/test-repo#42' },
+      entity_properties: { external_id: 'github:test-owner/test-repo:42' },
       changed_fields: { status: 'In Progress' }
     })
 
@@ -72,7 +72,7 @@ describe('sync_task_to_github', () => {
 
     const result = await sync_task_to_github({
       entity_properties: {
-        external_id: 'github:test-owner/test-repo#42',
+        external_id: 'github:test-owner/test-repo:42',
         github_project_item_id: 'PVTI_test'
       },
       changed_fields: { status: 'In Progress' }
@@ -98,7 +98,7 @@ describe('sync_task_to_github', () => {
 
     const result = await sync_task_to_github({
       entity_properties: {
-        external_id: 'github:unknown-owner/unknown-repo#42',
+        external_id: 'github:unknown-owner/unknown-repo:42',
         github_project_item_id: 'PVTI_test'
       },
       changed_fields: { status: 'In Progress' }

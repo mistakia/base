@@ -10,14 +10,14 @@ const TERMINAL_STATUSES = ['Completed', 'Abandoned']
 
 /**
  * Parse a github external_id into owner, repo, and issue number.
- * Expected format: "github:owner/repo#123"
+ * Expected format: "github:owner/repo:123"
  */
 function parse_github_external_id(external_id) {
   if (!external_id || !external_id.startsWith('github:')) {
     return null
   }
 
-  const match = external_id.slice(7).match(/^(.+?)\/(.+?)#(\d+)$/)
+  const match = external_id.slice(7).match(/^(.+?)\/(.+?):(\d+)$/)
   if (!match) {
     return null
   }
