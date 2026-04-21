@@ -59,6 +59,10 @@ import { backfill_git_activity_from_scratch } from './sync/sync-git-activity.mjs
 import { resync_full_index } from './sync/resync-full-index.mjs'
 import { migrate_to_v8 } from './sqlite/migrations/migrate-to-v8.mjs'
 import {
+  sync_thread_timeline,
+  delete_thread_timeline
+} from './sync/sync-thread-timeline.mjs'
+import {
   get_index_metadata,
   set_index_metadata,
   set_repo_sync_state,
@@ -918,6 +922,20 @@ class EmbeddedIndexManager {
           latest_event_data = await read_and_extract_latest_event({
             thread_id
           })
+
+          // Timeline changed (or first sync): refresh thread_timeline rows.
+          // The _timeline_sync_cache is the single source of truth for
+          // changedness; sync_thread_timeline does not maintain its own cache.
+          try {
+            await sync_thread_timeline({ thread_id })
+          } catch (timeline_error) {
+            log(
+              'Error syncing thread_timeline for %s: %s',
+              thread_id,
+              timeline_error.message
+            )
+          }
+
           this._timeline_sync_cache.set(thread_id, {
             size: timeline_size,
             mtime: timeline_mtime,
@@ -1031,6 +1049,8 @@ class EmbeddedIndexManager {
     if (this.sqlite_ready) {
       try {
         await delete_thread_from_sqlite({ thread_id })
+        await delete_thread_timeline({ thread_id })
+        this._timeline_sync_cache.delete(thread_id)
         if (this._metrics) this._metrics.increment('thread_deletes')
       } catch (error) {
         log('Error removing thread from SQLite: %s', error.message)
