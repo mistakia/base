@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { search_all_file_paths } from './ripgrep-file-search.mjs'
+import { list_file_paths } from '#libs-server/files/list-file-paths.mjs'
 
 const log = debug('search:file-path-cache')
 
@@ -36,7 +36,7 @@ export function invalidate() {
 export async function get_file_paths(options = {}) {
   // Only use cache for unscoped (full) searches
   if (options.directory) {
-    return search_all_file_paths(options)
+    return list_file_paths(options)
   }
 
   if (valid && cached_paths) {
@@ -52,7 +52,7 @@ export async function get_file_paths(options = {}) {
 
   log('Cache miss, fetching file paths...')
   const fetch_generation = generation
-  fetch_promise = search_all_file_paths(options)
+  fetch_promise = list_file_paths(options)
 
   try {
     const result = await fetch_promise
