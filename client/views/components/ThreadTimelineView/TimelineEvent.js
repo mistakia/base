@@ -41,6 +41,14 @@ const TimelineEvent = ({
       working_directory
     })
     should_hide_event = processed.is_empty
+  } else if (timeline_event?.type === 'thinking') {
+    // Signature-only thinking blocks (cached/redacted replays) arrive with
+    // empty content -- there is nothing to reveal on expand, so hide them.
+    const processed = process_message_content({
+      content: timeline_event.content,
+      working_directory
+    })
+    should_hide_event = processed.is_empty
   }
 
   if (should_hide_event) return null
