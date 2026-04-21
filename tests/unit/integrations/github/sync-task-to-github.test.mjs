@@ -93,6 +93,21 @@ describe('sync_task_to_github', () => {
     expect(result.skipped_reason).to.equal('could not parse external_id')
   })
 
+  it('should reject hash-separator format (canonical uses colon)', async () => {
+    // Canonical format per system/text/external-data-sync.md is
+    // "github:{owner}/{repo}:{issue_number}". Guard against parser regression
+    // to a hash separator, which silently broke sync between e89cb6ff and b35db0e8.
+    const result = await sync_task_to_github({
+      entity_properties: {
+        external_id: 'github:test-owner/test-repo#42',
+        github_project_item_id: 'PVTI_test'
+      },
+      changed_fields: { status: 'In Progress' }
+    })
+
+    expect(result.skipped_reason).to.equal('could not parse external_id')
+  })
+
   it('should skip when no project config is found', async () => {
     config.github.projects = {}
 
