@@ -95,7 +95,8 @@ export async function embed_texts({
   texts,
   model = DEFAULT_EMBEDDING_MODEL,
   base_url,
-  timeout_ms = DEFAULT_EMBEDDING_TIMEOUT_MS
+  timeout_ms = DEFAULT_EMBEDDING_TIMEOUT_MS,
+  signal
 }) {
   if (!texts || texts.length === 0) {
     throw new Error('texts array is required and must not be empty')
@@ -109,6 +110,17 @@ export async function embed_texts({
   const controller = new AbortController()
   const timeout_id = setTimeout(() => controller.abort(), timeout_ms)
 
+  // Relay external abort (orchestrator timeout) into the fetch controller.
+  let external_abort_handler = null
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort()
+    } else {
+      external_abort_handler = () => controller.abort()
+      signal.addEventListener('abort', external_abort_handler, { once: true })
+    }
+  }
+
   try {
     const response = await fetch(url, {
       method: 'POST',
@@ -118,6 +130,9 @@ export async function embed_texts({
     })
 
     clearTimeout(timeout_id)
+    if (external_abort_handler && signal) {
+      signal.removeEventListener('abort', external_abort_handler)
+    }
     const duration_ms = Date.now() - start_time
 
     if (!response.ok) {
@@ -136,7 +151,15 @@ export async function embed_texts({
     return { embeddings: data.embeddings, duration_ms }
   } catch (error) {
     clearTimeout(timeout_id)
+    if (external_abort_handler && signal) {
+      signal.removeEventListener('abort', external_abort_handler)
+    }
     if (error.name === 'AbortError') {
+      if (signal?.aborted) {
+        const abort_error = new Error('Ollama embedding aborted')
+        abort_error.name = 'AbortError'
+        throw abort_error
+      }
       throw new Error(`Ollama embedding timed out after ${timeout_ms}ms`)
     }
     throw error
