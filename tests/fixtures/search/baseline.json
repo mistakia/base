@@ -1,0 +1,12 @@
+{
+  "description": "p95 baseline (ms) for search performance suite. Regenerate with `bun test:file ./tests/integration/search-performance.test.mjs --update-baseline` after intentional performance changes. CI fails when a scenario's p95 exceeds baseline * 1.20.",
+  "regression_tolerance": 0.20,
+  "scenarios": {
+    "entity_one_token": 30,
+    "entity_four_tokens": 60,
+    "thread_timeline_two_tokens": 80,
+    "default_multi_source": 200,
+    "multi_source_with_filters": 220,
+    "semantic_unavailable": 1000
+  }
+}
