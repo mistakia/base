@@ -15,150 +15,104 @@ import {
   get_search_total,
   get_recent_files,
   get_recent_files_loading,
-  get_search_mode,
-  get_semantic_available,
   get_chips
 } from '@core/search'
 
 import './CommandPalette.styl'
 
-/**
- * Get display type from file path or category
- */
-const get_type_label = (item) => {
-  if (item.category === 'thread') {
-    return 'thread'
-  }
-  if (item.category === 'directory') {
-    return 'dir'
-  }
-  if (item.category === 'recent' || item.category === 'entity') {
-    // Extract entity type from path (e.g., "task/foo.md" -> "task")
-    const file_path = item.file_path || item.relative_path
-    if (file_path) {
-      const first_segment = file_path.split('/')[0]
-      return first_segment || item.entity_type || 'entity'
+const encode_path = (p) =>
+  p
+    .split('/')
+    .map((segment) => encodeURIComponent(segment))
+    .join('/')
+
+function url_for_result(result) {
+  if (!result) return null
+  if (result.entity_uri) {
+    if (result.entity_uri.startsWith('user:thread/')) {
+      return `/thread/${result.entity_uri.slice('user:thread/'.length)}`
     }
-    return item.entity_type || 'entity'
+    const entity_path = result.entity_uri.replace(/^(?:user|sys):/, '')
+    return `/${encode_path(entity_path)}`
   }
-  if (item.category === 'file') {
-    // Get file extension
-    const ext = item.file_path?.split('.').pop()
-    return ext || 'file'
+  const fallback_path = result.relative_path || result.file_path
+  if (fallback_path) return `/${encode_path(fallback_path)}`
+  return null
+}
+
+function type_label(result) {
+  if (result.type) return result.type
+  if (result.category === 'recent') {
+    const file_path = result.file_path || result.relative_path || ''
+    return file_path.split('/')[0] || result.entity_type || 'entity'
   }
-  return item.category || 'file'
+  return 'entity'
+}
+
+function display_text(result) {
+  if (result.title) return result.title
+  if (result.entity_uri) return result.entity_uri
+  return result.relative_path || result.file_path || ''
 }
 
 const ResultItem = ({ item, is_selected, onClick }) => {
-  const get_display_text = () => {
-    if (item.category === 'thread') {
-      return item.title || item.working_directory || item.thread_id?.slice(0, 8)
-    }
-    return item.file_path || item.relative_path
-  }
-
+  const matches = Array.isArray(item.matches) ? item.matches : []
   return (
     <div
       className={`command-palette__result-item ${is_selected ? 'command-palette__result-item--selected' : ''}`}
       onClick={onClick}>
-      <span className='command-palette__result-type'>
-        {get_type_label(item)}
-      </span>
-      <span className='command-palette__result-text'>{get_display_text()}</span>
+      <div className='command-palette__result-header'>
+        <span className='command-palette__result-type'>
+          {type_label(item)}
+        </span>
+        <span className='command-palette__result-text'>
+          {display_text(item)}
+        </span>
+        {typeof item.score === 'number' && (
+          <span className='command-palette__result-score'>
+            {item.score.toFixed(2)}
+          </span>
+        )}
+      </div>
+      {matches.length > 0 && (
+        <div className='command-palette__result-matches'>
+          {matches.map((match, i) => (
+            <div key={i} className='command-palette__match'>
+              <span className='command-palette__match-source'>
+                {match.source}
+              </span>
+              {match.snippet && (
+                <span className='command-palette__match-snippet'>
+                  {match.snippet.slice(0, 160)}
+                  {match.snippet.length > 160 ? '…' : ''}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
 
 ResultItem.propTypes = {
   item: PropTypes.shape({
+    entity_uri: PropTypes.string,
+    type: PropTypes.string,
+    title: PropTypes.string,
+    score: PropTypes.number,
+    matches: PropTypes.array,
     category: PropTypes.string,
     file_path: PropTypes.string,
     relative_path: PropTypes.string,
-    thread_id: PropTypes.string,
-    title: PropTypes.string,
-    working_directory: PropTypes.string,
     entity_type: PropTypes.string
   }).isRequired,
   is_selected: PropTypes.bool,
   onClick: PropTypes.func
 }
 
-const ContentResultItem = ({ item, is_selected, onClick }) => (
-  <div
-    className={`command-palette__result-item command-palette__result-item--content ${is_selected ? 'command-palette__result-item--selected' : ''}`}
-    onClick={onClick}>
-    <div className='command-palette__content-header'>
-      <span className='command-palette__result-type'>
-        {item.relative_path?.split('.').pop() || 'file'}
-      </span>
-      <span className='command-palette__result-text'>{item.relative_path}</span>
-      <span className='command-palette__line-number'>:{item.line_number}</span>
-    </div>
-    <div className='command-palette__content-context'>
-      {item.context_before?.map((line, i) => (
-        <div key={`before-${i}`} className='command-palette__context-line'>
-          {line}
-        </div>
-      ))}
-      <div className='command-palette__match-line'>{item.match_line}</div>
-      {item.context_after?.map((line, i) => (
-        <div key={`after-${i}`} className='command-palette__context-line'>
-          {line}
-        </div>
-      ))}
-    </div>
-  </div>
-)
-
-ContentResultItem.propTypes = {
-  item: PropTypes.object.isRequired,
-  is_selected: PropTypes.bool,
-  onClick: PropTypes.func
-}
-
-const SemanticResultItem = ({ item, is_selected, onClick }) => (
-  <div
-    className={`command-palette__result-item command-palette__result-item--semantic ${is_selected ? 'command-palette__result-item--selected' : ''}`}
-    onClick={onClick}>
-    <div className='command-palette__semantic-header'>
-      <span className='command-palette__result-type'>
-        {item.type || 'entity'}
-      </span>
-      <span className='command-palette__result-text'>
-        {item.title || item.base_uri}
-      </span>
-      <span className='command-palette__similarity-score'>
-        {Math.round((item.similarity_score || 0) * 100)}%
-      </span>
-    </div>
-    {item.description && (
-      <div className='command-palette__semantic-description'>
-        {item.description}
-      </div>
-    )}
-    {item.chunk_text && (
-      <div className='command-palette__semantic-chunk'>
-        {item.chunk_text.slice(0, 200)}
-        {item.chunk_text.length > 200 ? '...' : ''}
-      </div>
-    )}
-  </div>
-)
-
-SemanticResultItem.propTypes = {
-  item: PropTypes.object.isRequired,
-  is_selected: PropTypes.bool,
-  onClick: PropTypes.func
-}
-
 const SearchChip = ({ chip, on_remove }) => {
-  const variant_class =
-    chip.type === 'mode'
-      ? 'command-palette__chip--mode'
-      : chip.type === 'exclude'
-        ? 'command-palette__chip--exclude'
-        : 'command-palette__chip--operator'
-
+  const variant_class = 'command-palette__chip--operator'
   return (
     <span className={`command-palette__chip ${variant_class}`}>
       <span className='command-palette__chip-label'>{chip.label}</span>
@@ -177,12 +131,6 @@ SearchChip.propTypes = {
   on_remove: PropTypes.func.isRequired
 }
 
-const encode_path = (p) =>
-  p
-    .split('/')
-    .map((segment) => encodeURIComponent(segment))
-    .join('/')
-
 const CommandPalette = () => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
@@ -196,12 +144,9 @@ const CommandPalette = () => {
   const total = useSelector(get_search_total)
   const recent_files = useSelector(get_recent_files)
   const recent_files_loading = useSelector(get_recent_files_loading)
-  const search_mode = useSelector(get_search_mode)
-  const semantic_available = useSelector(get_semantic_available)
   const chips = useSelector(get_chips)
 
-  // Determine what to display: recent files (when no query/filters) or search results
-  const has_filter_chips = chips.some((c) => c.type !== 'mode')
+  const has_filter_chips = chips.size > 0
   const show_recent_files = (!query || query.length < 2) && !has_filter_chips
   const display_items = useMemo(
     () =>
@@ -225,34 +170,15 @@ const CommandPalette = () => {
 
   const navigate_to_item = useCallback(
     (item, new_tab = false) => {
-      // Only close palette when navigating in current tab
-      // Keep palette open when opening in new tab
-      if (!new_tab) {
-        handle_close()
-      }
+      if (!new_tab) handle_close()
 
-      let url
-      if (item.category === 'thread') {
-        url = `/thread/${item.thread_id}`
-      } else if (item.category === 'semantic' && item.base_uri) {
-        const entity_path = item.base_uri.replace(/^user:/, '')
-        url = `/${encode_path(entity_path)}`
-      } else if (item.category === 'content' && item.relative_path) {
-        const line_suffix = item.line_number ? `#L${item.line_number}` : ''
-        url = `/${encode_path(item.relative_path)}${line_suffix}`
+      const url = url_for_result(item)
+      if (!url) return
+
+      if (new_tab) {
+        window.open(url, '_blank')
       } else {
-        const file_path = item.file_path || item.relative_path
-        if (file_path) {
-          url = `/${encode_path(file_path)}`
-        }
-      }
-
-      if (url) {
-        if (new_tab) {
-          window.open(url, '_blank')
-        } else {
-          navigate(url)
-        }
+        navigate(url)
       }
     },
     [navigate, handle_close]
@@ -284,7 +210,6 @@ const CommandPalette = () => {
           event.preventDefault()
           const selected_item = display_items.get(selected_index)
           if (selected_item) {
-            // Command/Ctrl+Enter opens in new tab
             const new_tab = event.metaKey || event.ctrlKey
             navigate_to_item(selected_item, new_tab)
           }
@@ -315,23 +240,17 @@ const CommandPalette = () => {
     ]
   )
 
-  // Reset selected index to 0 when display items change
   useEffect(() => {
     if (display_items.size > 0 && selected_index >= display_items.size) {
       dispatch(search_actions.set_selected_index(0))
     }
   }, [display_items, selected_index, dispatch])
 
-  // Focus input when dialog opens
   useEffect(() => {
-    if (is_open && input_ref.current) {
-      input_ref.current.focus()
-    }
+    if (is_open && input_ref.current) input_ref.current.focus()
   }, [is_open])
 
-  if (!is_open) {
-    return null
-  }
+  if (!is_open) return null
 
   return (
     <Dialog
@@ -364,7 +283,7 @@ const CommandPalette = () => {
           placeholder={
             chips.size > 0
               ? 'Filter...'
-              : 'Search... (# content, ? semantic, type: tag: in: -exclude)'
+              : 'Search... (? semantic, type: tag: status: source: path:)'
           }
           value={query}
           onChange={handle_query_change}
@@ -380,11 +299,6 @@ const CommandPalette = () => {
         )}
         {!show_recent_files && total > 0 && (
           <span className='command-palette__result-count'>{total}</span>
-        )}
-        {search_mode === 'semantic' && !semantic_available && (
-          <span className='command-palette__mode-status'>
-            Ollama unavailable
-          </span>
         )}
       </Box>
 
@@ -407,36 +321,14 @@ const CommandPalette = () => {
       {!show_recent_files && display_items.size > 0 && (
         <Box className='command-palette__results'>
           <List disablePadding>
-            {display_items.map((item, index) => {
-              if (item.category === 'content') {
-                return (
-                  <ContentResultItem
-                    key={`content-${item.relative_path}-${item.line_number}-${index}`}
-                    item={item}
-                    is_selected={index === selected_index}
-                    onClick={() => navigate_to_item(item)}
-                  />
-                )
-              }
-              if (item.category === 'semantic') {
-                return (
-                  <SemanticResultItem
-                    key={`semantic-${item.base_uri}-${item.chunk_index}-${index}`}
-                    item={item}
-                    is_selected={index === selected_index}
-                    onClick={() => navigate_to_item(item)}
-                  />
-                )
-              }
-              return (
-                <ResultItem
-                  key={`${item.category}-${item.file_path || item.thread_id}-${index}`}
-                  item={item}
-                  is_selected={index === selected_index}
-                  onClick={() => navigate_to_item(item)}
-                />
-              )
-            })}
+            {display_items.map((item, index) => (
+              <ResultItem
+                key={`${item.entity_uri || item.file_path || 'item'}-${index}`}
+                item={item}
+                is_selected={index === selected_index}
+                onClick={() => navigate_to_item(item)}
+              />
+            ))}
           </List>
         </Box>
       )}

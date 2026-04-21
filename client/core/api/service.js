@@ -358,24 +358,16 @@ export const api = {
     return { url }
   },
 
-  // Search operations
-  search({
-    q,
-    mode = 'full',
-    types,
-    directory,
-    limit,
-    entity_types,
-    tags,
-    exclude
-  }) {
-    const params = { q, mode }
-    if (types) params.types = types
-    if (directory) params.directory = directory
+  // Search operations — source-first API. All list params are CSV strings.
+  search({ q, source, type, tag, status, path, limit, offset }) {
+    const params = { q }
+    if (source) params.source = source
+    if (type) params.type = type
+    if (tag) params.tag = tag
+    if (status) params.status = status
+    if (path) params.path = path
     if (limit) params.limit = limit
-    if (entity_types) params.entity_types = entity_types
-    if (tags) params.tags = tags
-    if (exclude) params.exclude = exclude
+    if (offset) params.offset = offset
     const url = `${API_URL}/search?${qs.stringify(params)}`
     return { url }
   },

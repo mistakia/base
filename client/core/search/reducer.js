@@ -1,4 +1,4 @@
-import { Record, List, Map } from 'immutable'
+import { Record, List } from 'immutable'
 
 import { search_action_types } from './actions.js'
 
@@ -16,10 +16,22 @@ const OPERATOR_PATTERNS = [
     label_fn: (v) => `tag: ${v}`
   },
   {
-    regex: /^(?:in|dir):(\S+)$/,
-    key: 'in',
+    regex: /^status:(\S+)$/,
+    key: 'status',
     chip_type: 'operator',
-    label_fn: (v) => `in: ${v}`
+    label_fn: (v) => `status: ${v}`
+  },
+  {
+    regex: /^source:(\S+)$/,
+    key: 'source',
+    chip_type: 'operator',
+    label_fn: (v) => `source: ${v}`
+  },
+  {
+    regex: /^path:(\S+)$/,
+    key: 'path',
+    chip_type: 'operator',
+    label_fn: (v) => `path: ${v}`
   }
 ]
 
@@ -27,19 +39,20 @@ function parse_query_input(raw_query, existing_chips = new List()) {
   let chips = existing_chips
   let query = raw_query
 
-  // Mode detection: # or ? at start followed by at least one more character
-  if (query.length >= 2 && (query[0] === '#' || query[0] === '?')) {
-    // Only add and strip if no mode chip already exists
-    if (!chips.some((c) => c.type === 'mode')) {
-      const mode = query[0] === '#' ? 'content' : 'semantic'
-      const label = query[0] === '#' ? 'Content' : 'Semantic'
-      chips = chips.push({ type: 'mode', key: 'mode', value: mode, label })
+  // `?` prefix opts into the semantic source — the only mode-style shortcut
+  // retained after the source-first refactor.
+  if (query.length >= 2 && query[0] === '?') {
+    if (!chips.some((c) => c.key === 'source')) {
+      chips = chips.push({
+        type: 'operator',
+        key: 'source',
+        value: 'semantic',
+        label: 'source: semantic'
+      })
       query = query.slice(1).trimStart()
     }
   }
 
-  // Operator parsing: split on spaces, convert completed tokens (not the last
-  // token unless the raw query ends with a space, indicating the user pressed space)
   const tokens = query.split(/\s+/)
   const remaining_tokens = []
   const ends_with_space = query.length > 0 && query[query.length - 1] === ' '
@@ -48,10 +61,7 @@ function parse_query_input(raw_query, existing_chips = new List()) {
     const token = tokens[i]
     if (!token) continue
 
-    // Only convert a token to a chip if it's not the last token, or if
-    // the query ends with a space (user committed the token with space)
     const is_committed = i < tokens.length - 1 || ends_with_space
-
     if (!is_committed) {
       remaining_tokens.push(token)
       continue
@@ -59,7 +69,6 @@ function parse_query_input(raw_query, existing_chips = new List()) {
 
     let matched = false
 
-    // Check value operators (type:, tag:, in:, dir:)
     for (const pattern of OPERATOR_PATTERNS) {
       const match = token.match(pattern.regex)
       if (match) {
@@ -78,32 +87,11 @@ function parse_query_input(raw_query, existing_chips = new List()) {
       }
     }
 
-    // Check exclude terms: -term at word boundary
-    if (!matched && token.match(/^-(\S+)$/) && token.length > 1) {
-      const value = token.slice(1)
-      const chip = {
-        type: 'exclude',
-        key: 'exclude',
-        value,
-        label: `-${value}`
-      }
-      if (!chips.some((c) => c.key === chip.key && c.value === chip.value)) {
-        chips = chips.push(chip)
-      }
-      matched = true
-    }
-
-    if (!matched) {
-      remaining_tokens.push(token)
-    }
+    if (!matched) remaining_tokens.push(token)
   }
 
   let result_query = remaining_tokens.join(' ')
-  // Preserve trailing space so the controlled input doesn't eat spaces.
-  // The trailing space is what the user just typed to commit a token.
-  if (ends_with_space && remaining_tokens.length > 0) {
-    result_query += ' '
-  }
+  if (ends_with_space && remaining_tokens.length > 0) result_query += ' '
   return { chips, query: result_query }
 }
 
@@ -111,15 +99,7 @@ const SearchState = new Record({
   is_open: false,
   query: '',
   chips: new List(),
-  results: new Map({
-    files: new List(),
-    threads: new List(),
-    entities: new List(),
-    directories: new List()
-  }),
-  content_results: new List(),
-  semantic_results: new List(),
-  semantic_available: true,
+  results: new List(),
   is_loading: false,
   error: null,
   selected_index: 0,
@@ -143,97 +123,42 @@ export function search_reducer(state = new SearchState(), { payload, type }) {
         payload.query,
         state.get('chips')
       )
-      return state.merge({
-        query,
-        chips,
-        selected_index: 0
-      })
+      return state.merge({ query, chips, selected_index: 0 })
     }
 
     case search_action_types.REMOVE_CHIP: {
       const chips = state.get('chips').delete(payload.index)
-      return state.merge({
-        chips,
-        selected_index: 0
-      })
+      return state.merge({ chips, selected_index: 0 })
     }
 
     case search_action_types.SEARCH_REQUEST:
-      return state.merge({
-        is_loading: true,
-        error: null
-      })
+      return state.merge({ is_loading: true, error: null })
 
     case search_action_types.SEARCH_SUCCESS: {
-      const results = payload.results || {}
-      const mode = results.mode
-
-      if (mode === 'content') {
-        return state.merge({
-          is_loading: false,
-          content_results: new List(results.content_results || []),
-          total: results.total || 0,
-          selected_index: 0
-        })
-      }
-
-      if (mode === 'semantic') {
-        return state.merge({
-          is_loading: false,
-          semantic_results: new List(results.semantic_results || []),
-          semantic_available: results.available !== false,
-          total: results.total || 0,
-          selected_index: 0
-        })
-      }
-
+      const response = payload.results || {}
       return state.merge({
         is_loading: false,
-        results: new Map({
-          files: new List(results.files || []),
-          threads: new List(results.threads || []),
-          entities: new List(results.entities || []),
-          directories: new List(results.directories || [])
-        }),
-        total: results.total || 0,
+        results: new List(response.results || []),
+        total: response.total || 0,
         selected_index: 0
       })
     }
 
     case search_action_types.SEARCH_FAILURE:
-      return state.merge({
-        is_loading: false,
-        error: payload.error
-      })
+      return state.merge({ is_loading: false, error: payload.error })
 
     case search_action_types.CLEAR_SEARCH:
       return state.merge({
         query: '',
         chips: new List(),
-        results: new Map({
-          files: new List(),
-          threads: new List(),
-          entities: new List(),
-          directories: new List()
-        }),
-        content_results: new List(),
-        semantic_results: new List(),
-        semantic_available: true,
+        results: new List(),
         selected_index: 0,
         total: 0
       })
 
     case search_action_types.CLEAR_SEARCH_RESULTS:
       return state.merge({
-        results: new Map({
-          files: new List(),
-          threads: new List(),
-          entities: new List(),
-          directories: new List()
-        }),
-        content_results: new List(),
-        semantic_results: new List(),
-        semantic_available: true,
+        results: new List(),
         selected_index: 0,
         total: 0
       })

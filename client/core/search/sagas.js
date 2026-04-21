@@ -14,49 +14,35 @@ import {
   get_selected_index,
   get_recent_files_loaded,
   get_recent_files_loading,
-  get_search_mode,
   get_search_query,
   get_active_types,
   get_active_tags,
-  get_active_directory,
-  get_exclude_terms
+  get_active_statuses,
+  get_active_sources,
+  get_active_path
 } from './selectors.js'
 import { api, api_request } from '@core/api/service.js'
 import { get_app } from '@core/app/selectors.js'
 
-// Debounced search saga
 function* handle_search_query({ payload }) {
-  const { query, mode = 'full', types, limit } = payload
+  const { query, source, type, tag, status, path, limit, offset } = payload
 
-  const has_filters =
-    (payload.entity_types && payload.entity_types.length > 0) ||
-    (payload.tags && payload.tags.length > 0) ||
-    payload.directory ||
-    (payload.exclude && payload.exclude.length > 0)
+  const has_filters = Boolean(source || type || tag || status || path)
 
   if ((!query || query.trim().length < 2) && !has_filters) {
-    yield put(
-      search_actions.search_success({
-        files: [],
-        threads: [],
-        entities: [],
-        total: 0
-      })
-    )
+    yield put(search_actions.search_success({ query: '', total: 0, results: [] }))
     return
   }
 
   try {
-    const params = { q: query, mode }
-    if (types) params.types = types.join(',')
+    const params = { q: query }
+    if (source) params.source = source
+    if (type) params.type = type
+    if (tag) params.tag = tag
+    if (status) params.status = status
+    if (path) params.path = path
     if (limit) params.limit = limit
-    if (payload.entity_types && payload.entity_types.length > 0)
-      params.entity_types = payload.entity_types.join(',')
-    if (payload.tags && payload.tags.length > 0)
-      params.tags = payload.tags.join(',')
-    if (payload.directory) params.directory = payload.directory
-    if (payload.exclude && payload.exclude.length > 0)
-      params.exclude = payload.exclude.join(',')
+    if (offset) params.offset = offset
 
     const app = yield select(get_app)
     const token = app.get('user_token')
@@ -69,45 +55,36 @@ function* handle_search_query({ payload }) {
   }
 }
 
-// Handle query change with debounce
 function* handle_query_change() {
-  const search_mode = yield select(get_search_mode)
   const current_query = yield select(get_search_query)
   const active_types = yield select(get_active_types)
   const active_tags = yield select(get_active_tags)
-  const active_directory = yield select(get_active_directory)
-  const exclude_terms = yield select(get_exclude_terms)
+  const active_statuses = yield select(get_active_statuses)
+  const active_sources = yield select(get_active_sources)
+  const active_path = yield select(get_active_path)
 
   const has_filters =
     active_types.length > 0 ||
     active_tags.length > 0 ||
-    active_directory ||
-    exclude_terms.length > 0
+    active_statuses.length > 0 ||
+    active_sources.length > 0 ||
+    Boolean(active_path)
 
   if ((current_query && current_query.trim().length >= 2) || has_filters) {
-    const api_mode = search_mode === 'default' ? 'full' : search_mode
-    const search_payload = { query: current_query || '', mode: api_mode }
-
-    if (active_types.length > 0) {
-      const non_thread_types = active_types.filter((t) => t !== 'thread')
-      const types = []
-      if (non_thread_types.length > 0) types.push('entities')
-      if (active_types.includes('thread')) types.push('threads')
-      if (non_thread_types.length > 0)
-        search_payload.entity_types = non_thread_types
-      search_payload.types = types
-    }
-    if (active_tags.length > 0) search_payload.tags = active_tags
-    if (active_directory) search_payload.directory = active_directory
-    if (exclude_terms.length > 0) search_payload.exclude = exclude_terms
-
+    const search_payload = { query: current_query || '' }
+    if (active_types.length > 0) search_payload.type = active_types.join(',')
+    if (active_tags.length > 0) search_payload.tag = active_tags.join(',')
+    if (active_statuses.length > 0)
+      search_payload.status = active_statuses.join(',')
+    if (active_sources.length > 0)
+      search_payload.source = active_sources.join(',')
+    if (active_path) search_payload.path = active_path
     yield put(search_actions.search(search_payload))
   } else {
     yield put(search_actions.clear_results())
   }
 }
 
-// Fetch recent files when palette opens
 function* handle_fetch_recent_files() {
   try {
     const app = yield select(get_app)
@@ -121,7 +98,6 @@ function* handle_fetch_recent_files() {
   }
 }
 
-// Handle palette open - fetch recent files if not loaded or loading
 function* handle_palette_open() {
   const recent_files_loaded = yield select(get_recent_files_loaded)
   const recent_files_loading = yield select(get_recent_files_loading)
@@ -131,41 +107,44 @@ function* handle_palette_open() {
   }
 }
 
-// Navigate to selected result
+const encode_path = (p) =>
+  p
+    .split('/')
+    .map((s) => encodeURIComponent(s))
+    .join('/')
+
+function navigation_url_for(result) {
+  if (!result) return null
+
+  // Flat search result — navigate by entity_uri. Threads go to the thread
+  // route; everything else resolves to its on-disk path under user:/sys:.
+  if (result.entity_uri) {
+    if (result.entity_uri.startsWith('user:thread/')) {
+      const thread_id = result.entity_uri.slice('user:thread/'.length)
+      return `/thread/${thread_id}`
+    }
+    const entity_path = result.entity_uri.replace(/^(?:user|sys):/, '')
+    return `/${encode_path(entity_path)}`
+  }
+
+  // Recent files retain the legacy shape with relative_path / file_path.
+  const fallback_path = result.relative_path || result.file_path
+  if (fallback_path) return `/${encode_path(fallback_path)}`
+
+  return null
+}
+
 export function* navigate_to_result() {
   const results = yield select(get_all_results_flat)
   const selected_index = yield select(get_selected_index)
   const selected = results.get(selected_index)
 
-  if (!selected) return
+  const url = navigation_url_for(selected)
+  if (!url) return
 
-  // Close palette
   yield put(search_actions.close())
-
-  // Encode path segments individually to preserve slashes
-  const encode_path = (p) =>
-    p
-      .split('/')
-      .map((s) => encodeURIComponent(s))
-      .join('/')
-
-  // Navigate based on result type
-  if (selected.category === 'thread') {
-    yield put(push(`/thread/${selected.thread_id}`))
-  } else if (selected.category === 'semantic' && selected.base_uri) {
-    const entity_path = selected.base_uri.replace(/^user:/, '')
-    yield put(push(`/${encode_path(entity_path)}`))
-  } else if (selected.category === 'content' && selected.relative_path) {
-    const line_suffix = selected.line_number ? `#L${selected.line_number}` : ''
-    yield put(push(`/${encode_path(selected.relative_path)}${line_suffix}`))
-  } else if (selected.file_path) {
-    yield put(push(`/${encode_path(selected.file_path)}`))
-  }
+  yield put(push(url))
 }
-
-// ============================================================================
-// Watchers
-// ============================================================================
 
 export function* watch_search_query_change() {
   yield debounce(300, search_action_types.SET_SEARCH_QUERY, handle_query_change)
@@ -192,10 +171,6 @@ export function* watch_fetch_recent_files() {
     handle_fetch_recent_files
   )
 }
-
-// ============================================================================
-// Root Saga Export
-// ============================================================================
 
 export const search_sagas = [
   fork(watch_search_query_change),

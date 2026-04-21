@@ -17,7 +17,7 @@ export const get_search_query = createSelector(
 
 export const get_search_results = createSelector(
   [get_search_state],
-  (search_state) => search_state?.get('results')
+  (search_state) => search_state?.get('results') || EMPTY_LIST
 )
 
 export const get_is_search_loading = createSelector(
@@ -42,7 +42,7 @@ export const get_search_total = createSelector(
 
 export const get_recent_files = createSelector(
   [get_search_state],
-  (search_state) => search_state?.get('recent_files') || new List()
+  (search_state) => search_state?.get('recent_files') || EMPTY_LIST
 )
 
 export const get_recent_files_loading = createSelector(
@@ -60,86 +60,33 @@ export const get_chips = createSelector(
   (search_state) => search_state?.get('chips') || new List()
 )
 
-export const get_search_mode = createSelector([get_chips], (chips) => {
-  const mode_chip = chips.find((c) => c.type === 'mode')
-  return mode_chip ? mode_chip.value : 'default'
-})
-
-export const get_active_types = createSelector([get_chips], (chips) =>
-  chips
-    .filter((c) => c.key === 'type')
+function collect_chip_values(chips, key) {
+  return chips
+    .filter((c) => c.key === key)
     .map((c) => c.value)
     .toArray()
+}
+
+export const get_active_types = createSelector([get_chips], (chips) =>
+  collect_chip_values(chips, 'type')
 )
 
 export const get_active_tags = createSelector([get_chips], (chips) =>
-  chips
-    .filter((c) => c.key === 'tag')
-    .map((c) => c.value)
-    .toArray()
+  collect_chip_values(chips, 'tag')
 )
 
-export const get_active_directory = createSelector([get_chips], (chips) => {
-  const dir_chip = chips.find((c) => c.key === 'in')
-  return dir_chip ? dir_chip.value : null
+export const get_active_statuses = createSelector([get_chips], (chips) =>
+  collect_chip_values(chips, 'status')
+)
+
+export const get_active_sources = createSelector([get_chips], (chips) =>
+  collect_chip_values(chips, 'source')
+)
+
+export const get_active_path = createSelector([get_chips], (chips) => {
+  const chip = chips.find((c) => c.key === 'path')
+  return chip ? chip.value : null
 })
 
-export const get_exclude_terms = createSelector([get_chips], (chips) =>
-  chips
-    .filter((c) => c.type === 'exclude')
-    .map((c) => c.value)
-    .toArray()
-)
-
-export const get_content_results = createSelector(
-  [get_search_state],
-  (search_state) => search_state?.get('content_results') || EMPTY_LIST
-)
-
-export const get_semantic_results = createSelector(
-  [get_search_state],
-  (search_state) => search_state?.get('semantic_results') || EMPTY_LIST
-)
-
-export const get_semantic_available = createSelector(
-  [get_search_state],
-  (search_state) => search_state?.get('semantic_available') !== false
-)
-
-// Get all results flattened into a single list for keyboard navigation
-// Mode-aware: returns appropriate results based on active search mode
-export const get_all_results_flat = createSelector(
-  [
-    get_search_results,
-    get_search_mode,
-    get_content_results,
-    get_semantic_results
-  ],
-  (results, search_mode, content_results, semantic_results) => {
-    if (search_mode === 'content') {
-      return content_results.map((item) => ({ ...item, category: 'content' }))
-    }
-
-    if (search_mode === 'semantic') {
-      return semantic_results.map((item) => ({ ...item, category: 'semantic' }))
-    }
-
-    if (!results) return EMPTY_LIST
-
-    // Helper to add category to items from a list
-    const add_category = (list, category) =>
-      list && list.size > 0
-        ? list.toArray().map((item) => ({ ...item, category }))
-        : []
-
-    // Combine results in display order
-    const categorized = [
-      ...add_category(results.get('entities'), 'entity'),
-      ...add_category(results.get('threads'), 'thread'),
-      ...add_category(results.get('directories'), 'directory'),
-      ...add_category(results.get('files'), 'file')
-    ]
-
-    return new List(categorized)
-  }
-)
+// Flat results list — results already carry `type`, `title`, `matches`.
+export const get_all_results_flat = get_search_results
