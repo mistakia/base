@@ -13,6 +13,7 @@ import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { extract_content_wikilinks_from_entity_metadata } from './entity-data-extractor.mjs'
 import { checkpoint_sqlite } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
@@ -57,7 +58,7 @@ function is_file_not_found_error(error) {
  * - MISSING_TYPE: Files with frontmatter but no entity type
  * - PARSE_ERROR: Malformed YAML frontmatter (user data issue, not infrastructure)
  */
-const EXPECTED_FAILURE_CODES = new Set([
+export const EXPECTED_FAILURE_CODES = new Set([
   'NO_FRONTMATTER',
   'MISSING_TYPE',
   'PARSE_ERROR'
@@ -69,7 +70,7 @@ const EXPECTED_FAILURE_CODES = new Set([
  * @param {Object} result - The read_entity_from_filesystem result
  * @returns {boolean}
  */
-function is_expected_failure(result) {
+export function is_expected_failure(result) {
   if (result.error_code) {
     return EXPECTED_FAILURE_CODES.has(result.error_code)
   }
@@ -101,7 +102,14 @@ async function sync_entity_file({ file_path, repo_path, index_manager }) {
         return { action: 'skipped', reason: result.error }
       }
 
-      log('Failed to read entity %s: %s', file_path, result.error)
+      console.error(
+        '[index-sync:error] parse failed base_uri=%s err=%s',
+        base_uri,
+        result.error
+      )
+      if (embedded_index_manager._metrics) {
+        embedded_index_manager._metrics.increment('parse_unexpected_failures')
+      }
       return { action: 'failed', error: result.error }
     }
 

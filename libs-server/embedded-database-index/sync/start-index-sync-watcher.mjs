@@ -17,6 +17,7 @@ import {
   extract_entity_type_from_path
 } from './index-file-watcher.mjs'
 import { extract_thread_id_from_path } from './index-sync-filters.mjs'
+import { is_expected_failure } from './incremental-sync.mjs'
 import { extract_content_wikilinks_from_entity_metadata } from './entity-data-extractor.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import {
@@ -145,7 +146,15 @@ export function start_index_sync_watcher({
         })
 
         if (!result.success) {
-          log('Failed to read entity %s: %s', file_path, result.error)
+          if (is_expected_failure(result)) {
+            log('Skipped non-entity file %s: %s', file_path, result.error)
+            return
+          }
+          console.error(
+            '[index-sync:error] parse failed base_uri=%s err=%s',
+            base_uri,
+            result.error
+          )
           record_failure(
             'watcher_entity_read_failed',
             `entity_read base_uri=${base_uri} path=${file_path} reason=${result.error}`,
