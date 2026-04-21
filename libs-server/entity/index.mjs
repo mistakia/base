@@ -18,9 +18,6 @@ export {
   delete_entity_from_git
 } from './git/index.mjs'
 
-// Re-export search functions (file-based)
-export { default as search_entities } from './search/search-entities.mjs'
-
 // Re-export relationship functions (base_uri-based)
 export {
   validate_base_uri_exists,
