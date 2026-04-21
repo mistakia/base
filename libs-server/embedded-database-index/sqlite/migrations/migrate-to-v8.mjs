@@ -14,8 +14,6 @@
  *      migration leaves the prior version pinned so the next startup retries.
  */
 
-import fs from 'fs/promises'
-import path from 'path'
 import debug from 'debug'
 
 import {
@@ -31,8 +29,7 @@ import {
 import { SCHEMA_SQL } from '../sqlite-schema-definitions.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
-import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
-import { sync_thread_timeline } from '#libs-server/embedded-database-index/sync/sync-thread-timeline.mjs'
+import { sync_all_thread_timelines } from '#libs-server/embedded-database-index/sync/sync-thread-timeline.mjs'
 
 const log = debug('embedded-index:migrations:v8')
 
@@ -151,52 +148,6 @@ async function populate_body_column() {
   return { total: rows.length, updated }
 }
 
-async function populate_thread_timeline_all({ user_base_directory }) {
-  const thread_base_directory = get_thread_base_directory({
-    user_base_directory
-  })
-
-  let entries
-  try {
-    entries = await fs.readdir(thread_base_directory, { withFileTypes: true })
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      log('Thread base directory missing, skipping timeline population')
-      return { total: 0, synced: 0 }
-    }
-    throw error
-  }
-
-  const thread_ids = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-
-  log('Populating thread_timeline for %d threads', thread_ids.length)
-
-  let synced = 0
-  for (const thread_id of thread_ids) {
-    const timeline_path = path.join(
-      thread_base_directory,
-      thread_id,
-      'timeline.jsonl'
-    )
-    try {
-      await fs.access(timeline_path)
-    } catch {
-      continue
-    }
-    try {
-      await sync_thread_timeline({ thread_id, user_base_directory })
-      synced++
-    } catch (error) {
-      log('Failed to sync timeline for %s: %s', thread_id, error.message)
-    }
-  }
-
-  log('thread_timeline populated for %d / %d threads', synced, thread_ids.length)
-  return { total: thread_ids.length, synced }
-}
-
 /**
  * Run the v8 migration. Safe to call when already on v8 (no-op on schema; still
  * re-runs population which is idempotent).
@@ -212,7 +163,7 @@ export async function migrate_to_v8({ user_base_directory }) {
   await rebuild_fts_indexes()
 
   const body = await populate_body_column()
-  const timeline = await populate_thread_timeline_all({ user_base_directory })
+  const timeline = await sync_all_thread_timelines({ user_base_directory })
 
   await set_index_metadata({
     key: INDEX_METADATA_KEYS.SCHEMA_VERSION,

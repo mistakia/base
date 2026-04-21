@@ -7,14 +7,15 @@
  */
 
 import path from 'path'
+import { promises as fs } from 'fs'
 import debug from 'debug'
 
 import config from '#config'
+import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import {
   execute_sqlite_run,
   with_sqlite_transaction
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
-import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { extract_turns_from_timeline } from './turn-extractor.mjs'
 
 const log = debug('embedded-index:sync:thread-timeline')
@@ -100,4 +101,88 @@ export async function delete_thread_timeline({ thread_id }) {
   })
 }
 
-export default { sync_thread_timeline, delete_thread_timeline }
+/**
+ * Iterate all thread/<uuid>/ directories and sync thread_timeline for each.
+ * DELETE+INSERT is idempotent so this is safe to re-run; no checkpoint needed.
+ *
+ * @param {Object} [params]
+ * @param {string} [params.user_base_directory]
+ * @param {number} [params.batch_size=50] - Threads per progress log entry
+ * @param {(progress: {processed: number, total: number}) => void} [params.on_progress]
+ * @returns {Promise<{total: number, synced: number, failed: number}>}
+ */
+export async function sync_all_thread_timelines({
+  user_base_directory,
+  batch_size = 50,
+  on_progress
+} = {}) {
+  const base_directory =
+    user_base_directory ||
+    config.user_base_directory ||
+    process.env.USER_BASE_DIRECTORY
+
+  if (!base_directory) {
+    throw new Error('USER_BASE_DIRECTORY not configured')
+  }
+
+  const thread_base_directory = get_thread_base_directory({
+    user_base_directory: base_directory
+  })
+
+  let entries
+  try {
+    entries = await fs.readdir(thread_base_directory, { withFileTypes: true })
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return { total: 0, synced: 0, failed: 0 }
+    }
+    throw error
+  }
+
+  const thread_ids = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+
+  let synced = 0
+  let failed = 0
+
+  for (let i = 0; i < thread_ids.length; i++) {
+    const thread_id = thread_ids[i]
+    const timeline_path = path.join(
+      thread_base_directory,
+      thread_id,
+      'timeline.jsonl'
+    )
+    try {
+      await fs.access(timeline_path)
+    } catch {
+      continue
+    }
+    try {
+      await sync_thread_timeline({
+        thread_id,
+        user_base_directory: base_directory
+      })
+      synced++
+    } catch (error) {
+      log('Failed to sync timeline for %s: %s', thread_id, error.message)
+      failed++
+    }
+
+    if (on_progress && (i + 1) % batch_size === 0) {
+      on_progress({ processed: i + 1, total: thread_ids.length })
+    }
+  }
+
+  if (on_progress) {
+    on_progress({ processed: thread_ids.length, total: thread_ids.length })
+  }
+
+  return { total: thread_ids.length, synced, failed }
+}
+
+export default {
+  sync_thread_timeline,
+  delete_thread_timeline,
+  sync_all_thread_timelines
+}
