@@ -1,10 +1,5 @@
-/**
- * Sync Thread Timeline
- *
- * Extract per-turn text from a thread's timeline.jsonl and upsert rows into
- * the thread_timeline base table. DELETE+INSERT is idempotent; no per-module
- * mtime cache is kept -- the live pipeline's _timeline_sync_cache gates calls.
- */
+// Extract per-turn text from timeline.jsonl and upsert into thread_timeline.
+// DELETE+INSERT is idempotent; caller (pipeline cache) gates calls.
 
 import path from 'path'
 import { promises as fs } from 'fs'
@@ -174,15 +169,10 @@ export async function sync_all_thread_timelines({
     }
   }
 
-  if (on_progress) {
+  if (on_progress && thread_ids.length % batch_size !== 0) {
     on_progress({ processed: thread_ids.length, total: thread_ids.length })
   }
 
   return { total: thread_ids.length, synced, failed }
 }
 
-export default {
-  sync_thread_timeline,
-  delete_thread_timeline,
-  sync_all_thread_timelines
-}

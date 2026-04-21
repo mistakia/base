@@ -80,10 +80,34 @@ describe('search filters', function () {
   })
 
   const hits = () => [
-    { entity_uri: 'user:task/a.md', raw_score: 1, source: 'entity' },
-    { entity_uri: 'user:task/b.md', raw_score: 1, source: 'entity' },
-    { entity_uri: 'user:workflow/w.md', raw_score: 1, source: 'entity' },
-    { entity_uri: 'user:thread/thr-1', raw_score: 1, source: 'thread_metadata' }
+    {
+      entity_uri: 'user:task/a.md',
+      raw_score: 1,
+      source: 'entity',
+      type: 'task',
+      status: 'In Progress'
+    },
+    {
+      entity_uri: 'user:task/b.md',
+      raw_score: 1,
+      source: 'entity',
+      type: 'task',
+      status: 'Completed'
+    },
+    {
+      entity_uri: 'user:workflow/w.md',
+      raw_score: 1,
+      source: 'entity',
+      type: 'workflow',
+      status: null
+    },
+    {
+      entity_uri: 'user:thread/thr-1',
+      raw_score: 1,
+      source: 'thread_metadata',
+      type: 'thread',
+      status: null
+    }
   ]
 
   it('passes through when no filters are supplied', async () => {

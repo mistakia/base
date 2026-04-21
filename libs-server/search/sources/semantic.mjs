@@ -1,10 +1,5 @@
-/**
- * Semantic Source Adapter
- *
- * Thin wrapper over search_semantic. Accepts an AbortSignal so the
- * orchestrator's per-source timeout can cancel an in-flight Ollama embed
- * request rather than leaking the connection.
- */
+// Thin wrapper over search_semantic; accepts AbortSignal so orchestrator
+// timeouts cancel the in-flight Ollama fetch.
 
 import debug from 'debug'
 
@@ -14,18 +9,12 @@ const log = debug('search:sources:semantic')
 
 const SOURCE_NAME = 'semantic'
 
-export async function search({
-  query,
-  candidate_limit = 100,
-  similarity_threshold = 0.3,
-  signal
-}) {
+export async function search({ query, candidate_limit = 100, signal }) {
   if (!query || !query.trim()) return []
 
   const { results, available, aborted } = await search_semantic({
     query,
     limit: candidate_limit,
-    similarity_threshold,
     signal
   })
 

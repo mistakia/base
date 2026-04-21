@@ -1,25 +1,16 @@
-/**
- * Migrate to schema v8
- *
- * Non-destructive migration: entity_embeddings are preserved. The migration:
- *
- *   1. Adds body TEXT to entities (idempotent).
- *   2. Drops and recreates entities_fts / threads_fts with the new tokenizer
- *      (and body column on entities_fts) plus matching triggers.
- *   3. Creates thread_timeline + thread_timeline_fts + triggers.
- *   4. Rebuilds entities_fts and threads_fts from the base tables.
- *   5. Populates the new body column from filesystem.
- *   6. Populates thread_timeline from each thread's timeline.jsonl.
- *   7. Writes SCHEMA_VERSION only after population succeeds; an interrupted
- *      migration leaves the prior version pinned so the next startup retries.
- */
+// v8 migration: non-destructive. Adds entities.body, rebuilds FTS5 tables
+// with the new tokenizer, creates thread_timeline + thread_timeline_fts,
+// repopulates body from filesystem and thread_timeline from timeline.jsonl.
+// SCHEMA_VERSION is written only after population succeeds so an interrupted
+// migration retries on the next startup.
 
 import debug from 'debug'
 
 import {
   execute_sqlite_query,
   execute_sqlite_run,
-  get_sqlite_database
+  get_sqlite_database,
+  with_sqlite_transaction
 } from '../sqlite-database-client.mjs'
 import {
   get_index_metadata,
@@ -121,7 +112,7 @@ async function populate_body_column() {
   })
   log('Populating body for %d entities', rows.length)
 
-  let updated = 0
+  const pending = []
   for (const row of rows) {
     let absolute_path
     try {
@@ -130,18 +121,28 @@ async function populate_body_column() {
       log('Skipping %s: %s', row.base_uri, error.message)
       continue
     }
-
     const entity_result = await read_entity_from_filesystem({ absolute_path })
     if (!entity_result.success) {
       log('Skipping %s: %s', row.base_uri, entity_result.error)
       continue
     }
-
-    await execute_sqlite_run({
-      query: 'UPDATE entities SET body = ? WHERE base_uri = ?',
-      parameters: [entity_result.entity_content ?? null, row.base_uri]
+    pending.push({
+      base_uri: row.base_uri,
+      body: entity_result.entity_content ?? null
     })
-    updated++
+  }
+
+  let updated = 0
+  if (pending.length > 0) {
+    await with_sqlite_transaction(async () => {
+      for (const { base_uri, body } of pending) {
+        await execute_sqlite_run({
+          query: 'UPDATE entities SET body = ? WHERE base_uri = ?',
+          parameters: [body, base_uri]
+        })
+        updated++
+      }
+    })
   }
 
   log('Body populated for %d / %d entities', updated, rows.length)

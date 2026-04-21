@@ -1,11 +1,4 @@
-/**
- * Path Source Adapter
- *
- * Fuzzy-matches the user query against all known file paths (via the cached
- * enumerator). Emits one hit per matching file path. The entity_uri is
- * derived from the relative path; non-entity files surface as sys or user
- * URIs according to their location.
- */
+// Fuzzy-match the user query against enumerated file paths.
 
 import debug from 'debug'
 
@@ -15,11 +8,6 @@ import { score_and_rank_results } from '#libs-server/search/fuzzy-scorer.mjs'
 const log = debug('search:sources:path')
 
 const SOURCE_NAME = 'path'
-
-function relative_path_to_user_uri(relative_path) {
-  if (!relative_path) return null
-  return `user:${relative_path}`
-}
 
 export async function search({ query, candidate_limit = 100 }) {
   if (!query || !query.trim()) return []
@@ -42,7 +30,7 @@ export async function search({ query, candidate_limit = 100 }) {
   })
 
   return ranked.map((result) => ({
-    entity_uri: relative_path_to_user_uri(result.file_path),
+    entity_uri: result.file_path ? `user:${result.file_path}` : null,
     raw_score: result.score,
     matched_field: 'file_path',
     snippet: result.file_path,

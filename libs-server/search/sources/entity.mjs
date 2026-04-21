@@ -1,11 +1,5 @@
-/**
- * Entity Source Adapter
- *
- * Queries entities_fts using FTS5 MATCH and ranks by bm25 weighted
- * towards title (10.0) >> description (3.0) >> body (1.0). The UNINDEXED
- * base_uri column does not participate in ranking and must be omitted from
- * the bm25 weight tuple.
- */
+// FTS5 MATCH over entities_fts with bm25(10.0, 3.0, 1.0) weighting
+// title > description > body.
 
 import debug from 'debug'
 
@@ -16,12 +10,6 @@ const log = debug('search:sources:entity')
 
 const SOURCE_NAME = 'entity'
 
-/**
- * @param {Object} params
- * @param {string} params.query - Raw user query
- * @param {number} [params.candidate_limit=100]
- * @returns {Promise<Array<{entity_uri: string, raw_score: number, matched_field: string, snippet: string, extras: Object, source: string}>>}
- */
 export async function search({ query, candidate_limit = 100 }) {
   const match_expression = build_fts_match_expression(query)
   if (!match_expression) return []

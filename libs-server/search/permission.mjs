@@ -1,18 +1,4 @@
-/**
- * Search Permission Filter
- *
- * Deny-by-default wrapper around check_permissions_batch. Operates on the
- * orchestrator's paginated top-`limit` so the permission gate is bounded.
- *
- * Rules:
- *   - Hit missing entity_uri            -> dropped (programming error upstream)
- *   - Hit whose entity_uri fails to     -> dropped (can't be resolved = deny)
- *     resolve to an absolute filesystem
- *   - Permission result missing         -> dropped (deny-by-default)
- *   - Permission result with            -> kept
- *     read.allowed === true
- *   - Anything else                     -> dropped
- */
+// Deny-by-default wrapper around check_permissions_batch over paginated hits.
 
 import debug from 'debug'
 
@@ -21,12 +7,6 @@ import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
 const log = debug('search:permission')
 
-/**
- * @param {Object} params
- * @param {Array<Object>} params.hits - Ranked + paginated hits
- * @param {string|null} params.user_public_key
- * @returns {Promise<Array<Object>>}
- */
 export async function permission_filter({ hits, user_public_key }) {
   if (!hits || hits.length === 0) return []
 
@@ -66,5 +46,3 @@ export async function permission_filter({ hits, user_public_key }) {
 
   return permitted
 }
-
-export default { permission_filter }

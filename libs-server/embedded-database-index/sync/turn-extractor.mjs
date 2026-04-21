@@ -1,11 +1,5 @@
-/**
- * Turn Extractor
- *
- * Stream a thread's timeline.jsonl and emit one "turn" per non-meta user
- * message. A turn aggregates the user message, the assistant messages that
- * follow it, and any Bash tool-call commands issued before the next user
- * message. The concatenated text feeds the thread_timeline FTS index.
- */
+// Emit one turn per non-meta user message: aggregate the user text, the
+// following assistant messages, and any Bash tool-call commands.
 
 import debug from 'debug'
 
@@ -142,4 +136,3 @@ export async function extract_turns_from_timeline({
   return turns
 }
 
-export default { extract_turns_from_timeline }

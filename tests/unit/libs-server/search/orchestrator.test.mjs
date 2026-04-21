@@ -95,13 +95,26 @@ describe('search orchestrator', function () {
     expect(sources).to.include('thread_timeline')
   })
 
-  it('reports total equal to results.length (post-permission)', async () => {
+  it('reports total as the filtered+ranked candidate count', async () => {
     const result = await orchestrator_search({
       permission_filter_fn: allow_all,
       query: 'alpha',
       sources: ['entity']
     })
+    // allow_all permits everything, so total equals the number returned.
     expect(result.total).to.equal(result.results.length)
+  })
+
+  it('reports total >= results.length so pagination can detect more pages', async () => {
+    const result = await orchestrator_search({
+      permission_filter_fn: allow_all,
+      query: 'term',
+      sources: ['entity'],
+      limit: 1,
+      offset: 0
+    })
+    expect(result.total).to.be.at.least(result.results.length)
+    expect(result.total).to.equal(2)
   })
 
   it('respects limit and offset for pagination', async () => {

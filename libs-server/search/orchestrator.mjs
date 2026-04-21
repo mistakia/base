@@ -1,17 +1,6 @@
-/**
- * Search Orchestrator
- *
- * Runs each requested source adapter in parallel, merges hits, applies
- * filters, dedupes by entity_uri, ranks, paginates, then applies the
- * deny-by-default permission gate on the paginated window.
- *
- * Design invariants:
- *   - Dedupe is owned here, not the ranker.
- *   - Permission filter runs on the paginated page (bounded by limit).
- *   - `total` returned is the count actually returned (post-permission).
- *   - Semantic is the only source subject to an orchestrator-level timeout,
- *     and the timeout cancels the in-flight Ollama fetch via AbortController.
- */
+// Search orchestrator: runs source adapters in parallel, dedupes by
+// entity_uri, attaches entity/thread metadata once, applies filters, ranks,
+// paginates, and gates on deny-by-default permission.
 
 import debug from 'debug'
 
@@ -27,6 +16,8 @@ import { load_search_config } from './search-config.mjs'
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('search:orchestrator')
+
+const MAX_IN_CLAUSE = 900
 
 const ADAPTERS = {
   entity: entity_source,
@@ -75,7 +66,6 @@ function dedupe_by_entity_uri(hits) {
   const by_uri = new Map()
   for (const hit of hits) {
     if (!hit.entity_uri) continue
-    const existing = by_uri.get(hit.entity_uri)
     const match_entry = {
       source: hit.source,
       raw_score: hit.raw_score,
@@ -83,6 +73,7 @@ function dedupe_by_entity_uri(hits) {
       snippet: hit.snippet,
       extras: hit.extras
     }
+    const existing = by_uri.get(hit.entity_uri)
     if (!existing) {
       by_uri.set(hit.entity_uri, {
         entity_uri: hit.entity_uri,
@@ -95,24 +86,37 @@ function dedupe_by_entity_uri(hits) {
   return [...by_uri.values()]
 }
 
+async function fetch_rows_chunked({ query, parameters }) {
+  const out = []
+  for (let i = 0; i < parameters.length; i += MAX_IN_CLAUSE) {
+    const chunk = parameters.slice(i, i + MAX_IN_CLAUSE)
+    const placeholders = chunk.map(() => '?').join(', ')
+    const rows = await execute_sqlite_query({
+      query: query.replace('?PLACEHOLDERS?', placeholders),
+      parameters: chunk
+    })
+    out.push(...rows)
+  }
+  return out
+}
+
 async function attach_entity_metadata(hits) {
   if (hits.length === 0) return hits
-  const entity_uris = hits
-    .map((h) => h.entity_uri)
-    .filter((uri) => uri && !uri.startsWith('user:thread/'))
-  const thread_ids = hits
-    .map((h) =>
-      h.entity_uri?.startsWith('user:thread/')
-        ? h.entity_uri.slice('user:thread/'.length)
-        : null
-    )
-    .filter(Boolean)
+
+  const entity_uris = []
+  const thread_ids = []
+  for (const hit of hits) {
+    if (hit.entity_uri.startsWith('user:thread/')) {
+      thread_ids.push(hit.entity_uri.slice('user:thread/'.length))
+    } else {
+      entity_uris.push(hit.entity_uri)
+    }
+  }
 
   const entity_map = new Map()
   if (entity_uris.length > 0) {
-    const placeholders = entity_uris.map(() => '?').join(', ')
-    const rows = await execute_sqlite_query({
-      query: `SELECT base_uri, type, title, updated_at FROM entities WHERE base_uri IN (${placeholders})`,
+    const rows = await fetch_rows_chunked({
+      query: `SELECT base_uri, type, status, title, updated_at FROM entities WHERE base_uri IN (?PLACEHOLDERS?)`,
       parameters: entity_uris
     })
     for (const row of rows) entity_map.set(row.base_uri, row)
@@ -120,21 +124,21 @@ async function attach_entity_metadata(hits) {
 
   const thread_map = new Map()
   if (thread_ids.length > 0) {
-    const placeholders = thread_ids.map(() => '?').join(', ')
-    const rows = await execute_sqlite_query({
-      query: `SELECT thread_id, title, updated_at FROM threads WHERE thread_id IN (${placeholders})`,
+    const rows = await fetch_rows_chunked({
+      query: `SELECT thread_id, title, updated_at FROM threads WHERE thread_id IN (?PLACEHOLDERS?)`,
       parameters: thread_ids
     })
     for (const row of rows) thread_map.set(row.thread_id, row)
   }
 
   return hits.map((hit) => {
-    if (hit.entity_uri?.startsWith('user:thread/')) {
+    if (hit.entity_uri.startsWith('user:thread/')) {
       const thread_id = hit.entity_uri.slice('user:thread/'.length)
       const row = thread_map.get(thread_id)
       return {
         ...hit,
         type: 'thread',
+        status: null,
         title: row?.title || '',
         updated_at: row?.updated_at || null
       }
@@ -142,25 +146,14 @@ async function attach_entity_metadata(hits) {
     const row = entity_map.get(hit.entity_uri)
     return {
       ...hit,
-      type: row?.type || 'unknown',
+      type: row?.type || null,
+      status: row?.status || null,
       title: row?.title || '',
       updated_at: row?.updated_at || null
     }
   })
 }
 
-/**
- * Execute a search.
- *
- * @param {Object} params
- * @param {string} params.query
- * @param {string[]} [params.sources]
- * @param {Object} [params.filters] - {type, tag, status, path}
- * @param {number} [params.limit=20]
- * @param {number} [params.offset=0]
- * @param {string|null} [params.user_public_key]
- * @returns {Promise<{query: string, total: number, results: Array}>}
- */
 export async function search({
   query,
   sources,
@@ -168,7 +161,6 @@ export async function search({
   limit = 20,
   offset = 0,
   user_public_key = null,
-  // Injected for tests; production callers should rely on the default.
   permission_filter_fn = permission_filter
 }) {
   const config = await load_search_config()
@@ -197,10 +189,10 @@ export async function search({
   )
 
   const all_hits = hits_by_source.flat()
-  const filtered = await apply_filters({ hits: all_hits, filters })
-  const deduped = dedupe_by_entity_uri(filtered)
+  const deduped = dedupe_by_entity_uri(all_hits)
   const with_metadata = await attach_entity_metadata(deduped)
-  const ranked = rank({ hits: with_metadata })
+  const filtered = await apply_filters({ hits: with_metadata, filters })
+  const ranked = rank({ hits: filtered })
 
   const page = ranked.slice(offset, offset + limit)
   const permitted = await permission_filter_fn({ hits: page, user_public_key })
@@ -214,7 +206,8 @@ export async function search({
     matches: hit.matches
   }))
 
-  return { query, total: results.length, results }
+  // `total` reflects the filtered+ranked candidate count so paginating
+  // callers know whether more pages exist. `results.length` may be smaller
+  // when permission denies entries in the current page.
+  return { query, total: ranked.length, results }
 }
-
-export default { search }

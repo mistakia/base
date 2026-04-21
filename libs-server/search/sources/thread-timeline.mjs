@@ -1,10 +1,4 @@
-/**
- * Thread Timeline Source Adapter
- *
- * Queries thread_timeline_fts (per-turn text) and emits one hit per matching
- * turn keyed by thread entity URI. The orchestrator dedupes across turns on
- * the same thread, keeping the best-scoring turn's snippet.
- */
+// FTS5 MATCH over thread_timeline_fts; one hit per matching turn.
 
 import debug from 'debug'
 

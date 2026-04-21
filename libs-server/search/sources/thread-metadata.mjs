@@ -1,10 +1,4 @@
-/**
- * Thread Metadata Source Adapter
- *
- * Queries threads_fts (title + short_description) ordered by bm25. Emits
- * thread entity URIs as `user:thread/<thread_id>` so the orchestrator can
- * dedupe against thread_timeline hits on the same entity.
- */
+// FTS5 MATCH over threads_fts (title + short_description).
 
 import debug from 'debug'
 
