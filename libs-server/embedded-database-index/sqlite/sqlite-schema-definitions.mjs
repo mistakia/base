@@ -229,11 +229,10 @@ const ENTITY_RELATIONS_INDEXES = [
   'CREATE INDEX IF NOT EXISTS idx_relations_type ON entity_relations(relation_type)'
 ]
 
-// FTS5 tokenizer: treat hyphen and underscore as in-word characters so
-// queries like `nano-community` tokenize equivalently to `nano community`.
-const FTS_TOKENIZER = `tokenize = 'unicode61 tokenchars ''-_'''`
-
-// FTS5 virtual tables for full-text search
+// FTS5 virtual tables for full-text search. The default unicode61 tokenizer
+// splits on non-alphanumeric characters, so `nano-community` and
+// `nano community` produce identical token streams. Adapters phrase-quote
+// user query terms that contain `-` to avoid the MATCH NOT operator.
 const ENTITIES_FTS_TABLE = `
 CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
   base_uri UNINDEXED,
@@ -241,8 +240,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
   description,
   body,
   content=entities,
-  content_rowid=rowid,
-  ${FTS_TOKENIZER}
+  content_rowid=rowid
 )
 `
 
@@ -252,8 +250,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS threads_fts USING fts5(
   title,
   short_description,
   content=threads,
-  content_rowid=rowid,
-  ${FTS_TOKENIZER}
+  content_rowid=rowid
 )
 `
 
@@ -275,8 +272,7 @@ const THREAD_TIMELINE_FTS_TABLE = `
 CREATE VIRTUAL TABLE IF NOT EXISTS thread_timeline_fts USING fts5(
   turn_text,
   content=thread_timeline,
-  content_rowid=rowid,
-  ${FTS_TOKENIZER}
+  content_rowid=rowid
 )
 `
 

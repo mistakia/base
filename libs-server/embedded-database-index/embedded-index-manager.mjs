@@ -57,6 +57,7 @@ import {
 import { sync_index_on_startup } from './sync/incremental-sync.mjs'
 import { backfill_git_activity_from_scratch } from './sync/sync-git-activity.mjs'
 import { resync_full_index } from './sync/resync-full-index.mjs'
+import { migrate_to_v8 } from './sqlite/migrations/migrate-to-v8.mjs'
 import {
   get_index_metadata,
   set_index_metadata,
@@ -293,9 +294,34 @@ class EmbeddedIndexManager {
       }
 
       if (!schema_matches) {
-        log('Schema version mismatch, performing reset and rebuild')
-        await this._reset_and_rebuild_index_internal()
-        return
+        const stored_version_for_migration = await get_index_metadata({
+          key: INDEX_METADATA_KEYS.SCHEMA_VERSION
+        }).catch(() => null)
+
+        if (stored_version_for_migration == null) {
+          log('No stored schema version, performing reset and rebuild')
+          await this._reset_and_rebuild_index_internal()
+          return
+        }
+
+        log(
+          'Schema version mismatch (%s -> %s), attempting in-place migration',
+          stored_version_for_migration,
+          CURRENT_SCHEMA_VERSION
+        )
+        try {
+          await migrate_to_v8({
+            user_base_directory: config.user_base_directory
+          })
+          log('Migration succeeded, continuing startup sync')
+        } catch (error) {
+          log(
+            'Migration failed (%s), falling back to reset and rebuild',
+            error.message
+          )
+          await this._reset_and_rebuild_index_internal()
+          return
+        }
       }
 
       // Check if a previous rebuild was interrupted (e.g., OOM kill).

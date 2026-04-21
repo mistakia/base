@@ -82,8 +82,9 @@ export const INDEX_METADATA_KEYS = {
  * v5: Renamed session_provider to source_provider
  * v6: Added external_session_id column to threads table
  * v7: Added has_continuation_prompt and continuation_prompt_count columns to threads table
+ * v8: Added body column to entities, FTS5 tokenizer change, thread_timeline + thread_timeline_fts tables
  */
-export const CURRENT_SCHEMA_VERSION = '7'
+export const CURRENT_SCHEMA_VERSION = '8'
 
 export async function get_repo_sync_state() {
   log('Getting repository sync state')
