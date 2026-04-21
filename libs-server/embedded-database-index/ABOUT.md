@@ -26,13 +26,14 @@ This module maintains `embedded-index.db`, a SQLite database derived from the fi
 
 | Table                      | Source                                                   | Use                                                    |
 | -------------------------- | -------------------------------------------------------- | ------------------------------------------------------ |
-| `entities`                 | Entity frontmatter                                       | Primary entity metadata; FTS via `entities_fts`.       |
+| `entities`                 | Entity frontmatter + body                                | Primary entity metadata including `body` column for FTS; FTS via `entities_fts(title, description, body)`. |
 | `entity_relations`         | Frontmatter `relations` strings                          | Typed edges; queried by `source` or `target`.          |
 | `entity_tags`              | Frontmatter `tags` array                                 | Tag membership; each target is a tag entity.           |
 | `entity_aliases`           | Frontmatter `aliases` array                              | Forwarding trail for move-preservation.                |
 | `entity_content_wikilinks` | Body-content `[[...]]` wikilinks                         | Inline references; frontmatter is NOT duplicated here. |
 | `thread_references`        | Thread `metadata.relations` + `metadata.file_references` | Back-refs from threads.                                |
-| `threads`, `thread_tags`   | Thread `metadata.json`                                   | Thread metadata and tagging.                           |
+| `threads`, `thread_tags`   | Thread `metadata.json`                                   | Thread metadata and tagging; FTS via `threads_fts`.    |
+| `thread_timeline`          | Thread `timeline.jsonl` (per-turn extract)               | Conversation text for search; FTS via `thread_timeline_fts`. |
 | `entity_embeddings`        | Embedding pipeline                                       | Semantic search.                                       |
 
 ## Sync pipeline
