@@ -46,6 +46,14 @@ async function entities_has_body_column() {
 }
 
 async function apply_schema_changes_exclusive() {
+  const already_applied = await get_index_metadata({
+    key: INDEX_METADATA_KEYS.V8_DDL_APPLIED
+  }).catch(() => null)
+  if (already_applied === 'true') {
+    log('v8 DDL already applied, skipping schema changes')
+    return
+  }
+
   const db = get_sqlite_database()
   db.exec('BEGIN EXCLUSIVE')
   try {
@@ -95,6 +103,14 @@ async function apply_schema_changes_exclusive() {
     }
     throw error
   }
+
+  // Record DDL success so retries after a later-stage crash (e.g., OOM in
+  // timeline sync) skip the destructive DROP TABLE calls above and preserve
+  // any thread_timeline rows already populated.
+  await set_index_metadata({
+    key: INDEX_METADATA_KEYS.V8_DDL_APPLIED,
+    value: 'true'
+  })
 }
 
 async function rebuild_fts_indexes() {
@@ -106,36 +122,48 @@ async function rebuild_fts_indexes() {
   })
 }
 
+const BODY_POPULATE_CHUNK_SIZE = 100
+
 async function populate_body_column() {
   const rows = await execute_sqlite_query({
     query: 'SELECT base_uri FROM entities WHERE body IS NULL'
   })
   log('Populating body for %d entities', rows.length)
 
-  const pending = []
-  for (const row of rows) {
-    let absolute_path
-    try {
-      absolute_path = resolve_base_uri(row.base_uri)
-    } catch (error) {
-      log('Skipping %s: %s', row.base_uri, error.message)
-      continue
-    }
-    const entity_result = await read_entity_from_filesystem({ absolute_path })
-    if (!entity_result.success) {
-      log('Skipping %s: %s', row.base_uri, entity_result.error)
-      continue
-    }
-    pending.push({
-      base_uri: row.base_uri,
-      body: entity_result.entity_content ?? null
-    })
-  }
-
+  // Stream: read + UPDATE in chunks so peak memory stays bounded (the OLD
+  // implementation buffered every body into a single `pending` array and
+  // wrapped all UPDATEs in one transaction). The `body IS NULL` filter above
+  // also keeps this resumable -- rows updated on a previous attempt are
+  // excluded from the next pass.
   let updated = 0
-  if (pending.length > 0) {
+  for (let i = 0; i < rows.length; i += BODY_POPULATE_CHUNK_SIZE) {
+    const chunk = rows.slice(i, i + BODY_POPULATE_CHUNK_SIZE)
+    const chunk_updates = []
+    for (const row of chunk) {
+      let absolute_path
+      try {
+        absolute_path = resolve_base_uri(row.base_uri)
+      } catch (error) {
+        log('Skipping %s: %s', row.base_uri, error.message)
+        continue
+      }
+      const entity_result = await read_entity_from_filesystem({
+        absolute_path
+      })
+      if (!entity_result.success) {
+        log('Skipping %s: %s', row.base_uri, entity_result.error)
+        continue
+      }
+      chunk_updates.push({
+        base_uri: row.base_uri,
+        body: entity_result.entity_content ?? null
+      })
+    }
+
+    if (chunk_updates.length === 0) continue
+
     await with_sqlite_transaction(async () => {
-      for (const { base_uri, body } of pending) {
+      for (const { base_uri, body } of chunk_updates) {
         await execute_sqlite_run({
           query: 'UPDATE entities SET body = ? WHERE base_uri = ?',
           parameters: [body, base_uri]
@@ -164,11 +192,25 @@ export async function migrate_to_v8({ user_base_directory }) {
   await rebuild_fts_indexes()
 
   const body = await populate_body_column()
-  const timeline = await sync_all_thread_timelines({ user_base_directory })
+  const timeline = await sync_all_thread_timelines({
+    user_base_directory,
+    // Crash-resume: skip threads whose timelines have already been parsed
+    // into thread_timeline on a previous attempt. Without this, every OOM
+    // retry re-parses every 100+ MB timeline.jsonl and re-OOMs.
+    skip_if_populated: true
+  })
 
   await set_index_metadata({
     key: INDEX_METADATA_KEYS.SCHEMA_VERSION,
     value: TARGET_SCHEMA_VERSION
+  })
+
+  // Clear the DDL-applied flag once the full migration has succeeded so a
+  // hypothetical v9 (which would reset schema_version != '8') gets a clean
+  // slate rather than incorrectly skipping its own DDL.
+  await set_index_metadata({
+    key: INDEX_METADATA_KEYS.V8_DDL_APPLIED,
+    value: 'false'
   })
 
   log('Migration to v8 complete')

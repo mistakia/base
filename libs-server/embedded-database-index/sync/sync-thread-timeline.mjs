@@ -8,6 +8,7 @@ import debug from 'debug'
 import config from '#config'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import {
+  execute_sqlite_query,
   execute_sqlite_run,
   with_sqlite_transaction
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
@@ -100,15 +101,23 @@ export async function delete_thread_timeline({ thread_id }) {
  * Iterate all thread/<uuid>/ directories and sync thread_timeline for each.
  * DELETE+INSERT is idempotent so this is safe to re-run; no checkpoint needed.
  *
+ * When skip_if_populated is true, threads that already have rows in
+ * thread_timeline are skipped. The v8 migration sets this to make the
+ * population resumable across crashes: a partial run leaves the already-
+ * synced threads in place, and the next attempt only processes the
+ * remainder instead of re-parsing every large timeline.jsonl from scratch.
+ *
  * @param {Object} [params]
  * @param {string} [params.user_base_directory]
  * @param {number} [params.batch_size=50] - Threads per progress log entry
+ * @param {boolean} [params.skip_if_populated=false] - Skip threads with existing rows
  * @param {(progress: {processed: number, total: number}) => void} [params.on_progress]
- * @returns {Promise<{total: number, synced: number, failed: number}>}
+ * @returns {Promise<{total: number, synced: number, skipped: number, failed: number}>}
  */
 export async function sync_all_thread_timelines({
   user_base_directory,
   batch_size = 50,
+  skip_if_populated = false,
   on_progress
 } = {}) {
   const base_directory =
@@ -139,6 +148,7 @@ export async function sync_all_thread_timelines({
     .map((entry) => entry.name)
 
   let synced = 0
+  let skipped = 0
   let failed = 0
 
   for (let i = 0; i < thread_ids.length; i++) {
@@ -153,6 +163,29 @@ export async function sync_all_thread_timelines({
     } catch {
       continue
     }
+
+    if (skip_if_populated) {
+      try {
+        const rows = await execute_sqlite_query({
+          query: 'SELECT 1 FROM thread_timeline WHERE thread_id = ? LIMIT 1',
+          parameters: [thread_id]
+        })
+        if (rows.length > 0) {
+          skipped++
+          if (on_progress && (i + 1) % batch_size === 0) {
+            on_progress({ processed: i + 1, total: thread_ids.length })
+          }
+          continue
+        }
+      } catch (error) {
+        log(
+          'skip_if_populated check failed for %s (proceeding with sync): %s',
+          thread_id,
+          error.message
+        )
+      }
+    }
+
     try {
       await sync_thread_timeline({
         thread_id,
@@ -173,6 +206,6 @@ export async function sync_all_thread_timelines({
     on_progress({ processed: thread_ids.length, total: thread_ids.length })
   }
 
-  return { total: thread_ids.length, synced, failed }
+  return { total: thread_ids.length, synced, skipped, failed }
 }
 

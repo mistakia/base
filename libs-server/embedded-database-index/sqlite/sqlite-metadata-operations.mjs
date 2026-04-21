@@ -72,7 +72,8 @@ export const INDEX_METADATA_KEYS = {
   SCHEMA_VERSION: 'schema_version',
   REPO_SYNC_STATE: 'repo_sync_state',
   ACTIVITY_GIT_SYNC_STATE: 'activity_git_sync_state',
-  REBUILD_IN_PROGRESS: 'rebuild_in_progress'
+  REBUILD_IN_PROGRESS: 'rebuild_in_progress',
+  V8_DDL_APPLIED: 'v8_ddl_applied'
 }
 
 /**
