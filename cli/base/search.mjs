@@ -99,12 +99,9 @@ function format_result(result, { verbose }) {
     return lines.join('\n')
   }
   const score = result.score !== undefined ? result.score.toFixed(3) : ''
-  return [
-    result.entity_uri,
-    result.type || '',
-    score,
-    result.title || ''
-  ].join('\t')
+  return [result.entity_uri, result.type || '', score, result.title || ''].join(
+    '\t'
+  )
 }
 
 export const handler = async (argv) => {

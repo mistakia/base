@@ -25,7 +25,9 @@ describe('claude normalize-session unsupported-type materialization', () => {
     ])
     expect(result.messages).to.have.lengthOf(1)
     const e = result.messages[0]
-    expect(e.id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    expect(e.id).to.match(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    )
     expect(e.type).to.equal('system')
     expect(e.system_type).to.equal('status')
     expect(e.content).to.equal('pending prompt body')
@@ -209,6 +211,8 @@ describe('claude normalize-session unsupported-type materialization', () => {
     expect(without_uuid_a.messages[0].id).to.equal(
       without_uuid_b.messages[0].id
     )
-    expect(without_uuid_a.messages[0].id).to.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/)
+    expect(without_uuid_a.messages[0].id).to.match(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+    )
   })
 })

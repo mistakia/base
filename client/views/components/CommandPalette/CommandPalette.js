@@ -67,9 +67,7 @@ const ResultItem = ({ item, is_selected, normalized_score, onClick }) => {
       style={score_style}
       onClick={onClick}>
       <div className='command-palette__result-header'>
-        <span className='command-palette__result-type'>
-          {type_label(item)}
-        </span>
+        <span className='command-palette__result-type'>{type_label(item)}</span>
         <span className='command-palette__result-text'>
           {display_text(item)}
         </span>

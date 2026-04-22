@@ -15,7 +15,13 @@ import entity_source from '#libs-server/search/sources/entity.mjs'
 import thread_metadata_source from '#libs-server/search/sources/thread-metadata.mjs'
 import thread_timeline_source from '#libs-server/search/sources/thread-timeline.mjs'
 
-async function insert_entity({ base_uri, entity_id, title, description, body }) {
+async function insert_entity({
+  base_uri,
+  entity_id,
+  title,
+  description,
+  body
+}) {
   await execute_sqlite_run({
     query: `INSERT INTO entities (
       base_uri, entity_id, type, title, description, body, user_public_key,
@@ -124,7 +130,9 @@ describe('search FTS source adapters', function () {
 
   describe('thread_metadata source', () => {
     it('matches against title + short_description', async () => {
-      const hits = await thread_metadata_source.search({ query: 'investigation' })
+      const hits = await thread_metadata_source.search({
+        query: 'investigation'
+      })
       expect(hits.map((h) => h.entity_uri)).to.include('user:thread/thr-nano')
     })
 

@@ -76,7 +76,8 @@ function write_entity_md({
   if (tags.length > 0) frontmatter.tags = tags
   const yaml = Object.entries(frontmatter)
     .map(([k, v]) => {
-      if (Array.isArray(v)) return `${k}:\n${v.map((x) => `  - ${x}`).join('\n')}`
+      if (Array.isArray(v))
+        return `${k}:\n${v.map((x) => `  - ${x}`).join('\n')}`
       if (typeof v === 'string') return `${k}: '${v.replace(/'/g, "''")}'`
       return `${k}: ${v}`
     })
@@ -355,8 +356,12 @@ describe('API /search accuracy', function () {
 
       expect(forward.status).to.equal(200)
       expect(reverse.status).to.equal(200)
-      const forward_uris = new Set(forward.body.results.map((r) => r.entity_uri))
-      const reverse_uris = new Set(reverse.body.results.map((r) => r.entity_uri))
+      const forward_uris = new Set(
+        forward.body.results.map((r) => r.entity_uri)
+      )
+      const reverse_uris = new Set(
+        reverse.body.results.map((r) => r.entity_uri)
+      )
       expect(forward_uris.has('user:task/alpha-task.md')).to.be.true
       expect(reverse_uris.has('user:task/alpha-task.md')).to.be.true
     })

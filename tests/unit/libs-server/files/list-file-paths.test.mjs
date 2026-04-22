@@ -80,6 +80,8 @@ describe('list_file_paths', function () {
     const result = await run({ directory: 'task' })
 
     expect(result.map((r) => r.file_path).sort()).to.deep.equal(['a.md'])
-    expect(result[0].absolute_path).to.equal(path.join(temp_dir, 'task', 'a.md'))
+    expect(result[0].absolute_path).to.equal(
+      path.join(temp_dir, 'task', 'a.md')
+    )
   })
 })

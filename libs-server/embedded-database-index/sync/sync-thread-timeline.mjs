@@ -26,10 +26,7 @@ const TURN_BATCH_SIZE = 100
  * @param {string} [params.user_base_directory] - Override for tests
  * @returns {Promise<{thread_id: string, turns_written: number}>}
  */
-export async function sync_thread_timeline({
-  thread_id,
-  user_base_directory
-}) {
+export async function sync_thread_timeline({ thread_id, user_base_directory }) {
   if (!thread_id) {
     throw new Error('sync_thread_timeline requires thread_id')
   }
@@ -208,4 +205,3 @@ export async function sync_all_thread_timelines({
 
   return { total: thread_ids.length, synced, skipped, failed }
 }
-

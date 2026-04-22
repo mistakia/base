@@ -40,7 +40,8 @@ function strip_machines({ descriptor }) {
 }
 
 function resolve_script_path({ descriptor, user_base_directory }) {
-  if (!descriptor.script || path.isAbsolute(descriptor.script)) return descriptor
+  if (!descriptor.script || path.isAbsolute(descriptor.script))
+    return descriptor
   return {
     ...descriptor,
     script: path.join(user_base_directory, descriptor.script)
@@ -65,7 +66,12 @@ export function collect_extension_pm2_services({ user_base_directory }) {
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
-    const json_file = path.join(extension_dir, entry.name, 'provide', 'pm2-service.json')
+    const json_file = path.join(
+      extension_dir,
+      entry.name,
+      'provide',
+      'pm2-service.json'
+    )
     if (!existsSync(json_file)) continue
 
     let descriptor = null
@@ -79,10 +85,12 @@ export function collect_extension_pm2_services({ user_base_directory }) {
     if (!applies_to_machine({ descriptor, machine_id })) continue
 
     const stripped = strip_machines({ descriptor })
-    descriptors.push(resolve_script_path({
-      descriptor: stripped,
-      user_base_directory
-    }))
+    descriptors.push(
+      resolve_script_path({
+        descriptor: stripped,
+        user_base_directory
+      })
+    )
   }
 
   return descriptors

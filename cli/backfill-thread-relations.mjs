@@ -44,31 +44,30 @@ const getArg = (name, defaultValue) => {
 }
 
 const options = {
-  batchSize: parseInt(getArg('batch-size', '5'), 10),
-  delayMs: parseInt(getArg('delay', '1000'), 10),
-  dryRun: getArg('dry-run', false),
+  batch_size: parseInt(getArg('batch-size', '5'), 10),
+  delay_ms: parseInt(getArg('delay', '1000'), 10),
+  dry_run: getArg('dry-run', false),
   limit: parseInt(getArg('limit', '0'), 10),
   verbose: getArg('verbose', false),
-  updateEntities: getArg('update-entities', false),
-  // --force is vestigial for the primary analysis path (analysis always runs
-  // now that the skip gate is gone), but still required to drive the
-  // `--update-entities` mode via `force: options.force || options.updateEntities`.
+  update_entities: getArg('update-entities', false),
+  // Force re-analysis; also drives the `--update-entities` path via
+  // `force: options.force || options.update_entities`.
   force: getArg('force', false),
-  syncKuzu: getArg('sync-kuzu', false),
-  staleBefore: getArg('stale-before', ''),
-  excludeActiveSessions: getArg('exclude-active-sessions', false),
+  sync_kuzu: getArg('sync-kuzu', false),
+  stale_before: getArg('stale-before', ''),
+  exclude_active_sessions: getArg('exclude-active-sessions', false),
   help: getArg('help', false) || getArg('h', false)
 }
 
-if (options.staleBefore) {
-  const parsed = new Date(options.staleBefore)
+if (options.stale_before) {
+  const parsed = new Date(options.stale_before)
   if (Number.isNaN(parsed.getTime())) {
     console.error(
-      `Error: --stale-before value "${options.staleBefore}" is not a valid ISO timestamp`
+      `Error: --stale-before value "${options.stale_before}" is not a valid ISO timestamp`
     )
     process.exit(1)
   }
-  options.staleBeforeMs = parsed.getTime()
+  options.stale_before_ms = parsed.getTime()
 }
 
 if (options.help) {
@@ -126,7 +125,7 @@ const stats = {
 /**
  * Find all threads that need analysis
  */
-async function findThreadsNeedingAnalysis() {
+async function find_threads_needing_analysis() {
   const threads = []
 
   try {
@@ -177,15 +176,15 @@ async function findThreadsNeedingAnalysis() {
   return threads
 }
 
-function filterStaleThreads(threads, cutoffMs) {
+function filter_stale_threads(threads, cutoff) {
   return threads.filter((t) => {
     if (!t.relations_analyzed_at) return true
     const ts = Date.parse(t.relations_analyzed_at)
-    return Number.isNaN(ts) || ts < cutoffMs
+    return Number.isNaN(ts) || ts < cutoff
   })
 }
 
-async function loadActiveSessionThreadIds() {
+async function load_active_session_thread_ids() {
   const sessions = await get_all_active_sessions()
   const ids = new Set()
   for (const s of sessions) {
@@ -198,7 +197,7 @@ async function loadActiveSessionThreadIds() {
  * Find threads that need entity back-reference updates
  * (already analyzed threads that have entity relations)
  */
-async function findThreadsNeedingEntityUpdate() {
+async function find_threads_needing_entity_update() {
   const threads = []
 
   try {
@@ -268,15 +267,15 @@ async function findThreadsNeedingEntityUpdate() {
 /**
  * Process a single thread
  */
-async function processThread(threadId, options = {}) {
+async function process_thread(thread_id, opts = {}) {
   const cliPath = path.join(BASE_REPO, 'cli/analyze-thread-relations.mjs')
 
-  const args = ['--thread-id', threadId, '--output-format', 'json']
-  if (options.dryRun) args.push('--dry-run')
-  if (options.force) args.push('--force')
+  const run_args = ['--thread-id', thread_id, '--output-format', 'json']
+  if (opts.dry_run) run_args.push('--dry-run')
+  if (opts.force) run_args.push('--force')
 
   return new Promise((resolve) => {
-    const child = spawn(process.argv[0], [cliPath, ...args], {
+    const child = spawn(process.argv[0], [cliPath, ...run_args], {
       cwd: BASE_REPO,
       env: { ...process.env, DEBUG: '' } // Disable debug output for cleaner JSON
     })
@@ -320,7 +319,7 @@ function sleep(ms) {
 /**
  * Format duration in human readable form
  */
-function formatDuration(ms) {
+function format_duration(ms) {
   const seconds = Math.floor(ms / 1000)
   const minutes = Math.floor(seconds / 60)
   const hours = Math.floor(minutes / 60)
@@ -337,7 +336,7 @@ function formatDuration(ms) {
 /**
  * Print progress bar
  */
-function printProgress(current, total) {
+function print_progress({ current, total }) {
   const width = 40
   const percent = total > 0 ? current / total : 0
   const filled = Math.round(width * percent)
@@ -352,65 +351,65 @@ function printProgress(current, total) {
  * Main execution
  */
 async function main() {
-  const modeLabel = options.updateEntities
+  const mode_label = options.update_entities
     ? 'Entity Back-Reference Update'
     : 'Thread Relations Backfill'
-  console.log(`\n=== ${modeLabel} ===\n`)
+  console.log(`\n=== ${mode_label} ===\n`)
   console.log(`Configuration:`)
   console.log(
-    `  Mode: ${options.updateEntities ? 'update-entities' : 'analyze'}`
+    `  Mode: ${options.update_entities ? 'update-entities' : 'analyze'}`
   )
-  console.log(`  Batch size: ${options.batchSize}`)
-  console.log(`  Delay between batches: ${options.delayMs}ms`)
-  console.log(`  Dry run: ${options.dryRun}`)
+  console.log(`  Batch size: ${options.batch_size}`)
+  console.log(`  Delay between batches: ${options.delay_ms}ms`)
+  console.log(`  Dry run: ${options.dry_run}`)
   console.log(`  Force re-analysis: ${options.force}`)
-  console.log(`  Sync to KuzuDB: ${options.syncKuzu}`)
+  console.log(`  Sync to KuzuDB: ${options.sync_kuzu}`)
   console.log(`  Limit: ${options.limit || 'unlimited'}`)
   console.log('')
 
   // Find threads based on mode
-  const scanMessage = options.updateEntities
+  const scan_message = options.update_entities
     ? 'Scanning for threads needing entity back-references...'
     : 'Scanning for threads needing analysis...'
-  console.log(scanMessage)
+  console.log(scan_message)
 
-  let threadsToProcess = options.updateEntities
-    ? await findThreadsNeedingEntityUpdate()
-    : await findThreadsNeedingAnalysis()
+  let threads_to_process = options.update_entities
+    ? await find_threads_needing_entity_update()
+    : await find_threads_needing_analysis()
 
   // Filter to stale threads (analyzed before the given cutoff or never analyzed).
   // Threads whose relations_analyzed_at is at/after the cutoff are skipped so
   // we do not thrash already-fresh analyses.
-  if (options.staleBeforeMs != null && !options.updateEntities) {
-    const before = threadsToProcess.length
-    threadsToProcess = filterStaleThreads(
-      threadsToProcess,
-      options.staleBeforeMs
+  if (options.stale_before_ms != null && !options.update_entities) {
+    const before = threads_to_process.length
+    threads_to_process = filter_stale_threads(
+      threads_to_process,
+      options.stale_before_ms
     )
     console.log(
-      `Stale filter (<${options.staleBefore}): ${before} -> ${threadsToProcess.length}`
+      `Stale filter (<${options.stale_before}): ${before} -> ${threads_to_process.length}`
     )
   }
 
   // Drop threads that are currently registered as active sessions so a bulk
   // sweep does not race metadata writes against a live session.
-  if (options.excludeActiveSessions) {
-    const before = threadsToProcess.length
-    const active_ids = await loadActiveSessionThreadIds()
-    threadsToProcess = threadsToProcess.filter(
+  if (options.exclude_active_sessions) {
+    const before = threads_to_process.length
+    const active_ids = await load_active_session_thread_ids()
+    threads_to_process = threads_to_process.filter(
       (t) => !active_ids.has(t.thread_id)
     )
     console.log(
-      `Active-session exclude: ${before} -> ${threadsToProcess.length} (${active_ids.size} active)`
+      `Active-session exclude: ${before} -> ${threads_to_process.length} (${active_ids.size} active)`
     )
   }
 
   // Apply limit if specified
   if (options.limit > 0) {
-    threadsToProcess = threadsToProcess.slice(0, options.limit)
+    threads_to_process = threads_to_process.slice(0, options.limit)
   }
 
-  stats.to_process = threadsToProcess.length
+  stats.to_process = threads_to_process.length
 
   console.log(`\nThreads found: ${stats.total_found}`)
   console.log(`Already analyzed: ${stats.already_analyzed}`)
@@ -424,14 +423,14 @@ async function main() {
   // Process in batches
   console.log('Processing threads...\n')
 
-  for (let i = 0; i < threadsToProcess.length; i += options.batchSize) {
-    const batch = threadsToProcess.slice(i, i + options.batchSize)
+  for (let i = 0; i < threads_to_process.length; i += options.batch_size) {
+    const batch = threads_to_process.slice(i, i + options.batch_size)
 
     // Process batch in parallel
     const promises = batch.map(async (thread) => {
-      const result = await processThread(thread.thread_id, {
-        dryRun: options.dryRun,
-        force: options.force || options.updateEntities // Force re-analysis in update mode or when explicit
+      const result = await process_thread(thread.thread_id, {
+        dry_run: options.dry_run,
+        force: options.force || options.update_entities // Force re-analysis in update mode or when explicit
       })
 
       stats.processed++
@@ -465,11 +464,11 @@ async function main() {
     await Promise.all(promises)
 
     // Update progress bar
-    printProgress(stats.processed, stats.to_process)
+    print_progress({ current: stats.processed, total: stats.to_process })
 
     // Delay between batches (unless last batch)
-    if (i + options.batchSize < threadsToProcess.length) {
-      await sleep(options.delayMs)
+    if (i + options.batch_size < threads_to_process.length) {
+      await sleep(options.delay_ms)
     }
   }
 
@@ -486,7 +485,7 @@ async function main() {
   console.log(`  - Errors: ${stats.errors}`)
   console.log(`Total relations: ${stats.total_relations}`)
   if (
-    options.updateEntities ||
+    options.update_entities ||
     stats.back_refs_added > 0 ||
     stats.back_refs_skipped > 0
   ) {
@@ -495,12 +494,12 @@ async function main() {
       `Back-references skipped (already exist): ${stats.back_refs_skipped}`
     )
   }
-  console.log(`Duration: ${formatDuration(elapsed)}`)
+  console.log(`Duration: ${format_duration(elapsed)}`)
   console.log(
     `Average: ${stats.processed > 0 ? (elapsed / stats.processed).toFixed(0) : 0}ms per thread`
   )
 
-  if (options.dryRun) {
+  if (options.dry_run) {
     console.log('\n[DRY RUN] No changes were made')
   }
 

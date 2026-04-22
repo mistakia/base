@@ -137,7 +137,9 @@ export async function embed_texts({
 
     if (!response.ok) {
       const error_text = await response.text()
-      throw new Error(`Ollama embed API error ${response.status}: ${error_text}`)
+      throw new Error(
+        `Ollama embed API error ${response.status}: ${error_text}`
+      )
     }
 
     const data = await response.json()
@@ -147,7 +149,11 @@ export async function embed_texts({
       )
     }
 
-    log('Embedding completed in %dms (%d vectors)', duration_ms, data.embeddings.length)
+    log(
+      'Embedding completed in %dms (%d vectors)',
+      duration_ms,
+      data.embeddings.length
+    )
     return { embeddings: data.embeddings, duration_ms }
   } catch (error) {
     clearTimeout(timeout_id)

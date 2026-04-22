@@ -103,8 +103,6 @@ async function seed_v7_schema() {
 describe('migrate_to_v8', function () {
   this.timeout(15000)
 
-  let original_user_base_directory
-
   before(async () => {
     await close_sqlite_connection()
     await initialize_sqlite_client({ in_memory: true })
@@ -115,7 +113,6 @@ describe('migrate_to_v8', function () {
       value: '7'
     })
 
-    original_user_base_directory = config.user_base_directory
     const test_dir = config.user_base_directory
     await fs.mkdir(path.join(test_dir, 'task'), { recursive: true })
     await fs.mkdir(path.join(test_dir, 'thread', 't-empty'), {
@@ -233,7 +230,8 @@ Body text referencing nano-community.
 
   it('creates thread_timeline + thread_timeline_fts tables', async () => {
     const tables = await execute_sqlite_query({
-      query: "SELECT name FROM sqlite_master WHERE type IN ('table') AND name LIKE 'thread_timeline%'"
+      query:
+        "SELECT name FROM sqlite_master WHERE type IN ('table') AND name LIKE 'thread_timeline%'"
     })
     const names = tables.map((t) => t.name)
     expect(names).to.include('thread_timeline')
@@ -242,8 +240,7 @@ Body text referencing nano-community.
 
   it('allows FTS5 MATCH queries against the rebuilt entities_fts, treating hyphen and space equivalently', async () => {
     const hyphen_rows = await execute_sqlite_query({
-      query:
-        'SELECT base_uri FROM entities_fts WHERE entities_fts MATCH ?',
+      query: 'SELECT base_uri FROM entities_fts WHERE entities_fts MATCH ?',
       parameters: ['"nano-community"']
     })
     expect(hyphen_rows.map((r) => r.base_uri)).to.include(
@@ -251,13 +248,10 @@ Body text referencing nano-community.
     )
 
     const space_rows = await execute_sqlite_query({
-      query:
-        'SELECT base_uri FROM entities_fts WHERE entities_fts MATCH ?',
+      query: 'SELECT base_uri FROM entities_fts WHERE entities_fts MATCH ?',
       parameters: ['nano community']
     })
-    expect(space_rows.map((r) => r.base_uri)).to.include(
-      'user:task/example.md'
-    )
+    expect(space_rows.map((r) => r.base_uri)).to.include('user:task/example.md')
   })
 
   it('advances SCHEMA_VERSION to the target', async () => {

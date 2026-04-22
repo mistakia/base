@@ -222,8 +222,10 @@ describe('API /search performance', function () {
       )
       return
     }
-    expect(p95, `${name} p95 ${p95.toFixed(1)}ms exceeded ceiling ${ceiling}ms`)
-      .to.be.at.most(ceiling)
+    expect(
+      p95,
+      `${name} p95 ${p95.toFixed(1)}ms exceeded ceiling ${ceiling}ms`
+    ).to.be.at.most(ceiling)
   }
 
   it('entity: 1-token query', async () => {

@@ -65,8 +65,7 @@ describe('search filters', function () {
       parameters: ['user:task/a.md', 'user:tag/alpha.md']
     })
     await execute_sqlite_run({
-      query:
-        'INSERT INTO thread_tags (thread_id, tag_base_uri) VALUES (?, ?)',
+      query: 'INSERT INTO thread_tags (thread_id, tag_base_uri) VALUES (?, ?)',
       parameters: ['thr-1', 'user:tag/alpha.md']
     })
   })

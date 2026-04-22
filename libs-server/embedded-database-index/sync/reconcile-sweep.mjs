@@ -57,7 +57,10 @@ async function walk_entity_directory({ user_base_directory, dir_name }) {
 async function build_file_map({ user_base_directory }) {
   const raw = []
   for (const dir_name of ENTITY_DIRECTORIES) {
-    const entries = await walk_entity_directory({ user_base_directory, dir_name })
+    const entries = await walk_entity_directory({
+      user_base_directory,
+      dir_name
+    })
     raw.push(...entries)
     await new Promise((resolve) => setImmediate(resolve))
   }
@@ -133,13 +136,16 @@ async function sync_one({
 
 async function run_with_concurrency({ items, limit, worker }) {
   let index = 0
-  const runners = Array.from({ length: Math.min(limit, items.length) }, async () => {
-    while (true) {
-      const current = index++
-      if (current >= items.length) return
-      await worker(items[current])
+  const runners = Array.from(
+    { length: Math.min(limit, items.length) },
+    async () => {
+      while (true) {
+        const current = index++
+        if (current >= items.length) return
+        await worker(items[current])
+      }
     }
-  })
+  )
   await Promise.all(runners)
 }
 

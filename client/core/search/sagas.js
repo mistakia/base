@@ -30,7 +30,9 @@ function* handle_search_query({ payload }) {
   const has_filters = Boolean(source || type || tag || status || path)
 
   if ((!query || query.trim().length < 2) && !has_filters) {
-    yield put(search_actions.search_success({ query: '', total: 0, results: [] }))
+    yield put(
+      search_actions.search_success({ query: '', total: 0, results: [] })
+    )
     return
   }
 
