@@ -55,11 +55,16 @@ function display_text(result) {
   return result.relative_path || result.file_path || ''
 }
 
-const ResultItem = ({ item, is_selected, onClick }) => {
+const ResultItem = ({ item, is_selected, normalized_score, onClick }) => {
   const matches = Array.isArray(item.matches) ? item.matches : []
+  const score_style =
+    typeof normalized_score === 'number'
+      ? { '--score': normalized_score }
+      : undefined
   return (
     <div
       className={`command-palette__result-item ${is_selected ? 'command-palette__result-item--selected' : ''}`}
+      style={score_style}
       onClick={onClick}>
       <div className='command-palette__result-header'>
         <span className='command-palette__result-type'>
@@ -108,6 +113,7 @@ ResultItem.propTypes = {
     entity_type: PropTypes.string
   }).isRequired,
   is_selected: PropTypes.bool,
+  normalized_score: PropTypes.number,
   onClick: PropTypes.func
 }
 
@@ -156,6 +162,29 @@ const CommandPalette = () => {
     [show_recent_files, recent_files, results]
   )
   const display_loading = show_recent_files ? recent_files_loading : is_loading
+
+  const score_range = useMemo(() => {
+    let min = Infinity
+    let max = -Infinity
+    display_items.forEach((item) => {
+      if (typeof item.score === 'number') {
+        if (item.score < min) min = item.score
+        if (item.score > max) max = item.score
+      }
+    })
+    if (!isFinite(min) || !isFinite(max)) return null
+    return { min, max }
+  }, [display_items])
+
+  const normalize_score = useCallback(
+    (score) => {
+      if (typeof score !== 'number' || !score_range) return undefined
+      const { min, max } = score_range
+      if (max === min) return 1
+      return (score - min) / (max - min)
+    },
+    [score_range]
+  )
 
   const handle_close = useCallback(() => {
     dispatch(search_actions.close())
@@ -311,6 +340,7 @@ const CommandPalette = () => {
                 key={`recent-${item.relative_path || item.file_path}-${index}`}
                 item={item}
                 is_selected={index === selected_index}
+                normalized_score={normalize_score(item.score)}
                 onClick={() => navigate_to_item(item)}
               />
             ))}
@@ -326,6 +356,7 @@ const CommandPalette = () => {
                 key={`${item.entity_uri || item.file_path || 'item'}-${index}`}
                 item={item}
                 is_selected={index === selected_index}
+                normalized_score={normalize_score(item.score)}
                 onClick={() => navigate_to_item(item)}
               />
             ))}

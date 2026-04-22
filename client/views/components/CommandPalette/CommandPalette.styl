@@ -62,10 +62,10 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
 
   &__result-item
     display flex
-    align-items center
-    height 20px
-    padding 0 12px
-    gap 8px
+    flex-direction column
+    align-items stretch
+    min-height 20px
+    padding 2px 12px
     cursor pointer
     font-family var(--font-family-mono)
     font-size var(--font-size-sm)
@@ -85,24 +85,20 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
       .command-palette__result-text
         color var(--color-white)
 
+      .command-palette__result-score
+      .command-palette__match-source
+      .command-palette__match-snippet
+        color rgba(255, 255, 255, 0.85)
+
     &--selected:hover
       background-color var(--color-primary)
-      color var(--color-white)
 
-      .command-palette__result-type
-        color var(--color-white)
-        opacity 0.7
-
-      .command-palette__result-text
-        color var(--color-white)
-
-      .command-palette__line-number
-      .command-palette__context-line
-      .command-palette__match-line
-      .command-palette__similarity-score
-      .command-palette__semantic-description
-      .command-palette__semantic-chunk
-        color rgba(255, 255, 255, 0.85)
+  &__result-header
+    display flex
+    align-items center
+    gap 8px
+    width 100%
+    min-width 0
 
   &__result-type
     color var(--color-text-tertiary)
@@ -122,6 +118,45 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
     text-overflow ellipsis
     min-width 0
 
+  &__result-score
+    margin-left auto
+    flex-shrink 0
+    font-size 10px
+    padding 0 6px
+    min-width 36px
+    text-align center
+    border-radius 2px
+    color unquote('rgba(74, 53, 32, calc(0.35 + var(--score, 0) * 0.65))')
+    background-color unquote('rgba(246, 106, 10, calc(0.05 + var(--score, 0) * 0.85))')
+
+  &__result-matches
+    display flex
+    flex-direction column
+    padding 2px 0 4px 76px
+    gap 1px
+
+  &__match
+    display flex
+    align-items baseline
+    gap 8px
+    min-width 0
+    line-height 16px
+    font-size 11px
+
+  &__match-source
+    color var(--color-text-tertiary)
+    font-size 10px
+    text-transform uppercase
+    flex-shrink 0
+    white-space nowrap
+
+  &__match-snippet
+    flex 1
+    min-width 0
+    color var(--color-text-secondary)
+    white-space nowrap
+    overflow hidden
+    text-overflow ellipsis
 
   &__empty
     padding 12px
@@ -139,19 +174,9 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
     font-family var(--font-family-mono)
     flex-shrink 0
     gap 2px
-
-    &--mode
-      background-color rgba(0, 123, 255, 0.15)
-      color var(--color-primary)
-
-    &--operator
-      background-color var(--color-surface-hover)
-      border 1px solid var(--color-border)
-      color var(--color-text-secondary)
-
-    &--exclude
-      background-color rgba(215, 58, 73, 0.10)
-      color var(--color-error)
+    background-color var(--color-surface-hover)
+    border 1px solid var(--color-border)
+    color var(--color-text-secondary)
 
   &__chip-label
     white-space nowrap
@@ -169,75 +194,3 @@ $overlay-box-shadow = 0 1px 6px rgba(0, 0, 0, 0.06), 0 2px 12px rgba(0, 0, 0, 0.
 
   &__chip:hover &__chip-remove
     display inline
-
-  &__mode-status
-    font-size 10px
-    color var(--color-text-tertiary)
-    flex-shrink 0
-
-  &__line-number
-    color var(--color-text-tertiary)
-    font-size var(--font-size-sm)
-    flex-shrink 0
-
-  &__similarity-score
-    font-size 10px
-    color var(--color-text-tertiary)
-    flex-shrink 0
-    margin-left auto
-
-  &__content-header
-    display flex
-    align-items center
-    gap 8px
-    width 100%
-
-  &__content-context
-    padding 2px 12px 4px 68px
-    font-family var(--font-family-mono)
-    font-size 11px
-    line-height 16px
-
-  &__context-line
-    color var(--color-text-tertiary)
-    white-space nowrap
-    overflow hidden
-    text-overflow ellipsis
-
-  &__match-line
-    color var(--color-text)
-    font-weight 500
-    white-space nowrap
-    overflow hidden
-    text-overflow ellipsis
-
-  &__semantic-header
-    display flex
-    align-items center
-    gap 8px
-    width 100%
-
-  &__semantic-description
-    padding 0 12px 2px 68px
-    font-size 11px
-    color var(--color-text-secondary)
-    white-space nowrap
-    overflow hidden
-    text-overflow ellipsis
-
-  &__semantic-chunk
-    padding 0 12px 4px 68px
-    font-size 11px
-    color var(--color-text-tertiary)
-    line-height 16px
-    display -webkit-box
-    -webkit-line-clamp 2
-    -webkit-box-orient vertical
-    overflow hidden
-
-  &__result-item--content
-  &__result-item--semantic
-    height auto
-    flex-direction column
-    align-items flex-start
-    padding 4px 12px
