@@ -14,6 +14,7 @@ import { rank } from './ranker.mjs'
 import { permission_filter } from './permission.mjs'
 import { load_search_config } from './search-config.mjs'
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
 const log = debug('search:orchestrator')
 
@@ -40,7 +41,7 @@ async function run_source_with_timeout({
     try {
       return await adapter.search({ query, candidate_limit })
     } catch (error) {
-      log('source %s failed: %s', name, error.message)
+      log('source %s failed: %s\n%s', name, error.message, error.stack)
       return []
     }
   }
@@ -163,48 +164,53 @@ export async function search({
   user_public_key = null,
   permission_filter_fn = permission_filter
 }) {
-  const config = await load_search_config()
-  const sources_config = config.sources || {}
-  const active_sources =
-    Array.isArray(sources) && sources.length > 0
-      ? sources
-      : sources_config.enabled_by_default || [
-          'entity',
-          'thread_metadata',
-          'thread_timeline',
-          'path'
-        ]
-  const candidate_limit = sources_config.per_source_candidate_cap || 100
-  const semantic_timeout_ms = sources_config.semantic_timeout_ms || 2000
+  return embedded_index_manager._with_reader(async () => {
+    const config = await load_search_config()
+    const sources_config = config.sources || {}
+    const active_sources =
+      Array.isArray(sources) && sources.length > 0
+        ? sources
+        : sources_config.enabled_by_default || [
+            'entity',
+            'thread_metadata',
+            'thread_timeline',
+            'path'
+          ]
+    const candidate_limit = sources_config.per_source_candidate_cap || 100
+    const semantic_timeout_ms = sources_config.semantic_timeout_ms || 2000
 
-  const hits_by_source = await Promise.all(
-    active_sources.map((name) =>
-      run_source_with_timeout({
-        name,
-        query,
-        candidate_limit,
-        semantic_timeout_ms
-      })
+    const hits_by_source = await Promise.all(
+      active_sources.map((name) =>
+        run_source_with_timeout({
+          name,
+          query,
+          candidate_limit,
+          semantic_timeout_ms
+        })
+      )
     )
-  )
 
-  const all_hits = hits_by_source.flat()
-  const deduped = dedupe_by_entity_uri(all_hits)
-  const with_metadata = await attach_entity_metadata(deduped)
-  const filtered = await apply_filters({ hits: with_metadata, filters })
-  const ranked = rank({ hits: filtered })
+    const all_hits = hits_by_source.flat()
+    const deduped = dedupe_by_entity_uri(all_hits)
+    const with_metadata = await attach_entity_metadata(deduped)
+    const filtered = await apply_filters({ hits: with_metadata, filters })
+    const ranked = rank({ hits: filtered })
 
-  const page = ranked.slice(offset, offset + limit)
-  const permitted = await permission_filter_fn({ hits: page, user_public_key })
+    const page = ranked.slice(offset, offset + limit)
+    const permitted = await permission_filter_fn({
+      hits: page,
+      user_public_key
+    })
 
-  const results = permitted.map((hit) => ({
-    entity_uri: hit.entity_uri,
-    type: hit.type,
-    title: hit.title,
-    updated_at: hit.updated_at,
-    score: hit.score,
-    matches: hit.matches
-  }))
+    const results = permitted.map((hit) => ({
+      entity_uri: hit.entity_uri,
+      type: hit.type,
+      title: hit.title,
+      updated_at: hit.updated_at,
+      score: hit.score,
+      matches: hit.matches
+    }))
 
-  return { query, total: results.length, results }
+    return { query, total: results.length, results }
+  })
 }
