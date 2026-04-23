@@ -1,6 +1,15 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
+import markdownItKatex from '@vscode/markdown-it-katex'
+import markdownItFootnote from 'markdown-it-footnote'
+import markdownItDeflist from 'markdown-it-deflist'
+import markdownItSub from 'markdown-it-sub'
+import markdownItSup from 'markdown-it-sup'
+import { full as markdownItEmoji } from 'markdown-it-emoji'
+import { alert as markdownItAlert } from '@mdit/plugin-alert'
+import markdownItContainer from 'markdown-it-container'
+import markdownItAttrs from 'markdown-it-attrs'
 import markdownItXmlStyling from './markdown-it-xml-styling.mjs'
 import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
 import markdownItHeadingAnchor from './markdown-it-heading-anchor.js'
@@ -13,6 +22,8 @@ import { process_plaintext_blocks } from './plaintext-number-highlighter.js'
 import { process_prompt_blocks } from './prompt-block-processor.js'
 import { transform_outside_inline_code } from './inline-code-parser.js'
 import 'highlight.js/styles/github.css'
+import 'katex/dist/katex.min.css'
+import '@mdit/plugin-alert/style'
 
 // Import plaintext language support
 import 'highlight.js/lib/languages/plaintext'
@@ -55,7 +66,15 @@ const escape_unknown_xml_tags_outside_code = (content) => {
   return processed_lines.join('\n')
 }
 
-// Initialize markdown-it with highlight.js
+// Plugin registration order is load-bearing:
+//   1. KaTeX first so math delimiters are tokenized before any other plugin
+//      can swallow `$` or `\`.
+//   2. GFM extensions (footnote, deflist, sub, sup, emoji, alert) second.
+//   3. markdown-it-container (catch-all) for `:::NAME` block fences.
+//   4. markdown-it-attrs LAST so `{.class #id}` tokens attach to blocks
+//      produced by all the plugins above (including alerts and containers).
+// Changing this order can silently break attribute attachment or math
+// rendering -- update tests in tests/unit/markdown/ if you touch it.
 const md = new MarkdownIt({
   html: true, // Enable HTML tags to allow styled XML tags
   breaks: true,
@@ -69,6 +88,7 @@ const md = new MarkdownIt({
     return '' // use external default escaping
   }
 })
+  .use(markdownItKatex)
   .use(markdownItHighlightjs, {
     hljs,
     auto: true,
@@ -79,9 +99,74 @@ const md = new MarkdownIt({
   .use(markdownItXmlStyling)
   .use(markdownItTaskCheckbox)
   .use(markdownItHeadingAnchor)
+  .use(markdownItFootnote)
+  .use(markdownItDeflist)
+  .use(markdownItSub)
+  .use(markdownItSup)
+  .use(markdownItEmoji)
+  .use(markdownItAlert)
+
+// Strict attribute whitelist for markdown-it-attrs. Array form (the plugin
+// also accepts an Object/RegExp form, but Set is NOT accepted).
+const ALLOWED_ATTRS = [
+  'id',
+  'class',
+  'alt',
+  'title',
+  'width',
+  'height',
+  'src',
+  'href',
+  'colspan',
+  'rowspan'
+]
+
+// Catch-all container: any `:::NAME` fence renders as `<div class="NAME">`.
+// The class name is HTML-escaped so authors cannot break out of the attribute.
+const escape_html_attr = (value) =>
+  String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+md.use(markdownItContainer, 'any', {
+  validate: () => true,
+  render: (tokens, idx) => {
+    const token = tokens[idx]
+    if (token.nesting === 1) {
+      const name = token.info.trim().split(/\s+/)[0] || 'container'
+      return `<div class="${escape_html_attr(name)}">\n`
+    }
+    return '</div>\n'
+  }
+})
+
+// markdown-it-attrs MUST be registered last; see comment above.
+md.use(markdownItAttrs, { allowedAttributes: ALLOWED_ATTRS })
+
+const html_escape = (str) =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
 
 const default_fence = md.renderer.rules.fence
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx]
+  const info = (token.info || '').trim().split(/\s+/)[0]
+
+  // Mermaid fences emit a passthrough wrapper; the post-render lifecycle
+  // (mermaid-runner.js) consumes [data-mermaid] nodes and renders SVGs.
+  // The body must be HTML-escaped so the markup survives DOM insertion;
+  // mermaid 11.x reads element.innerHTML and runs entityDecode() before
+  // parsing, so `<` / `>` round-trip correctly.
+  if (info === 'mermaid') {
+    return `<div class="mermaid-source" data-mermaid>${html_escape(token.content)}</div>\n`
+  }
+
   const rendered = default_fence
     ? default_fence(tokens, idx, options, env, self)
     : self.renderToken(tokens, idx, options)

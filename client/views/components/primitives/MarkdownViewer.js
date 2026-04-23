@@ -3,11 +3,13 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { sanitize_html } from '@views/utils/sanitize-html.mjs'
+import { run_mermaid_in } from '@views/utils/mermaid-runner.js'
 import { history } from '@core/store.js'
 
 import { COLORS } from '@theme/colors.js'
 import '@styles/checkbox.styl'
 import '@styles/plaintext-highlighting.styl'
+import '@styles/markdown.styl'
 
 const get_normal_styles = {
   // Heading anchor link (visible on hover, pointer devices only)
@@ -364,6 +366,19 @@ const MarkdownViewer = ({ content, is_redacted }) => {
       scroll_to_fragment(hash)
     })
   }, [html_content, scroll_to_fragment])
+
+  // Run mermaid against any [data-mermaid] nodes after each HTML update.
+  // requestAnimationFrame defers until after the browser paints so mermaid
+  // reads non-zero container dimensions (otherwise it can produce 0x0 SVGs).
+  useEffect(() => {
+    const container = container_ref.current
+    if (!container) return
+
+    const raf = requestAnimationFrame(() => {
+      run_mermaid_in(container)
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [html_content])
 
   return (
     <Box
