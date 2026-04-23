@@ -101,7 +101,7 @@ export const check_thread_permission_middleware = () => {
  *
  * @param {Object} req - Express request object (for permission context + share_token)
  * @param {string} resource_uri - Fully-formed base URI (e.g. `storage:foo.png`)
- * @returns {Promise<{read_allowed: boolean, write_allowed: boolean, reason: string, resource_uri: string, user_public_key: string|null}>}
+ * @returns {Promise<{read_allowed: boolean, write_allowed: boolean, reason: string, user_public_key: string|null}>}
  */
 export const check_permission_for_uri = async (req, resource_uri) => {
   const context = get_permission_context(req)
@@ -111,16 +111,11 @@ export const check_permission_for_uri = async (req, resource_uri) => {
     share_token
   })
 
-  const read_allowed = result?.read?.allowed ?? false
-  const write_allowed = result?.write?.allowed ?? false
-  const reason = result?.read?.reason ?? 'Permission check failed'
-
   return {
     user_public_key: context.user_public_key,
-    resource_uri,
-    read_allowed,
-    write_allowed,
-    reason
+    read_allowed: result?.read?.allowed ?? false,
+    write_allowed: result?.write?.allowed ?? false,
+    reason: result?.read?.reason ?? 'Permission check failed'
   }
 }
 

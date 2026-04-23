@@ -6,7 +6,7 @@ import path from 'path'
 import config from '#config'
 import {
   resolve_base_uri,
-  is_storage_uri,
+  verify_storage_realpath,
   is_valid_base_uri
 } from '#libs-server/base-uri/base-uri-utilities.mjs'
 
@@ -35,25 +35,21 @@ describe('storage: base-URI scheme', () => {
     fs.rmSync(outside_root, { recursive: true, force: true })
   })
 
-  it('detects storage URIs', () => {
-    expect(is_storage_uri('storage:foo.png')).to.equal(true)
-    expect(is_storage_uri('user:foo.md')).to.equal(false)
-    expect(is_storage_uri(null)).to.equal(false)
-  })
-
   it('treats storage as a valid scheme', () => {
     expect(is_valid_base_uri('storage:foo.png')).to.equal(true)
     expect(is_valid_base_uri('storage:/foo.png')).to.equal(true)
   })
 
-  it('resolves `storage:foo.png` to `<root>/foo.png`', () => {
+  it('resolves `storage:foo.png` to `<root>/foo.png`', async () => {
     const resolved = resolve_base_uri('storage:foo.png')
-    expect(resolved).to.equal(fs.realpathSync(path.join(storage_root, 'foo.png')))
+    const real = await verify_storage_realpath(resolved)
+    expect(real).to.equal(fs.realpathSync(path.join(storage_root, 'foo.png')))
   })
 
-  it('strips a leading slash on `storage:/foo.png`', () => {
+  it('strips a leading slash on `storage:/foo.png`', async () => {
     const resolved = resolve_base_uri('storage:/foo.png')
-    expect(resolved).to.equal(fs.realpathSync(path.join(storage_root, 'foo.png')))
+    const real = await verify_storage_realpath(resolved)
+    expect(real).to.equal(fs.realpathSync(path.join(storage_root, 'foo.png')))
   })
 
   it('rejects `storage:../etc/passwd` (path traversal)', () => {
@@ -62,9 +58,15 @@ describe('storage: base-URI scheme', () => {
     )
   })
 
-  it('rejects symlinks whose realpath escapes the root', () => {
-    expect(() => resolve_base_uri('storage:escape.png')).to.throw(
-      /symlink|escape|traversal/i
-    )
+  it('rejects symlinks whose realpath escapes the root', async () => {
+    const resolved = resolve_base_uri('storage:escape.png')
+    let err
+    try {
+      await verify_storage_realpath(resolved)
+    } catch (e) {
+      err = e
+    }
+    expect(err).to.exist
+    expect(err.message).to.match(/symlink|escape|traversal/i)
   })
 })

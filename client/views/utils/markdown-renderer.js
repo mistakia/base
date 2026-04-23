@@ -66,15 +66,9 @@ const escape_unknown_xml_tags_outside_code = (content) => {
   return processed_lines.join('\n')
 }
 
-// Plugin registration order is load-bearing:
-//   1. KaTeX first so math delimiters are tokenized before any other plugin
-//      can swallow `$` or `\`.
-//   2. GFM extensions (footnote, deflist, sub, sup, emoji, alert) second.
-//   3. markdown-it-container (catch-all) for `:::NAME` block fences.
-//   4. markdown-it-attrs LAST so `{.class #id}` tokens attach to blocks
-//      produced by all the plugins above (including alerts and containers).
-// Changing this order can silently break attribute attachment or math
-// rendering -- update tests in tests/unit/markdown/ if you touch it.
+// Plugin order is load-bearing: KaTeX first so `$`/`\` are tokenized before
+// other plugins can swallow them; markdown-it-attrs last so `{.class #id}`
+// tokens attach to blocks produced by containers/alerts above.
 const md = new MarkdownIt({
   html: true, // Enable HTML tags to allow styled XML tags
   breaks: true,
@@ -121,30 +115,6 @@ const ALLOWED_ATTRS = [
   'rowspan'
 ]
 
-// Catch-all container: any `:::NAME` fence renders as `<div class="NAME">`.
-// The class name is HTML-escaped so authors cannot break out of the attribute.
-const escape_html_attr = (value) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
-md.use(markdownItContainer, 'any', {
-  validate: () => true,
-  render: (tokens, idx) => {
-    const token = tokens[idx]
-    if (token.nesting === 1) {
-      const name = token.info.trim().split(/\s+/)[0] || 'container'
-      return `<div class="${escape_html_attr(name)}">\n`
-    }
-    return '</div>\n'
-  }
-})
-
-// markdown-it-attrs MUST be registered last; see comment above.
-md.use(markdownItAttrs, { allowedAttributes: ALLOWED_ATTRS })
-
 const html_escape = (str) =>
   String(str)
     .replace(/&/g, '&amp;')
@@ -152,6 +122,20 @@ const html_escape = (str) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;')
+
+md.use(markdownItContainer, 'any', {
+  validate: () => true,
+  render: (tokens, idx) => {
+    const token = tokens[idx]
+    if (token.nesting === 1) {
+      const name = token.info.trim().split(/\s+/)[0] || 'container'
+      return `<div class="${html_escape(name)}">\n`
+    }
+    return '</div>\n'
+  }
+})
+
+md.use(markdownItAttrs, { allowedAttributes: ALLOWED_ATTRS })
 
 const default_fence = md.renderer.rules.fence
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {

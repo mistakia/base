@@ -362,22 +362,27 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     const hash = window.location.hash
     if (!hash || !html_content) return
 
-    requestAnimationFrame(() => {
+    const raf = requestAnimationFrame(() => {
       scroll_to_fragment(hash)
     })
+    return () => cancelAnimationFrame(raf)
   }, [html_content, scroll_to_fragment])
 
-  // Run mermaid against any [data-mermaid] nodes after each HTML update.
-  // requestAnimationFrame defers until after the browser paints so mermaid
-  // reads non-zero container dimensions (otherwise it can produce 0x0 SVGs).
+  // requestAnimationFrame defers until after paint so mermaid reads non-zero
+  // container dimensions; AbortController cancels in-flight mermaid.run when
+  // content changes mid-render to avoid duplicate-id races on the same nodes.
   useEffect(() => {
     const container = container_ref.current
     if (!container) return
 
+    const controller = new AbortController()
     const raf = requestAnimationFrame(() => {
-      run_mermaid_in(container)
+      run_mermaid_in(container, controller.signal)
     })
-    return () => cancelAnimationFrame(raf)
+    return () => {
+      cancelAnimationFrame(raf)
+      controller.abort()
+    }
   }, [html_content])
 
   return (

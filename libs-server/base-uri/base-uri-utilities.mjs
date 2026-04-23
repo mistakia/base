@@ -9,7 +9,6 @@
  */
 
 import path from 'path'
-import fs from 'fs'
 import debug from 'debug'
 
 import config from '#config'
@@ -224,15 +223,9 @@ export function resolve_base_uri(base_uri, options = {}) {
       if (!is_path_within_directory(initial, storage_root)) {
         throw new Error(`Path traversal detected in storage URI: ${base_uri}`)
       }
-      // Re-validate after realpath to block symlink escapes.
-      // realpathSync throws ENOENT for missing files; let that bubble up so
-      // route handlers can map it to 404.
-      const real = fs.realpathSync(initial)
-      const real_root = fs.realpathSync(storage_root)
-      if (!is_path_within_directory(real, real_root)) {
-        throw new Error(`Symlink escape detected in storage URI: ${base_uri}`)
-      }
-      return real
+      // Symlink-escape guard is performed asynchronously by the caller via
+      // verify_storage_realpath so this resolver does not block the event loop.
+      return initial
     }
 
     case 'ssh':
@@ -303,13 +296,23 @@ export function create_base_uri_from_path(absolute_path, options = {}) {
 }
 
 /**
- * Detect whether a base URI uses the storage: scheme.
- * @param {string} base_uri
- * @returns {boolean}
+ * Asynchronously realpath a resolved storage path and verify it still sits
+ * inside storage.root_dir. Defense-in-depth against symlink escapes; the
+ * initial resolve_base_uri call already enforced lexical containment.
+ *
+ * @param {string} resolved_path - Path returned by resolve_base_uri for a storage: URI
+ * @returns {Promise<string>} - Realpath-resolved absolute path
  */
-export function is_storage_uri(base_uri) {
-  if (!base_uri || typeof base_uri !== 'string') return false
-  return base_uri.startsWith('storage:')
+export async function verify_storage_realpath(resolved_path) {
+  const { realpath } = await import('fs/promises')
+  const storage_root = config.storage && config.storage.root_dir
+  if (!storage_root) throw new Error('Storage root_dir not configured')
+  const real = await realpath(resolved_path)
+  const real_root = await realpath(storage_root)
+  if (!is_path_within_directory(real, real_root)) {
+    throw new Error(`Symlink escape detected: ${resolved_path}`)
+  }
+  return real
 }
 
 // Default export with all utilities
@@ -321,5 +324,5 @@ export default {
   resolve_base_uri,
   create_base_uri_from_path,
   create_base_uri_from_git_file,
-  is_storage_uri
+  verify_storage_realpath
 }

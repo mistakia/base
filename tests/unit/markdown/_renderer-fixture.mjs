@@ -31,13 +31,6 @@ const ALLOWED_ATTRS = [
   'rowspan'
 ]
 
-const escape_html_attr = (value) =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-
 const html_escape = (str) =>
   String(str)
     .replace(/&/g, '&amp;')
@@ -65,7 +58,7 @@ export const build_renderer = () => {
         const token = tokens[idx]
         if (token.nesting === 1) {
           const name = token.info.trim().split(/\s+/)[0] || 'container'
-          return `<div class="${escape_html_attr(name)}">\n`
+          return `<div class="${html_escape(name)}">\n`
         }
         return '</div>\n'
       }
