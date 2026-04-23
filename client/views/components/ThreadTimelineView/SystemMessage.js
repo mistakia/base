@@ -17,9 +17,7 @@ const SystemMessage = ({ message, working_directory = null }) => {
     set_is_expanded((v) => !v)
   }, [])
 
-  // Delegate thread lifecycle state changes to dedicated component
-  // (migrated from thread_state_change type, now type="system" with thread_lifecycle metadata)
-  if (message.metadata?.thread_lifecycle === true) {
+  if (message.system_type === 'state_change') {
     return <ThreadStateChangeMessage event={message} />
   }
 
@@ -118,7 +116,6 @@ SystemMessage.propTypes = {
     system_type: PropTypes.string,
     metadata: PropTypes.shape({
       level: PropTypes.string,
-      thread_lifecycle: PropTypes.bool,
       from_state: PropTypes.string,
       to_state: PropTypes.string,
       reason: PropTypes.string

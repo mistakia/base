@@ -135,8 +135,6 @@ const create_truncated_entry = (entry) => {
       const { metadata } = entry
       if (metadata) {
         const forwarded = {}
-        if (metadata.thread_lifecycle !== undefined)
-          forwarded.thread_lifecycle = metadata.thread_lifecycle
         if (metadata.is_interrupt !== undefined)
           forwarded.is_interrupt = metadata.is_interrupt
         if (metadata.level !== undefined) forwarded.level = metadata.level

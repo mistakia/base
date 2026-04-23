@@ -49,7 +49,6 @@ describe('content-redactor system metadata', () => {
           metadata: {
             from_state: 'active',
             to_state: 'archived',
-            thread_lifecycle: true,
             reason: 'completed by alice@example.com (call 415-555-1234)'
           }
         }
@@ -62,7 +61,6 @@ describe('content-redactor system metadata', () => {
     expect(entry.system_type).to.equal('state_change')
     expect(entry.metadata.from_state).to.equal('active')
     expect(entry.metadata.to_state).to.equal('archived')
-    expect(entry.metadata.thread_lifecycle).to.equal(true)
     expect(entry.metadata.reason).to.not.include('alice@example.com')
     expect(entry.metadata.reason).to.not.include('415-555-1234')
   })
