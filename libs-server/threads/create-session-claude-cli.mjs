@@ -84,6 +84,60 @@ export const derive_projects_dir_name = (working_directory) => {
   return working_directory.replace(/\//g, '-')
 }
 
+/**
+ * Derive a short account-namespace label from a container CLAUDE_CONFIG_DIR.
+ * Primary (null or `.claude`) becomes 'primary'; secondary dirs surface their
+ * basename with the leading dot stripped (e.g. `.claude-earn.crop.code` ->
+ * `claude-earn.crop.code`). Used for human-readable error messages.
+ */
+export const derive_account_namespace = (container_config_dir) => {
+  if (!container_config_dir) return 'primary'
+  const base = basename(container_config_dir.replace(/\/$/, ''))
+  if (base === '.claude') return 'primary'
+  return base.replace(/^\./, '')
+}
+
+/**
+ * Pre-flight resume gate: assert the live session JSONL exists at the exact
+ * path `claude -r <session_id>` will read. On ENOENT, throw a descriptive
+ * error naming account_namespace, session_id, expected path, and
+ * claude_config_dir so the failure is self-explanatory in job output rather
+ * than surfacing only as a silent fork or a terse CLI stderr.
+ */
+export const assert_live_session_file_exists = async ({
+  session_id,
+  username,
+  claude_config_dir,
+  working_directory
+}) => {
+  const resolved_claude_home = resolve_account_host_path({
+    username,
+    container_config_dir: claude_config_dir
+  })
+  const projects_dir_name = derive_projects_dir_name(working_directory)
+  const expected_session_file = join(
+    resolved_claude_home,
+    'projects',
+    projects_dir_name,
+    `${session_id}.jsonl`
+  )
+  const account_namespace = derive_account_namespace(claude_config_dir)
+  try {
+    await access(expected_session_file, constants.F_OK)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(
+        `Pre-flight resume check failed: live session file not found. ` +
+          `account_namespace=${account_namespace} ` +
+          `session_id=${session_id} ` +
+          `claude_config_dir=${claude_config_dir || '(default)'} ` +
+          `expected_path=${expected_session_file}`
+      )
+    }
+    throw err
+  }
+}
+
 // =============================================================================
 // Command Path Resolution
 // =============================================================================
@@ -707,6 +761,15 @@ export const create_session_claude_cli = async ({
       username,
       claude_config_dir
     })
+
+    if (execution_mode === 'container_user' && username) {
+      await assert_live_session_file_exists({
+        session_id,
+        username,
+        claude_config_dir,
+        working_directory: container_working_directory
+      })
+    }
   }
 
   // -------------------------
