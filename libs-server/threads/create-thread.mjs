@@ -18,6 +18,7 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 
 const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:create')
@@ -101,6 +102,7 @@ export function build_thread_metadata({
   prompt_properties = {},
   tools = [],
   source = null,
+  execution = null,
   additional_fields = {},
   created_at = null,
   updated_at = null,
@@ -130,6 +132,13 @@ export function build_thread_metadata({
   // Set source if provided
   if (source) {
     metadata.source = source
+  }
+
+  // Stamp canonical execution attribution. Allow explicit null to land in the
+  // record so the schema's nullable execution invariant is satisfied even for
+  // threads that cannot be classified at creation time.
+  if (execution !== undefined) {
+    metadata.execution = execution
   }
 
   // Add title and description if provided
@@ -175,6 +184,7 @@ export default async function create_thread({
   tools = [],
   create_git_branches = false,
   source = null,
+  execution = null,
   additional_metadata = {},
   created_at = null,
   updated_at = null,
@@ -319,12 +329,15 @@ export default async function create_thread({
     prompt_properties,
     tools: final_tools,
     source,
+    execution,
     additional_fields: additional_metadata,
     created_at,
     updated_at,
     title,
     short_description
   })
+
+  await assert_valid_thread_metadata(metadata)
 
   await fs.mkdir(thread_dir, { recursive: true })
 
@@ -378,6 +391,7 @@ export default async function create_thread({
       metadata.user_worktree_path = worktree_paths.user
 
       // Rewrite metadata.json with the worktree paths now populated
+      await assert_valid_thread_metadata(metadata)
       await fs.writeFile(
         metadata_path,
         JSON.stringify(metadata, null, 2),

@@ -21,6 +21,8 @@ import { build_timeline_from_session } from './build-timeline-entries.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
+import { would_downgrade_per_user_container } from '#libs-server/threads/execution-attribution.mjs'
+import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 
 const log = debug('integrations:thread:create-from-session')
 const log_debug = debug('integrations:thread:create-from-session:debug')
@@ -122,7 +124,7 @@ export const create_thread_from_session = async ({
   inference_provider,
   models,
   raw_session_data = null, // Original raw data from provider
-  source_overrides = null // Additional source fields (e.g. execution_mode, container_user)
+  execution_overrides = null // Canonical execution attribution (or null)
 }) => {
   try {
     // Calculate message and tool call counts from normalized session
@@ -136,7 +138,8 @@ export const create_thread_from_session = async ({
       normalized_session.metadata || {}
     )
 
-    // Create source metadata (session origin tracking)
+    // Source carries pure provenance (provider + session origin); execution
+    // attribution lives in its own top-level object.
     const source = {
       provider: normalized_session.session_provider,
       session_id: normalized_session.session_id,
@@ -145,9 +148,7 @@ export const create_thread_from_session = async ({
         ...normalized_session.metadata,
         plan_slug: normalized_session.metadata?.plan_slug || null
       },
-      raw_data_saved: !!raw_session_data,
-      // Apply source overrides (execution_mode, container_user, container_name)
-      ...(source_overrides || {})
+      raw_data_saved: !!raw_session_data
     }
 
     // Extract timeline timestamps for thread creation
@@ -185,6 +186,7 @@ export const create_thread_from_session = async ({
       create_git_branches: false,
       create_memory_repository: false,
       source,
+      execution: execution_overrides,
       title: default_title,
       additional_metadata: {
         system_worktree_path: null,
@@ -557,7 +559,7 @@ export const update_existing_thread = async (
       thread_dir,
       raw_session_data,
       user_base_directory = get_user_base_directory(),
-      source_overrides = null
+      execution_overrides = null
     } = options
 
     log_debug(
@@ -577,7 +579,7 @@ export const update_existing_thread = async (
       metadata_changed = await update_thread_metadata(
         thread_dir,
         normalized_session,
-        { source_overrides }
+        { execution_overrides }
       )
 
       // Enforce the lifecycle-anchor invariant before any sibling file is
@@ -684,7 +686,7 @@ function build_source_from_existing(existing_metadata, normalized_session) {
 export const update_thread_metadata = async (
   thread_dir,
   normalized_session,
-  { source_overrides = null } = {}
+  { execution_overrides = null } = {}
 ) => {
   try {
     const metadata_start = Date.now()
@@ -705,22 +707,20 @@ export const update_thread_metadata = async (
       }
     }
 
-    // Never downgrade a container_user thread. Once the container-aware
-    // import path has stamped a thread with execution_mode='container_user',
-    // no subsequent import may rewrite those fields, even if the new import
-    // supplies its own source_overrides (e.g. sync_session_fallback running
-    // from the owner's process with execution_mode='host').
-    const existing_execution_mode =
-      existing_metadata.source?.execution_mode || null
-    const effective_source_overrides =
-      existing_execution_mode === 'container_user' ? null : source_overrides
-    if (
-      existing_execution_mode === 'container_user' &&
-      source_overrides &&
-      source_overrides.execution_mode !== 'container_user'
-    ) {
+    // Idempotency: never downgrade a per-user-container attribution to a
+    // less-specific stamp. A sync running from the owner's process (e.g.
+    // sync_session_fallback with mode='host') must not overwrite an existing
+    // base-user-<name> stamp recorded by the container-aware import path.
+    const existing_execution = existing_metadata.execution || null
+    const effective_execution_overrides = would_downgrade_per_user_container(
+      existing_execution,
+      execution_overrides
+    )
+      ? null
+      : execution_overrides
+    if (effective_execution_overrides === null && execution_overrides) {
       log(
-        `Refusing to overwrite container_user attribution on ${thread_dir} (incoming execution_mode=${source_overrides.execution_mode})`
+        `Refusing to downgrade per-user container attribution on ${thread_dir} (incoming container_name=${execution_overrides?.container_name || 'null'})`
       )
     }
 
@@ -758,13 +758,9 @@ export const update_thread_metadata = async (
         provider_metadata: {
           ...normalized_session.metadata,
           plan_slug: normalized_session.metadata?.plan_slug || null
-        },
-        // Apply source overrides last so explicit container attribution
-        // from the calling import path wins, but fall back to existing
-        // values when no overrides are supplied. Overrides are suppressed
-        // when they would downgrade a container_user thread.
-        ...(effective_source_overrides || {})
+        }
       },
+      execution: effective_execution_overrides ?? existing_execution,
       // Add detailed counts for Claude sessions
       ...(normalized_session.session_provider === 'claude' && {
         user_message_count: detailed_counts.user_message_count,
@@ -804,6 +800,8 @@ export const update_thread_metadata = async (
         safe_date_to_iso(session_metadata.end_time) || new Date().toISOString()
 
       updated_metadata.updated_at = timeline_updated_at
+
+      await assert_valid_thread_metadata(updated_metadata)
 
       const write_start = Date.now()
       await write_file_to_filesystem({

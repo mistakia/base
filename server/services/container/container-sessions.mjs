@@ -10,7 +10,8 @@ import { execFile } from 'child_process'
 import { Queue } from 'bullmq'
 import debug from 'debug'
 
-import { DOCKER_CONTAINER_NAME } from '#libs-server/docker/execution-mode.mjs'
+import { DOCKER_CONTAINER_NAME } from '#libs-server/container/execution-mode.mjs'
+import { get_container_runtime_name } from '#libs-server/container/runtime-config.mjs'
 import { get_redis_connection } from '#server/services/redis/get-connection.mjs'
 
 const log = debug('docker:container-sessions')
@@ -26,7 +27,7 @@ const THREAD_QUEUE_NAME = 'thread-creation'
 const run_docker_top = (container_name) => {
   return new Promise((resolve, reject) => {
     execFile(
-      'docker',
+      get_container_runtime_name(),
       ['top', container_name, '-o', 'pid,args'],
       (error, stdout, stderr) => {
         if (error) {

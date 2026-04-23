@@ -23,12 +23,17 @@ describe('job-worker sync_session_fallback', function () {
           user_public_key: 'test-key'
         }
       }
-      const source_overrides = { execution_mode: 'host' }
+      const execution_overrides = {
+        mode: 'host',
+        machine_id: null,
+        container_runtime: null,
+        container_name: null
+      }
 
       // Should not throw - errors are caught internally
       await sync_session_fallback_by_file({
         job,
-        source_overrides,
+        execution_overrides,
         session_id: job.data.session_id
       })
     })
@@ -48,10 +53,15 @@ describe('job-worker sync_session_fallback', function () {
           user_public_key: 'test-key'
         }
       }
-      const source_overrides = { execution_mode: 'host' }
+      const execution_overrides = {
+        mode: 'host',
+        machine_id: null,
+        container_runtime: null,
+        container_name: null
+      }
 
       // Should not throw - errors are caught internally
-      await sync_session_fallback_by_glob(job, source_overrides)
+      await sync_session_fallback_by_glob(job, execution_overrides)
     })
 
     it('should handle container_user mode without username gracefully', async () => {
@@ -64,10 +74,15 @@ describe('job-worker sync_session_fallback', function () {
           user_public_key: 'test-key'
         }
       }
-      const source_overrides = { execution_mode: 'container_user' }
+      const execution_overrides = {
+        mode: 'container',
+        machine_id: 'storage',
+        container_runtime: 'docker',
+        container_name: 'base-user-test'
+      }
 
       // Should not throw - errors are caught internally
-      await sync_session_fallback_by_glob(job, source_overrides)
+      await sync_session_fallback_by_glob(job, execution_overrides)
     })
   })
 })

@@ -23,8 +23,9 @@ import { get_user_container_claude_home } from '#libs-server/threads/user-contai
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
-import { translate_to_container_path } from '#libs-server/docker/execution-mode.mjs'
+import { translate_to_container_path } from '#libs-server/container/execution-mode.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import { build_execution_attribution } from '#libs-server/threads/execution-attribution.mjs'
 import {
   select_account,
   handle_rate_limit_failure,
@@ -319,24 +320,26 @@ const sync_session_fallback = async (job, { override_session_id } = {}) => {
   const { thread_id, execution_mode, username } = job.data
   const session_id = override_session_id || job.data.session_id
 
-  // Build source overrides for all execution modes
-  const source_overrides =
+  const execution_overrides =
     execution_mode === 'container_user'
-      ? {
-          execution_mode: 'container_user',
-          container_user: true,
-          container_name: `base-user-${username}`
-        }
+      ? build_execution_attribution({ mode: 'container', username })
       : execution_mode === 'container'
-        ? { execution_mode: 'container' }
-        : { execution_mode: execution_mode || 'host' }
+        ? build_execution_attribution({
+            mode: 'container',
+            container_name: 'base-container'
+          })
+        : build_execution_attribution({ mode: 'host' })
 
   if (session_id && thread_id) {
     // Resume case or recovered session_id: import the specific session file
-    await sync_session_fallback_by_file({ job, source_overrides, session_id })
+    await sync_session_fallback_by_file({
+      job,
+      execution_overrides,
+      session_id
+    })
   } else {
     // New session case: glob for all JSONL files in the projects directory
-    await sync_session_fallback_by_glob(job, source_overrides)
+    await sync_session_fallback_by_glob(job, execution_overrides)
   }
 }
 
@@ -345,7 +348,7 @@ const sync_session_fallback = async (job, { override_session_id } = {}) => {
  */
 const sync_session_fallback_by_file = async ({
   job,
-  source_overrides,
+  execution_overrides,
   session_id
 }) => {
   const { working_directory, execution_mode, username } = job.data
@@ -396,7 +399,7 @@ const sync_session_fallback_by_file = async ({
         session_file
       },
       user_public_key: job.data.user_public_key,
-      source_overrides
+      execution_overrides
     }
 
     // Pass known_thread_id to prevent duplicate creation via deterministic ID mismatch
@@ -420,7 +423,7 @@ const sync_session_fallback_by_file = async ({
  * Glob for JSONL files in the projects directory (new session case where session_id is null)
  * Handles deduplication via create_threads_from_session_provider's check_thread_exists
  */
-const sync_session_fallback_by_glob = async (job, source_overrides) => {
+const sync_session_fallback_by_glob = async (job, execution_overrides) => {
   const { working_directory, execution_mode, username } = job.data
 
   try {
@@ -471,7 +474,7 @@ const sync_session_fallback_by_glob = async (job, source_overrides) => {
             session_file
           },
           user_public_key: job.data.user_public_key,
-          source_overrides
+          execution_overrides
         }
 
         // Do NOT pass known_thread_id on the glob path: this loop processes

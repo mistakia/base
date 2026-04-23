@@ -1,88 +1,168 @@
 import { expect } from 'chai'
 
+import { is_per_user_container } from '#libs-server/threads/execution-attribution.mjs'
+
 /**
- * Integration tests for thread resume ownership enforcement.
- * These tests verify the ownership model for container_user threads.
- *
- * Full API-level tests require a running server and Redis instance.
- * These tests validate the logic components used in the resume flow.
+ * Integration tests for thread resume ownership and dispatch derivation.
+ * These are logic-only tests that mirror the resume route's permission and
+ * routing decisions. Full API-level coverage requires a running server and
+ * Redis instance and is exercised by the API integration suite.
  */
-describe('Thread Resume Ownership', function () {
+
+// Mirrors the resume route's two-step permission decision.
+const decide_permission = ({ is_owner, has_read_permission }) => {
+  if (is_owner) return { allowed: true }
+  if (has_read_permission) return { allowed: true }
+  return { allowed: false }
+}
+
+// Mirrors the resume route's local routing-variable derivation.
+const derive_execution_mode = (thread) => {
+  const container_name = thread.execution?.container_name
+  if (is_per_user_container(container_name)) return 'container_user'
+  if (thread.execution?.mode === 'container') return 'container'
+  return 'host'
+}
+
+describe('Thread Resume Ownership and Dispatch', function () {
   this.timeout(10000)
 
-  describe('ownership validation logic', () => {
-    it('should allow owner to resume their own thread', () => {
-      const thread_metadata = {
-        owner_public_key: 'user-key-abc',
-        source: { execution_mode: 'container_user' }
-      }
-      const requesting_user = 'user-key-abc'
-      const is_owner = thread_metadata.owner_public_key === requesting_user
-      expect(is_owner).to.be.true
+  describe('permission decision', () => {
+    it('allows the owner to resume their own thread', () => {
+      const result = decide_permission({
+        is_owner: true,
+        has_read_permission: false
+      })
+      expect(result.allowed).to.be.true
     })
 
-    it('should deny non-owner from resuming container_user thread', () => {
-      const thread_metadata = {
-        owner_public_key: 'user-key-abc',
-        source: { execution_mode: 'container_user' }
-      }
-      const requesting_user = 'user-key-xyz'
-      const is_owner = thread_metadata.owner_public_key === requesting_user
-      expect(is_owner).to.be.false
+    it('allows a non-owner with read permission (e.g. public_read)', () => {
+      const result = decide_permission({
+        is_owner: false,
+        has_read_permission: true
+      })
+      expect(result.allowed).to.be.true
     })
 
-    it('should use read permission check for non-container_user threads', () => {
-      const thread_metadata = {
-        owner_public_key: 'user-key-abc',
-        source: { execution_mode: 'container' }
-      }
-      // For container/host mode, ownership is not required -- read permission suffices
-      const execution_mode = thread_metadata.source.execution_mode
-      expect(execution_mode).to.not.equal('container_user')
+    it('denies a non-owner without read permission', () => {
+      const result = decide_permission({
+        is_owner: false,
+        has_read_permission: false
+      })
+      expect(result.allowed).to.be.false
     })
   })
 
-  describe('container_user resuming non-container_user threads', () => {
-    it('should deny container_user from resuming host/container threads', () => {
-      // A user with thread_config (container_user) should not be able
-      // to resume threads that were created in host or container mode
-      const thread_source = { provider: 'claude' } // legacy thread, no execution_mode
-      const execution_mode = thread_source.execution_mode || 'host'
-      const requesting_user_has_thread_config = true // arrin has thread_config
-
-      // The resume route blocks container_users from resuming non-container_user threads
-      const should_deny =
-        execution_mode !== 'container_user' && requesting_user_has_thread_config
-      expect(should_deny).to.be.true
+  describe('execution-mode routing derivation', () => {
+    it('routes per-user container threads via container_name prefix', () => {
+      const thread = {
+        execution: {
+          mode: 'container',
+          machine_id: 'storage',
+          container_runtime: 'docker',
+          container_name: 'base-user-arrin'
+        }
+      }
+      expect(derive_execution_mode(thread)).to.equal('container_user')
     })
 
-    it('should allow non-container_user to resume host/container threads with read permission', () => {
-      const thread_source = { execution_mode: 'container' }
-      const execution_mode = thread_source.execution_mode
-      const requesting_user_has_thread_config = false // admin, no thread_config
+    it('routes shared container threads via execution.mode', () => {
+      const thread = {
+        execution: {
+          mode: 'container',
+          machine_id: 'storage',
+          container_runtime: 'docker',
+          container_name: 'base-container'
+        }
+      }
+      expect(derive_execution_mode(thread)).to.equal('container')
+    })
 
-      const should_deny =
-        execution_mode !== 'container_user' && requesting_user_has_thread_config
-      expect(should_deny).to.be.false
+    it('routes host threads to host', () => {
+      const thread = {
+        execution: {
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
+      }
+      expect(derive_execution_mode(thread)).to.equal('host')
+    })
+
+    it('falls back to host when execution is null (legacy thread)', () => {
+      const thread = { execution: null }
+      expect(derive_execution_mode(thread)).to.equal('host')
+    })
+
+    it('falls back to host when execution is missing entirely', () => {
+      const thread = {}
+      expect(derive_execution_mode(thread)).to.equal('host')
     })
   })
 
-  describe('execution mode routing', () => {
-    it('should detect container_user threads from source metadata', () => {
-      const source = {
-        execution_mode: 'container_user',
-        container_user: true,
-        container_name: 'base-user-greg'
+  describe('end-to-end resume scenarios', () => {
+    it('owner with thread_config resuming own per-user container thread: allowed, routes to per-user container', () => {
+      const thread = {
+        owner_public_key: 'user-key-arrin',
+        execution: {
+          mode: 'container',
+          container_name: 'base-user-arrin'
+        }
       }
-      expect(source.execution_mode).to.equal('container_user')
-      expect(source.container_user).to.be.true
-      expect(source.container_name).to.match(/^base-user-/)
+      const requester = 'user-key-arrin'
+      const permission = decide_permission({
+        is_owner: thread.owner_public_key === requester,
+        has_read_permission: false
+      })
+      expect(permission.allowed).to.be.true
+      expect(derive_execution_mode(thread)).to.equal('container_user')
     })
 
-    it('should fall back to config default for legacy threads', () => {
-      const source = { provider: 'claude' }
-      const execution_mode = source.execution_mode || 'host'
-      expect(execution_mode).to.equal('host')
+    it('non-owner container user attempting another user-isolated thread: denied unless read permission grants it', () => {
+      const thread = {
+        owner_public_key: 'user-key-zoe',
+        execution: { mode: 'container', container_name: 'base-user-zoe' }
+      }
+      const requester = 'user-key-arrin'
+      const permission = decide_permission({
+        is_owner: thread.owner_public_key === requester,
+        has_read_permission: false
+      })
+      expect(permission.allowed).to.be.false
+    })
+
+    it('owner without thread_config resuming own host thread: allowed, routes to host', () => {
+      const thread = {
+        owner_public_key: 'user-key-greg',
+        execution: {
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
+      }
+      const requester = 'user-key-greg'
+      const permission = decide_permission({
+        is_owner: thread.owner_public_key === requester,
+        has_read_permission: false
+      })
+      expect(permission.allowed).to.be.true
+      expect(derive_execution_mode(thread)).to.equal('host')
+    })
+
+    it('legacy thread with no execution stamp: governed solely by ownership/permission, dispatches to host', () => {
+      const thread = {
+        owner_public_key: 'user-key-greg',
+        source: { provider: 'claude' }
+      }
+      const requester = 'user-key-greg'
+      const permission = decide_permission({
+        is_owner: thread.owner_public_key === requester,
+        has_read_permission: false
+      })
+      expect(permission.allowed).to.be.true
+      expect(derive_execution_mode(thread)).to.equal('host')
     })
   })
 })

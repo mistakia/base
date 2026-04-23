@@ -17,6 +17,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 # Require USER_BASE_DIRECTORY to be set
 source "$SCRIPT_DIR/lib/paths.sh"
+# shellcheck source=lib/container-runtime.sh
+source "$SCRIPT_DIR/lib/container-runtime.sh"
 
 USER_BASE_DIR="$USER_BASE_DIRECTORY"
 CONTAINER_NAME="base-container"
@@ -39,6 +41,6 @@ if is_container; then
     exec claude -p --dangerously-skip-permissions -- "$@"
 else
     # On host: execute via docker exec (non-interactive)
-    exec docker exec -u node -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" \
+    exec $CONTAINER_CMD exec -u node -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" \
         claude -p --dangerously-skip-permissions -- "$@"
 fi

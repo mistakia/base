@@ -9,7 +9,11 @@ import { generate_compose_config } from './user-container-compose.mjs'
 import { get_container_claude_home } from './create-session-claude-cli.mjs'
 import config from '#config'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
-import { CONTAINER_USER_BASE_PATH } from '#libs-server/docker/execution-mode.mjs'
+import { CONTAINER_USER_BASE_PATH } from '#libs-server/container/execution-mode.mjs'
+import {
+  get_container_runtime_name,
+  get_container_compose_cmd
+} from '#libs-server/container/runtime-config.mjs'
 
 const execAsync = promisify(exec)
 const log = debug('threads:user-container-manager')
@@ -57,7 +61,7 @@ export const get_user_container_claude_home = ({ username }) => {
 const is_user_container_running = async ({ container_name }) => {
   try {
     const { stdout } = await execAsync(
-      `docker ps --filter name=${container_name} --format '{{.Status}}'`
+      `${get_container_runtime_name()} ps --filter name=${container_name} --format '{{.Status}}'`
     )
     return stdout.includes('Up')
   } catch {
@@ -91,7 +95,7 @@ export const wait_for_container_ready = async ({
   while (Date.now() - start < effective_timeout) {
     try {
       const { stdout } = await execAsync(
-        `docker exec -u node ${container_name} cat /tmp/entrypoint-ready 2>/dev/null`
+        `${get_container_runtime_name()} exec -u node ${container_name} cat /tmp/entrypoint-ready 2>/dev/null`
       )
       if (stdout !== undefined) {
         log(`${container_name} is ready`)
@@ -119,7 +123,7 @@ export const get_active_sessions = async ({ username }) => {
   const container_name = get_user_container_name({ username })
   try {
     const { stdout } = await execAsync(
-      `docker top ${container_name} -o pid,comm 2>/dev/null | grep -c claude || echo 0`
+      `${get_container_runtime_name()} top ${container_name} -o pid,comm 2>/dev/null | grep -c claude || echo 0`
     )
     return parseInt(stdout.trim(), 10) || 0
   } catch {
@@ -198,7 +202,9 @@ export const ensure_user_container_running = async ({
   // Start container via docker compose
   log(`Starting ${container_name} via docker compose`)
   try {
-    await execAsync(`docker compose -f "${compose_path}" up -d`)
+    await execAsync(
+      `${get_container_compose_cmd()} -f "${compose_path}" up -d`
+    )
     log(`Container ${container_name} started`)
   } catch (error) {
     throw new Error(

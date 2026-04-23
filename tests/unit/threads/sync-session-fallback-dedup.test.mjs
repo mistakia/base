@@ -141,7 +141,12 @@ describe('sync_session_fallback dedup', () => {
         allow_updates: true,
         provider_options: { session_file: '/test/file.jsonl' },
         user_public_key: 'test-key',
-        source_overrides: { execution_mode: 'host' }
+        execution_overrides: {
+          mode: 'host',
+          machine_id: null,
+          container_runtime: null,
+          container_name: null
+        }
       }
 
       // This mirrors the logic in sync_session_fallback_by_file and

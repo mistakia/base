@@ -103,6 +103,7 @@
   "extensions": {
     "discovery_paths": []
   },
+  "container_runtime": "docker",
   "machine_registry": {},
   "discord": {
     "webhook_url": "",

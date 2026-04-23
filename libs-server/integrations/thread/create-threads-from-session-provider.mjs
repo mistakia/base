@@ -233,7 +233,7 @@ export const create_threads_from_session_provider = async ({
   merge_agents = true,
   include_warm_agents = false,
   provider_options = {},
-  source_overrides = null,
+  execution_overrides = null,
   known_thread_id = null
 }) => {
   if (!provider_name) {
@@ -335,7 +335,7 @@ export const create_threads_from_session_provider = async ({
         user_base_directory,
         allow_updates,
         verbose,
-        source_overrides,
+        execution_overrides,
         known_thread_id
       })
 
@@ -396,7 +396,7 @@ export const process_single_session = async ({
   user_base_directory,
   allow_updates,
   verbose,
-  source_overrides = null,
+  execution_overrides = null,
   known_thread_id = null
 }) => {
   const session_id = session_provider.get_session_id(raw_session)
@@ -419,7 +419,7 @@ export const process_single_session = async ({
       thread_id: known_thread_id,
       thread_dir,
       session_id,
-      source_overrides
+      execution_overrides
     })
   }
 
@@ -438,7 +438,7 @@ export const process_single_session = async ({
         thread_id,
         thread_dir,
         session_id,
-        source_overrides
+        execution_overrides
       })
     } else {
       return {
@@ -462,9 +462,15 @@ export const process_single_session = async ({
     if (stats.isDirectory()) {
       const previous_metadata =
         await read_previous_metadata_from_git(thread_dir)
-      if (previous_metadata?.source?.execution_mode === 'container_user') {
+      const prior_container_name =
+        previous_metadata?.execution?.container_name ||
+        previous_metadata?.source?.container_name
+      if (
+        typeof prior_container_name === 'string' &&
+        prior_container_name.startsWith('base-user-')
+      ) {
         log(
-          `Thread dir ${thread_dir} exists without metadata.json but prior git state shows container_user attribution; refusing to recreate`
+          `Thread dir ${thread_dir} exists without metadata.json but prior git state shows per-user container attribution; refusing to recreate`
         )
         return {
           status: 'skipped',
@@ -507,7 +513,7 @@ export const process_single_session = async ({
         thread_id: existing_thread_id,
         thread_dir: existing_thread_dir,
         session_id,
-        source_overrides
+        execution_overrides
       })
     }
   } catch (matcher_error) {
@@ -555,7 +561,7 @@ export const process_single_session = async ({
     user_public_key,
     user_base_directory,
     session_id,
-    source_overrides
+    execution_overrides
   })
 }
 
@@ -569,7 +575,7 @@ const create_new_session_thread = async ({
   user_public_key,
   user_base_directory,
   session_id,
-  source_overrides = null
+  execution_overrides = null
 }) => {
   // Normalize session just-in-time
   let normalized_session = session_provider.normalize_session(raw_session)
@@ -586,7 +592,7 @@ const create_new_session_thread = async ({
     inference_provider: session_provider.get_inference_provider(),
     models,
     raw_session_data: raw_session,
-    source_overrides
+    execution_overrides
   })
 
   // Build timeline entries (uses normalized_session only)
@@ -642,7 +648,7 @@ const update_existing_session_thread = async ({
   thread_id,
   thread_dir,
   session_id,
-  source_overrides = null
+  execution_overrides = null
 }) => {
   // Normalize session just-in-time
   let normalized_session = session_provider.normalize_session(raw_session)
@@ -652,7 +658,7 @@ const update_existing_session_thread = async ({
     thread_id,
     thread_dir,
     raw_session_data: raw_session,
-    source_overrides
+    execution_overrides
   })
 
   // Timeline write + integrity check succeeded inside update_existing_thread --

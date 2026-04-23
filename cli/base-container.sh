@@ -12,6 +12,9 @@ BASE_COMPOSE_DIR="$BASE_DIR/config/base-container"
 USER_COMPOSE_DIR="$USER_BASE_DIR/config/base-container"
 PM2_CONFIG="$BASE_DIR/pm2.config.mjs"
 
+# shellcheck source=lib/container-runtime.sh
+source "$SCRIPT_DIR/lib/container-runtime.sh"
+
 # Auto-detect machine
 detect_machine() {
     if [ "$(uname)" = "Darwin" ]; then
@@ -24,7 +27,7 @@ detect_machine() {
 MACHINE=$(detect_machine)
 
 compose_cmd() {
-    CONFIG_ENCRYPTION_KEY="${CONFIG_ENCRYPTION_KEY}" docker compose \
+    CONFIG_ENCRYPTION_KEY="${CONFIG_ENCRYPTION_KEY}" $CONTAINER_COMPOSE_CMD \
         -f "$BASE_COMPOSE_DIR/docker-compose.yml" \
         -f "$USER_COMPOSE_DIR/docker-compose.${MACHINE}.yml" \
         "$@"
@@ -48,7 +51,7 @@ WAIT_POLL_INTERVAL=10  # seconds
 # Returns 0 if sessions found, 1 if no sessions
 check_container_sessions() {
     local sessions
-    sessions=$(docker top "$CONTAINER_NAME" -o pid,args 2>/dev/null | grep -v "^PID" | grep "claude" || true)
+    sessions=$($CONTAINER_CMD top "$CONTAINER_NAME" -o pid,args 2>/dev/null | grep -v "^PID" | grep "claude" || true)
 
     if [ -z "$sessions" ]; then
         return 1
@@ -224,7 +227,7 @@ case "${1:-}" in
         compose_cmd up -d base-container
         ;;
     shell)
-        docker exec -u node -it base-container bash
+        $CONTAINER_CMD exec -u node -it base-container bash
         ;;
     build)
         echo "Building container image ($MACHINE)..."
@@ -245,11 +248,11 @@ case "${1:-}" in
         ;;
     claude)
         shift
-        docker exec -u node -it base-container claude-container "$@"
+        $CONTAINER_CMD exec -u node -it base-container claude-container "$@"
         ;;
     opencode)
         shift
-        docker exec -u node -it base-container opencode "$@"
+        $CONTAINER_CMD exec -u node -it base-container opencode "$@"
         ;;
     *)
         usage

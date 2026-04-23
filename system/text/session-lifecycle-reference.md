@@ -13,7 +13,8 @@ relations:
   - relates_to [[sys:system/text/session-orchestrator.md]]
   - relates_to [[sys:system/text/execution-threads.md]]
   - relates_to [[sys:system/text/background-services.md]]
-updated_at: '2026-04-12T00:00:00.000Z'
+  - relates_to [[sys:system/text/thread-execution-attribution.md]]
+updated_at: '2026-04-23T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -148,7 +149,15 @@ Container:  docker exec -u node -w <path> [-e JOB_ID=...] [-e BASE_API_PROTO=...
 
 #### Container User Mode
 
-When `execution_mode` is `container_user`, sessions run inside the Docker container as the `node` user. This affects hook script behavior:
+When the local `execution_mode` routing variable resolves to `container_user`,
+sessions run inside the per-user Docker container as the `node` user. The
+local variable is derived from the canonical `thread.execution` attribution
+on resume (a `container_name` starting with `base-user-` => `container_user`)
+and from `thread_config` presence on create. The persisted attribution lives
+in `thread.execution`; see [[sys:system/text/thread-execution-attribution.md]]
+for the full shape and resume-permission rule.
+
+This affects hook script behavior:
 
 - Hook scripts must resolve paths relative to the container filesystem
 - API calls from hooks use `BASE_API_PROTO` and `BASE_API_PORT` env vars (defaulting to `http` and `8080`)

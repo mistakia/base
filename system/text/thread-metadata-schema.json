@@ -6,7 +6,6 @@
   "required": [
     "thread_id",
     "user_public_key",
-    "source",
     "thread_state",
     "created_at",
     "updated_at"
@@ -30,8 +29,8 @@
       "description": "Public key of the user who owns the thread"
     },
     "workflow_base_uri": {
-      "type": "string",
-      "description": "Reference to the workflow that initiated this thread (e.g., 'sys:system/workflow/write-workflow.md')"
+      "type": ["string", "null"],
+      "description": "Reference to the workflow that initiated this thread (e.g., 'sys:system/workflow/write-workflow.md'). Null for external/imported sessions that have no originating workflow."
     },
     "source": {
       "type": "object",
@@ -66,6 +65,32 @@
         }
       },
       "required": ["provider"],
+      "additionalProperties": false
+    },
+    "execution": {
+      "type": ["object", "null"],
+      "description": "Canonical execution attribution: where and how this thread's session ran. May be null for legacy threads that cannot be classified. See system/text/thread-execution-attribution.md.",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["host", "container"],
+          "description": "host = ran directly on the machine; container = ran inside a container"
+        },
+        "machine_id": {
+          "type": ["string", "null"],
+          "description": "machine_registry key for the host that ran the session; null only when no registry entry matches"
+        },
+        "container_runtime": {
+          "type": ["string", "null"],
+          "enum": ["docker", null],
+          "description": "Container runtime binary name; null for host mode"
+        },
+        "container_name": {
+          "type": ["string", "null"],
+          "description": "Container name; null for host mode. A container_name starting with 'base-user-' indicates per-user isolation."
+        }
+      },
+      "required": ["mode", "machine_id", "container_runtime", "container_name"],
       "additionalProperties": false
     },
     "inference_provider": {
@@ -254,6 +279,40 @@
     "job_id": {
       "type": "string",
       "description": "BullMQ job ID for queue correlation with the session creation job"
+    },
+    "model": {
+      "type": "string",
+      "description": "Single canonical model identifier; legacy field carried alongside the models array on older imports."
+    },
+    "tags_prompt_version": {
+      "type": ["string", "number"],
+      "description": "Version identifier of the tag-analysis prompt used when tags were last assigned."
+    },
+    "tags_taxonomy_hash": {
+      "type": "string",
+      "description": "Hash of the tag taxonomy snapshot used at analysis time, for cache invalidation."
+    },
+    "tags_reasoning": {
+      "type": "string",
+      "description": "Free-text rationale for tag assignments produced by the analysis pipeline."
+    },
+    "title_prompt_version": {
+      "type": ["string", "number"],
+      "description": "Version identifier of the title-generation prompt used when title was last set."
+    },
+    "visibility_analyzed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp when public_read visibility analysis was last performed."
+    },
+    "external_session": {
+      "type": "object",
+      "description": "Legacy provenance block from older import format; superseded by source.* fields.",
+      "additionalProperties": true
+    },
+    "review_needed": {
+      "type": "boolean",
+      "description": "Marker set by data-migration tooling when an entity could not be classified automatically and needs manual review."
     }
   },
   "additionalProperties": false

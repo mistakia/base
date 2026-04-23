@@ -6,8 +6,9 @@ import {
   CONTAINER_USER_BASE_PATH,
   validate_execution_mode,
   translate_to_container_path
-} from '#libs-server/docker/execution-mode.mjs'
+} from '#libs-server/container/execution-mode.mjs'
 import { validate_queued_command } from '#libs-server/utils/validate-shell-command.mjs'
+import { get_container_runtime_name } from '#libs-server/container/runtime-config.mjs'
 
 const log = debug('cli-queue:executor')
 
@@ -78,7 +79,7 @@ export const execute_command = async ({
       const timeout_seconds = Math.max(1, Math.ceil(timeout_ms / 1000))
       const kill_after_seconds = Math.max(1, Math.ceil(KILL_TIMEOUT_MS / 1000))
       child = spawn(
-        'docker',
+        get_container_runtime_name(),
         [
           'exec',
           '-u',

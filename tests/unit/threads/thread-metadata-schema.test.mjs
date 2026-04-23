@@ -25,7 +25,6 @@ describe('Thread Metadata Schema Validation', () => {
       expect(schema.required).to.deep.equal([
         'thread_id',
         'user_public_key',
-        'source',
         'thread_state',
         'created_at',
         'updated_at'
@@ -253,6 +252,101 @@ describe('Thread Metadata Schema Validation', () => {
           error.params.missingProperty === 'thread_id'
       )
       expect(required_error).to.exist
+    })
+  })
+
+  describe('Execution Attribution', () => {
+    const base_metadata = () => ({
+      thread_id: '123e4567-e89b-12d3-a456-426614174000',
+      user_public_key:
+        '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+      source: { provider: 'claude' },
+      thread_state: 'active',
+      created_at: '2023-01-01T00:00:00.000Z',
+      updated_at: '2023-01-01T00:00:00.000Z'
+    })
+
+    it('should validate metadata with host execution', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
+      }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should validate metadata with shared container execution', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          mode: 'container',
+          machine_id: 'storage',
+          container_runtime: 'docker',
+          container_name: 'base-container'
+        }
+      }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should validate metadata with per-user container execution', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          mode: 'container',
+          machine_id: 'storage',
+          container_runtime: 'docker',
+          container_name: 'base-user-arrin'
+        }
+      }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should validate metadata with execution explicitly null', () => {
+      const metadata = { ...base_metadata(), execution: null }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should reject execution with unknown mode', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          mode: 'wat',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
+      }
+      expect(validate(metadata)).to.equal(false)
+    })
+
+    it('should reject execution with unknown additional property', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null,
+          execution_mode: 'host'
+        }
+      }
+      expect(validate(metadata)).to.equal(false)
+    })
+
+    it('should reject execution missing required keys', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: { mode: 'host' }
+      }
+      expect(validate(metadata)).to.equal(false)
     })
   })
 

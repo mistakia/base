@@ -34,7 +34,11 @@ import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
-import { translate_to_host_path } from '#libs-server/docker/execution-mode.mjs'
+import { translate_to_host_path } from '#libs-server/container/execution-mode.mjs'
+import {
+  is_per_user_container,
+  build_execution_attribution
+} from '#libs-server/threads/execution-attribution.mjs'
 import user_registry from '#libs-server/users/user-registry.mjs'
 import { get_active_sessions } from '#libs-server/threads/user-container-manager.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
@@ -714,6 +718,19 @@ router.post('/create-session', async (req, res) => {
     const thread_id = crypto.randomUUID()
     const job_id = crypto.randomUUID()
 
+    // Build canonical execution attribution at creation time so resume and
+    // dispatch reads have a stamp from session zero rather than waiting on
+    // a post-session sync hook to backfill it.
+    const create_execution =
+      execution_mode === 'container_user'
+        ? build_execution_attribution({ mode: 'container', username })
+        : execution_mode === 'container'
+          ? build_execution_attribution({
+              mode: 'container',
+              container_name: 'base-container'
+            })
+          : build_execution_attribution({ mode: 'host' })
+
     // Create thread entity on disk before queuing the job; the initial
     // user message is written atomically as part of thread creation.
     await create_thread({
@@ -723,6 +740,7 @@ router.post('/create-session', async (req, res) => {
       models: [],
       thread_state: 'active',
       title: generate_default_thread_title_from_prompt({ prompt }),
+      execution: create_execution,
       initial_timeline_entry: {
         type: 'message',
         role: 'user',
@@ -819,6 +837,24 @@ router.put(
           const raw = await readFile(metadata_path, 'utf-8')
           const existing = JSON.parse(raw)
           if (!existing.source?.session_id) {
+            // Stamp execution attribution on first source write so resume-path
+            // classification does not depend on post-session sync paths
+            // (which may be skipped if SessionEnd hook or fallback fails).
+            const owner_public_key = existing.user_public_key || null
+            const owner_thread_config = owner_public_key
+              ? await user_registry.get_thread_config(owner_public_key)
+              : null
+            if (owner_thread_config && !existing.execution) {
+              const owner =
+                await user_registry.find_by_public_key(owner_public_key)
+              const owner_username = owner?.username || null
+              if (owner_username) {
+                patches.execution = build_execution_attribution({
+                  mode: 'container',
+                  username: owner_username
+                })
+              }
+            }
             patches.source = {
               ...(existing.source || {}),
               provider: 'claude',
@@ -875,46 +911,16 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
-    // Determine execution mode from thread metadata or request
-    const thread_execution_mode = thread.source?.execution_mode
-    const execution_mode =
-      thread_execution_mode ||
-      req.body.execution_mode ||
-      config.threads?.cli?.default_execution_mode ||
-      'host'
-
-    // Check if requesting user is a container_user (has thread_config)
-    const requesting_user_thread_config =
-      await user_registry.get_thread_config(user_public_key)
-    const is_container_user = requesting_user_thread_config !== null
-
-    // For container_user threads, enforce ownership
-    if (execution_mode === 'container_user') {
-      const is_owner = await validate_thread_ownership({
-        user_public_key,
-        thread_id
-      })
-      if (!is_owner) {
-        log(
-          `User ${user_public_key} is not the owner of container_user thread ${thread_id}`
-        )
-        return res.status(403).json({
-          error: 'Permission denied',
-          message: 'You can only resume threads that you created'
-        })
-      }
-    } else if (is_container_user) {
-      // Container users can only resume their own container_user threads,
-      // not host/container threads created by other users (e.g., admin)
-      log(
-        `Container user ${user_public_key} attempted to resume non-container_user thread ${thread_id}`
-      )
-      return res.status(403).json({
-        error: 'Permission denied',
-        message: 'You can only resume threads that you created'
-      })
-    } else {
-      // For host/container threads from non-container users, use existing read permission check
+    // Permission: ownership-first, then read-permission fallback. The
+    // resume action grants execute privilege, so callers must either own
+    // the thread or hold an applicable permission grant. Mode-string
+    // branching is intentionally absent -- per-user isolation is governed
+    // by container dispatch below, not by ownership semantics.
+    const is_owner = await validate_thread_ownership({
+      user_public_key,
+      thread_id
+    })
+    if (!is_owner) {
       const permission_result = await check_thread_permission_for_user({
         user_public_key,
         thread_id
@@ -930,11 +936,21 @@ router.post('/:thread_id/resume', async (req, res) => {
       }
     }
 
-    // Use already-loaded thread_config for container_user mode
+    // Re-derive the local routing variable from the canonical execution
+    // attribution.
+    const thread_container_name = thread.execution?.container_name
+    const execution_mode = is_per_user_container(thread_container_name)
+      ? 'container_user'
+      : thread.execution?.mode === 'container'
+        ? 'container'
+        : 'host'
+
+    // For per-user container dispatch, look up the requester's thread_config
+    // and username so the queue payload routes into their isolated container.
     let thread_config = null
     let username = null
     if (execution_mode === 'container_user') {
-      thread_config = requesting_user_thread_config
+      thread_config = await user_registry.get_thread_config(user_public_key)
       const user = thread_config
         ? await user_registry.find_by_public_key(user_public_key)
         : null
@@ -1149,11 +1165,10 @@ router.post('/sync-user-session', async (req, res) => {
         session_file: host_path
       },
       user_public_key,
-      source_overrides: {
-        execution_mode: 'container_user',
-        container_user: true,
-        container_name: `base-user-${username}`
-      }
+      execution_overrides: build_execution_attribution({
+        mode: 'container',
+        username
+      })
     }
 
     // Pass known_thread_id to skip deterministic check_thread_exists lookup

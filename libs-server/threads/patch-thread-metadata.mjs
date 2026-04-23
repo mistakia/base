@@ -4,6 +4,7 @@ import debug from 'debug'
 
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 
 const log = debug('threads:patch-metadata')
 
@@ -27,6 +28,8 @@ const patch_thread_metadata = async ({ thread_id, patches }) => {
   const metadata = JSON.parse(raw)
 
   Object.assign(metadata, patches, { updated_at: new Date().toISOString() })
+
+  await assert_valid_thread_metadata(metadata)
 
   await writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
   log(

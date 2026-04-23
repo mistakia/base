@@ -11,6 +11,15 @@ const log = debug('schedule:machine')
  * 1. Exact hostname match against registry entries
  * 2. Platform fallback if no hostname matches
  *
+ * Recognized per-machine fields used elsewhere in the system:
+ * - hostname, platform        machine identity (matched here)
+ * - container_runtime         per-machine override of the global
+ *                             config.container_runtime (precedence:
+ *                             machine_registry[id].container_runtime ->
+ *                             config.container_runtime -> 'docker').
+ *                             See libs-server/container/runtime-config.mjs.
+ * - claude_paths              Claude integration paths
+ *
  * @param {Object} [options] - Optional overrides (used in tests)
  * @param {Object} [options.registry] - Machine registry to use instead of config
  * @param {string} [options.hostname] - Hostname override

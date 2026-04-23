@@ -11,10 +11,14 @@ import config from '#config'
 import validate_working_directory from './validate-working-directory.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
+  get_container_runtime_name,
+  get_container_compose_cmd
+} from '#libs-server/container/runtime-config.mjs'
+import {
   DOCKER_CONTAINER_NAME,
   validate_execution_mode,
   translate_to_container_path
-} from '#libs-server/docker/execution-mode.mjs'
+} from '#libs-server/container/execution-mode.mjs'
 import {
   get_user_container_name,
   get_user_container_claude_home,
@@ -312,7 +316,7 @@ const build_success_result = ({ working_directory, session_id, exit_code }) => {
 const is_container_running = async () => {
   try {
     const { stdout } = await execAsync(
-      "docker ps --filter name=base-container --format '{{.Status}}'"
+      `${get_container_runtime_name()} ps --filter name=base-container --format '{{.Status}}'`
     )
     return stdout.includes('Up')
   } catch {
@@ -340,7 +344,9 @@ const ensure_container_running = async (user_base_directory) => {
   )
 
   try {
-    await execAsync(`docker compose -f "${compose_file}" up -d`)
+    await execAsync(
+      `${get_container_compose_cmd()} -f "${compose_file}" up -d`
+    )
     log('Container started')
 
     // Wait briefly for container to be ready
@@ -721,7 +727,7 @@ export const create_session_claude_cli = async ({
       execution_mode === 'container_user'
         ? get_user_container_name({ username })
         : DOCKER_CONTAINER_NAME
-    spawn_command = 'docker'
+    spawn_command = get_container_runtime_name()
     spawn_args = [
       'exec',
       '-u',
