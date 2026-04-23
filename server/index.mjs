@@ -202,6 +202,18 @@ api.use('/api/stats', read_limiter, routes.stats)
 // Share link resolution - read-only, public-facing
 api.use('/s', read_limiter, routes.share)
 
+// Storage file serving - opt-in via config.storage.enabled. The route is
+// default-deny via the rule engine even when enabled; an explicit allow rule
+// in role/storage-reader.md is required for any path to return 200.
+if (config.storage && config.storage.enabled) {
+  api.use('/api/storage', read_limiter, routes.storage)
+  console.log(
+    `[storage] enabled (root_dir=${config.storage.root_dir || '(unset)'})`
+  )
+} else {
+  console.log('[storage] disabled')
+}
+
 // Extension routes placeholder - populated by mount_extension_routes() after
 // load_extension_providers() runs. Registered here so extension routes fall
 // between built-in routes and the error handler / SPA fallback.

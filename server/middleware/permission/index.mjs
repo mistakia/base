@@ -39,5 +39,6 @@ export {
 export {
   attach_permission_context,
   check_thread_permission_middleware,
-  check_filesystem_permission
+  check_filesystem_permission,
+  check_permission_for_uri
 } from './middleware.mjs'
