@@ -1,6 +1,6 @@
 import { spawn, exec } from 'child_process'
 import { join, dirname, isAbsolute, basename } from 'path'
-import { access, mkdir, copyFile, readFile } from 'fs/promises'
+import { access, mkdir, copyFile, readFile, stat } from 'fs/promises'
 import { constants, existsSync } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
@@ -21,7 +21,7 @@ import {
 } from '#libs-server/container/execution-mode.mjs'
 import {
   get_user_container_name,
-  get_user_container_claude_home,
+  resolve_account_host_path,
   ensure_user_container_running
 } from './user-container-manager.mjs'
 
@@ -82,6 +82,61 @@ export const get_container_claude_home = () => {
  */
 export const derive_projects_dir_name = (working_directory) => {
   return working_directory.replace(/\//g, '-')
+}
+
+/**
+ * Derive a short account-namespace label from a container CLAUDE_CONFIG_DIR.
+ * Primary (null or `.claude`) becomes 'primary'; secondary dirs surface their
+ * basename with the leading dot stripped (e.g. `.claude-earn.crop.code` ->
+ * `claude-earn.crop.code`). Used for human-readable error messages.
+ */
+export const derive_account_namespace = (container_config_dir) => {
+  if (!container_config_dir) return 'primary'
+  const base = basename(container_config_dir.replace(/\/$/, ''))
+  if (base === '.claude') return 'primary'
+  return base.replace(/^\./, '')
+}
+
+/**
+ * Pre-flight resume gate: assert the live session JSONL exists at the exact
+ * path `claude -r <session_id>` will read. On ENOENT, throw a descriptive
+ * error naming account_namespace, session_id, expected path, and
+ * claude_config_dir so the failure is self-explanatory in job output rather
+ * than surfacing only as a silent fork or a terse CLI stderr.
+ */
+export const assert_live_session_file_exists = async ({
+  session_id,
+  username,
+  claude_config_dir,
+  working_directory
+}) => {
+  const resolved_claude_home = resolve_account_host_path({
+    username,
+    container_config_dir: claude_config_dir
+  })
+  const projects_dir_name = derive_projects_dir_name(working_directory)
+  const expected_session_file = join(
+    resolved_claude_home,
+    'projects',
+    projects_dir_name,
+    `${session_id}.jsonl`
+  )
+  const account_namespace = derive_account_namespace(claude_config_dir)
+  try {
+    await access(expected_session_file, constants.F_OK)
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      throw new Error(
+        `Pre-flight resume check failed: live session file not found. ` +
+          `account_namespace=${account_namespace} ` +
+          `session_id=${session_id} ` +
+          `claude_config_dir=${claude_config_dir || '(default)'} ` +
+          `expected_path=${expected_session_file}`
+      )
+    }
+    throw err
+  }
+  return expected_session_file
 }
 
 // =============================================================================
@@ -375,7 +430,8 @@ const restore_session_state = async ({
   working_directory,
   user_base_directory,
   execution_mode = 'container',
-  username = null
+  username = null,
+  claude_config_dir = null
 }) => {
   if (!session_id || !thread_id) {
     log('Skipping session state restoration - missing session_id or thread_id')
@@ -386,16 +442,19 @@ const restore_session_state = async ({
     `Restoring session state for session ${session_id} from thread ${thread_id}`
   )
 
-  // Resolve the correct claude-home based on execution mode
+  // Resolve the correct claude-home based on execution mode and account
   const claude_home =
     execution_mode === 'container_user' && username
-      ? get_user_container_claude_home({ username })
+      ? resolve_account_host_path({
+          username,
+          container_config_dir: claude_config_dir
+        })
       : get_container_claude_home()
 
   // Ensure the appropriate container is running before restoring files
   if (execution_mode === 'container_user') {
     // User container should already be running (ensured earlier in the flow)
-    log(`Using user container claude-home for ${username}`)
+    log(`Using user container claude-home for ${username}: ${claude_home}`)
   } else {
     await ensure_container_running(user_base_directory)
   }
@@ -438,7 +497,7 @@ const restore_session_state = async ({
 /**
  * Restore session JSONL file to container projects directory
  */
-const restore_session_jsonl = async ({
+export const restore_session_jsonl = async ({
   session_id,
   raw_data_dir,
   projects_dir_name,
@@ -453,15 +512,34 @@ const restore_session_jsonl = async ({
   const target_jsonl = join(target_dir, `${session_id}.jsonl`)
 
   try {
-    // Check if source exists
-    await access(source_jsonl)
+    const source_stat = await stat(source_jsonl)
 
-    // Create target directory
+    // Skip restore when the live file is at least as fresh as our snapshot.
+    // size guarantees correctness when mtime is second-resolution and ties.
+    let target_stat
+    try {
+      target_stat = await stat(target_jsonl)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+    if (
+      target_stat &&
+      target_stat.size >= source_stat.size &&
+      target_stat.mtimeMs >= source_stat.mtimeMs
+    ) {
+      log(
+        `Skipping restore for ${target_jsonl}: live is fresher ` +
+          `(target=${target_stat.size}B/${target_stat.mtimeMs}ms, ` +
+          `source=${source_stat.size}B/${source_stat.mtimeMs}ms)`
+      )
+      return
+    }
+
     await mkdir(target_dir, { recursive: true })
-
-    // Always overwrite - thread raw-data is the canonical copy
     await copyFile(source_jsonl, target_jsonl)
-    log(`Restored session JSONL to ${target_jsonl}`)
+    log(
+      `Restored session JSONL to ${target_jsonl} (${source_stat.size}B from snapshot)`
+    )
   } catch (error) {
     log(`Warning: Failed to restore session JSONL: ${error.message}`)
   }
@@ -681,8 +759,50 @@ export const create_session_claude_cli = async ({
       working_directory: container_working_directory,
       user_base_directory,
       execution_mode,
-      username
+      username,
+      claude_config_dir
     })
+
+    if (execution_mode === 'container_user' && username) {
+      const live_session_file = await assert_live_session_file_exists({
+        session_id,
+        username,
+        claude_config_dir,
+        working_directory: container_working_directory
+      })
+      // Loud-warn if the live file is smaller than the raw-data snapshot we
+      // just restored. Under normal operation live >= snapshot because the
+      // restore just copied snapshot into live (mtime/size guard may have
+      // skipped the copy if live was already fresher). A smaller live here
+      // signals snapshot corruption or a rollback we failed to prevent.
+      const snapshot_file = join(
+        user_base_directory,
+        'thread',
+        thread_id,
+        'raw-data',
+        'claude-session.jsonl'
+      )
+      try {
+        const [live_stat, snapshot_stat] = await Promise.all([
+          stat(live_session_file),
+          stat(snapshot_file)
+        ])
+        if (live_stat.size < snapshot_stat.size) {
+          log(
+            `WARN pre-spawn size mismatch: live=${live_stat.size}B < ` +
+              `snapshot=${snapshot_stat.size}B (live=${live_session_file} ` +
+              `snapshot=${snapshot_file})`
+          )
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          log(
+            `Pre-spawn size check failed: ${err.message} ` +
+              `(live=${live_session_file} snapshot=${snapshot_file})`
+          )
+        }
+      }
+    }
   }
 
   // -------------------------

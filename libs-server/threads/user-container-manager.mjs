@@ -1,4 +1,4 @@
-import { join } from 'path'
+import { join, basename } from 'path'
 import { existsSync } from 'fs'
 import { promisify } from 'util'
 import { exec } from 'child_process'
@@ -40,15 +40,86 @@ export const get_user_data_directory = () => {
 }
 
 /**
- * Get the path to a user's claude-home directory on the host
+ * Resolve the host path for a user's per-account Claude config directory.
+ *
+ * The mapping convention: the primary account (container `/home/node/.claude`)
+ * lives at `<user_data_dir>/<username>/claude-home`. Secondary accounts strip
+ * the leading dot from the container basename and join under the user dir,
+ * e.g. `/home/node/.claude-earn.crop.code` -> `<user_data_dir>/<username>/claude-earn.crop.code`.
  *
  * @param {Object} params
- * @param {string} params.username - User's username
- * @returns {string} Host path to user's claude-home
+ * @param {string} params.username
+ * @param {string|null} [params.container_config_dir] - Container CLAUDE_CONFIG_DIR
+ *   (e.g. `/home/node/.claude` or `/home/node/.claude-earn.crop.code`). When
+ *   null/undefined or the primary path, returns the primary claude-home.
+ * @returns {string} Host path
+ */
+export const resolve_account_host_path = ({
+  username,
+  container_config_dir
+}) => {
+  const user_dir = join(get_user_data_directory(), username)
+  if (!container_config_dir) {
+    return join(user_dir, 'claude-home')
+  }
+  const normalized = container_config_dir.replace(/\/$/, '')
+  const base = basename(normalized)
+  if (base === '.claude') {
+    return join(user_dir, 'claude-home')
+  }
+  return join(user_dir, base.replace(/^\./, ''))
+}
+
+/**
+ * Get the path to a user's primary claude-home directory on the host.
+ * Thin alias over resolve_account_host_path for the no-config-dir case.
  */
 export const get_user_container_claude_home = ({ username }) => {
-  const user_data_dir = get_user_data_directory()
-  return join(user_data_dir, username, 'claude-home')
+  return resolve_account_host_path({
+    username,
+    container_config_dir: null
+  })
+}
+
+/**
+ * Translate a container-internal transcript_path (e.g. from a Claude hook) to
+ * the corresponding host path. Supports primary (.claude) and secondary
+ * (.claude-foo, etc.) account dirs under /home/node/.
+ *
+ * @param {Object} params
+ * @param {string} params.username
+ * @param {string} params.transcript_path - Container path
+ * @returns {{ host_path: string } | { error: string }}
+ */
+export const translate_container_transcript_path = ({
+  username,
+  transcript_path
+}) => {
+  const container_root = '/home/node/'
+  if (!transcript_path.startsWith(container_root)) {
+    return { error: `transcript_path must start with ${container_root}` }
+  }
+  const remainder = transcript_path.slice(container_root.length)
+  const segments = remainder.split('/')
+  if (segments.some((seg) => seg === '..' || seg === '.')) {
+    return { error: `transcript_path must not contain . or .. segments` }
+  }
+  const config_basename = segments[0]
+  if (!config_basename.startsWith('.claude')) {
+    return {
+      error: `transcript_path config segment must begin with .claude (got ${config_basename})`
+    }
+  }
+  const host_root = resolve_account_host_path({
+    username,
+    container_config_dir: container_root + config_basename
+  })
+  const tail_segments = segments.slice(1)
+  return {
+    host_path: tail_segments.length
+      ? join(host_root, ...tail_segments)
+      : host_root
+  }
 }
 
 /**

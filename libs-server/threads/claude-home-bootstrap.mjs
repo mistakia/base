@@ -16,6 +16,7 @@ import debug from 'debug'
 
 import config from '#config'
 import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
+import { resolve_account_host_path } from './user-container-manager.mjs'
 
 const log = debug('threads:claude-home-bootstrap')
 
@@ -41,10 +42,10 @@ const get_configured_accounts = () => {
  * Resolve secondary account directories for a user.
  * Filters out the primary account (.claude) and returns resolved paths.
  *
- * @param {string} user_dir - Parent directory for this user's container data
+ * @param {string} username - Username
  * @returns {Array<{account: Object, user_account_dir: string, admin_source: string|null}>}
  */
-const get_secondary_account_dirs = (user_dir) => {
+const get_secondary_account_dirs = (username) => {
   const accounts = get_configured_accounts()
   const machine_id = get_current_machine_id()
   const admin_data_dir =
@@ -54,14 +55,12 @@ const get_secondary_account_dirs = (user_dir) => {
   for (const account of accounts) {
     const container_dir = account.container_config_dir
     if (!container_dir) continue
+    if (basename(container_dir.replace(/\/$/, '')) === '.claude') continue
 
-    const normalized = container_dir.replace(/\/$/, '')
-    if (basename(normalized) === '.claude') continue
-
-    const user_account_dir = join(
-      user_dir,
-      basename(normalized).replace(/^\./, '')
-    )
+    const user_account_dir = resolve_account_host_path({
+      username,
+      container_config_dir: container_dir
+    })
     const admin_source = resolve_config_dir(admin_data_dir?.[account.namespace])
     results.push({ account, user_account_dir, admin_source })
   }
@@ -512,7 +511,7 @@ export const bootstrap_claude_home = async ({
   log(`Generated settings.json for ${username}`)
 
   // Bootstrap secondary account directories (if multi-account enabled)
-  const secondary_dirs = get_secondary_account_dirs(user_dir)
+  const secondary_dirs = get_secondary_account_dirs(username)
   await Promise.all(
     secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
       log(
@@ -580,7 +579,7 @@ export const refresh_credentials = async ({
   log(`Refreshed primary credentials for ${username}`)
 
   // Refresh secondary accounts
-  const secondary_dirs = get_secondary_account_dirs(user_dir)
+  const secondary_dirs = get_secondary_account_dirs(username)
   await Promise.all(
     secondary_dirs.map(async ({ account, user_account_dir, admin_source }) => {
       if (!admin_source) return

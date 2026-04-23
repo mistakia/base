@@ -1123,21 +1123,20 @@ router.post('/sync-user-session', async (req, res) => {
     }
     sync_rate_limit.set(transcript_path, Date.now())
 
-    // Translate container-internal path to host path
-    // Container path: /home/node/.claude/projects/...
-    // Host path: <user_data_dir>/<username>/claude-home/projects/...
-    const { get_user_container_claude_home } =
-      await import('#libs-server/threads/user-container-manager.mjs')
-    const container_prefix = '/home/node/.claude'
-    if (!transcript_path.startsWith(container_prefix)) {
+    const { translate_container_transcript_path } = await import(
+      '#libs-server/threads/user-container-manager.mjs'
+    )
+    const translation = translate_container_transcript_path({
+      username,
+      transcript_path
+    })
+    if (translation.error) {
       return res.status(400).json({
         error: 'Invalid transcript_path',
-        message: `transcript_path must start with ${container_prefix}`
+        message: translation.error
       })
     }
-    const relative_path = transcript_path.slice(container_prefix.length)
-    const host_path =
-      get_user_container_claude_home({ username }) + relative_path
+    const host_path = translation.host_path
 
     // Verify the host-path file exists
     const { access } = await import('fs/promises')
