@@ -273,9 +273,7 @@ export const ensure_user_container_running = async ({
   // Start container via docker compose
   log(`Starting ${container_name} via docker compose`)
   try {
-    await execAsync(
-      `${get_container_compose_cmd()} -f "${compose_path}" up -d`
-    )
+    await execAsync(`${get_container_compose_cmd()} -f "${compose_path}" up -d`)
     log(`Container ${container_name} started`)
   } catch (error) {
     throw new Error(

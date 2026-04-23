@@ -399,9 +399,7 @@ const ensure_container_running = async (user_base_directory) => {
   )
 
   try {
-    await execAsync(
-      `${get_container_compose_cmd()} -f "${compose_file}" up -d`
-    )
+    await execAsync(`${get_container_compose_cmd()} -f "${compose_file}" up -d`)
     log('Container started')
 
     // Wait briefly for container to be ready
