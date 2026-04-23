@@ -243,6 +243,12 @@ if (config.machine_registry && process.env.NODE_ENV !== 'test') {
       config.key = machine_config.ssl_key_path
       config.cert = machine_config.ssl_cert_path
     }
+    // Per-machine storage overlay. /mnt/md0 only exists on certain hosts,
+    // so storage serving is opt-in per machine_registry entry rather than
+    // a global flag.
+    if (machine_config.storage) {
+      config.storage = { ...config.storage, ...machine_config.storage }
+    }
   } else {
     log('No machine registry match for hostname: %s', current_hostname)
   }

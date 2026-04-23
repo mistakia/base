@@ -87,8 +87,8 @@ export function parse_base_uri(base_uri) {
     fragment = branch_fragment
   }
 
-  // First try to match path-only schemes (sys:, user:)
-  const path_only_match = uri_part.match(/^(sys|user):(.*)$/)
+  // First try to match path-only schemes (sys:, user:, storage:)
+  const path_only_match = uri_part.match(/^(sys|user|storage):(.*)$/)
   if (path_only_match) {
     const [, scheme, path] = path_only_match
     return {
@@ -144,7 +144,15 @@ export function parse_base_uri(base_uri) {
 export function is_valid_base_uri(base_uri) {
   try {
     const parsed = parse_base_uri(base_uri)
-    const valid_schemes = ['sys', 'user', 'ssh', 'git', 'http', 'https']
+    const valid_schemes = [
+      'sys',
+      'user',
+      'storage',
+      'ssh',
+      'git',
+      'http',
+      'https'
+    ]
     return valid_schemes.includes(parsed.scheme)
   } catch {
     return false
@@ -202,6 +210,23 @@ export function resolve_base_uri(base_uri, options = {}) {
         throw new Error('User base directory not configured')
       }
       return resolve_and_validate(user_base_directory)
+
+    case 'storage': {
+      const storage_root = config.storage && config.storage.root_dir
+      if (!storage_root) {
+        throw new Error('Storage root_dir not configured')
+      }
+      // Accept both `storage:foo.png` and `storage:/foo.png`.
+      const stripped_leading = parsed.path.replace(/^\/+/, '')
+      const decoded = decodeURIComponent(stripped_leading)
+      const initial = path.resolve(storage_root, decoded)
+      if (!is_path_within_directory(initial, storage_root)) {
+        throw new Error(`Path traversal detected in storage URI: ${base_uri}`)
+      }
+      // Symlink-escape guard is performed asynchronously by the caller via
+      // verify_storage_realpath so this resolver does not block the event loop.
+      return initial
+    }
 
     case 'ssh':
     case 'git':
@@ -270,6 +295,26 @@ export function create_base_uri_from_path(absolute_path, options = {}) {
   )
 }
 
+/**
+ * Asynchronously realpath a resolved storage path and verify it still sits
+ * inside storage.root_dir. Defense-in-depth against symlink escapes; the
+ * initial resolve_base_uri call already enforced lexical containment.
+ *
+ * @param {string} resolved_path - Path returned by resolve_base_uri for a storage: URI
+ * @returns {Promise<string>} - Realpath-resolved absolute path
+ */
+export async function verify_storage_realpath(resolved_path) {
+  const { realpath } = await import('fs/promises')
+  const storage_root = config.storage && config.storage.root_dir
+  if (!storage_root) throw new Error('Storage root_dir not configured')
+  const real = await realpath(resolved_path)
+  const real_root = await realpath(storage_root)
+  if (!is_path_within_directory(real, real_root)) {
+    throw new Error(`Symlink escape detected: ${resolved_path}`)
+  }
+  return real
+}
+
 // Default export with all utilities
 export default {
   create_system_uri,
@@ -278,5 +323,6 @@ export default {
   is_valid_base_uri,
   resolve_base_uri,
   create_base_uri_from_path,
-  create_base_uri_from_git_file
+  create_base_uri_from_git_file,
+  verify_storage_realpath
 }

@@ -3,11 +3,13 @@ import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { render_markdown } from '@views/utils/markdown-renderer.js'
 import { sanitize_html } from '@views/utils/sanitize-html.mjs'
+import { run_mermaid_in } from '@views/utils/mermaid-runner.js'
 import { history } from '@core/store.js'
 
 import { COLORS } from '@theme/colors.js'
 import '@styles/checkbox.styl'
 import '@styles/plaintext-highlighting.styl'
+import '@styles/markdown.styl'
 
 const get_normal_styles = {
   // Heading anchor link (visible on hover, pointer devices only)
@@ -360,10 +362,28 @@ const MarkdownViewer = ({ content, is_redacted }) => {
     const hash = window.location.hash
     if (!hash || !html_content) return
 
-    requestAnimationFrame(() => {
+    const raf = requestAnimationFrame(() => {
       scroll_to_fragment(hash)
     })
+    return () => cancelAnimationFrame(raf)
   }, [html_content, scroll_to_fragment])
+
+  // requestAnimationFrame defers until after paint so mermaid reads non-zero
+  // container dimensions; AbortController cancels in-flight mermaid.run when
+  // content changes mid-render to avoid duplicate-id races on the same nodes.
+  useEffect(() => {
+    const container = container_ref.current
+    if (!container) return
+
+    const controller = new AbortController()
+    const raf = requestAnimationFrame(() => {
+      run_mermaid_in(container, controller.signal)
+    })
+    return () => {
+      cancelAnimationFrame(raf)
+      controller.abort()
+    }
+  }, [html_content])
 
   return (
     <Box

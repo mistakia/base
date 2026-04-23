@@ -1,6 +1,15 @@
 import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import markdownItHighlightjs from 'markdown-it-highlightjs'
+import markdownItKatex from '@vscode/markdown-it-katex'
+import markdownItFootnote from 'markdown-it-footnote'
+import markdownItDeflist from 'markdown-it-deflist'
+import markdownItSub from 'markdown-it-sub'
+import markdownItSup from 'markdown-it-sup'
+import { full as markdownItEmoji } from 'markdown-it-emoji'
+import { alert as markdownItAlert } from '@mdit/plugin-alert'
+import markdownItContainer from 'markdown-it-container'
+import markdownItAttrs from 'markdown-it-attrs'
 import markdownItXmlStyling from './markdown-it-xml-styling.mjs'
 import markdownItTaskCheckbox from './markdown-it-task-checkbox.js'
 import markdownItHeadingAnchor from './markdown-it-heading-anchor.js'
@@ -13,6 +22,8 @@ import { process_plaintext_blocks } from './plaintext-number-highlighter.js'
 import { process_prompt_blocks } from './prompt-block-processor.js'
 import { transform_outside_inline_code } from './inline-code-parser.js'
 import 'highlight.js/styles/github.css'
+import 'katex/dist/katex.min.css'
+import '@mdit/plugin-alert/style'
 
 // Import plaintext language support
 import 'highlight.js/lib/languages/plaintext'
@@ -55,7 +66,9 @@ const escape_unknown_xml_tags_outside_code = (content) => {
   return processed_lines.join('\n')
 }
 
-// Initialize markdown-it with highlight.js
+// Plugin order is load-bearing: KaTeX first so `$`/`\` are tokenized before
+// other plugins can swallow them; markdown-it-attrs last so `{.class #id}`
+// tokens attach to blocks produced by containers/alerts above.
 const md = new MarkdownIt({
   html: true, // Enable HTML tags to allow styled XML tags
   breaks: true,
@@ -69,6 +82,7 @@ const md = new MarkdownIt({
     return '' // use external default escaping
   }
 })
+  .use(markdownItKatex)
   .use(markdownItHighlightjs, {
     hljs,
     auto: true,
@@ -79,9 +93,64 @@ const md = new MarkdownIt({
   .use(markdownItXmlStyling)
   .use(markdownItTaskCheckbox)
   .use(markdownItHeadingAnchor)
+  .use(markdownItFootnote)
+  .use(markdownItDeflist)
+  .use(markdownItSub)
+  .use(markdownItSup)
+  .use(markdownItEmoji)
+  .use(markdownItAlert)
+
+// Strict attribute whitelist for markdown-it-attrs. Array form (the plugin
+// also accepts an Object/RegExp form, but Set is NOT accepted).
+const ALLOWED_ATTRS = [
+  'id',
+  'class',
+  'alt',
+  'title',
+  'width',
+  'height',
+  'src',
+  'href',
+  'colspan',
+  'rowspan'
+]
+
+const html_escape = (str) =>
+  String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+
+md.use(markdownItContainer, 'any', {
+  validate: () => true,
+  render: (tokens, idx) => {
+    const token = tokens[idx]
+    if (token.nesting === 1) {
+      const name = token.info.trim().split(/\s+/)[0] || 'container'
+      return `<div class="${html_escape(name)}">\n`
+    }
+    return '</div>\n'
+  }
+})
+
+md.use(markdownItAttrs, { allowedAttributes: ALLOWED_ATTRS })
 
 const default_fence = md.renderer.rules.fence
 md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+  const token = tokens[idx]
+  const info = (token.info || '').trim().split(/\s+/)[0]
+
+  // Mermaid fences emit a passthrough wrapper; the post-render lifecycle
+  // (mermaid-runner.js) consumes [data-mermaid] nodes and renders SVGs.
+  // The body must be HTML-escaped so the markup survives DOM insertion;
+  // mermaid 11.x reads element.innerHTML and runs entityDecode() before
+  // parsing, so `<` / `>` round-trip correctly.
+  if (info === 'mermaid') {
+    return `<div class="mermaid-source" data-mermaid>${html_escape(token.content)}</div>\n`
+  }
+
   const rendered = default_fence
     ? default_fence(tokens, idx, options, env, self)
     : self.renderToken(tokens, idx, options)

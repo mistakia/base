@@ -1,0 +1,67 @@
+.columns
+  display grid
+  grid-template-columns repeat(auto-fit, minmax(16rem, 1fr))
+  gap 1rem
+
+.col
+  min-width 0
+
+.side-by-side
+  display flex
+  flex-direction row
+  gap 1rem
+  flex-wrap wrap
+
+  > *
+    flex 1 1 0
+    min-width 0
+
+.figure
+  display flex
+  flex-direction column
+  align-items center
+  margin 1rem 0
+
+  img
+    max-width 100%
+    height auto
+
+.caption
+  font-size 0.875rem
+  color $color_text
+  opacity 0.75
+  text-align center
+  margin-top 0.5rem
+
+.markdown-alert
+  border-left 0.25rem solid currentColor
+  padding 0.5rem 1rem
+  margin 1rem 0
+
+  &.markdown-alert-tip
+    border-left-color #1a7f37
+
+  &.markdown-alert-note
+    border-left-color #0969da
+
+  &.markdown-alert-warning
+    border-left-color #9a6700
+
+  &.markdown-alert-caution
+    border-left-color #cf222e
+
+  &.markdown-alert-important
+    border-left-color #8250df
+
+  .markdown-alert-title
+    font-weight 600
+    margin 0 0 0.5rem 0
+
+.mermaid-source
+  display block
+  margin 1rem 0
+  text-align center
+
+  svg
+    max-width 100%
+    height auto

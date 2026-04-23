@@ -92,6 +92,34 @@ export const check_thread_permission_middleware = () => {
 }
 
 /**
+ * Evaluate a fully-formed base URI against the rule engine.
+ *
+ * Unlike the filesystem middleware, this helper does not derive the URI
+ * from a request path -- callers pass the URI directly. Used by the
+ * storage route to evaluate `storage:` URIs that the filesystem
+ * middleware (which hardcodes `user:`/`sys:` resolution) cannot handle.
+ *
+ * @param {Object} req - Express request object (for permission context + share_token)
+ * @param {string} resource_uri - Fully-formed base URI (e.g. `storage:foo.png`)
+ * @returns {Promise<{read_allowed: boolean, write_allowed: boolean, reason: string, user_public_key: string|null}>}
+ */
+export const check_permission_for_uri = async (req, resource_uri) => {
+  const context = get_permission_context(req)
+  const share_token = req.query?.share_token || null
+  const result = await context.check_permission({
+    resource_path: resource_uri,
+    share_token
+  })
+
+  return {
+    user_public_key: context.user_public_key,
+    read_allowed: result?.read?.allowed ?? false,
+    write_allowed: result?.write?.allowed ?? false,
+    reason: result?.read?.reason ?? 'Permission check failed'
+  }
+}
+
+/**
  * Middleware to check filesystem path permissions
  *
  * Sets req.access with read_allowed, write_allowed, and reason.
@@ -109,28 +137,18 @@ export const check_filesystem_permission = () => {
       const resource_path = create_base_uri_from_path(full_path)
       log(`Checking filesystem permission for ${resource_path}`)
 
-      const context = get_permission_context(req)
-      const share_token = req.query.share_token || null
-      const result = await context.check_permission({
-        resource_path,
-        share_token
-      })
-
-      // Defensive check for result structure
-      const read_allowed = result?.read?.allowed ?? false
-      const write_allowed = result?.write?.allowed ?? false
-      const reason = result?.read?.reason ?? 'Permission check failed'
+      const access = await check_permission_for_uri(req, resource_path)
 
       req.access = {
-        user_public_key: context.user_public_key,
+        user_public_key: access.user_public_key,
         resource_path,
-        read_allowed,
-        write_allowed,
-        reason
+        read_allowed: access.read_allowed,
+        write_allowed: access.write_allowed,
+        reason: access.reason
       }
 
-      if (!read_allowed) {
-        log(`Access denied to ${resource_path}: ${reason}`)
+      if (!access.read_allowed) {
+        log(`Access denied to ${resource_path}: ${access.reason}`)
       }
 
       next()

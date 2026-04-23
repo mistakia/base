@@ -16,6 +16,7 @@ import finance from './finance.mjs'
 import stats from './stats.mjs'
 import physical_items from './physical-items.mjs'
 import share from './share.mjs'
+import storage from './storage.mjs'
 
 export default {
   users,
@@ -35,5 +36,6 @@ export default {
   finance,
   stats,
   physical_items,
-  share
+  share,
+  storage
 }

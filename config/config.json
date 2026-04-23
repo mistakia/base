@@ -165,5 +165,23 @@
       "interval_ms": 180000,
       "startup_delay_ms": 30000
     }
+  },
+  "storage": {
+    "enabled": false,
+    "root_dir": "",
+    "extension_whitelist": [
+      "png",
+      "jpg",
+      "jpeg",
+      "gif",
+      "webp",
+      "svg",
+      "pdf",
+      "mp4",
+      "webm",
+      "mov",
+      "mp3",
+      "docx"
+    ]
   }
 }
