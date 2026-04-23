@@ -1,5 +1,6 @@
 import { expect } from 'chai'
 import MarkdownIt from 'markdown-it'
+import markdownItKatex from '@vscode/markdown-it-katex'
 
 // Import the XML styling plugin directly
 const md_plugin_path = '../../../client/views/utils/markdown-it-xml-styling.mjs'
@@ -475,6 +476,43 @@ This should also not have border
 
       // Should not have multiple border styles
       expect(result.split('border-left:').length - 1).to.equal(1) // Only one border
+    })
+  })
+
+  describe('XML styling composes with KaTeX math', () => {
+    let md_with_math
+
+    beforeEach(async () => {
+      const { default: markdownItXmlStyling } = await import(md_plugin_path)
+      md_with_math = new MarkdownIt({ html: true, breaks: true })
+        .use(markdownItKatex)
+        .use(markdownItXmlStyling)
+    })
+
+    // The production renderer pre-escapes unknown XML-like tags before
+    // markdown-it sees them so KaTeX gets a chance to tokenize math
+    // inside the block. Tests simulate that step here.
+    const pre_escape_xml = (src) =>
+      src
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+
+    it('renders inline math inside an <example> block', () => {
+      const src = pre_escape_xml(
+        '<example>\nThe formula is $x^2 + y^2$ here.\n</example>'
+      )
+      const result = md_with_math.render(src)
+      expect(result).to.include('class="katex"')
+      expect(result).to.include('xml-tag-content')
+    })
+
+    it('renders display math inside an <instruction> block', () => {
+      const src = pre_escape_xml(
+        '<instruction>\n\n$$\\frac{a}{b}$$\n\n</instruction>'
+      )
+      const result = md_with_math.render(src)
+      expect(result).to.include('katex-display')
+      expect(result).to.include('xml-tag-content')
     })
   })
 })
