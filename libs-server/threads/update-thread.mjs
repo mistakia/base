@@ -111,7 +111,6 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     metadata: {
       from_state,
       to_state,
-      thread_lifecycle: true,
       ...(reason ? { reason } : {})
     },
     schema_version: TIMELINE_SCHEMA_VERSION,

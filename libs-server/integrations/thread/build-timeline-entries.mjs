@@ -13,7 +13,10 @@ import {
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
-import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
+import {
+  PROVENANCE,
+  must_preserve_across_rebuild
+} from '#libs-shared/timeline/entry-provenance.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
@@ -110,11 +113,9 @@ export const build_timeline_from_session = async (
         modify: async (content) => {
           // parse_mode='full' is authoritative for session-derived entries:
           // a full re-parse may follow a source-file replacement, so prior
-          // session entries must not survive by ID. Retain only non-session
-          // entries written by runtime paths like update-thread.mjs
-          // (state_change lifecycle events, flagged via
-          // metadata.thread_lifecycle=true) which cannot be reconstructed
-          // from the raw JSONL.
+          // session entries must not survive by ID. Retain only runtime-authored
+          // entries (state_change lifecycle events, etc.) which cannot be
+          // reconstructed from the raw JSONL.
           const merged = new Map()
           const lines = content.split('\n')
           let line_number = 0
@@ -133,7 +134,7 @@ export const build_timeline_from_session = async (
             if (
               entry &&
               entry.id != null &&
-              entry.metadata?.thread_lifecycle === true
+              must_preserve_across_rebuild(entry)
             ) {
               merged.set(entry.id, entry)
             }

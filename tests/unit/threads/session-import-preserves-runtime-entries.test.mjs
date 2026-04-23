@@ -43,7 +43,7 @@ const make_session = () => ({
   }
 })
 
-describe('session import preserves thread lifecycle fields', function () {
+describe('session import preserves runtime-authored entries', function () {
   this.timeout(15000)
 
   let test_user
@@ -160,10 +160,10 @@ describe('session import preserves thread lifecycle fields', function () {
         metadata: {
           from_state: 'active',
           to_state: 'archived',
-          reason: 'completed',
-          thread_lifecycle: true
+          reason: 'completed'
         },
-        schema_version: 1
+        schema_version: 2,
+        provenance: PROVENANCE.RUNTIME_EVENT
       }
       await fs.writeFile(
         timeline_path,
@@ -186,60 +186,6 @@ describe('session import preserves thread lifecycle fields', function () {
 
       const message_entries = merged.filter((e) => e.type === 'message')
       expect(message_entries).to.have.lengthOf(2)
-    } finally {
-      test_thread.cleanup()
-    }
-  })
-
-  it('phase-A dual-write: runtime entry carrying both thread_lifecycle and provenance survives full-mode rebuild', async function () {
-    // Verifies the Phase A intermediate state where runtime producers stamp
-    // both fields. The rebuild filter still keys off thread_lifecycle, so
-    // the dual-written entry must survive. Guards against any code path
-    // that might accidentally treat presence of `provenance` as a reason
-    // to drop the legacy sentinel before Phase C.
-    const test_thread = await create_test_thread({
-      user_public_key: test_user.user_public_key
-    })
-    try {
-      const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
-      const dual_entry = {
-        id: 'thread_state_dual_write_1',
-        timestamp: '2026-04-09T23:30:00.000Z',
-        type: 'system',
-        system_type: 'state_change',
-        content: 'active -> archived: completed',
-        provider: 'base',
-        provider_data: {},
-        ordering: { sequence: 0, parent_id: null },
-        metadata: {
-          from_state: 'active',
-          to_state: 'archived',
-          reason: 'completed',
-          thread_lifecycle: true
-        },
-        schema_version: 2,
-        provenance: PROVENANCE.RUNTIME_EVENT
-      }
-      await fs.writeFile(timeline_path, JSON.stringify(dual_entry) + '\n')
-
-      await build_timeline_from_session(make_session(), {
-        thread_dir: test_thread.context_dir,
-        thread_id: test_thread.thread_id
-      })
-
-      const merged = await read_timeline_jsonl({ timeline_path })
-      const state_change = merged.find(
-        (e) => e.id === 'thread_state_dual_write_1'
-      )
-      expect(state_change, 'dual-write state_change survived').to.exist
-      expect(state_change.provenance).to.equal(PROVENANCE.RUNTIME_EVENT)
-      expect(state_change.metadata.thread_lifecycle).to.equal(true)
-
-      const message_entries = merged.filter((e) => e.type === 'message')
-      expect(message_entries).to.have.lengthOf(2)
-      for (const entry of message_entries) {
-        expect(entry.provenance).to.equal(PROVENANCE.SESSION_IMPORT)
-      }
     } finally {
       test_thread.cleanup()
     }

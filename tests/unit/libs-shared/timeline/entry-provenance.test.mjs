@@ -4,8 +4,7 @@ import {
   PROVENANCE,
   is_valid_provenance,
   assert_valid_provenance,
-  must_preserve_across_rebuild,
-  classify_legacy_entry
+  must_preserve_across_rebuild
 } from '#libs-shared/timeline/entry-provenance.mjs'
 
 describe('libs-shared/timeline/entry-provenance', () => {
@@ -77,32 +76,11 @@ describe('libs-shared/timeline/entry-provenance', () => {
       ).to.equal(true)
     })
 
-    it('returns true for entries missing provenance (migration safety net)', () => {
+    it('returns true for entries missing provenance (defensive fallback)', () => {
       expect(must_preserve_across_rebuild({})).to.equal(true)
       expect(must_preserve_across_rebuild({ provenance: undefined })).to.equal(
         true
       )
-    })
-  })
-
-  describe('classify_legacy_entry', () => {
-    it('maps thread_lifecycle=true to RUNTIME_EVENT', () => {
-      expect(
-        classify_legacy_entry({ metadata: { thread_lifecycle: true } })
-      ).to.equal(PROVENANCE.RUNTIME_EVENT)
-    })
-
-    it('maps everything else to SESSION_IMPORT', () => {
-      expect(classify_legacy_entry({})).to.equal(PROVENANCE.SESSION_IMPORT)
-      expect(classify_legacy_entry({ metadata: {} })).to.equal(
-        PROVENANCE.SESSION_IMPORT
-      )
-      expect(
-        classify_legacy_entry({ metadata: { thread_lifecycle: false } })
-      ).to.equal(PROVENANCE.SESSION_IMPORT)
-      expect(
-        classify_legacy_entry({ metadata: { thread_lifecycle: 'true' } })
-      ).to.equal(PROVENANCE.SESSION_IMPORT)
     })
   })
 })

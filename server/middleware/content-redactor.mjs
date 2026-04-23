@@ -408,10 +408,9 @@ export const redact_object_property = (value, property_name) => {
 }
 
 // Non-sensitive structural keys on system-entry metadata that must survive
-// redaction so the client dispatch logic (thread_lifecycle) and system_type
-// discriminator keep working.
+// redaction so the client dispatch logic (system_type discriminator, state
+// transitions) keeps working.
 const SYSTEM_METADATA_PASSTHROUGH_KEYS = new Set([
-  'thread_lifecycle',
   'from_state',
   'to_state',
   'error_type',

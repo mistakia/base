@@ -274,7 +274,7 @@
                 "compaction",
                 "branch_point"
               ],
-              "description": "Discriminator for system event kind. status: general informational updates. state_change: execution/thread lifecycle transitions (metadata.thread_lifecycle=true for thread state). error: error events (message in content, error_type in metadata). configuration: model/thinking_level/setting changes. compaction: context compression events. branch_point: conversation fork annotations."
+              "description": "Discriminator for system event kind. status: general informational updates. state_change: execution/thread lifecycle transitions. error: error events (message in content, error_type in metadata). configuration: model/thinking_level/setting changes. compaction: context compression events. branch_point: conversation fork annotations."
             },
             "metadata": {
               "type": "object",

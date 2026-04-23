@@ -18,9 +18,8 @@ const is_terminal_archive_entry = (entry) => {
 /**
  * Detect drift between a thread's timeline terminal archival entry and its
  * metadata.json thread_state. Streams timeline.jsonl without loading into
- * memory; accepts both legacy and consolidated shapes (thread_lifecycle flag
- * is not required). thread_id is log-context only -- no filesystem I/O is
- * performed beyond reading timeline_path.
+ * memory. thread_id is log-context only -- no filesystem I/O is performed
+ * beyond reading timeline_path.
  *
  * @param {Object} params
  * @param {string} params.thread_id      Log context only.

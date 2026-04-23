@@ -29,20 +29,9 @@ export function assert_valid_provenance(entry) {
 }
 
 // Rebuild-preservation predicate: true if an entry must survive a full
-// session-derived timeline rebuild. Intentionally returns true when
-// `provenance` is missing — this is the migration-window safety net so
-// legacy entries (pre-Phase-B) are never dropped. Post-migration the
-// write-time assert and the migration pass guarantee every entry carries a
-// valid value, so the missing-field branch becomes unreachable.
+// session-derived timeline rebuild. Returns true when `provenance` is
+// missing as a defensive fallback; the write-time assert guarantees every
+// new entry carries a valid value.
 export function must_preserve_across_rebuild(entry) {
   return entry?.provenance !== PROVENANCE.SESSION_IMPORT
-}
-
-// Legacy-entry classifier used only by the one-shot migration script.
-// Maps the retiring `metadata.thread_lifecycle === true` sentinel to
-// RUNTIME_EVENT; everything else is SESSION_IMPORT.
-export function classify_legacy_entry(entry) {
-  if (entry?.metadata?.thread_lifecycle === true)
-    return PROVENANCE.RUNTIME_EVENT
-  return PROVENANCE.SESSION_IMPORT
 }

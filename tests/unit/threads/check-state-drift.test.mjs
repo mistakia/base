@@ -4,6 +4,7 @@ import os from 'os'
 import path from 'path'
 
 import { check_state_drift } from '#libs-server/threads/check-state-drift.mjs'
+import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 
 const write_timeline = async (timeline_path, entries) => {
   const lines = entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
@@ -15,12 +16,10 @@ const make_state_change = ({
   timestamp = '2026-04-10T00:00:00.000Z',
   from_state = 'active',
   to_state = 'archived',
-  include_lifecycle_flag = true,
   archived_at,
   ...rest
 } = {}) => {
   const metadata = { from_state, to_state }
-  if (include_lifecycle_flag) metadata.thread_lifecycle = true
   const reason = 'reason' in rest ? rest.reason : 'completed'
   if (reason !== undefined) metadata.reason = reason
   if (archived_at) metadata.archived_at = archived_at
@@ -31,7 +30,8 @@ const make_state_change = ({
     system_type: 'state_change',
     content: `${from_state} -> ${to_state}`,
     metadata,
-    schema_version: 2
+    schema_version: 2,
+    provenance: PROVENANCE.RUNTIME_EVENT
   }
 }
 
@@ -174,10 +174,8 @@ describe('check_state_drift', function () {
     expect(result.drift.repair_inputs.archive_reason).to.equal('user_abandoned')
   })
 
-  it('detects drift on legacy shape without thread_lifecycle flag', async () => {
-    await write_timeline(timeline_path, [
-      make_state_change({ include_lifecycle_flag: false })
-    ])
+  it('detects drift keyed off system_type=state_change', async () => {
+    await write_timeline(timeline_path, [make_state_change()])
     const result = await check_state_drift({
       thread_id: 't6',
       timeline_path,
@@ -185,8 +183,7 @@ describe('check_state_drift', function () {
     })
     expect(result.drift).to.exist
     expect(result.drift.repairable).to.equal(true)
-    expect(result.drift.terminal_entry.metadata.thread_lifecycle).to.be
-      .undefined
+    expect(result.drift.terminal_entry.system_type).to.equal('state_change')
   })
 
   it('returns drift:null when timeline file is missing', async () => {
