@@ -763,12 +763,54 @@ export const create_session_claude_cli = async ({
     })
 
     if (execution_mode === 'container_user' && username) {
+      const resolved_claude_home = resolve_account_host_path({
+        username,
+        container_config_dir: claude_config_dir
+      })
+      const live_session_file = join(
+        resolved_claude_home,
+        'projects',
+        derive_projects_dir_name(container_working_directory),
+        `${session_id}.jsonl`
+      )
       await assert_live_session_file_exists({
         session_id,
         username,
         claude_config_dir,
         working_directory: container_working_directory
       })
+      // Loud-warn if the live file is smaller than the raw-data snapshot we
+      // just restored. Under normal operation live >= snapshot because the
+      // restore just copied snapshot into live (mtime/size guard may have
+      // skipped the copy if live was already fresher). A smaller live here
+      // signals snapshot corruption or a rollback we failed to prevent.
+      const snapshot_file = join(
+        user_base_directory,
+        'thread',
+        thread_id,
+        'raw-data',
+        'claude-session.jsonl'
+      )
+      try {
+        const [live_stat, snapshot_stat] = await Promise.all([
+          stat(live_session_file),
+          stat(snapshot_file)
+        ])
+        if (live_stat.size < snapshot_stat.size) {
+          log(
+            `WARN pre-spawn size mismatch: live=${live_stat.size}B < ` +
+              `snapshot=${snapshot_stat.size}B (live=${live_session_file} ` +
+              `snapshot=${snapshot_file})`
+          )
+        }
+      } catch (err) {
+        if (err.code !== 'ENOENT') {
+          log(
+            `Pre-spawn size check failed: ${err.message} ` +
+              `(live=${live_session_file} snapshot=${snapshot_file})`
+          )
+        }
+      }
     }
   }
 
