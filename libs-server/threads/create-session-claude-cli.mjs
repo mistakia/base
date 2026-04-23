@@ -1,6 +1,6 @@
 import { spawn, exec } from 'child_process'
 import { join, dirname, isAbsolute, basename } from 'path'
-import { access, mkdir, copyFile, readFile } from 'fs/promises'
+import { access, mkdir, copyFile, readFile, stat } from 'fs/promises'
 import { constants, existsSync } from 'fs'
 import { homedir } from 'os'
 import { promisify } from 'util'
@@ -21,7 +21,7 @@ import {
 } from '#libs-server/container/execution-mode.mjs'
 import {
   get_user_container_name,
-  get_user_container_claude_home,
+  resolve_account_host_path,
   ensure_user_container_running
 } from './user-container-manager.mjs'
 
@@ -375,7 +375,8 @@ const restore_session_state = async ({
   working_directory,
   user_base_directory,
   execution_mode = 'container',
-  username = null
+  username = null,
+  claude_config_dir = null
 }) => {
   if (!session_id || !thread_id) {
     log('Skipping session state restoration - missing session_id or thread_id')
@@ -386,16 +387,19 @@ const restore_session_state = async ({
     `Restoring session state for session ${session_id} from thread ${thread_id}`
   )
 
-  // Resolve the correct claude-home based on execution mode
+  // Resolve the correct claude-home based on execution mode and account
   const claude_home =
     execution_mode === 'container_user' && username
-      ? get_user_container_claude_home({ username })
+      ? resolve_account_host_path({
+          username,
+          container_config_dir: claude_config_dir
+        })
       : get_container_claude_home()
 
   // Ensure the appropriate container is running before restoring files
   if (execution_mode === 'container_user') {
     // User container should already be running (ensured earlier in the flow)
-    log(`Using user container claude-home for ${username}`)
+    log(`Using user container claude-home for ${username}: ${claude_home}`)
   } else {
     await ensure_container_running(user_base_directory)
   }
@@ -438,7 +442,7 @@ const restore_session_state = async ({
 /**
  * Restore session JSONL file to container projects directory
  */
-const restore_session_jsonl = async ({
+export const restore_session_jsonl = async ({
   session_id,
   raw_data_dir,
   projects_dir_name,
@@ -453,15 +457,34 @@ const restore_session_jsonl = async ({
   const target_jsonl = join(target_dir, `${session_id}.jsonl`)
 
   try {
-    // Check if source exists
-    await access(source_jsonl)
+    const source_stat = await stat(source_jsonl)
 
-    // Create target directory
+    // Skip restore when the live file is at least as fresh as our snapshot.
+    // size guarantees correctness when mtime is second-resolution and ties.
+    let target_stat
+    try {
+      target_stat = await stat(target_jsonl)
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error
+    }
+    if (
+      target_stat &&
+      target_stat.size >= source_stat.size &&
+      target_stat.mtimeMs >= source_stat.mtimeMs
+    ) {
+      log(
+        `Skipping restore for ${target_jsonl}: live is fresher ` +
+          `(target=${target_stat.size}B/${target_stat.mtimeMs}ms, ` +
+          `source=${source_stat.size}B/${source_stat.mtimeMs}ms)`
+      )
+      return
+    }
+
     await mkdir(target_dir, { recursive: true })
-
-    // Always overwrite - thread raw-data is the canonical copy
     await copyFile(source_jsonl, target_jsonl)
-    log(`Restored session JSONL to ${target_jsonl}`)
+    log(
+      `Restored session JSONL to ${target_jsonl} (${source_stat.size}B from snapshot)`
+    )
   } catch (error) {
     log(`Warning: Failed to restore session JSONL: ${error.message}`)
   }
@@ -681,7 +704,8 @@ export const create_session_claude_cli = async ({
       working_directory: container_working_directory,
       user_base_directory,
       execution_mode,
-      username
+      username,
+      claude_config_dir
     })
   }
 
