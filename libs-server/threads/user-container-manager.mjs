@@ -100,20 +100,26 @@ export const translate_container_transcript_path = ({
     return { error: `transcript_path must start with ${container_root}` }
   }
   const remainder = transcript_path.slice(container_root.length)
-  const slash_idx = remainder.indexOf('/')
-  const config_basename =
-    slash_idx === -1 ? remainder : remainder.slice(0, slash_idx)
+  const segments = remainder.split('/')
+  if (segments.some((seg) => seg === '..' || seg === '.')) {
+    return { error: `transcript_path must not contain . or .. segments` }
+  }
+  const config_basename = segments[0]
   if (!config_basename.startsWith('.claude')) {
     return {
       error: `transcript_path config segment must begin with .claude (got ${config_basename})`
     }
   }
-  const tail = slash_idx === -1 ? '' : remainder.slice(slash_idx)
   const host_root = resolve_account_host_path({
     username,
     container_config_dir: container_root + config_basename
   })
-  return { host_path: host_root + tail }
+  const tail_segments = segments.slice(1)
+  return {
+    host_path: tail_segments.length
+      ? join(host_root, ...tail_segments)
+      : host_root
+  }
 }
 
 /**

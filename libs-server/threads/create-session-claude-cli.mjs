@@ -136,6 +136,7 @@ export const assert_live_session_file_exists = async ({
     }
     throw err
   }
+  return expected_session_file
 }
 
 // =============================================================================
@@ -763,17 +764,7 @@ export const create_session_claude_cli = async ({
     })
 
     if (execution_mode === 'container_user' && username) {
-      const resolved_claude_home = resolve_account_host_path({
-        username,
-        container_config_dir: claude_config_dir
-      })
-      const live_session_file = join(
-        resolved_claude_home,
-        'projects',
-        derive_projects_dir_name(container_working_directory),
-        `${session_id}.jsonl`
-      )
-      await assert_live_session_file_exists({
+      const live_session_file = await assert_live_session_file_exists({
         session_id,
         username,
         claude_config_dir,

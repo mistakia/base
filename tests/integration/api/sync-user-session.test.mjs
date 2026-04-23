@@ -82,5 +82,4 @@ describe('POST /api/threads/sync-user-session', () => {
     expect(res.status).to.equal(403)
     expect(res.body.error).to.equal('Access denied')
   })
-
 })

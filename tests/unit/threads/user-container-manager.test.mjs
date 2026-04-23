@@ -140,5 +140,14 @@ describe('user-container-manager', function () {
       expect(result.error).to.include('.claude')
       expect(result.host_path).to.be.undefined
     })
+
+    it('rejects .. traversal segments', () => {
+      const result = translate_container_transcript_path({
+        username: 'arrin',
+        transcript_path: '/home/node/.claude/../../../etc/passwd'
+      })
+      expect(result.error).to.include('..')
+      expect(result.host_path).to.be.undefined
+    })
   })
 })
