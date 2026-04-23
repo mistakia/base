@@ -1,22 +1,24 @@
 import { join } from 'path'
-import { readFile, writeFile } from 'fs/promises'
 import debug from 'debug'
 
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 
 const log = debug('threads:patch-metadata')
 
 /**
- * Apply a targeted field merge to a thread's metadata.json.
- * Reads the current file, applies patches, writes back.
+ * Apply a targeted field merge to a thread's metadata.json under optimistic
+ * concurrency. Reads the current file with an mtime guard, applies patches,
+ * writes back; retries on concurrent-writer mtime conflict.
  *
  * @param {Object} params
  * @param {string} params.thread_id - Thread UUID
  * @param {Object} params.patches - Fields to merge into metadata
  * @returns {Promise<Object>} Updated metadata
- * @throws {Error} If thread metadata cannot be read
+ * @throws {Error} If thread metadata cannot be read or concurrent writers
+ *   exhaust retry budget (error.code === 'EMTIME_CONFLICT').
  */
 const patch_thread_metadata = async ({ thread_id, patches }) => {
   const user_base_directory = get_user_base_directory()
@@ -24,18 +26,23 @@ const patch_thread_metadata = async ({ thread_id, patches }) => {
     user_base_directory
   })
   const metadata_path = join(thread_base_directory, thread_id, 'metadata.json')
-  const raw = await readFile(metadata_path, 'utf-8')
-  const metadata = JSON.parse(raw)
 
-  Object.assign(metadata, patches, { updated_at: new Date().toISOString() })
+  let updated_metadata
+  await read_modify_write({
+    absolute_path: metadata_path,
+    modify: async (content) => {
+      const metadata = JSON.parse(content)
+      Object.assign(metadata, patches, { updated_at: new Date().toISOString() })
+      await assert_valid_thread_metadata(metadata)
+      updated_metadata = metadata
+      return JSON.stringify(metadata, null, 2)
+    }
+  })
 
-  await assert_valid_thread_metadata(metadata)
-
-  await writeFile(metadata_path, JSON.stringify(metadata, null, 2), 'utf-8')
   log(
     `Thread ${thread_id}: patched fields [${Object.keys(patches).join(', ')}]`
   )
-  return metadata
+  return updated_metadata
 }
 
 export default patch_thread_metadata

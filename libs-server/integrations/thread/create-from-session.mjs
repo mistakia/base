@@ -5,6 +5,7 @@ import { glob } from 'glob'
 import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
@@ -41,33 +42,6 @@ const safe_date_to_iso = (value) => {
     return isNaN(d.getTime()) ? null : d.toISOString()
   }
   return null
-}
-
-/**
- * Create a stable string representation for comparison by sorting keys recursively
- * and excluding timestamp fields that shouldn't trigger updates
- */
-const stable_stringify_for_comparison = (
-  obj,
-  exclude_keys = ['updated_at', 'created_at']
-) => {
-  const sort_object = (o) => {
-    if (o === null || typeof o !== 'object') {
-      return o
-    }
-    if (Array.isArray(o)) {
-      return o.map(sort_object)
-    }
-    const sorted = {}
-    Object.keys(o)
-      .filter((key) => !exclude_keys.includes(key))
-      .sort()
-      .forEach((key) => {
-        sorted[key] = sort_object(o[key])
-      })
-    return sorted
-  }
-  return JSON.stringify(sort_object(obj))
 }
 
 /**
@@ -672,148 +646,156 @@ export const update_thread_metadata = async (
   normalized_session,
   { execution_overrides = null } = {}
 ) => {
+  const metadata_start = Date.now()
+  const metadata_path = path.join(thread_dir, 'metadata.json')
+  const session_metadata = normalized_session.metadata || {}
+
+  // Compute counts once, outside the RMW loop. These depend only on the
+  // normalized session, not on the on-disk metadata state.
+  const precomputed = normalized_session.precomputed_counts
+  const counts = precomputed
+    ? {
+        message_count: precomputed.message_count,
+        tool_call_count: precomputed.tool_call_count
+      }
+    : calculate_session_counts(normalized_session.messages || [])
+  const detailed_counts = precomputed
+    ? {
+        user_message_count: precomputed.user_message_count,
+        assistant_message_count: precomputed.assistant_message_count
+      }
+    : calculate_detailed_message_counts(normalized_session.messages || [])
+  const token_counts = precomputed
+    ? {
+        input_tokens: precomputed.input_tokens,
+        output_tokens: precomputed.output_tokens,
+        cache_creation_input_tokens: precomputed.cache_creation_input_tokens,
+        cache_read_input_tokens: precomputed.cache_read_input_tokens
+      }
+    : aggregate_token_counts(normalized_session.metadata || {})
+
+  const timeline_updated_at =
+    safe_date_to_iso(session_metadata.end_time) || new Date().toISOString()
+
+  // Compute effective execution overrides outside the RMW loop using the
+  // pre-RMW state of metadata.json. The downgrade guard is idempotent w.r.t.
+  // retries and the execution field is not mutated by other writers, so a
+  // one-shot read is sufficient. When the file is absent, seed a minimal
+  // skeleton so the RMW loop below has something to read.
+  let initial_existing_execution = null
   try {
-    const metadata_start = Date.now()
-    const metadata_path = path.join(thread_dir, 'metadata.json')
-
-    // Read existing metadata. When metadata.json is missing (e.g. a prior
-    // import crashed mid-write, or only raw-data/ + timeline.jsonl survived),
-    // seed with a minimal skeleton so the merge/write path below can bootstrap
-    // a fresh metadata file rather than silently no-op.
-    let existing_metadata
-    try {
-      existing_metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
-    } catch (read_error) {
-      if (read_error.code !== 'ENOENT') throw read_error
-      existing_metadata = {
-        thread_id: path.basename(thread_dir),
-        created_at: new Date().toISOString()
-      }
-    }
-
-    // Idempotency: never downgrade a per-user-container attribution to a
-    // less-specific stamp. A sync running from the owner's process (e.g.
-    // sync_session_fallback with mode='host') must not overwrite an existing
-    // base-user-<name> stamp recorded by the container-aware import path.
-    const existing_execution = existing_metadata.execution || null
-    const effective_execution_overrides = would_downgrade_per_user_container(
-      existing_execution,
-      execution_overrides
+    const initial_existing = JSON.parse(
+      await fs.readFile(metadata_path, 'utf-8')
     )
-      ? null
-      : execution_overrides
-    if (effective_execution_overrides === null && execution_overrides) {
-      log(
-        `Refusing to downgrade per-user container attribution on ${thread_dir} (incoming container_name=${execution_overrides?.container_name || 'null'})`
-      )
+    initial_existing_execution = initial_existing.execution || null
+  } catch (read_error) {
+    if (read_error.code !== 'ENOENT') {
+      log(`Error reading thread metadata: ${read_error.message}`)
+      return false
     }
-
-    // Calculate updated counts from normalized session.
-    // When precomputed_counts exist (incremental sync), use them instead of
-    // iterating the partial messages array.
-    const precomputed = normalized_session.precomputed_counts
-    const counts = precomputed
-      ? {
-          message_count: precomputed.message_count,
-          tool_call_count: precomputed.tool_call_count
-        }
-      : calculate_session_counts(normalized_session.messages || [])
-    const detailed_counts = precomputed
-      ? {
-          user_message_count: precomputed.user_message_count,
-          assistant_message_count: precomputed.assistant_message_count
-        }
-      : calculate_detailed_message_counts(normalized_session.messages || [])
-    const token_counts = precomputed
-      ? {
-          input_tokens: precomputed.input_tokens,
-          output_tokens: precomputed.output_tokens,
-          cache_creation_input_tokens: precomputed.cache_creation_input_tokens,
-          cache_read_input_tokens: precomputed.cache_read_input_tokens
-        }
-      : aggregate_token_counts(normalized_session.metadata || {})
-
-    const updated_metadata = {
-      ...existing_metadata,
-      message_count: counts.message_count,
-      tool_call_count: counts.tool_call_count,
-      source: {
-        ...build_source_from_existing(existing_metadata, normalized_session),
-        provider_metadata: {
-          ...normalized_session.metadata,
-          plan_slug: normalized_session.metadata?.plan_slug || null
-        }
-      },
-      execution: effective_execution_overrides ?? existing_execution,
-      // Add detailed counts for Claude sessions
-      ...(normalized_session.session_provider === 'claude' && {
-        user_message_count: detailed_counts.user_message_count,
-        assistant_message_count: detailed_counts.assistant_message_count,
-        input_tokens: token_counts.input_tokens,
-        output_tokens: token_counts.output_tokens,
-        cache_creation_input_tokens: token_counts.cache_creation_input_tokens,
-        cache_read_input_tokens: token_counts.cache_read_input_tokens
-      })
-    }
-
-    // Backfill title from session messages if missing (thread-first flow
-    // pre-creates threads with title: null)
-    if (!updated_metadata.title) {
-      const initial_prompt = extract_initial_user_prompt_from_messages({
-        messages: normalized_session.messages
-      })
-      const default_title = generate_default_thread_title_from_prompt({
-        prompt: initial_prompt
-      })
-      if (default_title) {
-        updated_metadata.title = default_title
-      }
-    }
-
-    // Compare using stable stringify that excludes timestamps and handles key ordering
-    const existing_stable = stable_stringify_for_comparison(existing_metadata)
-    const updated_stable = stable_stringify_for_comparison(updated_metadata)
-    const metadata_changed = existing_stable !== updated_stable
-
-    const diff_ms = Date.now() - metadata_start
-
-    if (metadata_changed) {
-      // Only update updated_at when meaningful changes exist
-      const session_metadata = normalized_session.metadata || {}
-      const timeline_updated_at =
-        safe_date_to_iso(session_metadata.end_time) || new Date().toISOString()
-
-      updated_metadata.updated_at = timeline_updated_at
-
-      await assert_valid_thread_metadata(updated_metadata)
-
-      const write_start = Date.now()
+    try {
       await write_file_to_filesystem({
         absolute_path: metadata_path,
-        file_content: JSON.stringify(updated_metadata, null, 2)
+        file_content: JSON.stringify(
+          {
+            thread_id: path.basename(thread_dir),
+            created_at: new Date().toISOString()
+          },
+          null,
+          2
+        )
       })
-      const write_ms = Date.now() - write_start
-      log_debug(`Updated thread metadata at ${metadata_path}`)
-      log_perf(
-        'update_thread_metadata session=%s metadata_changed=true diff_ms=%d write_ms=%d total_ms=%d',
-        normalized_session.session_id,
-        diff_ms,
-        write_ms,
-        Date.now() - metadata_start
-      )
-    } else {
-      log_debug(`Metadata unchanged, skipping write for ${metadata_path}`)
-      log_perf(
-        'update_thread_metadata session=%s metadata_changed=false diff_ms=%d',
-        normalized_session.session_id,
-        diff_ms
-      )
+    } catch (seed_error) {
+      log(`Error seeding thread metadata: ${seed_error.message}`)
+      return false
     }
+  }
 
-    return metadata_changed
+  const effective_execution_overrides = would_downgrade_per_user_container(
+    initial_existing_execution,
+    execution_overrides
+  )
+    ? null
+    : execution_overrides
+  if (effective_execution_overrides === null && execution_overrides) {
+    log(
+      `Refusing to downgrade per-user container attribution on ${thread_dir} (incoming container_name=${execution_overrides?.container_name || 'null'})`
+    )
+  }
+
+  try {
+    await read_modify_write({
+      absolute_path: metadata_path,
+      modify: async (content) => {
+        const current = JSON.parse(content)
+
+        // Session-owned fields. Anything not listed here is owned by other
+        // writers (update_thread_state, metadata analyzers, tag/relation
+        // analyzers, workflow runners, etc.) and must pass through
+        // untouched. See "Field ownership" in
+        // user:task/base/fix-session-import-overwriting-thread-lifecycle-fields.md.
+        const patch = {
+          message_count: counts.message_count,
+          tool_call_count: counts.tool_call_count,
+          source: {
+            ...build_source_from_existing(current, normalized_session),
+            provider_metadata: {
+              ...normalized_session.metadata,
+              plan_slug: normalized_session.metadata?.plan_slug || null
+            }
+          },
+          execution:
+            effective_execution_overrides ?? (current.execution || null)
+        }
+        if (normalized_session.session_provider === 'claude') {
+          patch.user_message_count = detailed_counts.user_message_count
+          patch.assistant_message_count =
+            detailed_counts.assistant_message_count
+          patch.input_tokens = token_counts.input_tokens
+          patch.output_tokens = token_counts.output_tokens
+          patch.cache_creation_input_tokens =
+            token_counts.cache_creation_input_tokens
+          patch.cache_read_input_tokens = token_counts.cache_read_input_tokens
+        }
+
+        Object.assign(current, patch)
+
+        // Conditional title backfill only when current title is null/missing.
+        if (current.title == null) {
+          const initial_prompt = extract_initial_user_prompt_from_messages({
+            messages: normalized_session.messages
+          })
+          const default_title = generate_default_thread_title_from_prompt({
+            prompt: initial_prompt
+          })
+          if (default_title) {
+            current.title = default_title
+          }
+        }
+
+        current.updated_at = timeline_updated_at
+
+        await assert_valid_thread_metadata(current)
+
+        return JSON.stringify(current, null, 2)
+      }
+    })
+
+    log_debug(`Updated thread metadata at ${metadata_path}`)
+    log_perf(
+      'update_thread_metadata session=%s total_ms=%d',
+      normalized_session.session_id,
+      Date.now() - metadata_start
+    )
+    return true
   } catch (error) {
+    if (error.code === 'EMTIME_CONFLICT') {
+      log(
+        `EMTIME_CONFLICT updating thread metadata at ${metadata_path} after ${error.attempts} attempts; skipping this cycle`
+      )
+      return false
+    }
     log(`Error updating thread metadata: ${error.message}`)
-    // Don't throw - metadata update failure shouldn't stop timeline update
     return false
   }
 }

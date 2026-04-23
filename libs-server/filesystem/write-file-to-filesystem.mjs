@@ -20,9 +20,12 @@ export async function write_file_to_filesystem({
   await ensure_directory(dir_path)
 
   // Atomic write: write to temp file in same directory, then rename.
-  // rename() is atomic on POSIX, preventing corruption when concurrent
-  // processes write to the same file (e.g., session import hooks racing
-  // with thread archive/update operations on metadata.json).
+  // rename() is atomic on POSIX, so readers never observe a partial/torn
+  // file. This prevents byte-level corruption but does NOT prevent
+  // last-write-wins lost updates: two concurrent read-modify-write cycles
+  // can each read the same pre-image and the second rename silently
+  // clobbers the first writer's changes. Callers that need lost-update
+  // protection must use `read_modify_write` from ./optimistic-write.mjs.
   const tmp_suffix = randomBytes(6).toString('hex')
   const tmp_path = join(dir_path, `.tmp-write-${tmp_suffix}`)
   try {

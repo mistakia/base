@@ -14,6 +14,11 @@ import {
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
+
+const log_warn = debug('integrations:thread:build-timeline-entries:warn')
+log_warn.enabled = true
 
 const EPOCH_ISO = '1970-01-01T00:00:00.000Z'
 
@@ -67,13 +72,15 @@ export const build_timeline_from_session = async (
     }
 
     const timeline_path = path.join(thread_info.thread_dir, 'timeline.jsonl')
-    const final_timeline = timeline_entries
+    const new_entries = timeline_entries
 
-    // Sort timeline entries by timestamp (primary) with ordering.sequence as tie-breaker
-    sort_timeline_entries(final_timeline)
+    // Sort session-derived entries by timestamp (primary) with ordering.sequence
+    // as tie-breaker. The full-mode merge below re-sorts after overlay; this
+    // keeps the delta-mode append ordered.
+    sort_timeline_entries(new_entries)
 
     // Validate and report tool interaction quality
-    const tool_validation = validate_tool_interactions(final_timeline)
+    const tool_validation = validate_tool_interactions(new_entries)
 
     const parse_mode = normalized_session.parse_mode
     if (parse_mode !== 'full' && parse_mode !== 'delta') {
@@ -85,30 +92,73 @@ export const build_timeline_from_session = async (
     const write_start = Date.now()
     let wrote = false
     if (parse_mode === 'full') {
-      await fs.writeFile(timeline_path, '')
-      if (final_timeline.length > 0) {
-        await append_timeline_entries({
-          timeline_path,
-          entries: final_timeline
+      // Seed an empty timeline file if absent so read_modify_write has
+      // something to stat.
+      try {
+        await fs.access(timeline_path)
+      } catch (access_error) {
+        if (access_error.code !== 'ENOENT') throw access_error
+        await write_file_to_filesystem({
+          absolute_path: timeline_path,
+          file_content: ''
         })
       }
-      wrote = true
-    } else if (final_timeline.length > 0) {
+
+      await read_modify_write({
+        absolute_path: timeline_path,
+        modify: async (content) => {
+          const merged = new Map()
+          const lines = content.split('\n')
+          let line_number = 0
+          for (const line of lines) {
+            line_number++
+            if (line.trim() === '') continue
+            let entry
+            try {
+              entry = JSON.parse(line)
+            } catch (parse_error) {
+              log_warn(
+                `Malformed JSON at line ${line_number} in ${timeline_path}: ${parse_error.message}`
+              )
+              continue
+            }
+            if (entry && entry.id != null) {
+              merged.set(entry.id, entry)
+            }
+          }
+          for (const entry of new_entries) {
+            if (entry && entry.id != null) {
+              merged.set(entry.id, entry)
+            }
+          }
+          const merged_array = [...merged.values()]
+          sort_timeline_entries(merged_array)
+          const serialized = merged_array
+            .map((e) => JSON.stringify(e) + '\n')
+            .join('')
+          if (serialized === content) {
+            return content
+          }
+          wrote = true
+          return serialized
+        }
+      })
+    } else if (new_entries.length > 0) {
       await append_timeline_entries({
         timeline_path,
-        entries: final_timeline
+        entries: new_entries
       })
       wrote = true
     }
     const write_ms = Date.now() - write_start
     log(
-      `Timeline write (parse_mode=${parse_mode}) with ${final_timeline.length} entries at ${timeline_path}`
+      `Timeline write (parse_mode=${parse_mode}${parse_mode === 'full' ? ',merge' : ''}) with ${new_entries.length} entries at ${timeline_path}`
     )
     log_perf(
       'build_timeline session=%s parse_mode=%s entries=%d write_ms=%d total_ms=%d',
       normalized_session.session_id,
       parse_mode,
-      final_timeline.length,
+      new_entries.length,
       write_ms,
       Date.now() - timeline_start
     )
@@ -144,7 +194,7 @@ export const build_timeline_from_session = async (
 
     return {
       timeline_path,
-      entry_count: final_timeline.length,
+      entry_count: new_entries.length,
       timeline_modified: wrote,
       tool_validation,
       unsupported_items: {
