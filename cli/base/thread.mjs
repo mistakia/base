@@ -5,6 +5,8 @@
  */
 
 import path from 'path'
+import fs from 'fs/promises'
+import os from 'os'
 
 import { update_thread_state } from '#libs-server/threads/update-thread.mjs'
 import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
@@ -14,6 +16,9 @@ import { create_base_uri_from_path } from '#libs-server/base-uri/base-uri-utilit
 import { thread_constants } from '#libs-shared'
 import list_threads from '#libs-server/threads/list-threads.mjs'
 import { validate_timeline_schema } from '#libs-server/threads/validate-timeline-schema.mjs'
+import { check_state_drift } from '#libs-server/threads/check-state-drift.mjs'
+import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
+import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { register_subcommand_extensions } from '#libs-server/extension/register-subcommand-extensions.mjs'
 import { get_system_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
@@ -361,6 +366,12 @@ const builder_builtin = (yargs) =>
           })
           .option('fail-fast', {
             describe: 'Stop on the first invalid entry',
+            type: 'boolean',
+            default: false
+          })
+          .option('repair', {
+            describe:
+              'Repair thread_state drift in place for repairable findings',
             type: 'boolean',
             default: false
           })
@@ -726,6 +737,70 @@ async function handle_messages(argv) {
   flush_and_exit(exit_code)
 }
 
+async function enumerate_thread_ids({ thread_dir, thread_id }) {
+  if (thread_id) return [thread_id]
+  const entries = await fs.readdir(thread_dir, { withFileTypes: true })
+  return entries
+    .filter((e) => e.isDirectory() && !e.name.startsWith('.'))
+    .map((e) => e.name)
+}
+
+async function run_drift_pool({ thread_ids, worker_fn }) {
+  const N = Math.min(os.cpus().length, 8)
+  const queue = thread_ids.slice()
+  const results = []
+  const workers = Array.from({ length: N }, async () => {
+    while (queue.length > 0) {
+      const id = queue.shift()
+      if (!id) break
+      try {
+        const r = await worker_fn(id)
+        if (r) results.push(r)
+      } catch (err) {
+        results.push({ thread_id: id, error: err.message })
+      }
+    }
+  })
+  await Promise.all(workers)
+  return results
+}
+
+async function check_thread_for_drift({ thread_id, thread_dir }) {
+  const dir = path.join(thread_dir, thread_id)
+  const metadata_path = path.join(dir, 'metadata.json')
+  const timeline_path = path.join(dir, 'timeline.jsonl')
+
+  let metadata
+  try {
+    metadata = JSON.parse(await fs.readFile(metadata_path, 'utf-8'))
+  } catch {
+    return null
+  }
+
+  const { drift } = await check_state_drift({
+    thread_id,
+    timeline_path,
+    metadata
+  })
+  if (!drift) return null
+  return { thread_id, metadata_path, ...drift }
+}
+
+async function repair_thread_state_drift({ metadata_path, repair_inputs }) {
+  await read_modify_write({
+    absolute_path: metadata_path,
+    modify: async (content) => {
+      const metadata = JSON.parse(content)
+      metadata.thread_state = repair_inputs.thread_state
+      metadata.archived_at = repair_inputs.archived_at
+      metadata.archive_reason = repair_inputs.archive_reason
+      metadata.updated_at = new Date().toISOString()
+      await assert_valid_thread_metadata(metadata)
+      return JSON.stringify(metadata, null, 2)
+    }
+  })
+}
+
 async function handle_validate(argv) {
   let exit_code = 0
   try {
@@ -758,6 +833,47 @@ async function handle_validate(argv) {
       }
     })
 
+    const drift_thread_ids = await enumerate_thread_ids({
+      thread_dir,
+      thread_id: argv['thread-id']
+    })
+    const drift_findings = await run_drift_pool({
+      thread_ids: drift_thread_ids,
+      worker_fn: (id) => check_thread_for_drift({ thread_id: id, thread_dir })
+    })
+
+    let drifts_repaired = 0
+    if (argv.repair) {
+      for (const finding of drift_findings) {
+        if (!finding.repairable) continue
+        try {
+          await repair_thread_state_drift({
+            metadata_path: finding.metadata_path,
+            repair_inputs: finding.repair_inputs
+          })
+          finding.repaired = true
+          drifts_repaired++
+        } catch (err) {
+          finding.repair_error = err.message
+        }
+      }
+    }
+
+    for (const finding of drift_findings) {
+      console.warn(
+        '[thread-drift] %s repairable=%s%s',
+        finding.thread_id,
+        finding.repairable,
+        finding.repaired ? ' repaired=true' : ''
+      )
+    }
+
+    const drifts_repairable = drift_findings.filter((f) => f.repairable).length
+    result.threads_with_drift = drift_findings.length
+    result.drifts_repairable = drifts_repairable
+    result.drifts_repaired = drifts_repaired
+    result.drifted_threads = drift_findings
+
     if (argv.json) {
       console.log(JSON.stringify(result, null, 2))
     } else {
@@ -766,6 +882,9 @@ async function handle_validate(argv) {
       )
       console.log(
         `[validate] ${result.threads_with_errors} thread(s) with validation errors, ${result.entries_invalid} entries invalid`
+      )
+      console.log(
+        `[validate] ${result.threads_with_drift} thread(s) with state drift, ${drifts_repairable} repairable, ${drifts_repaired} repaired`
       )
       for (const r of result.bad_threads) {
         console.log(`\n${r.thread_id} (${r.invalid} invalid of ${r.entries}):`)
@@ -790,7 +909,8 @@ async function handle_validate(argv) {
       }
     }
 
-    exit_code = result.entries_invalid > 0 ? 1 : 0
+    const drift_unrepaired = result.threads_with_drift - drifts_repaired
+    exit_code = result.entries_invalid > 0 || drift_unrepaired > 0 ? 1 : 0
   } catch (error) {
     console.error(`Error: ${error.message}`)
     exit_code = 2
