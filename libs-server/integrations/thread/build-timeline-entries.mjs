@@ -107,6 +107,13 @@ export const build_timeline_from_session = async (
       await read_modify_write({
         absolute_path: timeline_path,
         modify: async (content) => {
+          // parse_mode='full' is authoritative for session-derived entries:
+          // a full re-parse may follow a source-file replacement, so prior
+          // session entries must not survive by ID. Retain only non-session
+          // entries written by runtime paths like update-thread.mjs
+          // (state_change lifecycle events, flagged via
+          // metadata.thread_lifecycle=true) which cannot be reconstructed
+          // from the raw JSONL.
           const merged = new Map()
           const lines = content.split('\n')
           let line_number = 0
@@ -122,7 +129,11 @@ export const build_timeline_from_session = async (
               )
               continue
             }
-            if (entry && entry.id != null) {
+            if (
+              entry &&
+              entry.id != null &&
+              entry.metadata?.thread_lifecycle === true
+            ) {
               merged.set(entry.id, entry)
             }
           }
