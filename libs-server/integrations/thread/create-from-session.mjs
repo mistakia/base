@@ -1,6 +1,5 @@
 import path from 'path'
 import fs from 'fs/promises'
-import { createWriteStream } from 'fs'
 import { homedir } from 'os'
 import { glob } from 'glob'
 import debug from 'debug'
@@ -301,58 +300,43 @@ const save_claude_raw_data = async ({
   session_id,
   parse_mode
 }) => {
-  if (parse_mode !== 'full' && parse_mode !== 'delta') {
+  const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
+  const source_file = raw_data.metadata?.file_path
+
+  if (!source_file) {
     throw new Error(
-      `save_claude_raw_data: parse_mode must be 'full' or 'delta', got ${parse_mode}`
+      `save_claude_raw_data: raw_data.metadata.file_path is required (parse_mode=${parse_mode})`
     )
   }
 
-  // Save original JSONL entries if available using streaming writes
-  // to avoid holding multiple copies in memory for large sessions
-  if (raw_data.entries && Array.isArray(raw_data.entries)) {
-    const jsonl_file = path.join(raw_data_dir, 'claude-session.jsonl')
-    const flags = parse_mode === 'full' ? 'w' : 'a'
-
-    // In delta mode, overlapping re-parses (e.g. after a sync-state reset or
-    // race) would otherwise append duplicate lines. Read existing uuids first
-    // and skip entries already on disk.
-    const existing_uuids = new Set()
-    if (flags === 'a') {
-      try {
-        const existing = await fs.readFile(jsonl_file, 'utf-8')
-        for (const line of existing.split('\n')) {
-          if (!line) continue
-          try {
-            const parsed = JSON.parse(line)
-            if (parsed.uuid) existing_uuids.add(parsed.uuid)
-          } catch {
-            // Skip unparseable lines
-          }
-        }
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error
+  // copyFile is safe under concurrent hooks: the live source grows
+  // monotonically, so last-write-wins yields the freshest snapshot.
+  let pre_copy_source_size = null
+  try {
+    pre_copy_source_size = (await fs.stat(source_file)).size
+  } catch (stat_error) {
+    log(`Pre-copy stat failed for ${source_file}: ${stat_error.message}`)
+  }
+  await fs.copyFile(source_file, jsonl_file)
+  raw_data.entries = null
+  if (pre_copy_source_size !== null) {
+    try {
+      const destination_size = (await fs.stat(jsonl_file)).size
+      log_debug(
+        `Snapshot ${source_file} -> ${jsonl_file} ` +
+          `(${destination_size}B parse_mode=${parse_mode})`
+      )
+      // Compare against the pre-copy source size; re-statting the source races
+      // against concurrent appends and would log spurious truncations.
+      if (destination_size < pre_copy_source_size) {
+        log(
+          `WARN snapshot truncation: ${jsonl_file} ` +
+            `dst=${destination_size}B < pre_src=${pre_copy_source_size}B (src=${source_file})`
+        )
       }
+    } catch (stat_error) {
+      log(`Post-copy stat failed for ${jsonl_file}: ${stat_error.message}`)
     }
-
-    await new Promise((resolve, reject) => {
-      const write_stream = createWriteStream(jsonl_file, { flags })
-      write_stream.on('error', reject)
-      write_stream.on('finish', resolve)
-      for (let i = 0; i < raw_data.entries.length; i++) {
-        const entry = raw_data.entries[i]
-        // Drop the array reference as we go to progressively free memory
-        // for large sessions (entries already normalized, no longer needed).
-        raw_data.entries[i] = null
-        if (entry && entry.uuid && existing_uuids.has(entry.uuid)) continue
-        write_stream.write(JSON.stringify(entry) + '\n')
-      }
-      write_stream.end()
-    })
-    // Release the entries array itself
-    raw_data.entries = null
-    log_debug(
-      `Saved Claude JSONL data to ${jsonl_file} (parse_mode=${parse_mode})`
-    )
   }
 
   // Save session metadata

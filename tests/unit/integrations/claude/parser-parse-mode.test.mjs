@@ -8,25 +8,10 @@ import {
   save_sync_state,
   clear_sync_state
 } from '#libs-server/integrations/claude/sync-state.mjs'
-
-const make_entry = (uuid, index) => ({
-  uuid,
-  parentUuid: index === 1 ? null : `uuid-${index - 1}`,
-  timestamp: `2026-04-18T12:00:${String(index).padStart(2, '0')}.000Z`,
-  type: index % 2 === 1 ? 'user' : 'assistant',
-  cwd: '/tmp/cwd',
-  message:
-    index % 2 === 1
-      ? { role: 'user', content: `msg ${index}` }
-      : {
-          role: 'assistant',
-          content: [{ type: 'text', text: `reply ${index}` }],
-          model: 'claude-opus-4-7'
-        }
-})
-
-const serialize = (entries) =>
-  entries.map((e) => JSON.stringify(e)).join('\n') + '\n'
+import {
+  make_claude_entry as make_entry,
+  serialize_claude_entries as serialize
+} from '#tests/utils/claude-jsonl-fixtures.mjs'
 
 describe('claude parser parse_mode decision table', function () {
   this.timeout(10000)
