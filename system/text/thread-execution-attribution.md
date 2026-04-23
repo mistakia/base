@@ -138,3 +138,14 @@ every historical thread from the `file_path` recorded in
 fields. Threads whose origin could not be classified, or whose metadata had
 pre-existing schema drift, were marked `review_needed: true` and excluded
 from the bulk commit.
+
+### Lessons learned for future one-shot migrations
+
+When a `file_path` matched none of the classifier's regexes (e.g. thread
+`ec67f399` with `/tmp/repro-timeline/...`), the script silently skipped the
+thread -- no Written, no Unchanged, no Abort, no raw-data-missing bucket. A
+correct classifier should return an explicit `{kind: 'ambiguous'}` for
+unmatched paths and route the thread into the `review_needed` quarantine so
+it is never invisible. Future migrations that iterate over historical raw
+data should preserve this invariant: every input must land in exactly one
+accounted-for output bucket.
