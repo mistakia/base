@@ -90,6 +90,8 @@ const create_truncated_entry = (entry) => {
     truncated: true
   }
 
+  if (entry.provenance !== undefined) truncated.provenance = entry.provenance
+
   switch (entry.type) {
     case 'message': {
       const { content } = entry

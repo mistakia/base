@@ -5,6 +5,17 @@ import path from 'path'
 import debug from 'debug'
 
 import { sort_timeline_entries } from './sort-timeline-entries.mjs'
+import { assert_valid_provenance } from '#libs-shared/timeline/entry-provenance.mjs'
+
+const assert_provenance_with_path = (entry, timeline_path) => {
+  try {
+    assert_valid_provenance(entry)
+  } catch (error) {
+    throw new Error(
+      `${error.message} (timeline=${timeline_path}, id=${entry?.id ?? '(no id)'})`
+    )
+  }
+}
 
 const log = debug('threads:timeline:jsonl')
 const log_warn = debug('threads:timeline:jsonl:warn')
@@ -162,6 +173,7 @@ export async function write_timeline_jsonl({ timeline_path, entries }) {
  * @returns {Promise<void>}
  */
 export async function append_timeline_entry_jsonl({ timeline_path, entry }) {
+  assert_provenance_with_path(entry, timeline_path)
   const dir = path.dirname(timeline_path)
 
   // Ensure directory exists
@@ -185,6 +197,8 @@ export async function append_timeline_entry_jsonl({ timeline_path, entry }) {
  */
 export async function append_timeline_entries({ timeline_path, entries }) {
   if (entries.length === 0) return
+
+  for (const entry of entries) assert_provenance_with_path(entry, timeline_path)
 
   const dir = path.dirname(timeline_path)
   await fs.mkdir(dir, { recursive: true })

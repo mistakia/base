@@ -13,6 +13,11 @@ import readline from 'node:readline'
 
 import { normalize_claude_session } from '#libs-server/integrations/claude/normalize-session.mjs'
 import { sort_timeline_entries } from '#libs-server/threads/timeline/index.mjs'
+import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
+import {
+  PROVENANCE,
+  assert_valid_provenance
+} from '#libs-shared/timeline/entry-provenance.mjs'
 
 const MATERIALIZED_RAW_TYPES = new Set([
   'queue-operation',
@@ -63,23 +68,30 @@ const parse_raw_session_file = async (file_path) => {
 }
 
 const read_timeline = (timeline_path) => {
-  if (!fs.existsSync(timeline_path)) return { lines: [], ids: new Set() }
+  if (!fs.existsSync(timeline_path)) return { entries: [], ids: new Set() }
   const raw = fs.readFileSync(timeline_path, 'utf8')
-  const had_trailing_nl = raw.endsWith('\n')
-  const lines = (had_trailing_nl ? raw.slice(0, -1) : raw).split('\n')
+  const body = raw.endsWith('\n') ? raw.slice(0, -1) : raw
+  const entries = []
   const ids = new Set()
-  for (const line of lines) {
+  for (const line of body.split('\n')) {
     if (!line.trim()) continue
     try {
       const e = JSON.parse(line)
+      entries.push(e)
       if (e && e.id) ids.add(e.id)
     } catch {}
   }
-  return { lines, ids, had_trailing_nl }
+  return { entries, ids }
 }
 
 const write_timeline_atomic = (timeline_path, entries) => {
   sort_timeline_entries(entries)
+  // Enforce the provenance invariant at the last write boundary so this
+  // script — which bypasses the shared append_timeline_entries write path
+  // for atomic-replace semantics — cannot silently persist unstamped
+  // entries. Atomic-replace is required here: session-derived timelines
+  // must be re-sorted after merge, which fs.appendFile cannot produce.
+  for (const entry of entries) assert_valid_provenance(entry)
   const body = entries.map((e) => JSON.stringify(e)).join('\n')
   const tmp = timeline_path + '.tmp'
   fs.writeFileSync(tmp, body + '\n')
@@ -138,43 +150,55 @@ for (const tid of thread_dirs) {
     continue
   }
 
-  // Existing timeline content (preserved unchanged).
-  const { lines: existing_lines, ids: existing_ids } =
-    read_timeline(timeline_path)
-  const existing_entries = []
-  for (const line of existing_lines) {
-    if (!line.trim()) continue
-    try {
-      existing_entries.push(JSON.parse(line))
-    } catch {}
+  // Acquire per-thread import lock so this read-modify-write cannot race
+  // with the scheduled importer. Non-zero exit on timeout for this thread;
+  // id-keyed idempotence makes partial re-runs safe.
+  let lock
+  try {
+    lock = await acquire_thread_import_lock({ thread_dir: thread_path })
+  } catch (err) {
+    failures.push({ tid, error: `lock acquire failed: ${err.message}` })
+    continue
   }
 
-  // Pick materialized entries not yet present, drop the others.
-  const new_entries = []
-  for (const m of normalized.messages || []) {
-    if (!m || !m.id) continue
-    if (existing_ids.has(m.id)) continue
-    // Restrict to entries that came from the materialized raw types so we
-    // don't touch user/assistant/system/summary entries that the existing
-    // pipeline already handled (deduping by id is already a guard, but this
-    // is belt-and-braces).
-    const orig = m.metadata && m.metadata.original_type
-    if (!orig || !MATERIALIZED_RAW_TYPES.has(orig)) continue
-    new_entries.push({
-      ...m,
-      timestamp:
-        m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
-      provider: 'claude',
-      schema_version: 2
-    })
+  try {
+    // Existing timeline content (preserved unchanged). Pre-condition: the
+    // Phase B migration (scripts/migrate-timeline-provenance.mjs) has run,
+    // so every legacy entry already carries `provenance`. The write-time
+    // assert inside write_timeline_atomic enforces this explicitly.
+    const { entries: existing_entries, ids: existing_ids } =
+      read_timeline(timeline_path)
+
+    // Pick materialized entries not yet present, drop the others.
+    const new_entries = []
+    for (const m of normalized.messages || []) {
+      if (!m || !m.id) continue
+      if (existing_ids.has(m.id)) continue
+      // Restrict to entries that came from the materialized raw types so we
+      // don't touch user/assistant/system/summary entries that the existing
+      // pipeline already handled (deduping by id is already a guard, but this
+      // is belt-and-braces).
+      const orig = m.metadata && m.metadata.original_type
+      if (!orig || !MATERIALIZED_RAW_TYPES.has(orig)) continue
+      new_entries.push({
+        ...m,
+        timestamp:
+          m.timestamp instanceof Date ? m.timestamp.toISOString() : m.timestamp,
+        provider: 'claude',
+        schema_version: 2,
+        provenance: PROVENANCE.SESSION_IMPORT
+      })
+    }
+
+    if (new_entries.length === 0) continue
+
+    const merged = existing_entries.concat(new_entries)
+    write_timeline_atomic(timeline_path, merged)
+    modified_threads++
+    total_added += new_entries.length
+  } finally {
+    await lock.release().catch(() => {})
   }
-
-  if (new_entries.length === 0) continue
-
-  const merged = existing_entries.concat(new_entries)
-  write_timeline_atomic(timeline_path, merged)
-  modified_threads++
-  total_added += new_entries.length
   if (modified_threads % 25 === 0) {
     console.log(
       `progress: scanned=${scanned} claude=${claude_threads} modified=${modified_threads} added=${total_added}`
@@ -188,4 +212,5 @@ console.log(
 if (failures.length) {
   console.log('first 5 failures:')
   for (const f of failures.slice(0, 5)) console.log(' ', f.tid, f.error)
+  process.exit(1)
 }

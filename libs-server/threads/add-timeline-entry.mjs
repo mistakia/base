@@ -10,6 +10,7 @@ import {
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { increment_timeline_backstop_counter } from '#libs-server/threads/timeline-backstop-counter.mjs'
+import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 
 const log = debug('threads:timeline')
 
@@ -145,6 +146,10 @@ export default async function add_timeline_entry({ thread_id, entry }) {
     throw new Error(
       'entry.id is required. Importers should use deterministic_timeline_entry_id; runtime callers should pass uuid() explicitly.'
     )
+  }
+
+  if (new_entry.provenance === undefined) {
+    new_entry.provenance = PROVENANCE.RUNTIME_EVENT
   }
 
   // Backstop: stamp current schema version on any caller that did not provide

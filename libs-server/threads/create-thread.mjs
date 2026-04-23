@@ -18,6 +18,7 @@ import {
 } from '#libs-server/base-uri/index.mjs'
 import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 
 const { THREAD_STATE, validate_thread_state } = thread_constants
@@ -367,7 +368,9 @@ export default async function create_thread({
           ...initial_timeline_entry,
           id: initial_timeline_entry.id || `msg_${uuid().split('-')[0]}`,
           timestamp: initial_timeline_entry.timestamp || now,
-          schema_version: TIMELINE_SCHEMA_VERSION
+          schema_version: TIMELINE_SCHEMA_VERSION,
+          provenance:
+            initial_timeline_entry.provenance || PROVENANCE.RUNTIME_EVENT
         }
       ]
     : []
