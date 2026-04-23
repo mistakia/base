@@ -43,7 +43,7 @@ const make_session = () => ({
   }
 })
 
-describe('session import preserves thread lifecycle fields', function () {
+describe('session import preserves runtime-authored entries', function () {
   this.timeout(15000)
 
   let test_user

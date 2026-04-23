@@ -76,7 +76,7 @@ describe('libs-shared/timeline/entry-provenance', () => {
       ).to.equal(true)
     })
 
-    it('returns true for entries missing provenance (migration safety net)', () => {
+    it('returns true for entries missing provenance (defensive fallback)', () => {
       expect(must_preserve_across_rebuild({})).to.equal(true)
       expect(must_preserve_across_rebuild({ provenance: undefined })).to.equal(
         true
