@@ -9,7 +9,11 @@ const log = debug('search:sources:path')
 
 const SOURCE_NAME = 'path'
 
-export async function search({ query, candidate_limit = 100, directory = null }) {
+export async function search({
+  query,
+  candidate_limit = 100,
+  directory = null
+}) {
   if (!query || !query.trim()) return []
 
   let all_paths
@@ -30,7 +34,9 @@ export async function search({ query, candidate_limit = 100, directory = null })
   })
 
   return ranked
-    .filter((result) => typeof result.file_path === 'string' && result.file_path)
+    .filter(
+      (result) => typeof result.file_path === 'string' && result.file_path
+    )
     .map((result) => ({
       entity_uri: `user:${result.file_path}`,
       raw_score: result.score,

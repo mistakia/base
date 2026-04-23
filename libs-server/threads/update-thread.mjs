@@ -18,6 +18,7 @@ import {
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
+import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 
 const {
   THREAD_STATE,
@@ -113,7 +114,8 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
       thread_lifecycle: true,
       ...(reason ? { reason } : {})
     },
-    schema_version: TIMELINE_SCHEMA_VERSION
+    schema_version: TIMELINE_SCHEMA_VERSION,
+    provenance: PROVENANCE.RUNTIME_EVENT
   }
 
   // Append timeline entry (streaming write - avoids read-modify-write)

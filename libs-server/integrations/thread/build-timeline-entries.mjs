@@ -13,6 +13,7 @@ import {
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { deterministic_timeline_entry_id } from '#libs-shared/timeline/deterministic-id.mjs'
+import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
@@ -293,7 +294,8 @@ const convert_message_to_timeline_entry = ({
     provider: session_provider,
     provider_data: message.provider_data || {},
     ordering,
-    schema_version: TIMELINE_SCHEMA_VERSION
+    schema_version: TIMELINE_SCHEMA_VERSION,
+    provenance: PROVENANCE.SESSION_IMPORT
   }
 
   switch (message.type) {

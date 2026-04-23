@@ -66,6 +66,11 @@
       },
       "thinking_type": {
         "description": "Present on thinking entries; narrowed under allOf[type=thinking]"
+      },
+      "provenance": {
+        "type": "string",
+        "enum": ["session_import", "runtime_event"],
+        "description": "Origin class for the entry. session_import = derived by re-parsing an external session source (re-derivable, dropped on rebuild). runtime_event = authored by server runtime (not re-derivable, preserved across rebuild). Enforcement lives at write-time via libs-shared/timeline/entry-provenance.mjs, not in `required`, so the migration can backfill legacy entries."
       }
     },
     "allOf": [

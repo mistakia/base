@@ -1123,9 +1123,8 @@ router.post('/sync-user-session', async (req, res) => {
     }
     sync_rate_limit.set(transcript_path, Date.now())
 
-    const { translate_container_transcript_path } = await import(
-      '#libs-server/threads/user-container-manager.mjs'
-    )
+    const { translate_container_transcript_path } =
+      await import('#libs-server/threads/user-container-manager.mjs')
     const translation = translate_container_transcript_path({
       username,
       transcript_path
