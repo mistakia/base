@@ -32,14 +32,16 @@ async function run_source_with_timeout({
   name,
   query,
   candidate_limit,
-  semantic_timeout_ms
+  semantic_timeout_ms,
+  source_options
 }) {
   const adapter = ADAPTERS[name]
   if (!adapter) return []
+  const per_source = (source_options && source_options[name]) || {}
 
   if (name !== 'semantic') {
     try {
-      return await adapter.search({ query, candidate_limit })
+      return await adapter.search({ query, candidate_limit, ...per_source })
     } catch (error) {
       log('source %s failed: %s\n%s', name, error.message, error.stack)
       return []
@@ -52,6 +54,7 @@ async function run_source_with_timeout({
     return await adapter.search({
       query,
       candidate_limit,
+      ...per_source,
       signal: controller.signal
     })
   } catch (error) {
@@ -155,6 +158,8 @@ async function attach_entity_metadata(hits) {
   })
 }
 
+const SCHEME_PREFIX = /^(?:user|sys):/
+
 export async function search({
   query,
   sources,
@@ -162,6 +167,7 @@ export async function search({
   limit = 20,
   offset = 0,
   user_public_key = null,
+  source_options = {},
   permission_filter_fn = permission_filter
 }) {
   return embedded_index_manager._with_reader(async () => {
@@ -185,7 +191,8 @@ export async function search({
           name,
           query,
           candidate_limit,
-          semantic_timeout_ms
+          semantic_timeout_ms,
+          source_options
         })
       )
     )
@@ -204,6 +211,9 @@ export async function search({
 
     const results = permitted.map((hit) => ({
       entity_uri: hit.entity_uri,
+      file_path: SCHEME_PREFIX.test(hit.entity_uri)
+        ? hit.entity_uri.replace(SCHEME_PREFIX, '')
+        : null,
       type: hit.type,
       title: hit.title,
       updated_at: hit.updated_at,

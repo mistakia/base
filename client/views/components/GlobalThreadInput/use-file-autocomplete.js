@@ -105,8 +105,8 @@ export default function useFileAutocomplete({
           api.search,
           {
             q: term,
-            mode: 'paths',
-            directory: working_directory,
+            source: 'path',
+            directory: working_directory || undefined,
             limit: MAX_RESULTS
           },
           token
@@ -181,12 +181,7 @@ export default function useFileAutocomplete({
         return
       }
 
-      // Get the path to insert (relative path from suggestion)
-      const file_path =
-        suggestion.file_path ||
-        suggestion.relative_path ||
-        suggestion.path ||
-        ''
+      const file_path = suggestion.file_path || ''
 
       // Insert as @<path> with trailing space for easy continuation
       const path_to_insert = '@' + file_path + ' '

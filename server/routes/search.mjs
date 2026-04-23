@@ -83,6 +83,8 @@ function parse_csv_list(value) {
  *   tag                 CSV of tag base_uris.
  *   status              CSV of status values.
  *   path                Glob against entity_uri.
+ *   directory           Filesystem path scoping applied to the `path` source
+ *                       (absolute or relative to USER_BASE_DIRECTORY).
  *   limit               Positive integer, capped by search.max_limit.
  *   offset              Non-negative integer.
  *
@@ -100,7 +102,14 @@ router.get('/', async (req, res) => {
       })
     }
 
-    for (const param of ['source', 'type', 'tag', 'status', 'path']) {
+    for (const param of [
+      'source',
+      'type',
+      'tag',
+      'status',
+      'path',
+      'directory'
+    ]) {
       if (reject_repeated_param(res, param, req.query[param])) return
     }
 
@@ -154,13 +163,17 @@ router.get('/', async (req, res) => {
       offset
     )
 
+    const directory = req.query.directory || null
+    const source_options = directory ? { path: { directory } } : {}
+
     const response = await orchestrator_search({
       query,
       sources: source_list || undefined,
       filters,
       limit,
       offset,
-      user_public_key
+      user_public_key,
+      source_options
     })
 
     res.json(response)

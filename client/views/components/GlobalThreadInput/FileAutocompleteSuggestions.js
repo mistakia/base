@@ -50,8 +50,7 @@ function SuggestionItem({ suggestion, is_selected, on_click }) {
 
   const is_directory =
     suggestion.is_directory || suggestion.type === 'directory'
-  const display_path =
-    suggestion.file_path || suggestion.relative_path || suggestion.path || ''
+  const display_path = suggestion.file_path || ''
 
   return (
     <Box
