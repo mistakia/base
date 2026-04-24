@@ -96,7 +96,83 @@ const build_tombstone_key = (session_id) => {
 const TOMBSTONE_TTL_SECONDS = 10
 
 /**
- * Register a new active session
+ * Lua script for atomic session registration. Executing tombstone check,
+ * GET, merge-or-create, and SETEX as a single Redis command eliminates
+ * the TOCTOU window where two parallel SessionStart POSTs could both
+ * observe "no existing session" and both fan out ACTIVE_SESSION_STARTED.
+ *
+ * Returns:
+ *   nil                    -- tombstone blocked registration (non-resume)
+ *   {is_new_str, json}     -- is_new_str is "1" for first-sight registration,
+ *                             "0" for resume/re-register of existing session
+ */
+const REGISTER_SESSION_SCRIPT = `
+local key = KEYS[1]
+local tombstone_key = KEYS[2]
+local ttl = tonumber(ARGV[1])
+local now = ARGV[2]
+local session_id = ARGV[3]
+local working_directory = ARGV[4]
+local transcript_path = ARGV[5]
+local job_id = ARGV[6]
+local resume = ARGV[7] == '1'
+
+if redis.call('EXISTS', tombstone_key) == 1 then
+  if resume then
+    redis.call('DEL', tombstone_key)
+  else
+    return nil
+  end
+end
+
+local existing = redis.call('GET', key)
+local session
+local is_new
+
+if existing then
+  session = cjson.decode(existing)
+  session.status = 'active'
+  session.working_directory = working_directory
+  session.transcript_path = transcript_path
+  if job_id ~= '' then
+    session.job_id = job_id
+  elseif session.job_id == nil then
+    session.job_id = cjson.null
+  end
+  session.started_at = now
+  session.last_activity_at = now
+  session.event_seq = (session.event_seq or 0) + 1
+  is_new = '0'
+else
+  session = {
+    session_id = session_id,
+    status = 'active',
+    thread_id = cjson.null,
+    thread_title = cjson.null,
+    latest_timeline_event = cjson.null,
+    working_directory = working_directory,
+    transcript_path = transcript_path,
+    job_id = (job_id ~= '' and job_id) or cjson.null,
+    created_at = now,
+    started_at = now,
+    last_activity_at = now,
+    event_seq = 1
+  }
+  is_new = '1'
+end
+
+local encoded = cjson.encode(session)
+redis.call('SETEX', key, ttl, encoded)
+return {is_new, encoded}
+`
+
+/**
+ * Register a new active session atomically.
+ *
+ * All state transitions (tombstone check, existing-session lookup,
+ * merge-or-create, SETEX) run in a single Lua script so concurrent
+ * SessionStart POSTs for the same session_id cannot both observe
+ * "no existing session" -- exactly one call sees is_new=true.
  *
  * @param {Object} params - Session parameters
  * @param {string} params.session_id - Claude session ID
@@ -106,8 +182,9 @@ const TOMBSTONE_TTL_SECONDS = 10
  * @param {boolean} [params.resume=false] - When true, clears any deletion
  *   tombstone and re-registers (Claude Code SessionStart source=resume).
  *   When false (default) and a tombstone exists, registration is refused.
- * @returns {Promise<Object|null>} Registered session record, or null when
- *   a tombstone blocks re-registration (non-resume caller).
+ * @returns {Promise<Object|null>} Session record (with non-persisted
+ *   `_is_new` boolean flag indicating first-sight registration) or null
+ *   when a tombstone blocks re-registration (non-resume caller).
  */
 export const register_active_session = async ({
   session_id,
@@ -119,67 +196,36 @@ export const register_active_session = async ({
   const redis = get_redis_connection()
   const key = build_session_key(session_id)
   const tombstone_key = build_tombstone_key(session_id)
-
-  // Tombstone-aware registration: if the session was just deleted, refuse to
-  // re-register unless the caller explicitly signals a resume. This blocks the
-  // POST-after-DELETE race for short sessions where the SessionStart POST
-  // lands after the SessionEnd DELETE, which would otherwise create an
-  // orphaned session with no subsequent ENDED event.
-  const tombstone_exists = await redis.exists(tombstone_key)
-  if (tombstone_exists) {
-    if (!resume) {
-      log(`Skipped registration for tombstoned session: ${session_id}`)
-      return null
-    }
-    // Resume: same session_id intentionally re-registering. Clear the
-    // tombstone so subsequent updates are not blocked.
-    await redis.del(tombstone_key)
-  }
-
   const now = new Date().toISOString()
 
-  // Check for existing session (resume case: same session_id re-registers)
-  const existing_raw = await redis.get(key)
-  let session
+  const result = await redis.eval(
+    REGISTER_SESSION_SCRIPT,
+    2,
+    key,
+    tombstone_key,
+    STORE_CONFIG.stale_timeout_seconds,
+    now,
+    session_id,
+    working_directory,
+    transcript_path,
+    job_id || '',
+    resume ? '1' : '0'
+  )
 
-  if (existing_raw) {
-    // Preserve created_at, thread_id, and other accumulated fields from the
-    // original registration. Only reset status and activity timestamps.
-    const existing = JSON.parse(existing_raw)
-    session = {
-      ...existing,
-      status: 'active',
-      working_directory,
-      transcript_path,
-      job_id: job_id || existing.job_id || null,
-      started_at: now,
-      last_activity_at: now,
-      event_seq: (existing.event_seq || 0) + 1
-    }
-    log(`Re-registered active session (resume): ${session_id}`)
-  } else {
-    session = {
-      session_id,
-      status: 'active',
-      thread_id: null,
-      thread_title: null,
-      latest_timeline_event: null,
-      working_directory,
-      transcript_path,
-      job_id: job_id || null,
-      created_at: now,
-      started_at: now,
-      last_activity_at: now,
-      event_seq: 1
-    }
-    log(`Registered active session: ${session_id}`)
+  if (result === null) {
+    log(`Skipped registration for tombstoned session: ${session_id}`)
+    return null
   }
 
-  await redis.setex(
-    key,
-    STORE_CONFIG.stale_timeout_seconds,
-    JSON.stringify(session)
-  )
+  const [is_new_str, encoded] = result
+  const session = JSON.parse(encoded)
+  session._is_new = is_new_str === '1'
+
+  if (session._is_new) {
+    log(`Registered active session: ${session_id}`)
+  } else {
+    log(`Re-registered active session (resume): ${session_id}`)
+  }
 
   return session
 }

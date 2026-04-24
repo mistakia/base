@@ -348,12 +348,11 @@ router.post('/', require_hook_auth, async (req, res) => {
     // so the tombstone guard is cleared rather than blocking registration.
     const resume = hook_source === 'resume'
 
-    // Snapshot pre-existing state so a second SessionStart POST for the same
-    // session (e.g. Claude Code firing the hook twice on startup) emits
-    // ACTIVE_SESSION_UPDATED instead of a duplicate ACTIVE_SESSION_STARTED.
-    const existing_before = await get_active_session(session_id)
-
-    // Register the session
+    // Register the session atomically. The returned session carries a
+    // non-persisted `_is_new` flag so two parallel SessionStart POSTs cannot
+    // both observe "no existing session" and both fan out STARTED -- exactly
+    // one call sees _is_new=true (the TOCTOU-free replacement for a
+    // separate pre-GET snapshot).
     const session = await register_active_session({
       session_id,
       working_directory,
@@ -410,11 +409,14 @@ router.post('/', require_hook_auth, async (req, res) => {
     // Emit WebSocket event. Re-registration of a still-live session (no
     // tombstone, entry already in store) is emitted as UPDATED to avoid
     // duplicate STARTED events when the SessionStart hook fires more than
-    // once for the same Claude session.
-    if (existing_before) {
-      await emit_active_session_updated(session)
-    } else {
+    // once for the same Claude session. Decision is driven by the atomic
+    // `_is_new` flag to eliminate the TOCTOU window.
+    const is_new = session._is_new === true
+    delete session._is_new
+    if (is_new) {
       await emit_active_session_started(session)
+    } else {
+      await emit_active_session_updated(session)
     }
 
     log_lifecycle(
