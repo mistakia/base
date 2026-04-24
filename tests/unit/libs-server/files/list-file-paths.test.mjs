@@ -71,17 +71,41 @@ describe('list_file_paths', function () {
     expect(result).to.have.lengthOf(2)
   })
 
-  it('scopes enumeration to a subdirectory when provided', async () => {
+  it('scopes enumeration to a resolved absolute subdirectory', async () => {
     await fs.mkdir(path.join(temp_dir, 'task'), { recursive: true })
     await fs.mkdir(path.join(temp_dir, 'workflow'), { recursive: true })
     await fs.writeFile(path.join(temp_dir, 'task', 'a.md'), '# a')
     await fs.writeFile(path.join(temp_dir, 'workflow', 'w.md'), '# w')
 
-    const result = await run({ directory: 'task' })
+    const result = await run({
+      resolved_directory_path: path.join(temp_dir, 'task')
+    })
 
-    expect(result.map((r) => r.file_path).sort()).to.deep.equal(['a.md'])
+    expect(result.map((r) => r.file_path).sort()).to.deep.equal(['task/a.md'])
     expect(result[0].absolute_path).to.equal(
       path.join(temp_dir, 'task', 'a.md')
     )
+  })
+
+  it('rejects a relative resolved_directory_path', async () => {
+    let threw = null
+    try {
+      await run({ resolved_directory_path: 'task' })
+    } catch (error) {
+      threw = error
+    }
+    expect(threw).to.be.an('error')
+    expect(threw.message).to.include('must be absolute')
+  })
+
+  it('rejects a resolved_directory_path outside user_base_directory', async () => {
+    let threw = null
+    try {
+      await run({ resolved_directory_path: '/etc' })
+    } catch (error) {
+      threw = error
+    }
+    expect(threw).to.be.an('error')
+    expect(threw.message).to.include('outside user_base_directory')
   })
 })

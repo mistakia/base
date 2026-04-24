@@ -2,7 +2,7 @@ import { Record } from 'immutable'
 
 import { thread_prompt_action_types } from './actions.js'
 
-const DEFAULT_WORKING_DIRECTORY = 'user:'
+const DEFAULT_WORKING_DIRECTORY_URI = 'user:'
 
 const ThreadPromptState = new Record({
   is_open: false,
@@ -13,7 +13,7 @@ const ThreadPromptState = new Record({
   // Draft state - persists during navigation while overlay is open
   draft_message: '',
   draft_cursor_position: 0,
-  draft_working_directory: DEFAULT_WORKING_DIRECTORY,
+  draft_working_directory_uri: DEFAULT_WORKING_DIRECTORY_URI,
   draft_should_resume: true
 })
 
@@ -39,7 +39,7 @@ export function thread_prompt_reducer(
         // Initialize draft state
         draft_message: initial_message,
         draft_cursor_position: initial_cursor,
-        draft_working_directory: DEFAULT_WORKING_DIRECTORY,
+        draft_working_directory_uri: DEFAULT_WORKING_DIRECTORY_URI,
         draft_should_resume: payload.thread_id !== null
       })
     }

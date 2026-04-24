@@ -440,7 +440,35 @@ describe('API /search accuracy', function () {
       const res = await request(server)
         .get('/api/search')
         .set('Authorization', auth_header)
-        .query({ q: 'alpha', path: 'user:workflow/**' })
+        .query({ q: 'alpha', path_glob: 'user:workflow/**' })
+
+      expect(res.status).to.equal(200)
+      for (const row of res.body.results) {
+        expect(row.entity_uri.startsWith('user:workflow/')).to.be.true
+      }
+    })
+
+    it('(4e) path source accepts scope=user: as whole-base enumeration', async () => {
+      const unscoped = await request(server)
+        .get('/api/search')
+        .set('Authorization', auth_header)
+        .query({ q: 'alpha', source: 'path' })
+      const scoped = await request(server)
+        .get('/api/search')
+        .set('Authorization', auth_header)
+        .query({ q: 'alpha', source: 'path', scope: 'user:' })
+
+      expect(unscoped.status).to.equal(200)
+      expect(scoped.status).to.equal(200)
+      expect(scoped.body.total).to.equal(unscoped.body.total)
+      expect(scoped.body.total).to.be.greaterThan(0)
+    })
+
+    it('(4f) path source narrows to scope=user:workflow/', async () => {
+      const res = await request(server)
+        .get('/api/search')
+        .set('Authorization', auth_header)
+        .query({ q: 'alpha', source: 'path', scope: 'user:workflow/' })
 
       expect(res.status).to.equal(200)
       for (const row of res.body.results) {

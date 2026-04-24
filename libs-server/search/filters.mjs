@@ -36,7 +36,7 @@ async function fetch_tag_sets({ query, parameters, key_column }) {
 
 export async function apply_filters({ hits, filters }) {
   if (!hits || hits.length === 0) return []
-  const { type, tag, status, path: path_glob } = filters || {}
+  const { type, tag, status, path_glob } = filters || {}
 
   const has_type = Array.isArray(type) && type.length > 0
   const has_tag = Array.isArray(tag) && tag.length > 0

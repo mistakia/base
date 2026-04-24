@@ -56,6 +56,28 @@ export const is_absolute_url = (url) => {
   return false
 }
 
+// Convert an absolute filesystem path under a known base directory back to
+// its base URI form (e.g. `/abs/user-base/task/foo/` -> `user:task/foo/`).
+// Returns null if the path does not live under a known base directory.
+export const convert_path_to_base_uri = (absolute_path) => {
+  if (typeof absolute_path !== 'string' || !absolute_path) return null
+
+  const normalize = (dir) => dir.replace(/\/+$/, '')
+  const user_root = normalize(BASE_DIRECTORIES.user)
+  const system_root = normalize(BASE_DIRECTORIES.system)
+  const input = normalize(absolute_path)
+
+  const to_uri = (scheme, root) => {
+    if (input === root) return `${scheme}`
+    if (input.startsWith(root + '/')) {
+      return `${scheme}${input.slice(root.length + 1)}`
+    }
+    return null
+  }
+
+  return to_uri('user:', user_root) || to_uri('sys:', system_root) || null
+}
+
 // Convert base URI to client path
 export const convert_base_uri_to_path = (base_uri) => {
   const colon_index = base_uri.indexOf(':')

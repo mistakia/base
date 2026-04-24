@@ -14,10 +14,8 @@ import {
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown'
 import './WorkingDirectoryPicker.styl'
 
-import { BASE_DIRECTORIES } from '@views/utils/base-uri-constants'
-
 // Constants
-const USER_BASE_ROOT = BASE_DIRECTORIES.user
+const USER_BASE_ROOT_URI = 'user:'
 const THREAD_PATH_PREFIX = '/thread/'
 
 /**
@@ -43,7 +41,7 @@ export default function WorkingDirectoryPicker({
   const options = useMemo(() => {
     const base_options = [
       {
-        value: USER_BASE_ROOT,
+        value: USER_BASE_ROOT_URI,
         label: 'root directory',
         description: null // No secondary text for root
       }
@@ -61,18 +59,13 @@ export default function WorkingDirectoryPicker({
           0,
           current_path.lastIndexOf('/')
         )
-        if (!directory_path) {
-          directory_path = '/'
-        }
       }
 
-      const full_directory_path = USER_BASE_ROOT + directory_path
-
-      // Only add if it's different from root
-      if (full_directory_path !== USER_BASE_ROOT) {
-        const relative_path = directory_path.replace(/^\//, '') || '/'
+      const relative_path = directory_path.replace(/^\//, '')
+      if (relative_path) {
+        const scoped_uri = `user:${relative_path.replace(/\/*$/, '/')}`
         base_options.push({
-          value: full_directory_path,
+          value: scoped_uri,
           label: 'current directory',
           description: relative_path
         })
@@ -88,7 +81,7 @@ export default function WorkingDirectoryPicker({
     if (!selected_option) return value
 
     // For root directory, show label only
-    if (selected_option.value === USER_BASE_ROOT) {
+    if (selected_option.value === USER_BASE_ROOT_URI) {
       return selected_option.label
     }
 

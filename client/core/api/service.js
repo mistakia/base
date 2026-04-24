@@ -359,14 +359,14 @@ export const api = {
   },
 
   // Search operations — source-first API. All list params are CSV strings.
-  search({ q, source, type, tag, status, path, directory, limit, offset }) {
+  search({ q, source, type, tag, status, path_glob, scope, limit, offset }) {
     const params = { q }
     if (source) params.source = source
     if (type) params.type = type
     if (tag) params.tag = tag
     if (status) params.status = status
-    if (path) params.path = path
-    if (directory) params.directory = directory
+    if (path_glob) params.path_glob = path_glob
+    if (scope) params.scope = scope
     if (limit) params.limit = limit
     if (offset) params.offset = offset
     const url = `${API_URL}/search?${qs.stringify(params)}`

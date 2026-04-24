@@ -25,9 +25,10 @@ import { api, api_request } from '@core/api/service.js'
 import { get_app } from '@core/app/selectors.js'
 
 function* handle_search_query({ payload }) {
-  const { query, source, type, tag, status, path, limit, offset } = payload
+  const { query, source, type, tag, status, path_glob, limit, offset } =
+    payload
 
-  const has_filters = Boolean(source || type || tag || status || path)
+  const has_filters = Boolean(source || type || tag || status || path_glob)
 
   if ((!query || query.trim().length < 2) && !has_filters) {
     yield put(
@@ -42,7 +43,7 @@ function* handle_search_query({ payload }) {
     if (type) params.type = type
     if (tag) params.tag = tag
     if (status) params.status = status
-    if (path) params.path = path
+    if (path_glob) params.path_glob = path_glob
     if (limit) params.limit = limit
     if (offset) params.offset = offset
 
@@ -80,7 +81,7 @@ function* handle_query_change() {
       search_payload.status = active_statuses.join(',')
     if (active_sources.length > 0)
       search_payload.source = active_sources.join(',')
-    if (active_path) search_payload.path = active_path
+    if (active_path) search_payload.path_glob = active_path
     yield put(search_actions.search(search_payload))
   } else {
     yield put(search_actions.clear_results())

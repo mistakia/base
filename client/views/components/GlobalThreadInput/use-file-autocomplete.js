@@ -48,6 +48,14 @@ const extract_at_search_term = (text, cursor_position) => {
 }
 
 /**
+ * Translate the thread-prompt working_directory URI into a search scope URI.
+ * Kept as a named helper so the two concepts stay syntactically distinct
+ * even while their string form currently matches.
+ */
+const derive_search_scope_from_working_directory = (working_directory_uri) =>
+  working_directory_uri || null
+
+/**
  * useFileAutocomplete hook
  *
  * Provides file/directory autocomplete functionality triggered by @ character.
@@ -56,14 +64,15 @@ const extract_at_search_term = (text, cursor_position) => {
  * @param {Object} options
  * @param {string} options.text - Current input text
  * @param {number} options.cursor_position - Current cursor position
- * @param {string} options.working_directory - Directory to scope search to
+ * @param {string} options.working_directory_uri - Thread working directory URI,
+ *   translated into a search scope URI for the autocomplete request.
  * @param {Function} options.on_select - Callback when suggestion is selected, receives (new_text, new_cursor_position)
  * @param {string} [options.token] - Optional auth token for API requests
  */
 export default function useFileAutocomplete({
   text,
   cursor_position,
-  working_directory,
+  working_directory_uri,
   on_select,
   token
 }) {
@@ -101,12 +110,14 @@ export default function useFileAutocomplete({
       set_is_loading(true)
 
       try {
+        const search_scope_uri =
+          derive_search_scope_from_working_directory(working_directory_uri)
         const { abort, request } = api_request(
           api.search,
           {
             q: term,
             source: 'path',
-            directory: working_directory || undefined,
+            scope: search_scope_uri || undefined,
             limit: MAX_RESULTS
           },
           token
@@ -133,7 +144,7 @@ export default function useFileAutocomplete({
         abort_controller_ref.current = null
       }
     },
-    [at_position, working_directory, token]
+    [at_position, working_directory_uri, token]
   )
 
   // Debounced search effect

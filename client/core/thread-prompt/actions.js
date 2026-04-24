@@ -26,7 +26,7 @@ export const thread_prompt_actions = {
   }),
 
   /**
-   * Update draft state (message, cursor, working_directory, should_resume)
+   * Update draft state (message, cursor, working_directory_uri, should_resume)
    * @param {Object} draft - Partial draft state to merge
    */
   update_draft: (draft) => ({

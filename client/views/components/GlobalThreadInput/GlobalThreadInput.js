@@ -78,7 +78,7 @@ const set_cursor_offset = (element, offset) => {
  * - Creating new threads (default)
  * - Resuming existing threads (when thread_id is set or on thread page)
  *
- * Draft state (message, cursor, working_directory, should_resume) is stored in Redux
+ * Draft state (message, cursor, working_directory_uri, should_resume) is stored in Redux
  * to persist during navigation while the overlay is open.
  */
 export default function GlobalThreadInput() {
@@ -119,8 +119,8 @@ export default function GlobalThreadInput() {
   const cursor_position = useSelector((state) =>
     state.getIn(['thread_prompt', 'draft_cursor_position'], 0)
   )
-  const working_directory = useSelector((state) =>
-    state.getIn(['thread_prompt', 'draft_working_directory'], 'user:')
+  const working_directory_uri = useSelector((state) =>
+    state.getIn(['thread_prompt', 'draft_working_directory_uri'], 'user:')
   )
   const should_resume = useSelector((state) =>
     state.getIn(['thread_prompt', 'draft_should_resume'], true)
@@ -142,10 +142,10 @@ export default function GlobalThreadInput() {
       ),
     [dispatch]
   )
-  const set_working_directory = useCallback(
+  const set_working_directory_uri = useCallback(
     (value) =>
       dispatch(
-        thread_prompt_actions.update_draft({ draft_working_directory: value })
+        thread_prompt_actions.update_draft({ draft_working_directory_uri: value })
       ),
     [dispatch]
   )
@@ -184,7 +184,7 @@ export default function GlobalThreadInput() {
   const autocomplete = useFileAutocomplete({
     text: message,
     cursor_position,
-    working_directory,
+    working_directory_uri,
     on_select: handle_autocomplete_select,
     token: user_token
   })
@@ -296,14 +296,14 @@ export default function GlobalThreadInput() {
       draft_persistence.save_draft({
         message,
         cursor_position,
-        working_directory
+        working_directory_uri
       })
     }
   }, [
     is_open,
     message,
     cursor_position,
-    working_directory,
+    working_directory_uri,
     draft_persistence.save_draft
   ])
 
@@ -356,14 +356,14 @@ export default function GlobalThreadInput() {
         threads_actions.resume_thread_session({
           thread_id,
           prompt: message,
-          working_directory
+          working_directory: working_directory_uri
         })
       )
     } else {
       dispatch(
         threads_actions.create_thread_session({
           prompt: message,
-          working_directory
+          working_directory: working_directory_uri
         })
       )
     }
@@ -721,8 +721,8 @@ export default function GlobalThreadInput() {
               <Box className='bottom-row-left'>
                 {show_directory_picker && (
                   <WorkingDirectoryPicker
-                    value={working_directory}
-                    onChange={set_working_directory}
+                    value={working_directory_uri}
+                    onChange={set_working_directory_uri}
                     current_path={captured_path}
                   />
                 )}

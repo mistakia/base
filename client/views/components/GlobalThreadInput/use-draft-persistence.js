@@ -73,14 +73,14 @@ export function load_draft({ namespace_type, namespace_value }) {
  * @param {string|null} params.namespace_value - Value for the namespace
  * @param {string} params.message - Draft message content
  * @param {number} params.cursor_position - Cursor position in message
- * @param {string} params.working_directory - Working directory setting
+ * @param {string} params.working_directory_uri - Working directory setting
  */
 export function save_draft({
   namespace_type,
   namespace_value,
   message,
   cursor_position,
-  working_directory
+  working_directory_uri
 }) {
   try {
     const key = get_draft_storage_key({ namespace_type, namespace_value })
@@ -94,7 +94,7 @@ export function save_draft({
     const draft = {
       message,
       cursor_position,
-      working_directory,
+      working_directory_uri,
       updated_at: Date.now()
     }
 
@@ -186,7 +186,7 @@ export default function use_draft_persistence(pathname, is_active = true) {
 
   // Debounced save function
   const save_draft_debounced = useCallback(
-    ({ message, cursor_position, working_directory }) => {
+    ({ message, cursor_position, working_directory_uri }) => {
       // Clear any pending save
       if (debounce_timer_ref.current) {
         clearTimeout(debounce_timer_ref.current)
@@ -199,7 +199,7 @@ export default function use_draft_persistence(pathname, is_active = true) {
           namespace_value: current_namespace.namespace_value,
           message,
           cursor_position,
-          working_directory
+          working_directory_uri
         })
       }, DEBOUNCE_DELAY_MS)
     },

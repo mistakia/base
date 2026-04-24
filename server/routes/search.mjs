@@ -82,17 +82,18 @@ function parse_csv_list(value) {
  * Unified source-first search over entities and threads.
  *
  * Query parameters:
- *   q       (required)  Search query.
- *   source              CSV of sources (entity, thread_metadata, thread_timeline, path, semantic).
- *                       Default is config.sources.enabled_by_default.
- *   type                CSV of entity types to filter on (task, workflow, thread, ...).
- *   tag                 CSV of tag base_uris.
- *   status              CSV of status values.
- *   path                Glob against entity_uri.
- *   directory           Filesystem path scoping applied to the `path` source
- *                       (absolute or relative to USER_BASE_DIRECTORY).
- *   limit               Positive integer, capped by search.max_limit.
- *   offset              Non-negative integer.
+ *   q         (required)  Search query.
+ *   source                CSV of sources (entity, thread_metadata, thread_timeline, path, semantic).
+ *                         Default is config.sources.enabled_by_default.
+ *   type                  CSV of entity types to filter on (task, workflow, thread, ...).
+ *   tag                   CSV of tag base_uris.
+ *   status                CSV of status values.
+ *   path_glob             Glob against entity_uri (post-source filter).
+ *   scope                 Base URI scoping the `path` source enumeration
+ *                         (e.g. `user:`, `user:task/`, `sys:`). Distinct from
+ *                         thread `working_directory`.
+ *   limit                 Positive integer, capped by search.max_limit.
+ *   offset                Non-negative integer.
  *
  * All list params are CSV-only. Repeated-param form (?type=a&type=b) returns 400.
  * Response shape: { query, total, results[] } where total === results.length.
@@ -113,8 +114,8 @@ router.get('/', async (req, res) => {
       'type',
       'tag',
       'status',
-      'path',
-      'directory'
+      'path_glob',
+      'scope'
     ]) {
       if (reject_repeated_param(res, param, req.query[param])) return
     }
@@ -156,7 +157,7 @@ router.get('/', async (req, res) => {
       type: parse_csv_list(req.query.type),
       tag: parse_csv_list(req.query.tag),
       status: parse_csv_list(req.query.status),
-      path: req.query.path || null
+      path_glob: req.query.path_glob || null
     }
 
     const user_public_key = req.user?.user_public_key || null
@@ -170,8 +171,8 @@ router.get('/', async (req, res) => {
       offset
     )
 
-    const directory = req.query.directory || null
-    const source_options = directory ? { path: { directory } } : {}
+    const scope_uri = req.query.scope || null
+    const source_options = scope_uri ? { path: { scope_uri } } : {}
 
     const response = await orchestrator_search({
       query,

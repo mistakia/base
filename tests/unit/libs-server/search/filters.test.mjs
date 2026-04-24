@@ -153,7 +153,7 @@ describe('search filters', function () {
   it('filters by path glob against entity_uri', async () => {
     const out = await apply_filters({
       hits: hits(),
-      filters: { path: 'user:task/*.md' }
+      filters: { path_glob: 'user:task/*.md' }
     })
     expect(out.map((h) => h.entity_uri)).to.have.members([
       'user:task/a.md',

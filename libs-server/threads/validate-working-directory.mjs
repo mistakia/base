@@ -67,17 +67,18 @@ function validate_required_parameters({
 }
 
 /**
- * Resolve base URI to filesystem path if the input is a base URI
- * Supports user: and sys: schemes (e.g., 'user:', 'user:task/', 'sys:system/')
+ * Resolve base URI to filesystem path. working_directory must be a base URI
+ * (e.g., 'user:', 'user:task/', 'sys:system/'). Raw filesystem paths are not
+ * accepted — callers that still produce paths must be fixed at the source.
  */
 function resolve_base_uri_if_needed({
   working_directory,
   user_base_directory
 }) {
-  // Check if the working_directory is a base URI
   if (!is_valid_base_uri(working_directory)) {
-    // Not a base URI, return as-is (assumed to be a filesystem path)
-    return working_directory
+    throw new Error(
+      `working_directory must be a base URI (e.g. 'user:', 'user:task/'); got: ${working_directory}`
+    )
   }
 
   log(`Resolving base URI: ${working_directory}`)
