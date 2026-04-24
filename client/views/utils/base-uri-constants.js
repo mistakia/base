@@ -78,6 +78,12 @@ export const convert_path_to_base_uri = (absolute_path) => {
   return to_uri('user:', user_root) || to_uri('sys:', system_root) || null
 }
 
+// Build the client-side route for a file's git history page
+export const git_history_href = (base_uri) => {
+  if (!base_uri) return null
+  return `/git-history/${encodeURIComponent(base_uri)}`
+}
+
 // Convert base URI to client path
 export const convert_base_uri_to_path = (base_uri) => {
   const colon_index = base_uri.indexOf(':')

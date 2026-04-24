@@ -9,6 +9,7 @@ import { active_sessions_sagas } from './active-sessions/index.js'
 import { activity_sagas } from './activity/index.js'
 import { git_sagas } from './git/index.js'
 import { commits_sagas } from './commits/index.js'
+import { file_history_sagas } from './file-history/sagas.js'
 import { search_sagas } from './search/index.js'
 import { thread_sheet_sagas } from './thread-sheet/index.js'
 import { task_stats_sagas } from './task-stats/index.js'
@@ -28,6 +29,7 @@ export default function* root_saga() {
     ...activity_sagas,
     ...git_sagas,
     ...commits_sagas,
+    ...file_history_sagas,
     ...search_sagas,
     ...thread_sheet_sagas,
     ...task_stats_sagas,

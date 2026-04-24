@@ -42,6 +42,7 @@ import {
   get_commits_actions,
   get_commit_detail_actions
 } from '@core/commits/actions'
+import { get_file_history_actions } from '@core/file-history/actions.js'
 import {
   get_physical_items_table_actions,
   get_available_tags_actions as get_physical_items_available_tags_actions
@@ -372,6 +373,12 @@ export const get_commit_detail = fetch.bind(
   null,
   api.get_commit_detail,
   get_commit_detail_actions
+)
+
+export const get_file_history = fetch.bind(
+  null,
+  api.get_file_history,
+  get_file_history_actions
 )
 
 // Physical items table processing saga

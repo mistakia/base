@@ -1,3 +1,4 @@
+import path from 'path'
 import debug from 'debug'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
@@ -298,6 +299,232 @@ export async function get_single_commit({ repo_path, hash }) {
   return parse_commit_record(record)
 }
 
+// Maximum byte length of a per-commit diff returned by get_file_history.
+// Diffs above this cap are truncated and flagged via the `truncated` field.
+export const FILE_HISTORY_PATCH_MAX_BYTES = 256 * 1024
+
+// Upper bound for the follow-aware commit count walk. Files with more commits
+// are reported as `total_count: FILE_HISTORY_MAX_COUNT` with `count_capped: true`
+// so pagination stays bounded for deep histories.
+export const FILE_HISTORY_MAX_COUNT = 1000
+
+/**
+ * Get file-scoped git history with --follow across renames.
+ * Returns commits that touched `relative_path`, in reverse chronological order,
+ * each record containing the diff scoped to that file at that commit.
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.repo_path Absolute repository path
+ * @param {string} params.relative_path File path relative to repo_path
+ * @param {number} [params.limit=50] Maximum number of commits to return (capped at 200)
+ * @param {number} [params.page=1] Page number for offset-based pagination
+ * @param {string} [params.before] Commit hash cursor - return commits before this commit
+ * @returns {Promise<Object>} { commits, total_count, branch, repo_name, current_path }
+ */
+export async function get_file_history({
+  repo_path,
+  relative_path,
+  limit = 50,
+  page = 1,
+  before
+}) {
+  const fetch_limit = Math.min(Math.max(1, limit), 200)
+  const effective_page = Math.max(1, page)
+  const skip = before ? 0 : (effective_page - 1) * fetch_limit
+
+  const safe_path = sanitize_shell_arg(relative_path)
+
+  // Record sentinel sits on its own line so it can never collide with patch
+  // content. %x1f separates metadata fields within the header line.
+  const commit_sentinel = '\x1eFILE_HISTORY_COMMIT\x1f'
+  const header_format = `${commit_sentinel}%H%x1f%h%x1f%s%x1f%aI%x1f%an`
+
+  // Notes on flags:
+  // - `--name-status` is not combinable with `-p` in `git log` (later diff
+  //   format wins). Parse status/path from patch headers instead.
+  // - `--follow` is incompatible with `--skip` in git log; fetch
+  //   `skip + fetch_limit` commits and slice in JS for offset pagination.
+  //   Deep pages pay for all prior commits' patch output — acceptable for
+  //   the expected UX (most navigation stays near page 1).
+  const total_to_fetch = before ? fetch_limit : skip + fetch_limit
+
+  // Bound stdout to what the fetch window plus truncation cap could produce,
+  // with headroom for header lines and extended-header frames. Never exceed
+  // a 50MB ceiling.
+  const max_buffer = Math.min(
+    50 * 1024 * 1024,
+    total_to_fetch * (FILE_HISTORY_PATCH_MAX_BYTES + 8 * 1024) + 64 * 1024
+  )
+
+  const log_args = [
+    `git log --follow -p --pretty=format:'${header_format}' -n ${total_to_fetch}`
+  ]
+  if (before) {
+    log_args.push(`${before}~1`)
+  }
+  log_args.push(`-- '${safe_path}'`)
+
+  let stdout = ''
+  try {
+    const result = await execute_shell_command(log_args.join(' '), {
+      cwd: repo_path,
+      maxBuffer: max_buffer
+    })
+    stdout = result.stdout || ''
+  } catch (error) {
+    if (
+      error.message?.includes('unknown revision') ||
+      error.stderr?.includes('unknown revision')
+    ) {
+      stdout = ''
+    } else {
+      throw error
+    }
+  }
+
+  const parsed = parse_file_history_output(stdout, commit_sentinel)
+  const commits = before ? parsed : parsed.slice(skip, skip + fetch_limit)
+
+  // Count is anchored at HEAD, so it only makes sense for page-based
+  // navigation. `before` cursor requests skip the count entirely.
+  let total_count = null
+  let count_capped = false
+  if (!before) {
+    try {
+      const { stdout: count_stdout } = await execute_shell_command(
+        `git log --follow --format=%H HEAD -n ${FILE_HISTORY_MAX_COUNT + 1} -- '${safe_path}'`,
+        { cwd: repo_path, maxBuffer: 2 * 1024 * 1024 }
+      )
+      const hashes = count_stdout.split('\n').filter((line) => line.trim())
+      if (hashes.length > FILE_HISTORY_MAX_COUNT) {
+        total_count = FILE_HISTORY_MAX_COUNT
+        count_capped = true
+      } else {
+        total_count = hashes.length
+      }
+    } catch (error) {
+      log(
+        'follow count failed, falling back to parsed length: %s',
+        error.message
+      )
+      total_count = commits.length
+    }
+  }
+
+  let branch = null
+  try {
+    const { stdout: branch_stdout } = await execute_shell_command(
+      'git rev-parse --abbrev-ref HEAD',
+      { cwd: repo_path }
+    )
+    branch = branch_stdout.trim() || null
+  } catch {
+    branch = null
+  }
+
+  return {
+    commits,
+    total_count,
+    count_capped,
+    branch,
+    repo_name: path.basename(repo_path),
+    current_path: relative_path
+  }
+}
+
+function parse_file_history_output(stdout, commit_sentinel) {
+  if (!stdout) return []
+
+  const chunks = stdout.split(commit_sentinel).filter((chunk) => chunk.length > 0)
+  return chunks.map((chunk) => parse_file_history_chunk(chunk))
+}
+
+function parse_file_history_chunk(chunk) {
+  const newline_index = chunk.indexOf('\n')
+  const header_line =
+    newline_index === -1 ? chunk : chunk.slice(0, newline_index)
+  const remainder = newline_index === -1 ? '' : chunk.slice(newline_index + 1)
+
+  const [hash, short_hash, subject, date, author_name] =
+    header_line.split('\x1f')
+
+  const diff_marker_index = remainder.indexOf('diff --git ')
+  const patch_section =
+    diff_marker_index === -1 ? '' : remainder.slice(diff_marker_index)
+
+  const { status, path_at_commit } = parse_patch_header(patch_section)
+
+  const is_binary = /^Binary files .* differ$/m.test(patch_section)
+  let diff = is_binary ? '' : patch_section
+  let truncated = false
+  if (diff.length > FILE_HISTORY_PATCH_MAX_BYTES) {
+    diff = diff.slice(0, FILE_HISTORY_PATCH_MAX_BYTES)
+    truncated = true
+  }
+
+  return {
+    hash: hash?.trim() || null,
+    short_hash: short_hash || null,
+    subject: subject || '',
+    date: date || null,
+    author_name: author_name || null,
+    path_at_commit,
+    status,
+    diff,
+    is_binary,
+    truncated
+  }
+}
+
+function parse_patch_header(patch_section) {
+  if (!patch_section) {
+    return { status: null, path_at_commit: null }
+  }
+
+  // Only inspect lines before the first hunk to avoid scanning the whole patch.
+  const hunk_index = patch_section.indexOf('\n@@')
+  const header_block =
+    hunk_index === -1 ? patch_section : patch_section.slice(0, hunk_index)
+  const lines = header_block.split('\n')
+
+  let status = 'M'
+  let src_path = null
+  let dst_path = null
+  let rename_to = null
+  let copy_to = null
+
+  // Paths are taken from the unified-diff `--- a/<src>` / `+++ b/<dst>`
+  // headers, which are unambiguous even when the path contains spaces or
+  // the ` b/` substring. The `diff --git` line is ambiguous for spaced
+  // paths and is intentionally ignored here.
+  for (const line of lines) {
+    if (line.startsWith('--- a/')) {
+      src_path = line.slice('--- a/'.length)
+    } else if (line.startsWith('+++ b/')) {
+      dst_path = line.slice('+++ b/'.length)
+    } else if (line.startsWith('new file mode')) {
+      status = 'A'
+    } else if (line.startsWith('deleted file mode')) {
+      status = 'D'
+    } else if (line.startsWith('rename to ')) {
+      status = 'R'
+      rename_to = line.slice('rename to '.length)
+    } else if (line.startsWith('copy to ')) {
+      status = 'C'
+      copy_to = line.slice('copy to '.length)
+    }
+  }
+
+  // Deletions have `+++ /dev/null`, so fall back to the src path.
+  let path_at_commit = dst_path || src_path
+
+  // Prefer explicit rename/copy targets when present.
+  if (rename_to) path_at_commit = rename_to
+  else if (copy_to) path_at_commit = copy_to
+
+  return { status, path_at_commit }
+}
+
 export default {
   get_repo_statistics,
   get_total_commits,
@@ -305,5 +532,6 @@ export default {
   get_first_commit,
   get_branch_count,
   get_commit_log,
-  get_single_commit
+  get_single_commit,
+  get_file_history
 }

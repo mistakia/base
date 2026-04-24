@@ -358,6 +358,15 @@ export const api = {
     return { url }
   },
 
+  get_file_history({ base_uri, limit, page, before }) {
+    const params = { base_uri }
+    if (limit) params.limit = limit
+    if (page) params.page = page
+    if (before) params.before = before
+    const url = `${API_URL}/git/file-history?${qs.stringify(params)}`
+    return { url }
+  },
+
   // Search operations — source-first API. All list params are CSV strings.
   search({ q, source, type, tag, status, path_glob, scope, limit, offset }) {
     const params = { q }

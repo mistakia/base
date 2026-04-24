@@ -5,6 +5,7 @@ import { FileDiff } from '@pierre/diffs/react'
 import { parsePatchFiles } from '@pierre/diffs'
 
 import { COLORS } from '@theme/colors.js'
+import { git_history_href } from '@views/utils/base-uri-constants.js'
 
 const status_labels = {
   A: 'Added',
@@ -116,32 +117,56 @@ const CommitDetail = ({ detail, is_loading }) => {
             }}>
             {files.length} file{files.length !== 1 ? 's' : ''} changed
           </Typography>
-          {files.map((file) => (
-            <Box
-              key={file.path}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1,
-                py: 0.25
-              }}>
-              <Typography
-                variant='caption'
+          {files.map((file) => {
+            const history_href = file.base_uri
+              ? git_history_href(file.base_uri)
+              : null
+            return (
+              <Box
+                key={file.path}
                 sx={{
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  color: status_colors[file.status] || COLORS.text_secondary,
-                  minWidth: 60
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  py: 0.25
                 }}>
-                {status_labels[file.status] || file.status}
-              </Typography>
-              <Typography
-                variant='body2'
-                sx={{ fontSize: '12px', fontFamily: 'monospace' }}>
-                {file.path}
-              </Typography>
-            </Box>
-          ))}
+                <Typography
+                  variant='caption'
+                  sx={{
+                    fontWeight: 600,
+                    fontSize: '11px',
+                    color: status_colors[file.status] || COLORS.text_secondary,
+                    minWidth: 60
+                  }}>
+                  {status_labels[file.status] || file.status}
+                </Typography>
+                <Typography
+                  variant='body2'
+                  sx={{
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                    flex: 1,
+                    minWidth: 0
+                  }}>
+                  {file.path}
+                </Typography>
+                {history_href && (
+                  <Typography
+                    component='a'
+                    href={history_href}
+                    variant='caption'
+                    sx={{
+                      fontSize: '11px',
+                      color: COLORS.info,
+                      textDecoration: 'none',
+                      '&:hover': { textDecoration: 'underline' }
+                    }}>
+                    History
+                  </Typography>
+                )}
+              </Box>
+            )
+          })}
         </Box>
       )}
 
@@ -171,7 +196,8 @@ CommitDetail.propTypes = {
     files: PropTypes.arrayOf(
       PropTypes.shape({
         status: PropTypes.string,
-        path: PropTypes.string
+        path: PropTypes.string,
+        base_uri: PropTypes.string
       })
     ),
     diff: PropTypes.string
