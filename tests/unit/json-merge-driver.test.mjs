@@ -200,67 +200,67 @@ describe('json-merge-driver', () => {
   })
 
   describe('nested object merge', () => {
-    it('should merge disjoint sub-keys in source object', () => {
-      const base = { source: { provider: 'claude' } }
-      const ours = { source: { provider: 'claude', session_id: 'abc' } }
+    it('should merge disjoint sub-keys in external_session object', () => {
+      const base = { external_session: { provider: 'claude' } }
+      const ours = { external_session: { provider: 'claude', session_id: 'abc' } }
       const theirs = {
-        source: { provider: 'claude', imported_at: '2026-01-01T00:00:00Z' }
+        external_session: { provider: 'claude', imported_at: '2026-01-01T00:00:00Z' }
       }
 
       const result = merge_json({ base, ours, theirs })
 
-      expect(result.source.provider).to.equal('claude')
-      expect(result.source.session_id).to.equal('abc')
-      expect(result.source.imported_at).to.equal('2026-01-01T00:00:00Z')
+      expect(result.external_session.provider).to.equal('claude')
+      expect(result.external_session.session_id).to.equal('abc')
+      expect(result.external_session.imported_at).to.equal('2026-01-01T00:00:00Z')
     })
 
     it('should handle sub-key deletion by theirs', () => {
-      const base = { source: { provider: 'claude', raw_data_saved: true } }
-      const ours = { source: { provider: 'claude', raw_data_saved: true } }
-      const theirs = { source: { provider: 'claude' } }
+      const base = { external_session: { provider: 'claude', raw_data_saved: true } }
+      const ours = { external_session: { provider: 'claude', raw_data_saved: true } }
+      const theirs = { external_session: { provider: 'claude' } }
 
       const result = merge_json({ base, ours, theirs })
 
-      expect(result.source).to.not.have.property('raw_data_saved')
+      expect(result.external_session).to.not.have.property('raw_data_saved')
     })
 
     it('should take theirs for conflicting unknown sub-key values', () => {
-      const base = { source: { provider: 'claude' } }
-      const ours = { source: { provider: 'openai' } }
-      const theirs = { source: { provider: 'gemini' } }
+      const base = { external_session: { provider: 'claude' } }
+      const ours = { external_session: { provider: 'openai' } }
+      const theirs = { external_session: { provider: 'gemini' } }
 
       const result = merge_json({ base, ours, theirs })
 
       expect(result).to.not.be.null
-      expect(result.source.provider).to.equal('gemini')
+      expect(result.external_session.provider).to.equal('gemini')
     })
 
     it('should resolve nested numeric sub-key conflicts via recursive resolution', () => {
-      const base = { source: { provider: 'claude', entry_count: 10 } }
-      const ours = { source: { provider: 'claude', entry_count: 15 } }
-      const theirs = { source: { provider: 'claude', entry_count: 20 } }
+      const base = { external_session: { provider: 'claude', entry_count: 10 } }
+      const ours = { external_session: { provider: 'claude', entry_count: 15 } }
+      const theirs = { external_session: { provider: 'claude', entry_count: 20 } }
 
       const result = merge_json({ base, ours, theirs })
 
       expect(result).to.not.be.null
-      expect(result.source.entry_count).to.equal(20)
+      expect(result.external_session.entry_count).to.equal(20)
     })
 
     it('should resolve nested timestamp sub-key conflicts via recursive resolution', () => {
       const base = {
-        source: { provider: 'claude', start_time: '2026-01-01T00:00:00Z' }
+        external_session: { provider: 'claude', start_time: '2026-01-01T00:00:00Z' }
       }
       const ours = {
-        source: { provider: 'claude', start_time: '2026-01-01T06:00:00Z' }
+        external_session: { provider: 'claude', start_time: '2026-01-01T06:00:00Z' }
       }
       const theirs = {
-        source: { provider: 'claude', start_time: '2026-01-01T12:00:00Z' }
+        external_session: { provider: 'claude', start_time: '2026-01-01T12:00:00Z' }
       }
 
       const result = merge_json({ base, ours, theirs })
 
       expect(result).to.not.be.null
-      expect(result.source.start_time).to.equal('2026-01-01T12:00:00Z')
+      expect(result.external_session.start_time).to.equal('2026-01-01T12:00:00Z')
     })
 
     it('should merge prompt_properties with disjoint changes', () => {
@@ -333,7 +333,7 @@ describe('json-merge-driver', () => {
         tool_call_count: 50,
         tags: ['user:tag/base-project.md'],
         relations: [],
-        source: { provider: 'claude', session_id: 'sess-1' }
+        external_session: { provider: 'claude', session_id: 'sess-1' }
       }
 
       // Machine A: session lifecycle (state change, counters)
@@ -346,7 +346,7 @@ describe('json-merge-driver', () => {
         tool_call_count: 120,
         tags: ['user:tag/base-project.md'],
         relations: [],
-        source: { provider: 'claude', session_id: 'sess-1' }
+        external_session: { provider: 'claude', session_id: 'sess-1' }
       }
 
       // Machine B: LLM metadata analysis (title, tags, relations)
@@ -364,7 +364,7 @@ describe('json-merge-driver', () => {
           'relates [[user:task/base/implement-json-merge-driver.md]]'
         ],
         relations_analyzed_at: '2026-01-01T06:00:00Z',
-        source: { provider: 'claude', session_id: 'sess-1' }
+        external_session: { provider: 'claude', session_id: 'sess-1' }
       }
 
       const result = merge_json({ base, ours, theirs })
@@ -399,8 +399,8 @@ describe('json-merge-driver', () => {
       expect(result.tags_analyzed_at).to.equal('2026-01-01T06:00:00Z')
       expect(result.relations_analyzed_at).to.equal('2026-01-01T06:00:00Z')
 
-      // source unchanged
-      expect(result.source.provider).to.equal('claude')
+      // external_session unchanged
+      expect(result.external_session.provider).to.equal('claude')
     })
   })
 })

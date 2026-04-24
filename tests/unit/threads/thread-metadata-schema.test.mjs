@@ -61,7 +61,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -78,7 +78,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -96,7 +96,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -114,7 +114,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -133,7 +133,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -154,7 +154,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -174,7 +174,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -189,12 +189,34 @@ describe('Thread Metadata Schema Validation', () => {
       expect(validate.errors[0].keyword).to.equal('type')
     })
 
-    it('should reject metadata with null title when provided', () => {
+    it('should reject metadata with legacy source key at root', () => {
       const metadata = {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         source: { provider: 'claude' },
+        workflow_base_uri: 'sys:system/workflow/test-workflow.md',
+        thread_state: 'active',
+        created_at: '2023-01-01T00:00:00.000Z',
+        updated_at: '2023-01-01T00:00:00.000Z'
+      }
+
+      const is_valid = validate(metadata)
+      expect(is_valid).to.equal(false)
+      const additional_error = validate.errors.find(
+        (error) =>
+          error.keyword === 'additionalProperties' &&
+          error.params.additionalProperty === 'source'
+      )
+      expect(additional_error).to.exist
+    })
+
+    it('should reject metadata with null title when provided', () => {
+      const metadata = {
+        thread_id: '123e4567-e89b-12d3-a456-426614174000',
+        user_public_key:
+          '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -218,7 +240,7 @@ describe('Thread Metadata Schema Validation', () => {
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
         updated_at: '2023-01-01T00:00:00.000Z',
@@ -236,7 +258,7 @@ describe('Thread Metadata Schema Validation', () => {
         // Missing thread_id - should fail
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -260,7 +282,7 @@ describe('Thread Metadata Schema Validation', () => {
       thread_id: '123e4567-e89b-12d3-a456-426614174000',
       user_public_key:
         '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-      source: { provider: 'claude' },
+      external_session: { provider: 'claude' },
       thread_state: 'active',
       created_at: '2023-01-01T00:00:00.000Z',
       updated_at: '2023-01-01T00:00:00.000Z'
@@ -357,7 +379,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -375,7 +397,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',
@@ -395,7 +417,7 @@ describe('Thread Metadata Schema Validation', () => {
         thread_id: '123e4567-e89b-12d3-a456-426614174000',
         user_public_key:
           '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        source: { provider: 'claude' },
+        external_session: { provider: 'claude' },
         workflow_base_uri: 'sys:system/workflow/test-workflow.md',
         thread_state: 'active',
         created_at: '2023-01-01T00:00:00.000Z',

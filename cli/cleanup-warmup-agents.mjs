@@ -48,15 +48,17 @@ async function is_warmup_agent(thread_id) {
     const metadata = JSON.parse(metadata_content)
 
     // Check if it's an agent session
-    const source = metadata.source || metadata.external_session
-    const session_id = source?.session_id || ''
+    const external_session = metadata.external_session
+    const session_id = external_session?.session_id || ''
     if (!session_id.startsWith('agent-')) {
       return { is_warmup: false, reason: 'not an agent session' }
     }
 
     // Check entry count - warmup agents typically have 1 entry
     const entry_count =
-      source?.provider_metadata?.entry_count || metadata.message_count || 0
+      external_session?.provider_metadata?.entry_count ||
+      metadata.message_count ||
+      0
 
     if (entry_count > 2) {
       return {

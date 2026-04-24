@@ -615,32 +615,6 @@ export const update_existing_thread = async (
   }
 }
 
-/**
- * Build source object from existing metadata.
- * When migrating from old metadata format (pre-source field), extracts
- * session tracking fields from old external_session and normalized session
- * to preserve session_id, imported_at, and raw_data_saved.
- */
-function build_source_from_existing(existing_metadata, normalized_session) {
-  if (existing_metadata.source) {
-    return existing_metadata.source
-  }
-
-  // Migrate from old format - extract tracking fields from
-  // old external_session and normalized session data
-  const external_session = existing_metadata.external_session
-  return {
-    provider:
-      external_session?.provider ||
-      external_session?.session_provider ||
-      normalized_session.session_provider,
-    session_id:
-      external_session?.session_id || normalized_session.session_id || null,
-    imported_at: external_session?.imported_at || new Date().toISOString(),
-    raw_data_saved: external_session?.raw_data_saved ?? false
-  }
-}
-
 export const update_thread_metadata = async (
   thread_dir,
   normalized_session,
@@ -737,8 +711,13 @@ export const update_thread_metadata = async (
         const patch = {
           message_count: counts.message_count,
           tool_call_count: counts.tool_call_count,
-          source: {
-            ...build_source_from_existing(current, normalized_session),
+          external_session: {
+            ...(current.external_session || {
+              provider: normalized_session.session_provider,
+              session_id: normalized_session.session_id || null,
+              imported_at: new Date().toISOString(),
+              raw_data_saved: false
+            }),
             provider_metadata: {
               ...normalized_session.metadata,
               plan_slug: normalized_session.metadata?.plan_slug || null

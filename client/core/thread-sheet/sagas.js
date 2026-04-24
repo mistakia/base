@@ -23,7 +23,7 @@ export function* handle_session_sheet_transition({ type, payload }) {
     session_id = payload.session?.session_id
   } else if (type === threads_action_types.THREAD_CREATED) {
     thread_id = payload.thread?.thread_id
-    session_id = payload.thread?.source?.session_id
+    session_id = payload.thread?.external_session?.session_id
   }
 
   if (!thread_id || !session_id) return

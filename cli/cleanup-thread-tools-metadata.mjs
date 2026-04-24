@@ -114,12 +114,19 @@ async function main() {
       }
     }
 
-    // Clean source.provider if it equals "base"
-    if (metadata.source && metadata.source.provider === 'base') {
+    // Strip external_session when it records a native base thread. The strict
+    // post-rename schema requires external_session.provider, so removing the
+    // provider alone would leave an invalid block; drop the whole object.
+    if (
+      metadata.external_session &&
+      metadata.external_session.provider === 'base'
+    ) {
       if (dry_run) {
-        console.log(`  ${thread_id}: would remove source.provider "base"`)
+        console.log(
+          `  ${thread_id}: would remove external_session (provider "base")`
+        )
       }
-      delete metadata.source.provider
+      delete metadata.external_session
       changed = true
     }
 

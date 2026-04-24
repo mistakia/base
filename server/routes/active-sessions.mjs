@@ -117,7 +117,7 @@ async function get_thread_info_for_session(thread_id) {
       message_count: metadata.message_count || null,
       duration_minutes: metadata.duration_minutes || null,
       total_tokens: metadata.total_tokens || null,
-      source_provider: metadata.source?.provider || null,
+      source_provider: metadata.external_session?.provider || null,
       _metadata: metadata
     }
   } catch {

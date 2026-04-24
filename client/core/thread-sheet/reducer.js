@@ -77,7 +77,7 @@ export function thread_sheet_reducer(state = initial_state, { type, payload }) {
     // When a thread is created matching a session sheet, transition it
     case threads_action_types.THREAD_CREATED: {
       const thread = payload.thread
-      const source_session_id = thread?.source?.session_id
+      const source_session_id = thread?.external_session?.session_id
       if (!source_session_id) return state
       return transition_session_sheet_to_thread(
         state,

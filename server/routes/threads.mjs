@@ -825,7 +825,7 @@ router.put(
       // Build patches for targeted field merge
       const patches = { session_status }
 
-      // Set source on SessionStart when session_id is provided
+      // Set external_session on SessionStart when session_id is provided
       if (session_id) {
         const { readFile } = await import('fs/promises')
         const user_base_directory = get_user_base_directory()
@@ -836,10 +836,7 @@ router.put(
         try {
           const raw = await readFile(metadata_path, 'utf-8')
           const existing = JSON.parse(raw)
-          if (!existing.source?.session_id) {
-            // Stamp execution attribution on first source write so resume-path
-            // classification does not depend on post-session sync paths
-            // (which may be skipped if SessionEnd hook or fallback fails).
+          if (!existing.external_session?.session_id) {
             const owner_public_key = existing.user_public_key || null
             const owner_thread_config = owner_public_key
               ? await user_registry.get_thread_config(owner_public_key)
@@ -855,8 +852,8 @@ router.put(
                 })
               }
             }
-            patches.source = {
-              ...(existing.source || {}),
+            patches.external_session = {
+              ...(existing.external_session || {}),
               provider: 'claude',
               session_id
             }
@@ -958,7 +955,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     }
 
     // Extract Claude session ID from thread metadata
-    const claude_session_id = thread.source?.session_id
+    const claude_session_id = thread.external_session?.session_id
     if (!claude_session_id) {
       log(`Thread ${thread_id} does not have an external Claude session ID`)
       return res.status(400).json({
@@ -980,7 +977,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     // Use provided working_directory or fall back to thread's stored directory
     const working_directory =
       req.body.working_directory ||
-      thread.source?.provider_metadata?.working_directory
+      thread.external_session?.provider_metadata?.working_directory
     if (!working_directory) {
       return res.status(400).json({
         error: 'Invalid working_directory',

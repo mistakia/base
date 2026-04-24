@@ -89,8 +89,8 @@ describe('session import preserves runtime-authored entries', function () {
       expect(after.workflow_base_uri).to.equal(
         'sys:system/workflow/test-workflow.md'
       )
-      expect(after.source).to.be.an('object')
-      expect(after.source.session_id).to.equal('sess-lifecycle-preserve-001')
+      expect(after.external_session).to.be.an('object')
+      expect(after.external_session.session_id).to.equal('sess-lifecycle-preserve-001')
       expect(after.message_count).to.equal(2)
       expect(after.updated_at).to.equal('2026-04-10T00:01:00.000Z')
     } finally {
@@ -134,7 +134,7 @@ describe('session import preserves runtime-authored entries', function () {
       expect(after.archive_reason).to.equal('completed')
       expect(after.archived_at).to.be.a('string')
       expect(after.archived_at).to.not.equal(null)
-      expect(after.source.session_id).to.equal('sess-lifecycle-preserve-001')
+      expect(after.external_session.session_id).to.equal('sess-lifecycle-preserve-001')
       expect(after.message_count).to.equal(2)
     } finally {
       test_thread.cleanup()

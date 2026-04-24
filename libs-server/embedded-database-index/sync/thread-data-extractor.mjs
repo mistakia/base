@@ -144,7 +144,7 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     return null
   }
 
-  const provider_metadata = metadata.source?.provider_metadata || {}
+  const provider_metadata = metadata.external_session?.provider_metadata || {}
 
   // Extract token counts - check multiple locations
   const total_input_tokens =
@@ -191,8 +191,8 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     ? working_directory_path.split('/').pop() || 'root'
     : null
 
-  const source_provider = metadata.source?.provider || null
-  const external_session_id = metadata.source?.session_id || null
+  const source_provider = metadata.external_session?.provider || null
+  const external_session_id = metadata.external_session?.session_id || null
 
   // Extract inference provider (for cost calculation)
   const inference_provider = metadata.inference_provider || null

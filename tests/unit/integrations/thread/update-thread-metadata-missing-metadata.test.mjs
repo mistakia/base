@@ -56,9 +56,9 @@ describe('update_thread_metadata missing metadata.json bootstrap', function () {
     )
 
     expect(written.thread_id).to.equal(thread_id)
-    expect(written.source).to.be.an('object')
-    expect(written.source.provider).to.equal('claude')
-    expect(written.source.session_id).to.equal('sess-missing-meta-001')
+    expect(written.external_session).to.be.an('object')
+    expect(written.external_session.provider).to.equal('claude')
+    expect(written.external_session.session_id).to.equal('sess-missing-meta-001')
     expect(written.updated_at).to.be.a('string')
     expect(written.message_count).to.be.a('number')
   })

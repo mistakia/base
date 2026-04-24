@@ -130,9 +130,8 @@ export function build_thread_metadata({
     ...additional_fields
   }
 
-  // Set source if provided
   if (source) {
-    metadata.source = source
+    metadata.external_session = source
   }
 
   // Stamp canonical execution attribution. Allow explicit null to land in the

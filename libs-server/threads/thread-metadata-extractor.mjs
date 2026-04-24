@@ -41,8 +41,8 @@ function calculate_cost_data(thread, models_data) {
  * Get provider information from thread (matching client-side logic)
  */
 function get_provider_info(thread) {
-  if (thread.source?.provider) {
-    return { source_provider: thread.source.provider }
+  if (thread.external_session?.provider) {
+    return { source_provider: thread.external_session.provider }
   }
 
   // Fallback to model-based detection if no provider
@@ -64,7 +64,7 @@ function get_provider_info(thread) {
  * Extract total tokens (matching DuckDB field name and client-side expectations)
  */
 function extract_total_tokens(thread) {
-  return thread.source?.provider_metadata?.total_tokens || 0
+  return thread.external_session?.provider_metadata?.total_tokens || 0
 }
 
 /**
@@ -72,7 +72,7 @@ function extract_total_tokens(thread) {
  */
 function extract_duration_minutes(thread) {
   const duration_from_metadata =
-    thread.source?.provider_metadata?.duration_minutes
+    thread.external_session?.provider_metadata?.duration_minutes
   if (duration_from_metadata) {
     return duration_from_metadata
   }
@@ -91,7 +91,7 @@ function extract_duration_minutes(thread) {
  */
 function extract_working_directory(thread) {
   const working_directory_path =
-    thread.source?.provider_metadata?.working_directory
+    thread.external_session?.provider_metadata?.working_directory
 
   if (!working_directory_path) {
     return { path: null, formatted: null }
@@ -175,7 +175,7 @@ function format_for_table_display(thread, extracted_data) {
     ...cost_data,
 
     // External session identifier
-    external_session_id: thread.source?.session_id || null,
+    external_session_id: thread.external_session?.session_id || null,
 
     // Additional metadata
     description: thread.description || '',

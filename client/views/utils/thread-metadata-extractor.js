@@ -59,9 +59,9 @@ export const extract_total_tokens = (thread) => {
   if (!thread) return 0
 
   if (thread.get) {
-    return thread.getIn(['source', 'provider_metadata', 'total_tokens']) || 0
+    return thread.getIn(['external_session', 'provider_metadata', 'total_tokens']) || 0
   } else {
-    return thread.source?.provider_metadata?.total_tokens || 0
+    return thread.external_session?.provider_metadata?.total_tokens || 0
   }
 }
 
@@ -77,12 +77,12 @@ export const extract_duration = (thread) => {
 
   if (thread.get) {
     duration_minutes = thread.getIn([
-      'source',
+      'external_session',
       'provider_metadata',
       'duration_minutes'
     ])
   } else {
-    duration_minutes = thread.source?.provider_metadata?.duration_minutes
+    duration_minutes = thread.external_session?.provider_metadata?.duration_minutes
   }
 
   if (!duration_minutes) return null
@@ -110,12 +110,12 @@ export const extract_working_directory = (thread) => {
 
   if (thread.get) {
     working_directory_path = thread.getIn([
-      'source',
+      'external_session',
       'provider_metadata',
       'working_directory'
     ])
   } else {
-    working_directory_path = thread.source?.provider_metadata?.working_directory
+    working_directory_path = thread.external_session?.provider_metadata?.working_directory
   }
 
   if (!working_directory_path) {
@@ -139,9 +139,9 @@ export const extract_session_provider = (thread) => {
   if (!thread) return null
 
   if (thread.get) {
-    return thread.getIn(['source', 'provider']) || null
+    return thread.getIn(['external_session', 'provider']) || null
   } else {
-    return thread.source?.provider || null
+    return thread.external_session?.provider || null
   }
 }
 

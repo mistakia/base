@@ -125,8 +125,9 @@ const find_precreated_thread_by_prompt = async ({
       const metadata = JSON.parse(content)
 
       // Must be a pre-created thread: has session_status but no
-      // source.session_id (the field that gets set when SessionStart syncs)
-      if (!metadata.session_status || metadata.source?.session_id) continue
+      // external_session.session_id (set when SessionStart syncs)
+      if (!metadata.session_status || metadata.external_session?.session_id)
+        continue
       if (!metadata.prompt_snippet) continue
 
       const created_at = new Date(metadata.created_at).getTime()
@@ -464,7 +465,7 @@ export const process_single_session = async ({
         await read_previous_metadata_from_git(thread_dir)
       const prior_container_name =
         previous_metadata?.execution?.container_name ||
-        previous_metadata?.source?.container_name
+        previous_metadata?.external_session?.container_name
       if (
         typeof prior_container_name === 'string' &&
         prior_container_name.startsWith('base-user-')

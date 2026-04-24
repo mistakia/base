@@ -35,9 +35,11 @@ function get_model_key(thread_metadata) {
   const provider = thread_metadata.inference_provider
   const model =
     (thread_metadata.models && thread_metadata.models[0]) ||
-    (thread_metadata.source?.provider_metadata?.models &&
-      Array.isArray(thread_metadata.source.provider_metadata.models) &&
-      thread_metadata.source.provider_metadata.models[0])
+    (thread_metadata.external_session?.provider_metadata?.models &&
+      Array.isArray(
+        thread_metadata.external_session.provider_metadata.models
+      ) &&
+      thread_metadata.external_session.provider_metadata.models[0])
 
   if (!provider || !model) {
     return null

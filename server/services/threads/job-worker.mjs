@@ -515,7 +515,7 @@ const handle_job_completed = async (job, result) => {
   if (job.data.thread_id && !job.data.session_id) {
     try {
       const metadata = await read_thread_metadata(job.data.thread_id)
-      override_session_id = metadata.source?.session_id || null
+      override_session_id = metadata.external_session?.session_id || null
       if (override_session_id) {
         log(
           `Job ${job.id}: recovered session_id ${override_session_id} from thread metadata`

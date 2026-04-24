@@ -58,12 +58,12 @@ export const rebuild_index = () => {
  * @param {Object} params.metadata
  */
 export const index_thread_metadata = ({ thread_id, metadata }) => {
-  if (metadata?.source?.session_id) {
-    session_id_to_thread_id.set(metadata.source.session_id, thread_id)
+  if (metadata?.external_session?.session_id) {
+    session_id_to_thread_id.set(metadata.external_session.session_id, thread_id)
   }
-  if (metadata?.source?.provider_metadata?.file_source) {
+  if (metadata?.external_session?.provider_metadata?.file_source) {
     transcript_path_to_thread_id.set(
-      metadata.source.provider_metadata.file_source,
+      metadata.external_session.provider_metadata.file_source,
       thread_id
     )
   }
@@ -138,8 +138,8 @@ export const find_thread_for_session = async ({
         // Index for future lookups
         index_thread_metadata({ thread_id, metadata })
 
-        const source = metadata.source
-        if (session_id && source?.session_id === session_id) {
+        const external_session = metadata.external_session
+        if (session_id && external_session?.session_id === session_id) {
           log_lifecycle(
             'MATCHER found session_id=%s thread_id=%s method=session_id',
             session_id,
@@ -151,7 +151,7 @@ export const find_thread_for_session = async ({
 
         if (
           transcript_path &&
-          source?.provider_metadata?.file_source === transcript_path
+          external_session?.provider_metadata?.file_source === transcript_path
         ) {
           log_lifecycle(
             'MATCHER found session_id=%s thread_id=%s method=transcript_path',
@@ -217,8 +217,8 @@ export const find_all_threads_for_session = async ({ session_id }) => {
         const metadata_path = path.join(threads_dir, thread_id, 'metadata.json')
         const metadata = await read_json_file({ file_path: metadata_path })
 
-        const source = metadata.source
-        if (source?.session_id === session_id) {
+        const external_session = metadata.external_session
+        if (external_session?.session_id === session_id) {
           matching_threads.push(thread_id)
         }
       } catch {

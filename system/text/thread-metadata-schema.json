@@ -32,7 +32,7 @@
       "type": ["string", "null"],
       "description": "Reference to the workflow that initiated this thread (e.g., 'sys:system/workflow/write-workflow.md'). Null for external/imported sessions that have no originating workflow."
     },
-    "source": {
+    "external_session": {
       "type": "object",
       "description": "Session origin and provider information",
       "properties": {
@@ -304,11 +304,6 @@
       "type": "string",
       "format": "date-time",
       "description": "Timestamp when public_read visibility analysis was last performed."
-    },
-    "external_session": {
-      "type": "object",
-      "description": "Legacy provenance block from older import format; superseded by source.* fields.",
-      "additionalProperties": true
     },
     "review_needed": {
       "type": "boolean",

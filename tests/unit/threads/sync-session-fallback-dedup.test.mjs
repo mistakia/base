@@ -55,13 +55,13 @@ describe('sync_session_fallback dedup', () => {
   })
 
   describe('session_id recovery from thread metadata', () => {
-    it('should recover session_id from metadata.json source.session_id', async () => {
+    it('should recover session_id from metadata.json external_session.session_id', async () => {
       const thread_id = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
       const session_id = 'test-session-12345'
       const thread_dir = path.join(threads_dir, thread_id)
       await fs.mkdir(thread_dir, { recursive: true })
 
-      // Write metadata with source.session_id (written by session-status endpoint on SessionStart)
+      // Write metadata with external_session.session_id (via external_session on SessionStart)
       const metadata = {
         thread_id,
         user_public_key: test_user.user_public_key,
@@ -69,7 +69,7 @@ describe('sync_session_fallback dedup', () => {
         session_status: 'active',
         inference_provider: 'anthropic',
         models: [],
-        source: {
+        external_session: {
           provider: 'claude',
           session_id
         },
@@ -88,17 +88,17 @@ describe('sync_session_fallback dedup', () => {
         'utf-8'
       )
       const read_metadata = JSON.parse(raw)
-      const recovered_session_id = read_metadata.source?.session_id || null
+      const recovered_session_id = read_metadata.external_session?.session_id || null
 
       expect(recovered_session_id).to.equal(session_id)
     })
 
-    it('should return null when source.session_id is not set (CLI crash before SessionStart)', async () => {
+    it('should return null when external_session.session_id is not set (CLI crash before SessionStart)', async () => {
       const thread_id = 'aaaaaaaa-bbbb-cccc-dddd-ffffffffffff'
       const thread_dir = path.join(threads_dir, thread_id)
       await fs.mkdir(thread_dir, { recursive: true })
 
-      // Write metadata without source (pre-created thread, CLI crashed before hooks ran)
+      // Write metadata without external_session (pre-created thread, CLI crashed before hooks ran)
       const metadata = {
         thread_id,
         user_public_key: test_user.user_public_key,
@@ -120,7 +120,7 @@ describe('sync_session_fallback dedup', () => {
         'utf-8'
       )
       const read_metadata = JSON.parse(raw)
-      const recovered_session_id = read_metadata.source?.session_id || null
+      const recovered_session_id = read_metadata.external_session?.session_id || null
 
       // Should be null -- fallback will use glob path with known_thread_id
       expect(recovered_session_id).to.be.null

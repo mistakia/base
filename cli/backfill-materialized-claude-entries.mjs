@@ -126,9 +126,9 @@ for (const tid of thread_dirs) {
   } catch {
     continue
   }
-  const source = metadata.source || {}
-  if (source.provider !== 'claude') continue
-  if (!source.session_id) continue
+  const external_session = metadata.external_session || {}
+  if (external_session.provider !== 'claude') continue
+  if (!external_session.session_id) continue
   if (!fs.existsSync(raw_session_path)) continue
   claude_threads++
 
@@ -141,7 +141,7 @@ for (const tid of thread_dirs) {
     const has_target = entries.some((e) => MATERIALIZED_RAW_TYPES.has(e.type))
     if (!has_target) continue
     normalized = normalize_claude_session({
-      session_id: source.session_id,
+      session_id: external_session.session_id,
       entries,
       metadata: { file_path: raw_session_path, file_summaries }
     })

@@ -57,7 +57,7 @@ export async function upsert_thread_to_sqlite({ thread_data }) {
   const primary_model =
     thread_data.primary_model ||
     (thread_data.models && thread_data.models[0]) ||
-    thread_data.source?.provider_metadata?.models?.[0] ||
+    thread_data.external_session?.provider_metadata?.models?.[0] ||
     null
 
   if (!thread_id) {

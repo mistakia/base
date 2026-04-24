@@ -29,7 +29,7 @@ describe('update_thread_metadata container_user downgrade guard', function () {
       updated_at: '2026-04-01T00:00:00Z',
       message_count: 0,
       tool_call_count: 0,
-      source: {
+      external_session: {
         provider: 'claude',
         session_id: 'test-session-001',
         execution_mode: 'container_user',
@@ -62,10 +62,10 @@ describe('update_thread_metadata container_user downgrade guard', function () {
       await fs.readFile(path.join(thread_dir, 'metadata.json'), 'utf-8')
     )
 
-    expect(after.source.execution_mode).to.equal('container_user')
-    expect(after.source.container_user).to.equal('arrin')
-    expect(after.source.container_name).to.equal('arrin-box')
-    expect(after.source.user_public_key).to.equal('arrin-pubkey')
+    expect(after.external_session.execution_mode).to.equal('container_user')
+    expect(after.external_session.container_user).to.equal('arrin')
+    expect(after.external_session.container_name).to.equal('arrin-box')
+    expect(after.external_session.user_public_key).to.equal('arrin-pubkey')
     // message_count may update from session even when source is preserved
     expect(changed).to.be.a('boolean')
   })
@@ -79,8 +79,8 @@ describe('update_thread_metadata container_user downgrade guard', function () {
       await fs.readFile(path.join(thread_dir, 'metadata.json'), 'utf-8')
     )
 
-    expect(after.source.execution_mode).to.equal('container_user')
-    expect(after.source.container_user).to.equal('arrin')
+    expect(after.external_session.execution_mode).to.equal('container_user')
+    expect(after.external_session.container_user).to.equal('arrin')
   })
 
   it('allows container_user override to persist on a non-container thread', async function () {
@@ -91,7 +91,7 @@ describe('update_thread_metadata container_user downgrade guard', function () {
       updated_at: '2026-04-01T00:00:00Z',
       message_count: 0,
       tool_call_count: 0,
-      source: {
+      external_session: {
         provider: 'claude',
         session_id: 'test-session-001',
         execution_mode: 'host',
@@ -114,8 +114,8 @@ describe('update_thread_metadata container_user downgrade guard', function () {
     const after = JSON.parse(
       await fs.readFile(path.join(thread_dir, 'metadata.json'), 'utf-8')
     )
-    expect(after.source.execution_mode).to.equal('container_user')
-    expect(after.source.container_user).to.equal('arrin')
+    expect(after.external_session.execution_mode).to.equal('container_user')
+    expect(after.external_session.container_user).to.equal('arrin')
   })
 
   it('preserves container_user attribution when no overrides are supplied', async function () {
@@ -124,7 +124,7 @@ describe('update_thread_metadata container_user downgrade guard', function () {
     const after = JSON.parse(
       await fs.readFile(path.join(thread_dir, 'metadata.json'), 'utf-8')
     )
-    expect(after.source.execution_mode).to.equal('container_user')
-    expect(after.source.container_user).to.equal('arrin')
+    expect(after.external_session.execution_mode).to.equal('container_user')
+    expect(after.external_session.container_user).to.equal('arrin')
   })
 })

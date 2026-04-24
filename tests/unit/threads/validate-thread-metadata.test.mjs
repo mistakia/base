@@ -6,7 +6,7 @@ const valid_base = () => ({
   thread_id: '123e4567-e89b-12d3-a456-426614174000',
   user_public_key:
     '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-  source: { provider: 'claude' },
+  external_session: { provider: 'claude' },
   thread_state: 'active',
   created_at: '2026-01-01T00:00:00.000Z',
   updated_at: '2026-01-01T00:00:00.000Z'

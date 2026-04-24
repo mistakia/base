@@ -7,11 +7,11 @@
 const normalize_thread = (thread) => {
   const working_directory =
     thread.working_directory ||
-    thread.source?.provider_metadata?.working_directory
+    thread.external_session?.provider_metadata?.working_directory
 
   const duration_minutes =
     thread.duration_minutes ||
-    thread.source?.provider_metadata?.duration_minutes
+    thread.external_session?.provider_metadata?.duration_minutes
 
   const can_write = thread.can_write !== false
 
@@ -44,7 +44,7 @@ const normalize_thread = (thread) => {
     message_count: thread.message_count,
     duration_minutes,
     total_tokens:
-      thread.total_tokens || thread.source?.provider_metadata?.total_tokens,
+      thread.total_tokens || thread.external_session?.provider_metadata?.total_tokens,
     latest_timeline_event: thread.latest_timeline_event || null,
     user_public_key: thread.user_public_key || null,
     show_actions: thread.thread_state === 'active' && can_write

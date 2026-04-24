@@ -105,7 +105,7 @@ describe('PUT /api/threads/:thread_id/session-status', () => {
     expect(metadata.updated_at).to.be.a('string')
   })
 
-  it('should set source.session_id when session_id is provided and source is null', async () => {
+  it('should set external_session.session_id when session_id is provided and external_session is null', async () => {
     const thread = await create_test_thread({
       user_public_key: test_user.user_public_key,
       test_directories
@@ -119,17 +119,17 @@ describe('PUT /api/threads/:thread_id/session-status', () => {
 
     expect(response.status).to.equal(200)
 
-    // Verify source was set in metadata
+    // Verify external_session was set in metadata
     const metadata_path = path.join(thread.context_dir, 'metadata.json')
     const raw = await readFile(metadata_path, 'utf-8')
     const metadata = JSON.parse(raw)
 
-    expect(metadata.source).to.be.an('object')
-    expect(metadata.source.session_id).to.equal(test_session_id)
-    expect(metadata.source.provider).to.equal('claude')
+    expect(metadata.external_session).to.be.an('object')
+    expect(metadata.external_session.session_id).to.equal(test_session_id)
+    expect(metadata.external_session.provider).to.equal('claude')
   })
 
-  it('should not overwrite existing source.session_id on subsequent calls', async () => {
+  it('should not overwrite existing external_session.session_id on subsequent calls', async () => {
     const thread = await create_test_thread({
       user_public_key: test_user.user_public_key,
       test_directories
@@ -155,7 +155,7 @@ describe('PUT /api/threads/:thread_id/session-status', () => {
     const raw = await readFile(metadata_path, 'utf-8')
     const metadata = JSON.parse(raw)
 
-    expect(metadata.source.session_id).to.equal(first_session_id)
+    expect(metadata.external_session.session_id).to.equal(first_session_id)
     expect(metadata.session_status).to.equal('active')
   })
 
