@@ -13,6 +13,7 @@ import { apply_filters } from './filters.mjs'
 import { rank } from './ranker.mjs'
 import { permission_filter } from './permission.mjs'
 import { load_search_config } from './search-config.mjs'
+import { discover_external_search_sources } from './discover-external-sources.mjs'
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 
@@ -20,7 +21,7 @@ const log = debug('search:orchestrator')
 
 const MAX_IN_CLAUSE = 900
 
-const ADAPTERS = {
+const BUILTIN_ADAPTERS = {
   entity: entity_source,
   thread_metadata: thread_metadata_source,
   thread_timeline: thread_timeline_source,
@@ -28,18 +29,35 @@ const ADAPTERS = {
   semantic: semantic_source
 }
 
+const BUILTIN_TIMED_SOURCES = new Set(['semantic'])
+
+async function resolve_sources_registry() {
+  const external = await discover_external_search_sources()
+  const adapters = { ...BUILTIN_ADAPTERS }
+  const timed = new Set(BUILTIN_TIMED_SOURCES)
+  const external_names = []
+  for (const entry of external) {
+    adapters[entry.name] = entry.adapter
+    if (entry.timed) timed.add(entry.name)
+    external_names.push(entry.name)
+  }
+  return { adapters, timed, external_names }
+}
+
 async function run_source_with_timeout({
   name,
   query,
   candidate_limit,
   semantic_timeout_ms,
-  source_options
+  source_options,
+  adapters,
+  timed_sources
 }) {
-  const adapter = ADAPTERS[name]
+  const adapter = adapters[name]
   if (!adapter) return []
   const per_source = (source_options && source_options[name]) || {}
 
-  if (name !== 'semantic') {
+  if (!timed_sources.has(name)) {
     try {
       return await adapter.search({ query, candidate_limit, ...per_source })
     } catch (error) {
@@ -59,7 +77,7 @@ async function run_source_with_timeout({
     })
   } catch (error) {
     if (error?.name === 'AbortError') return []
-    log('semantic source failed: %s', error.message)
+    log('source %s failed: %s', name, error.message)
     return []
   } finally {
     clearTimeout(timer)
@@ -110,6 +128,7 @@ async function attach_entity_metadata(hits) {
   const entity_uris = []
   const thread_ids = []
   for (const hit of hits) {
+    if (!SCHEME_PREFIX.test(hit.entity_uri)) continue
     if (hit.entity_uri.startsWith('user:thread/')) {
       thread_ids.push(hit.entity_uri.slice('user:thread/'.length))
     } else {
@@ -136,6 +155,20 @@ async function attach_entity_metadata(hits) {
   }
 
   return hits.map((hit) => {
+    if (!SCHEME_PREFIX.test(hit.entity_uri)) {
+      const extras = hit.matches?.[0]?.extras || {}
+      const preview = (extras.content_preview || '').slice(0, 80)
+      const title = extras.channel_alias
+        ? `#${extras.channel_alias} — ${preview}`
+        : preview
+      return {
+        ...hit,
+        type: 'discord_message',
+        status: null,
+        title,
+        updated_at: extras.timestamp || null
+      }
+    }
     if (hit.entity_uri.startsWith('user:thread/')) {
       const thread_id = hit.entity_uri.slice('user:thread/'.length)
       const row = thread_map.get(thread_id)
@@ -172,16 +205,27 @@ export async function search({
 }) {
   return embedded_index_manager._with_reader(async () => {
     const config = await load_search_config()
+    const { adapters, timed_sources, external_names } = await (async () => {
+      const registry = await resolve_sources_registry()
+      return {
+        adapters: registry.adapters,
+        timed_sources: registry.timed,
+        external_names: registry.external_names
+      }
+    })()
     const sources_config = config.sources || {}
+    const configured_default = sources_config.enabled_by_default || [
+      'entity',
+      'thread_metadata',
+      'thread_timeline',
+      'path'
+    ]
+    const default_sources = [
+      ...configured_default,
+      ...external_names.filter((n) => !configured_default.includes(n))
+    ]
     const active_sources =
-      Array.isArray(sources) && sources.length > 0
-        ? sources
-        : sources_config.enabled_by_default || [
-            'entity',
-            'thread_metadata',
-            'thread_timeline',
-            'path'
-          ]
+      Array.isArray(sources) && sources.length > 0 ? sources : default_sources
     const candidate_limit = sources_config.per_source_candidate_cap || 100
     const semantic_timeout_ms = sources_config.semantic_timeout_ms || 2000
 
@@ -192,7 +236,9 @@ export async function search({
           query,
           candidate_limit,
           semantic_timeout_ms,
-          source_options
+          source_options,
+          adapters,
+          timed_sources
         })
       )
     )

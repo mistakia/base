@@ -14,17 +14,23 @@ import {
   get_recent_files_config
 } from '#libs-server/search/recent-files.mjs'
 import { load_search_config } from '#libs-server/search/search-config.mjs'
+import { discover_external_search_sources } from '#libs-server/search/discover-external-sources.mjs'
 
 const router = express.Router()
 const log = debug('api:search')
 
-const VALID_SOURCES = [
+const BUILTIN_SOURCES = [
   'entity',
   'thread_metadata',
   'thread_timeline',
   'path',
   'semantic'
 ]
+
+async function get_valid_sources() {
+  const external = await discover_external_search_sources()
+  return [...BUILTIN_SOURCES, ...external.map((e) => e.name)]
+}
 
 router.use(attach_permission_context())
 router.use(apply_redaction_interceptor())
@@ -115,10 +121,11 @@ router.get('/', async (req, res) => {
 
     const source_list = parse_csv_list(req.query.source)
     if (source_list) {
-      const invalid = source_list.filter((s) => !VALID_SOURCES.includes(s))
+      const valid_sources = await get_valid_sources()
+      const invalid = source_list.filter((s) => !valid_sources.includes(s))
       if (invalid.length > 0) {
         return res.status(400).json({
-          error: `Invalid source values: ${invalid.join(', ')}. Valid: ${VALID_SOURCES.join(', ')}`,
+          error: `Invalid source values: ${invalid.join(', ')}. Valid: ${valid_sources.join(', ')}`,
           param: 'source'
         })
       }
