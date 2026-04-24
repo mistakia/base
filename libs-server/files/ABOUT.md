@@ -16,9 +16,9 @@ Neutral helpers for filesystem enumeration that must not take a dependency on th
 
 ## Entries
 
-- `list-file-paths.mjs` — exports `list_file_paths({directory, extensions, exclude})`. Uses ripgrep for speed when available and falls back to a pure-Node walker. Callers: `libs-server/search/file-path-cache.mjs`, `services/server.mjs`, and any future feature that needs fast path enumeration.
+- `list-file-paths.mjs` — exports `list_file_paths({resolved_directory_path, max_results, user_base_directory})`. The `resolved_directory_path` argument is an absolute filesystem path (null = whole user-base) and must lie within `user_base_directory`; URI resolution is the caller's responsibility and lives in `libs-server/search/resolve-search-scope.mjs`. Uses ripgrep and returns `{file_path, absolute_path, type}` rows. Callers: `libs-server/search/file-path-cache.mjs` and any future feature that needs fast path enumeration.
 
 ## Design notes
 
-- This module imports no search code. The search module imports this one.
-- Exclusion patterns default to `.git`, `node_modules`, `.system`, and `import-history` but are parameterizable.
+- This module imports no search code and knows nothing about base URIs. The search module imports this one.
+- Exclusion patterns and hidden/symlink behaviour come from `search-config.ripgrep` (currently the only consumer of that config block).

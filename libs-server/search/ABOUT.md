@@ -25,16 +25,19 @@ search/
   ranker.mjs                Per-source normalization + weights + recency boost.
   permission.mjs            Deny-by-default wrapper around check_permissions_batch.
   search-config.mjs         Config loader (sources.enabled_by_default, caps, timeouts).
-  file-path-cache.mjs       Cache in front of libs-server/files/list-file-paths.
+  resolve-search-scope.mjs  Resolve a scope base URI (e.g. `user:`, `user:task/`) to an absolute directory for the path source.
+  file-path-cache.mjs       Cache in front of libs-server/files/list-file-paths, keyed by resolved absolute path (null key = whole user-base).
   semantic-search-engine.mjs  Cosine over entity_embeddings; accepts AbortSignal.
   sources/
     entity.mjs              FTS5 over entities_fts, bm25(10, 3, 1).
     thread-metadata.mjs     FTS5 over threads_fts.
     thread-timeline.mjs     FTS5 over thread_timeline_fts (per-turn docs).
-    path.mjs                Fuzzy scorer over path cache.
+    path.mjs                Fuzzy scorer over path cache; accepts a `scope_uri` option that narrows enumeration to a sub-tree.
     semantic.mjs            Wraps semantic-search-engine; forwards signal.
     fts-query.mjs           Tokenize + phrase-quote so FTS operators are literal.
 ```
+
+Two distinct concepts sit on either side of the ranker: `scope` is a base URI passed to the path source and controls which directory is enumerated, while `path_glob` is a post-source filter matched against each hit's `entity_uri`. The path source is the only adapter that cares about `scope`; filters apply uniformly across sources.
 
 ## Contract
 
