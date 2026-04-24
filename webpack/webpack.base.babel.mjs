@@ -109,7 +109,7 @@ const base = (options) => ({
       },
       {
         test: /\.(eot|otf|ttf|woff|woff2)$/,
-        use: 'file-loader'
+        type: 'asset/resource'
       },
       {
         test: /\.svg$/,
