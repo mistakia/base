@@ -34,7 +34,6 @@ import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
-import { translate_to_host_path } from '#libs-server/container/execution-mode.mjs'
 import {
   is_per_user_container,
   build_execution_attribution
@@ -685,22 +684,14 @@ router.post('/create-session', async (req, res) => {
       }
     }
 
-    // Normalize container paths to host paths before validation
-    const normalized_working_directory =
-      execution_mode === 'container' || execution_mode === 'container_user'
-        ? translate_to_host_path(working_directory)
-        : working_directory
-
-    // Validate working directory -- resolves base URIs (e.g. 'user:') to
-    // host filesystem paths and ensures the path is within user-base.
-    // Volume mounts and permissions.deny are the security boundary for
-    // container_user mode, not the working directory itself.
-    const user_base_directory = get_user_base_directory()
-    let validated_working_directory
+    // Fast-fail with a 400 for invalid base URIs. The job worker re-runs
+    // validate_working_directory for the authoritative resolve; we forward
+    // the original URI so the worker's resolver is the single source of
+    // truth for URI -> host path translation.
     try {
-      validated_working_directory = await validate_working_directory({
-        working_directory: normalized_working_directory,
-        user_base_directory
+      await validate_working_directory({
+        working_directory,
+        user_base_directory: get_user_base_directory()
       })
     } catch (validation_error) {
       log(`Working directory validation failed: ${validation_error.message}`)
@@ -711,7 +702,7 @@ router.post('/create-session', async (req, res) => {
     }
 
     log(
-      `Queuing Claude CLI session for user ${user_public_key} with prompt length ${prompt.length} in ${validated_working_directory}`
+      `Queuing Claude CLI session for user ${user_public_key} with prompt length ${prompt.length} in ${working_directory}`
     )
 
     // Generate IDs upfront for thread-first flow
@@ -756,7 +747,7 @@ router.post('/create-session', async (req, res) => {
     // Add job to queue with pre-generated IDs
     const job = await add_thread_creation_job({
       prompt,
-      working_directory: validated_working_directory,
+      working_directory,
       user_public_key,
       execution_mode,
       thread_config,
@@ -986,20 +977,12 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
-    // Normalize container paths to host paths before validation
-    const normalized_working_directory =
-      execution_mode === 'container' || execution_mode === 'container_user'
-        ? translate_to_host_path(working_directory)
-        : working_directory
-
-    // Validate working directory -- resolves base URIs and ensures path
-    // is within user-base bounds for all execution modes
-    const user_base_directory = get_user_base_directory()
-    let validated_working_directory
+    // Fast-fail with a 400 for invalid base URIs. See create-session for why
+    // the worker owns the authoritative resolve.
     try {
-      validated_working_directory = await validate_working_directory({
-        working_directory: normalized_working_directory,
-        user_base_directory
+      await validate_working_directory({
+        working_directory,
+        user_base_directory: get_user_base_directory()
       })
     } catch (validation_error) {
       log(`Working directory validation failed: ${validation_error.message}`)
@@ -1016,7 +999,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     // Add job to queue - thread will be updated by hook after session completes
     const job = await add_thread_creation_job({
       prompt,
-      working_directory: validated_working_directory,
+      working_directory,
       user_public_key,
       session_id: claude_session_id,
       thread_id,
