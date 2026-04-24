@@ -190,6 +190,13 @@ describe('Git Commits API', function () {
       expect(res.body).to.have.property('files')
       expect(res.body.files).to.be.an('array')
       expect(res.body).to.have.property('diff')
+
+      // Each file entry now includes an optional base_uri field.
+      for (const file of res.body.files) {
+        expect(file).to.have.property('status')
+        expect(file).to.have.property('path')
+        expect(file).to.have.property('base_uri')
+      }
     })
 
     it('should return 400 for invalid hash', async () => {

@@ -28,6 +28,9 @@ import {
   get_commit_log,
   get_single_commit
 } from '#libs-server/git/index.mjs'
+import { get_file_history } from '#libs-server/git/repo-statistics.mjs'
+import { find_git_root } from '#libs-server/git/find-git-root.mjs'
+import { resolve_base_uri } from '#libs-server/base-uri/base-uri-utilities.mjs'
 import { parse_jwt_token } from '#server/middleware/jwt-parser.mjs'
 import { attach_permission_context } from '#server/middleware/permission/middleware.mjs'
 import { check_permissions_batch } from '#server/middleware/permission/permission-service.mjs'
@@ -398,6 +401,14 @@ const check_repo_permission = async ({
  * @param {Object} params.permission_context - Permission context from request
  * @returns {Promise<{allowed: boolean, reason: string}>}
  */
+// Distinguish "default deny" (no matching rule) from an explicit deny
+// (public_read: false, a deny rule, or a matching rule that evaluated false).
+// Default deny indicates the permission layer has no opinion — upstream
+// gates (e.g. repo-level read permission) decide access in that case.
+const DEFAULT_DENY_REASON = 'No matching permission rules (default deny)'
+const is_explicit_deny = (permission_result) =>
+  !permission_result.allowed && permission_result.reason !== DEFAULT_DENY_REASON
+
 const check_file_permission = async ({
   repo_path,
   file_path,
@@ -1854,7 +1865,20 @@ router.get(
         .filter((line) => line.trim())
         .map((line) => {
           const [status, ...file_parts] = line.split('\t')
-          return { status: status.trim(), path: file_parts.join('\t').trim() }
+          const file_path = file_parts.join('\t').trim()
+          let file_base_uri = null
+          try {
+            file_base_uri = create_base_uri_from_path(
+              path.join(repo_path, file_path)
+            )
+          } catch {
+            file_base_uri = null
+          }
+          return {
+            status: status.trim(),
+            path: file_path,
+            base_uri: file_base_uri
+          }
         })
 
       // Get full diff with explicit buffer limit
@@ -1909,6 +1933,150 @@ router.get(
     } catch (error) {
       log('Error getting commit detail:', error)
       res.status(500).json({ error: 'Failed to get commit detail' })
+    }
+  }
+)
+
+/**
+ * Pre-middleware for /api/git/file-history: resolve base_uri to the owning
+ * repository and relative file path, then delegate to require_repo_read_permission.
+ */
+const resolve_file_history_target = async (req, res, next) => {
+  try {
+    const { base_uri } = req.query
+    if (!base_uri || typeof base_uri !== 'string') {
+      return res.status(400).json({ error: 'base_uri is required' })
+    }
+
+    let absolute_file_path
+    try {
+      absolute_file_path = resolve_base_uri(base_uri)
+    } catch (error) {
+      return res
+        .status(400)
+        .json({ error: `Invalid base_uri: ${safe_error_message(error)}` })
+    }
+
+    try {
+      await fs.access(absolute_file_path)
+    } catch {
+      return res.status(404).json({ error: 'File not found' })
+    }
+
+    const repo_path = find_git_root({
+      file_path: absolute_file_path,
+      bounds_path: '/'
+    })
+    if (!repo_path) {
+      return res
+        .status(400)
+        .json({ error: 'Target is not within a git repository' })
+    }
+
+    const relative_path = path.relative(repo_path, absolute_file_path)
+    if (!relative_path || relative_path.startsWith('..')) {
+      return res
+        .status(400)
+        .json({ error: 'File path is outside repository root' })
+    }
+
+    req.default_repo_path = repo_path
+    req.file_history_context = {
+      base_uri,
+      absolute_file_path,
+      relative_path
+    }
+
+    next()
+  } catch (error) {
+    log('Error resolving file history target:', error)
+    next(error)
+  }
+}
+
+/**
+ * GET /api/git/file-history
+ * Get commit history scoped to a single file (follows renames).
+ * Query params: base_uri (required), limit, page, before (cursor)
+ */
+router.get(
+  '/file-history',
+  resolve_file_history_target,
+  require_repo_read_permission,
+  async (req, res) => {
+    try {
+      const repo_path = req.validated_repo_path
+      const { base_uri, relative_path } = req.file_history_context
+      const user_public_key = req.user?.user_public_key
+
+      const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200)
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+      const { before } = req.query
+
+      if (before && !/^[a-f0-9]{7,40}$/i.test(before)) {
+        return res.status(400).json({ error: 'Invalid before cursor' })
+      }
+
+      // File-level read check defends against .md files with explicit
+      // public_read: false or a matching deny rule. Non-md files inherit
+      // from the repo-level gate (already passed above). For .md files
+      // without any matching rule, fall back to the repo-level gate as
+      // well — history is already reachable via /api/git/commit/:hash,
+      // which applies the same policy.
+      if (relative_path.endsWith('.md') && req.permission_context) {
+        const file_permission = await check_file_permission({
+          repo_path,
+          file_path: relative_path,
+          user_public_key,
+          permission_type: 'read',
+          permission_context: req.permission_context
+        })
+
+        if (is_explicit_deny(file_permission)) {
+          return res.status(403).json({
+            error: 'Access denied',
+            message: file_permission.reason,
+            permission_denied: true
+          })
+        }
+      }
+
+      const {
+        commits,
+        total_count,
+        count_capped,
+        branch,
+        repo_name,
+        current_path
+      } = await get_file_history({
+        repo_path,
+        relative_path,
+        limit,
+        page,
+        before
+      })
+
+      const total_pages =
+        total_count == null ? null : Math.max(1, Math.ceil(total_count / limit))
+
+      res.json({
+        base_uri,
+        repo_name,
+        branch,
+        current_path,
+        commits,
+        page,
+        per_page: limit,
+        total_pages,
+        total_count,
+        count_capped
+      })
+    } catch (error) {
+      log('Error getting file history:', error)
+      res.status(500).json({
+        error: 'Failed to get file history',
+        message: safe_error_message(error)
+      })
     }
   }
 )
