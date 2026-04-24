@@ -325,8 +325,16 @@ router.post('/', require_hook_auth, async (req, res) => {
     working_directory,
     transcript_path,
     job_id,
+    // Claude Code SessionStart payload's `source` field:
+    // startup | resume | clear | compact. Describes what triggered the
+    // session start. Used to distinguish true resumes from startup-driven
+    // duplicate hook fires.
+    session_start_trigger,
+    // Legacy field name accepted for backwards compat with in-flight
+    // hook scripts that have not yet been updated.
     hook_source
   } = req.body
+  const start_trigger = session_start_trigger || hook_source
 
   if (!session_id) {
     return res.status(400).json({
@@ -337,16 +345,16 @@ router.post('/', require_hook_auth, async (req, res) => {
 
   try {
     log_lifecycle(
-      'POST session_started session_id=%s job_id=%s hook_source=%s working_directory=%s',
+      'POST session_started session_id=%s job_id=%s session_start_trigger=%s working_directory=%s',
       session_id,
       job_id || 'none',
-      hook_source || 'none',
+      start_trigger || 'none',
       working_directory
     )
 
-    // Treat Claude Code SessionStart source=resume as an intentional resume
+    // Treat Claude Code SessionStart trigger=resume as an intentional resume
     // so the tombstone guard is cleared rather than blocking registration.
-    const resume = hook_source === 'resume'
+    const resume = start_trigger === 'resume'
 
     // Register the session atomically. The returned session carries a
     // non-persisted `_is_new` flag so two parallel SessionStart POSTs cannot

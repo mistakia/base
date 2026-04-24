@@ -50,7 +50,7 @@ SESSION_ID=$(echo "$INPUT" | jq -r '.session_id // empty')
 TRANSCRIPT_PATH=$(echo "$INPUT" | jq -r '.transcript_path // empty')
 CWD=$(echo "$INPUT" | jq -r '.cwd // empty')
 HOOK_EVENT=$(echo "$INPUT" | jq -r '.hook_event_name // empty')
-HOOK_SOURCE=$(echo "$INPUT" | jq -r '.source // empty')
+SESSION_START_TRIGGER=$(echo "$INPUT" | jq -r '.source // empty')
 
 # Extract jsonl_session_id from transcript_path filename
 JSONL_SESSION_ID=""
@@ -89,7 +89,7 @@ case "$HOOK_EVENT" in
         \"jsonl_session_id\": \"${JSONL_SESSION_ID}\",
         ${job_id_field}
         ${thread_id_field}
-        \"hook_source\": \"${HOOK_SOURCE}\",
+        \"session_start_trigger\": \"${SESSION_START_TRIGGER}\",
         \"working_directory\": \"${CWD}\",
         \"transcript_path\": \"${TRANSCRIPT_PATH}\"
     }"
