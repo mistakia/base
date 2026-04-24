@@ -714,27 +714,32 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const { thread_id, job_id } = payload.data
       const prompt = payload.opts?.prompt || ''
 
-      // Check if thread already exists (THREAD_CREATED from watcher may arrive first)
-      const already_exists = state
+      // The THREAD_CREATED WebSocket event can race the HTTP fulfilled
+      // response and add the thread to views before this reducer runs. Skip
+      // adding it to views again in that case, but still seed the cache
+      // timeline below -- the WebSocket path does not carry the prompt and
+      // never seeds the optimistic user message.
+      const already_in_views = state
         .get('thread_table_views')
         .some((view) =>
           view
             .get('thread_table_data', List())
             .some((t) => t.get('thread_id') === thread_id)
         )
-      if (already_exists) return state
 
-      const optimistic_thread = Map({
-        thread_id,
-        session_status: 'queued',
-        prompt_snippet: prompt.slice(0, 200),
-        job_id,
-        thread_state: 'active',
-        created_at: new Date().toISOString()
-      })
-      let new_state = add_thread_to_all_views(state, optimistic_thread)
-      new_state = add_thread_to_basic_list(new_state, optimistic_thread)
-      new_state = new_state.set('session_created_at', Date.now())
+      let new_state = state.set('session_created_at', Date.now())
+      if (!already_in_views) {
+        const optimistic_thread = Map({
+          thread_id,
+          session_status: 'queued',
+          prompt_snippet: prompt.slice(0, 200),
+          job_id,
+          thread_state: 'active',
+          created_at: new Date().toISOString()
+        })
+        new_state = add_thread_to_all_views(new_state, optimistic_thread)
+        new_state = add_thread_to_basic_list(new_state, optimistic_thread)
+      }
 
       // Insert optimistic user message so the timeline is not empty while
       // the session is queued / starting up. The cache entry has not been
