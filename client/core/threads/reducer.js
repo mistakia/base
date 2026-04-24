@@ -780,7 +780,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const { opts } = payload
       const thread_id = opts.thread_id
       if (!thread_id) return state
-      return state.setIn(
+      const submitted_at = new Date().toISOString()
+      let new_state = state.setIn(
         ['thread_pending_resumes', thread_id],
         Map({
           prompt: opts.prompt || '',
@@ -789,37 +790,21 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           job_id: null,
           queue_position: null,
           error_message: null,
-          submitted_at: new Date().toISOString()
+          submitted_at
         })
       )
-    }
 
-    case threads_action_types.RESUME_THREAD_SESSION_FULFILLED: {
-      const { opts, data } = payload
-      const thread_id = opts.thread_id
-      if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
-        return state
-      }
-      let new_state = state.updateIn(
-        ['thread_pending_resumes', thread_id],
-        (entry) =>
-          entry.merge({
-            status: 'queued',
-            job_id: data?.job_id || null,
-            queue_position: data?.queue_position ?? null
-          })
-      )
-
-      // Insert optimistic user message into the cached thread timeline
+      // Injected on PENDING (not FULFILLED) so the UI updates on submit;
+      // reinject_optimistic_entry_if_needed restores it after a later fetch
+      // populates the cache.
       if (opts.prompt) {
-        const now = new Date().toISOString()
         const optimistic_entry = {
           id: `optimistic-${thread_id}-${Date.now()}`,
           type: 'message',
           role: 'user',
           content: opts.prompt,
-          timestamp: now,
-          created_at: now,
+          timestamp: submitted_at,
+          created_at: submitted_at,
           _optimistic: true
         }
         new_state = append_timeline_entry(
@@ -828,8 +813,22 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           optimistic_entry
         )
       }
-
       return new_state
+    }
+
+    case threads_action_types.RESUME_THREAD_SESSION_FULFILLED: {
+      const { opts, data } = payload
+      const thread_id = opts.thread_id
+      if (!thread_id || !state.hasIn(['thread_pending_resumes', thread_id])) {
+        return state
+      }
+      return state.updateIn(['thread_pending_resumes', thread_id], (entry) =>
+        entry.merge({
+          status: 'queued',
+          job_id: data?.job_id || null,
+          queue_position: data?.queue_position ?? null
+        })
+      )
     }
 
     case threads_action_types.RESUME_THREAD_SESSION_FAILED: {

@@ -12,6 +12,7 @@ import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
 import { index_thread_metadata } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
+import { ACTIVE_SESSION_STATUSES } from '#libs-shared/session-status-display.mjs'
 
 const log = debug('threads:watcher')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -55,6 +56,25 @@ const latest_timeline_entry_cache = new Map()
 // Populated on metadata add/change, used by timeline change handler to avoid re-reading
 // Map<thread_id, Object>
 const metadata_cache = new Map()
+
+// Secondary index: thread_ids whose session_status is in ACTIVE_SESSION_STATUSES.
+// Kept in sync with metadata_cache so GET /api/active-sessions is O(active)
+// instead of O(all threads ever observed).
+const active_session_thread_ids = new Set()
+
+const ACTIVE_STATUS_SET = new Set(ACTIVE_SESSION_STATUSES)
+const update_active_session_index = (thread_id, metadata) => {
+  if (ACTIVE_STATUS_SET.has(metadata?.session_status)) {
+    active_session_thread_ids.add(thread_id)
+  } else {
+    active_session_thread_ids.delete(thread_id)
+  }
+}
+
+const cache_metadata = (thread_id, metadata) => {
+  metadata_cache.set(thread_id, metadata)
+  update_active_session_index(thread_id, metadata)
+}
 
 // Watcher instance
 let watcher = null
@@ -100,6 +120,9 @@ export const get_cached_latest_timeline_entry = (thread_id) => {
  * @returns {Map<string, Object>} Map of thread_id -> metadata
  */
 export const get_metadata_cache = () => metadata_cache
+
+// Read-only view of thread_ids currently in an active session lifecycle.
+export const get_active_session_thread_ids = () => active_session_thread_ids
 
 // ============================================================================
 // Index Sync Hook Debouncing
@@ -209,7 +232,7 @@ const get_or_read_metadata = async (thread_id, metadata_dir) => {
       path.join(metadata_dir, FILE_NAMES.METADATA)
     )
     if (metadata) {
-      metadata_cache.set(thread_id, metadata)
+      cache_metadata(thread_id, metadata)
       index_thread_metadata({ thread_id, metadata })
     }
   }
@@ -411,7 +434,7 @@ const handle_metadata_added = async (file_path) => {
   const { thread_id } = metadata
 
   // Cache metadata for use by timeline change handler
-  metadata_cache.set(thread_id, metadata)
+  cache_metadata(thread_id, metadata)
   index_thread_metadata(thread_id, metadata)
 
   log_lifecycle('WATCHER metadata_added thread_id=%s', thread_id)
@@ -454,7 +477,7 @@ const handle_metadata_changed = async (file_path) => {
 
   // Update metadata cache and reverse index
   if (metadata.thread_id) {
-    metadata_cache.set(metadata.thread_id, metadata)
+    cache_metadata(metadata.thread_id, metadata)
     index_thread_metadata(metadata.thread_id, metadata)
   }
 
@@ -787,6 +810,7 @@ export const stop_thread_watcher = async () => {
     last_seen_state.clear()
     latest_timeline_entry_cache.clear()
     metadata_cache.clear()
+    active_session_thread_ids.clear()
     index_sync_hooks = null
 
     // Clear reconciliation timer

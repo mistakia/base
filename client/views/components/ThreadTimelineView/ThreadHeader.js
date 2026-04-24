@@ -38,6 +38,7 @@ import {
   extract_tags
 } from '@views/utils/thread-metadata-extractor.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
+import { SESSION_STATUS_DISPLAY_MAP } from '#libs-shared/session-status-display.mjs'
 
 const SPACING = {
   TITLE_MARGIN: '8px',
@@ -530,9 +531,34 @@ const ThreadHeader = ({
   )
 
   // Get active session for this thread
-  const active_session = useSelector((state) =>
+  const ws_active_session = useSelector((state) =>
     get_active_session_for_thread(state, thread_id)
   )
+
+  // Fallback path: ACTIVE_SESSION_* events may not have arrived on direct
+  // navigation, so derive the Live Session display from persisted
+  // thread.session_status when the ephemeral store is empty.
+  const thread_session_status = metadata?.get?.('session_status') || null
+  const thread_updated_at = metadata?.get?.('updated_at') || null
+  const thread_created_at = metadata?.get?.('created_at') || null
+  const synthetic_active_session = useMemo(() => {
+    if (ws_active_session) return null
+    const mapped = SESSION_STATUS_DISPLAY_MAP[thread_session_status]
+    if (!mapped) return null
+    return {
+      session_id: null,
+      status: mapped,
+      started_at: thread_created_at,
+      last_activity_at: thread_updated_at,
+      total_tokens: null
+    }
+  }, [
+    ws_active_session,
+    thread_session_status,
+    thread_created_at,
+    thread_updated_at
+  ])
+  const active_session = ws_active_session || synthetic_active_session
 
   // Check if current user owns this thread
   const user_owns_thread =

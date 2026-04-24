@@ -18,7 +18,12 @@ import {
 import path from 'path'
 import { read_json_file } from '#libs-server/threads/thread-utils.mjs'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
-import { get_cached_latest_timeline_entry } from '#server/services/thread-watcher.mjs'
+import {
+  get_cached_latest_timeline_entry,
+  get_metadata_cache,
+  get_active_session_thread_ids
+} from '#server/services/thread-watcher.mjs'
+import { SESSION_STATUS_DISPLAY_MAP } from '#libs-shared/session-status-display.mjs'
 import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
@@ -85,7 +90,7 @@ async function apply_session_redaction(
  * @param {string} thread_id - Thread ID to fetch info for
  * @returns {Promise<Object>} Object with thread metadata fields
  */
-async function get_thread_info_for_session(thread_id) {
+async function get_thread_info_for_session(thread_id, preloaded_metadata) {
   const empty_result = {
     thread_title: null,
     thread_state: null,
@@ -100,11 +105,13 @@ async function get_thread_info_for_session(thread_id) {
   if (!thread_id) return empty_result
 
   try {
-    const thread_base_dir = get_thread_base_directory()
-    const thread_dir = path.join(thread_base_dir, thread_id)
-    const metadata_path = path.join(thread_dir, 'metadata.json')
-
-    const metadata = await read_json_file({ file_path: metadata_path })
+    let metadata = preloaded_metadata
+    if (!metadata) {
+      const thread_base_dir = get_thread_base_directory()
+      const thread_dir = path.join(thread_base_dir, thread_id)
+      const metadata_path = path.join(thread_dir, 'metadata.json')
+      metadata = await read_json_file({ file_path: metadata_path })
+    }
 
     // Use thread watcher cache instead of streaming entire timeline
     const cached_entry = get_cached_latest_timeline_entry(thread_id)
@@ -140,10 +147,14 @@ async function enrich_session_with_thread_info(session) {
     return session
   }
 
-  const thread_info = await get_thread_info_for_session(session.thread_id)
+  const { _preloaded_metadata, ...rest } = session
+  const thread_info = await get_thread_info_for_session(
+    session.thread_id,
+    _preloaded_metadata
+  )
 
   return {
-    ...session,
+    ...rest,
     // Use fresh data, falling back to cached if read fails
     thread_title: thread_info.thread_title || session.thread_title,
     thread_state: thread_info.thread_state,
@@ -173,10 +184,48 @@ router.get('/', async (req, res) => {
   try {
     const sessions = await get_all_active_sessions()
 
+    // Thread-first hook scripts call PUT /api/threads/:id/session-status
+    // instead of POSTing to this route, so Redis never sees these sessions.
+    // Synthesize entries for them from the watcher's active-session index
+    // (O(active), not O(all threads)) and apply the per-user ownership gate
+    // inline so a failed metadata disk read downstream cannot leak them.
+    const metadata_cache = get_metadata_cache()
+    const virtual_sessions = []
+    const redis_thread_ids = new Set(
+      sessions.map((s) => s.thread_id).filter(Boolean)
+    )
+    for (const thread_id of get_active_session_thread_ids()) {
+      if (redis_thread_ids.has(thread_id)) continue
+      const metadata = metadata_cache.get(thread_id)
+      if (!metadata) continue
+      if (
+        user_public_key &&
+        metadata.user_public_key &&
+        metadata.user_public_key !== user_public_key
+      ) {
+        continue
+      }
+      virtual_sessions.push({
+        session_id: metadata.external_session?.session_id || null,
+        thread_id,
+        job_id: metadata.job_id || null,
+        status:
+          SESSION_STATUS_DISPLAY_MAP[metadata.session_status] || 'active',
+        thread_state: metadata.thread_state || null,
+        working_directory:
+          metadata.external_session?.provider_metadata?.working_directory ||
+          null,
+        created_at: metadata.created_at || null,
+        last_activity_at: metadata.updated_at || null,
+        total_tokens: metadata.total_tokens || null,
+        _preloaded_metadata: metadata
+      })
+    }
+
     // Enrich sessions with fresh thread info (title and latest timeline event)
     // This ensures we always return the current latest event, not stale Redis data
     const enriched_sessions = await Promise.all(
-      sessions.map(enrich_session_with_thread_info)
+      [...sessions, ...virtual_sessions].map(enrich_session_with_thread_info)
     )
 
     // Filter out sessions without a locally-available thread (unless they have

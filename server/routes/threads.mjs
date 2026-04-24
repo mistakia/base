@@ -722,8 +722,9 @@ router.post('/create-session', async (req, res) => {
             })
           : build_execution_attribution({ mode: 'host' })
 
-    // Create thread entity on disk before queuing the job; the initial
-    // user message is written atomically as part of thread creation.
+    // The claude sync hook is the sole writer of the initial user entry.
+    // Writing it here too produced duplicates because server-generated ids
+    // and the hook's deterministic ids did not match.
     await create_thread({
       thread_id,
       user_public_key,
@@ -732,11 +733,6 @@ router.post('/create-session', async (req, res) => {
       thread_state: 'active',
       title: generate_default_thread_title_from_prompt({ prompt }),
       execution: create_execution,
-      initial_timeline_entry: {
-        type: 'message',
-        role: 'user',
-        content: prompt
-      },
       additional_metadata: {
         session_status: 'queued',
         prompt_snippet: prompt.slice(0, 200),

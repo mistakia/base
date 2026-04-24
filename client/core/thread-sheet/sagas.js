@@ -7,7 +7,26 @@ import { threads_action_types } from '@core/threads/actions'
 import { subscribe_to_thread } from '@core/websocket/service'
 
 export function* load_sheet_thread({ payload }) {
+  const thread_id = payload?.thread_id
+  if (thread_id) {
+    subscribe_to_thread(thread_id)
+  }
   yield call(get_sheet_thread, payload)
+
+  // queued/starting covers the window where the harness is spinning up and
+  // timeline entries can arrive between fetch snapshot and subscribe-ack.
+  // active/idle threads already have their initial sync, so skip the extra
+  // fetch there.
+  if (thread_id) {
+    const thread_data = yield select((state) =>
+      state.getIn(['threads', 'thread_cache', thread_id])
+    )
+    const status = thread_data?.get?.('session_status')
+    if (status === 'queued' || status === 'starting') {
+      yield delay(1500)
+      yield call(get_sheet_thread, payload)
+    }
+  }
 }
 
 /**
