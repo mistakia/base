@@ -1759,7 +1759,14 @@ router.get(
     try {
       const { before, author, search } = req.query
       const limit = Math.min(parseInt(req.query.limit, 10) || 50, 200)
-      const page = Math.max(1, parseInt(req.query.page, 10) || 1)
+      // Hard cap on page to prevent unbounded `git log --skip=N` walks via
+      // attacker-controlled query strings. 1000 pages * 200 per page covers
+      // 200k commits which is well above any realistic UI navigation.
+      const MAX_COMMITS_PAGE = 1000
+      const page = Math.min(
+        Math.max(1, parseInt(req.query.page, 10) || 1),
+        MAX_COMMITS_PAGE
+      )
 
       const repo_path = req.validated_repo_path
 
@@ -1853,9 +1860,12 @@ router.get(
         return res.status(404).json({ error: 'Commit not found' })
       }
 
-      // Get file changes with name-status
+      // Get file changes with name-status. Disable core.quotePath so non-ASCII
+      // filenames render unquoted here AND in the patch output below; the
+      // redact_diff_by_files matcher relies on consistent path encoding
+      // between the name-status list and the diff sections.
       const { stdout: files_output } = await execute_shell_command(
-        `git diff-tree --no-commit-id -r --name-status ${hash}`,
+        `git -c core.quotePath=false diff-tree --no-commit-id -r --name-status ${hash}`,
         { cwd: repo_path }
       )
 
@@ -1885,7 +1895,7 @@ router.get(
       let diff_output = ''
       try {
         const diff_result = await execute_shell_command(
-          `git diff-tree -p ${hash}`,
+          `git -c core.quotePath=false diff-tree -p ${hash}`,
           { cwd: repo_path, maxBuffer: 10 * 1024 * 1024 }
         )
         diff_output = diff_result.stdout
@@ -1963,9 +1973,13 @@ const resolve_file_history_target = async (req, res, next) => {
       return res.status(404).json({ error: 'File not found' })
     }
 
+    // Bound to the user base directory; require_repo_read_permission's
+    // validate_repo_path enforces the same constraint, so a wider bound
+    // would only add a defense-in-depth gap. get_user_base_dir is
+    // registry-aware so this works under NODE_ENV=test as well.
     const repo_path = find_git_root({
       file_path: absolute_file_path,
-      bounds_path: '/'
+      bounds_path: get_user_base_dir()
     })
     if (!repo_path) {
       return res

@@ -329,7 +329,11 @@ export async function get_file_history({
   before
 }) {
   const fetch_limit = Math.min(Math.max(1, limit), 200)
-  const effective_page = Math.max(1, page)
+  // Clamp page so total_to_fetch can never exceed FILE_HISTORY_MAX_COUNT +
+  // fetch_limit. Pages past the count cap can return no new results, so
+  // requesting them must not trigger an unbounded `git log -n N` walk.
+  const max_page = Math.max(1, Math.ceil(FILE_HISTORY_MAX_COUNT / fetch_limit))
+  const effective_page = Math.min(Math.max(1, page), max_page)
   const skip = before ? 0 : (effective_page - 1) * fetch_limit
 
   const safe_path = sanitize_shell_arg(relative_path)
