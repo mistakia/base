@@ -3,8 +3,7 @@ import path from 'path'
 import debug from 'debug'
 import { list_files_recursive } from './file-operations.mjs'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
-import { quote_path, quote_arg } from './utils.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:search-operations')
 
@@ -18,8 +17,8 @@ const log = debug('git:search-operations')
  */
 async function populate_file_diffs({ files, commit_hash, repo_path }) {
   for (const file of files) {
-    const { stdout: diff_output } = await execute_shell_command(
-      `git show ${commit_hash} -- ${quote_path(file.path)}`,
+    const { stdout: diff_output } = await execute_git_command(
+      ['show', commit_hash, '--', file.path],
       { cwd: repo_path }
     )
     file.diff = diff_output
@@ -44,7 +43,7 @@ export async function get_diff({
   format = 'unified'
 }) {
   try {
-    let format_option = ''
+    let format_option = '-p'
     switch (format) {
       case 'name-only':
         format_option = '--name-only'
@@ -63,14 +62,12 @@ export async function get_diff({
         break
     }
 
-    const path_filter = path ? `-- ${quote_path(path)}` : ''
     log(
-      `Getting diff between ${from_ref} and ${to_ref} in ${repo_path} with path filter ${path_filter}`
+      `Getting diff between ${from_ref} and ${to_ref} in ${repo_path}${path ? ` with path filter ${path}` : ''}`
     )
-    const { stdout } = await execute_shell_command(
-      `git diff ${format_option} ${from_ref} ${to_ref} ${path_filter}`,
-      { cwd: repo_path }
-    )
+    const args = ['diff', format_option, from_ref, to_ref]
+    if (path) args.push('--', path)
+    const { stdout } = await execute_git_command(args, { cwd: repo_path })
 
     return stdout
   } catch (error) {
@@ -99,17 +96,18 @@ export async function search_repository({
   case_sensitive = false
 }) {
   try {
-    const case_option = case_sensitive ? '' : '-i'
     // Use -- to separate revision from paths to avoid ambiguity when branch names
     // match directory names (e.g., thread/xxx branch with a thread/ directory)
-    const path_filter = path ? quote_path(path) : ''
+    const args = ['grep']
+    if (!case_sensitive) args.push('-i')
+    args.push('-n', '-I', '--no-color', '-e', query, git_ref, '--')
+    if (path) args.push(path)
 
-    const cmd = `git grep ${case_option} -n -I --no-color -e ${quote_arg(query)} ${quote_arg(git_ref)} -- ${path_filter}`
     log(
       `Searching for "${query}" in reference "${git_ref}" in ${repo_path} ${path ? `with path filter ${path}` : ''}`
     )
 
-    const { stdout } = await execute_shell_command(cmd, {
+    const { stdout } = await execute_git_command(args, {
       cwd: repo_path,
       maxBuffer: 50 * 1024 * 1024 // 50MB buffer for large results
     })
@@ -220,8 +218,12 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
     // Check if both references exist
     try {
       // Try to get commit hashes in reverse chronological order
-      const { stdout: commit_output } = await execute_shell_command(
-        `git log --pretty=format:"%H|%an|%ae|%ad|%s" ${from_ref}..${to_ref}`,
+      const { stdout: commit_output } = await execute_git_command(
+        [
+          'log',
+          '--pretty=format:%H|%an|%ae|%ad|%s',
+          `${from_ref}..${to_ref}`
+        ],
         { cwd: repo_path }
       )
 
@@ -245,8 +247,8 @@ export async function get_commits_with_diffs({ repo_path, from_ref, to_ref }) {
       // For each commit, get the file changes
       for (const commit of commits) {
         // Get file changes for this specific commit
-        const { stdout: file_output } = await execute_shell_command(
-          `git show --name-status ${commit.hash} --format=""`,
+        const { stdout: file_output } = await execute_git_command(
+          ['show', '--name-status', commit.hash, '--format='],
           { cwd: repo_path }
         )
 
@@ -330,8 +332,8 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
     }
 
     // Get commit details
-    const { stdout: commit_details } = await execute_shell_command(
-      `git show --format="%H|%an|%ae|%ad|%s" --no-patch ${commit_hash}`,
+    const { stdout: commit_details } = await execute_git_command(
+      ['show', '--format=%H|%an|%ae|%ad|%s', '--no-patch', commit_hash],
       { cwd: repo_path }
     )
 
@@ -354,8 +356,8 @@ export async function get_merge_commit_info({ repo_path, commit_hash }) {
     }
 
     // Get file changes for this merge commit
-    const { stdout: file_output } = await execute_shell_command(
-      `git show --name-status ${commit_hash} --format=""`,
+    const { stdout: file_output } = await execute_git_command(
+      ['show', '--name-status', commit_hash, '--format='],
       { cwd: repo_path }
     )
 
@@ -401,17 +403,15 @@ export async function get_working_tree_diff({
   staged = false
 }) {
   try {
-    const staged_flag = staged ? '--cached' : ''
-    const path_filter = file_path ? `-- ${quote_path(file_path)}` : ''
-
     log(
       `Getting ${staged ? 'staged' : 'unstaged'} diff for ${repo_path} ${file_path || '(all files)'}`
     )
 
-    const { stdout } = await execute_shell_command(
-      `git diff ${staged_flag} ${path_filter}`,
-      { cwd: repo_path }
-    )
+    const args = ['diff']
+    if (staged) args.push('--cached')
+    if (file_path) args.push('--', file_path)
+
+    const { stdout } = await execute_git_command(args, { cwd: repo_path })
 
     // Parse diff into structured hunks
     const hunks = parse_diff_hunks(stdout)

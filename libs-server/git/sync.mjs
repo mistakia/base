@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:sync')
 
@@ -26,8 +26,8 @@ export async function pull({
     let stash_message = null
 
     // Check for uncommitted changes
-    const { stdout: status_output } = await execute_shell_command(
-      'git status --porcelain',
+    const { stdout: status_output } = await execute_git_command(
+      ['status', '--porcelain'],
       { cwd: repo_path }
     )
     const has_changes = status_output.trim().length > 0
@@ -36,7 +36,7 @@ export async function pull({
     if (has_changes && stash_changes) {
       stash_message = `auto-stash before pull ${new Date().toISOString()}`
       log(`Stashing changes: ${stash_message}`)
-      await execute_shell_command(`git stash push -m "${stash_message}"`, {
+      await execute_git_command(['stash', 'push', '-m', stash_message], {
         cwd: repo_path
       })
       stashed = true
@@ -47,24 +47,23 @@ export async function pull({
     }
 
     // Fetch first to see what's coming
-    await execute_shell_command(`git fetch ${remote}`, { cwd: repo_path })
+    await execute_git_command(['fetch', remote], { cwd: repo_path })
 
     // Get current HEAD
-    const { stdout: head_before } = await execute_shell_command(
-      'git rev-parse HEAD',
+    const { stdout: head_before } = await execute_git_command(
+      ['rev-parse', 'HEAD'],
       { cwd: repo_path }
     )
 
     // Perform the pull (always rebase to maintain linear history)
-    const pull_command = branch
-      ? `git pull --rebase ${remote} ${branch}`
-      : `git pull --rebase ${remote}`
+    const pull_args = ['pull', '--rebase', remote]
+    if (branch) pull_args.push(branch)
 
     let pull_result
     let had_conflicts = false
 
     try {
-      const { stdout, stderr } = await execute_shell_command(pull_command, {
+      const { stdout, stderr } = await execute_git_command(pull_args, {
         cwd: repo_path
       })
       pull_result = { stdout, stderr }
@@ -80,7 +79,7 @@ export async function pull({
         // Restore stash if we stashed
         if (stashed) {
           try {
-            await execute_shell_command('git stash pop', { cwd: repo_path })
+            await execute_git_command(['stash', 'pop'], { cwd: repo_path })
           } catch (stash_error) {
             log(`Warning: Failed to restore stash: ${stash_error.message}`)
           }
@@ -90,8 +89,8 @@ export async function pull({
     }
 
     // Get new HEAD
-    const { stdout: head_after } = await execute_shell_command(
-      'git rev-parse HEAD',
+    const { stdout: head_after } = await execute_git_command(
+      ['rev-parse', 'HEAD'],
       { cwd: repo_path }
     )
 
@@ -99,8 +98,12 @@ export async function pull({
     let commits_pulled = 0
     if (head_before.trim() !== head_after.trim() && !had_conflicts) {
       try {
-        const { stdout: log_output } = await execute_shell_command(
-          `git rev-list --count ${head_before.trim()}..${head_after.trim()}`,
+        const { stdout: log_output } = await execute_git_command(
+          [
+            'rev-list',
+            '--count',
+            `${head_before.trim()}..${head_after.trim()}`
+          ],
           { cwd: repo_path }
         )
         commits_pulled = parseInt(log_output.trim(), 10) || 0
@@ -113,8 +116,8 @@ export async function pull({
     let stash_restore_result = null
     if (stashed) {
       try {
-        const { stdout, stderr } = await execute_shell_command(
-          'git stash pop',
+        const { stdout, stderr } = await execute_git_command(
+          ['stash', 'pop'],
           {
             cwd: repo_path
           }
@@ -160,13 +163,12 @@ export async function pull({
  */
 export async function fetch_remote({ repo_path, remote = 'origin', branch }) {
   try {
-    const fetch_command = branch
-      ? `git fetch ${remote} ${branch}`
-      : `git fetch ${remote}`
+    const fetch_args = ['fetch', remote]
+    if (branch) fetch_args.push(branch)
 
     log(`Fetching from ${remote}${branch ? `/${branch}` : ''} in ${repo_path}`)
 
-    const { stdout, stderr } = await execute_shell_command(fetch_command, {
+    const { stdout, stderr } = await execute_git_command(fetch_args, {
       cwd: repo_path
     })
 

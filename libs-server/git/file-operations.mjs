@@ -4,6 +4,7 @@ import os from 'os'
 import debug from 'debug'
 
 import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:file-operations')
 
@@ -22,7 +23,7 @@ export async function apply_patch({ repo_path, patch_content }) {
 
     try {
       log(`Applying patch ${patch_file} to ${repo_path}`)
-      await execute_shell_command(`git apply --index ${patch_file}`, {
+      await execute_git_command(['apply', '--index', patch_file], {
         cwd: repo_path
       })
       return true
@@ -48,13 +49,13 @@ export async function apply_patch({ repo_path, patch_content }) {
  */
 export async function delete_file({ repo_path, file_path, force = false }) {
   try {
-    const force_flag = force ? ' -f' : ''
     log(`Deleting file ${file_path} in ${repo_path}${force ? ' (forced)' : ''}`)
 
+    const args = ['rm']
+    if (force) args.push('-f')
+    args.push('--', file_path)
     // Use git rm to both delete the file and stage the deletion
-    await execute_shell_command(`git rm${force_flag} ${file_path}`, {
-      cwd: repo_path
-    })
+    await execute_git_command(args, { cwd: repo_path })
     return true
   } catch (error) {
     log(`Failed to delete file ${file_path}:`, error)
@@ -120,8 +121,8 @@ export async function generate_patch({
 export async function read_file_from_ref({ repo_path, ref, file_path }) {
   try {
     log(`Reading file ${file_path} from ${ref} in ${repo_path}`)
-    const { stdout } = await execute_shell_command(
-      `git show ${ref}:${file_path}`,
+    const { stdout } = await execute_git_command(
+      ['show', `${ref}:${file_path}`],
       {
         cwd: repo_path
       }
@@ -161,8 +162,8 @@ export async function list_files({
       log('Pattern contains wildcards, using JS filtering')
 
       // Get all files first
-      const { stdout } = await execute_shell_command(
-        `git ls-tree -r --name-only ${ref}`,
+      const { stdout } = await execute_git_command(
+        ['ls-tree', '-r', '--name-only', ref],
         { cwd: repo_path }
       )
 
@@ -185,8 +186,8 @@ export async function list_files({
       )
 
       // Get all files first
-      const { stdout } = await execute_shell_command(
-        `git ls-tree -r --name-only ${ref}`,
+      const { stdout } = await execute_git_command(
+        ['ls-tree', '-r', '--name-only', ref],
         { cwd: repo_path }
       )
 
@@ -202,13 +203,12 @@ export async function list_files({
       )
     } else {
       // Use git's native pattern matching for exact paths or simple patterns
-      const pattern = path_pattern ? `-- ${path_pattern}` : ''
-      log(`Using git native pattern: ${pattern}`)
+      log(`Using git native pattern: ${path_pattern || '(none)'}`)
 
-      const { stdout } = await execute_shell_command(
-        `git ls-tree -r --name-only ${ref} ${pattern}`,
-        { cwd: repo_path }
-      )
+      const args = ['ls-tree', '-r', '--name-only', ref]
+      if (path_pattern) args.push('--', path_pattern)
+
+      const { stdout } = await execute_git_command(args, { cwd: repo_path })
 
       return stdout.trim().split('\n').filter(Boolean)
     }
@@ -304,8 +304,8 @@ export async function list_files_recursive(base_path, path_pattern = '') {
 export async function get_file_git_sha({ repo_path, file_path, branch }) {
   try {
     log(`Getting git SHA for file ${file_path} in branch ${branch}`)
-    const { stdout } = await execute_shell_command(
-      `git rev-parse ${branch}:${file_path}`,
+    const { stdout } = await execute_git_command(
+      ['rev-parse', `${branch}:${file_path}`],
       { cwd: repo_path }
     )
     return stdout.trim()

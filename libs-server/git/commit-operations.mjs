@@ -1,13 +1,10 @@
 import debug from 'debug'
-import { promisify } from 'util'
-import { execFile } from 'child_process'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
-import { quote_files } from './utils.mjs'
-
-const exec_file = promisify(execFile)
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:commit-operations')
+
+const to_array = (files) => (Array.isArray(files) ? files : [files])
 
 /**
  * Stage files in the repository/worktree
@@ -17,10 +14,10 @@ const log = debug('git:commit-operations')
  * @returns {Promise<Boolean>} True if successful
  */
 export async function add_files({ worktree_path, files_to_add }) {
+  const files = to_array(files_to_add)
   try {
-    const files_string = quote_files(files_to_add)
-    log(`Staging files: ${files_string} in ${worktree_path}`)
-    await execute_shell_command(`git add -- ${files_string}`, {
+    log(`Staging files: ${files.join(' ')} in ${worktree_path}`)
+    await execute_git_command(['add', '--', ...files], {
       cwd: worktree_path
     })
     return true
@@ -53,7 +50,7 @@ export async function commit_changes({
     if (author) {
       args.push('--author', author)
     }
-    await exec_file('git', args, { cwd: worktree_path })
+    await execute_git_command(args, { cwd: worktree_path })
     return true
   } catch (error) {
     // Check if the error is because there's nothing to commit
@@ -76,10 +73,10 @@ export async function commit_changes({
  * @returns {Promise<Boolean>} True if successful
  */
 export async function unstage_files({ worktree_path, files_to_unstage }) {
+  const files = to_array(files_to_unstage)
   try {
-    const files_string = quote_files(files_to_unstage)
-    log(`Unstaging files: ${files_string} in ${worktree_path}`)
-    await execute_shell_command(`git reset HEAD -- ${files_string}`, {
+    log(`Unstaging files: ${files.join(' ')} in ${worktree_path}`)
+    await execute_git_command(['reset', 'HEAD', '--', ...files], {
       cwd: worktree_path
     })
     return true
@@ -99,10 +96,10 @@ export async function unstage_files({ worktree_path, files_to_unstage }) {
  * @returns {Promise<Boolean>} True if successful
  */
 export async function discard_changes({ worktree_path, files_to_discard }) {
+  const files = to_array(files_to_discard)
   try {
-    const files_string = quote_files(files_to_discard)
-    log(`Discarding changes to: ${files_string} in ${worktree_path}`)
-    await execute_shell_command(`git checkout -- ${files_string}`, {
+    log(`Discarding changes to: ${files.join(' ')} in ${worktree_path}`)
+    await execute_git_command(['checkout', '--', ...files], {
       cwd: worktree_path
     })
     return true

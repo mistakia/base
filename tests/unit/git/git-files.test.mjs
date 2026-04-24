@@ -272,7 +272,7 @@ describe('Git Files Operations', function () {
         expect.fail('File should not exist in main branch')
       } catch (error) {
         // Expected error
-        expect(error.message).to.include('failed')
+        expect(error.message.toLowerCase()).to.include('failed')
       }
     })
 

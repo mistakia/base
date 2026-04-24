@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:status')
 
@@ -112,18 +112,18 @@ export async function get_status({ repo_path }) {
     // Run git commands in parallel for better performance
     const [branch_result, status_result, tracking_result, remote_result] =
       await Promise.allSettled([
-        execute_shell_command('git rev-parse --abbrev-ref HEAD', {
+        execute_git_command(['rev-parse', '--abbrev-ref', 'HEAD'], {
           cwd: repo_path
         }),
-        execute_shell_command(
-          'git status --porcelain=v1 --ignore-submodules=dirty',
+        execute_git_command(
+          ['status', '--porcelain=v1', '--ignore-submodules=dirty'],
           { cwd: repo_path }
         ),
-        execute_shell_command(
-          'git rev-list --left-right --count HEAD...@{upstream}',
+        execute_git_command(
+          ['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'],
           { cwd: repo_path }
         ),
-        execute_shell_command('git remote get-url origin', { cwd: repo_path })
+        execute_git_command(['remote', 'get-url', 'origin'], { cwd: repo_path })
       ])
 
     // Extract branch name

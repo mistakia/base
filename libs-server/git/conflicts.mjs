@@ -2,7 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:conflicts')
 
@@ -14,8 +14,8 @@ const log = debug('git:conflicts')
  */
 export async function get_current_branch_name({ repo_path }) {
   try {
-    const { stdout } = await execute_shell_command(
-      'git branch --show-current',
+    const { stdout } = await execute_git_command(
+      ['branch', '--show-current'],
       {
         cwd: repo_path
       }
@@ -40,8 +40,8 @@ export async function get_merge_head_branch_name({ repo_path }) {
     const commit_hash = merge_head_commit.trim()
 
     // Use git name-rev to get the branch name
-    const { stdout } = await execute_shell_command(
-      `git name-rev --name-only ${commit_hash}`,
+    const { stdout } = await execute_git_command(
+      ['name-rev', '--name-only', commit_hash],
       { cwd: repo_path }
     )
 
@@ -75,8 +75,8 @@ export async function get_conflicts({ repo_path }) {
   try {
     log(`Getting conflicts for ${repo_path}`)
 
-    const { stdout } = await execute_shell_command(
-      'git diff --name-only --diff-filter=U',
+    const { stdout } = await execute_git_command(
+      ['diff', '--name-only', '--diff-filter=U'],
       { cwd: repo_path }
     )
 
@@ -112,8 +112,8 @@ export async function get_conflict_versions({ repo_path, file_path }) {
     // Get our version (HEAD/current branch)
     let ours = null
     try {
-      const { stdout } = await execute_shell_command(
-        `git show :2:"${file_path}"`,
+      const { stdout } = await execute_git_command(
+        ['show', `:2:${file_path}`],
         { cwd: repo_path }
       )
       ours = stdout
@@ -124,8 +124,8 @@ export async function get_conflict_versions({ repo_path, file_path }) {
     // Get their version (incoming/merge branch)
     let theirs = null
     try {
-      const { stdout } = await execute_shell_command(
-        `git show :3:"${file_path}"`,
+      const { stdout } = await execute_git_command(
+        ['show', `:3:${file_path}`],
         { cwd: repo_path }
       )
       theirs = stdout
@@ -136,8 +136,8 @@ export async function get_conflict_versions({ repo_path, file_path }) {
     // Get base version (common ancestor)
     let base = null
     try {
-      const { stdout } = await execute_shell_command(
-        `git show :1:"${file_path}"`,
+      const { stdout } = await execute_git_command(
+        ['show', `:1:${file_path}`],
         { cwd: repo_path }
       )
       base = stdout
@@ -197,12 +197,12 @@ export async function resolve_conflict({
 
     if (resolution === 'ours') {
       // Use our version
-      await execute_shell_command(`git checkout --ours "${file_path}"`, {
+      await execute_git_command(['checkout', '--ours', '--', file_path], {
         cwd: repo_path
       })
     } else if (resolution === 'theirs') {
       // Use their version
-      await execute_shell_command(`git checkout --theirs "${file_path}"`, {
+      await execute_git_command(['checkout', '--theirs', '--', file_path], {
         cwd: repo_path
       })
     } else if (resolution === 'merged') {
@@ -218,7 +218,7 @@ export async function resolve_conflict({
     }
 
     // Stage the resolved file
-    await execute_shell_command(`git add "${file_path}"`, { cwd: repo_path })
+    await execute_git_command(['add', '--', file_path], { cwd: repo_path })
 
     log(`Successfully resolved conflict for ${file_path}`)
     return true
@@ -239,7 +239,7 @@ export async function resolve_conflict({
 export async function abort_merge({ repo_path }) {
   try {
     log(`Aborting merge in ${repo_path}`)
-    await execute_shell_command('git merge --abort', { cwd: repo_path })
+    await execute_git_command(['merge', '--abort'], { cwd: repo_path })
     return true
   } catch (error) {
     log(`Failed to abort merge in ${repo_path}:`, error)

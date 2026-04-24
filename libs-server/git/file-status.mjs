@@ -1,8 +1,7 @@
 import path from 'path'
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
-import { quote_path } from './utils.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:file-status')
 
@@ -55,8 +54,8 @@ export async function get_file_status({ repo_path, file_path }) {
   log(`Getting status for file ${file_path} in ${repo_path}`)
 
   try {
-    const { stdout } = await execute_shell_command(
-      `git status --porcelain=v1 -- ${quote_path(file_path)}`,
+    const { stdout } = await execute_git_command(
+      ['status', '--porcelain=v1', '--', file_path],
       { cwd: repo_path }
     )
 
@@ -142,11 +141,10 @@ export async function get_file_diff_stats({
   )
 
   try {
-    const staged_flag = staged ? '--cached ' : ''
-    const { stdout } = await execute_shell_command(
-      `git diff ${staged_flag}--numstat -- ${quote_path(file_path)}`,
-      { cwd: repo_path }
-    )
+    const args = ['diff']
+    if (staged) args.push('--cached')
+    args.push('--numstat', '--', file_path)
+    const { stdout } = await execute_git_command(args, { cwd: repo_path })
 
     const output = stdout.trim()
     if (!output) {

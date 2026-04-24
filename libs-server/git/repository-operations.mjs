@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:repository-operations')
 
@@ -12,8 +12,8 @@ const log = debug('git:repository-operations')
 export async function get_repo_info(repo_path) {
   try {
     log(`Getting remote URL for ${repo_path}`)
-    const { stdout: remote_url } = await execute_shell_command(
-      'git config --get remote.origin.url',
+    const { stdout: remote_url } = await execute_git_command(
+      ['config', '--get', 'remote.origin.url'],
       {
         cwd: repo_path
       }
@@ -58,11 +58,10 @@ export async function get_repo_info(repo_path) {
  */
 export async function git_init({ directory, bare = false }) {
   try {
-    const bare_option = bare ? '--bare' : ''
     log(`Initializing git repository in ${directory}`)
-    await execute_shell_command(`git init ${bare_option}`, {
-      cwd: directory
-    })
+    const args = ['init']
+    if (bare) args.push('--bare')
+    await execute_git_command(args, { cwd: directory })
     return true
   } catch (error) {
     log(`Failed to initialize git repository in ${directory}:`, error)
@@ -82,7 +81,7 @@ export async function git_init({ directory, bare = false }) {
 export async function list_submodules({ repo_path = '.' }) {
   try {
     log(`Listing submodules in ${repo_path}`)
-    const { stdout } = await execute_shell_command('git submodule', {
+    const { stdout } = await execute_git_command(['submodule'], {
       cwd: repo_path
     })
 

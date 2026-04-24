@@ -2,7 +2,7 @@ import debug from 'debug'
 
 import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:generate-commit-message')
 
@@ -11,8 +11,8 @@ const MAX_DIFF_LENGTH = 4000
 export async function generate_commit_message({ repo_path }) {
   log(`Generating commit message for ${repo_path}`)
 
-  const { stdout: staged_diff } = await execute_shell_command(
-    'git diff --cached',
+  const { stdout: staged_diff } = await execute_git_command(
+    ['diff', '--cached'],
     { cwd: repo_path }
   )
 
@@ -21,10 +21,10 @@ export async function generate_commit_message({ repo_path }) {
   }
 
   const [staged_files_result, recent_commits_result] = await Promise.all([
-    execute_shell_command('git diff --cached --name-status', {
+    execute_git_command(['diff', '--cached', '--name-status'], {
       cwd: repo_path
     }),
-    execute_shell_command('git log --oneline -10', { cwd: repo_path })
+    execute_git_command(['log', '--oneline', '-10'], { cwd: repo_path })
   ])
 
   const staged_files = staged_files_result.stdout.trim()
