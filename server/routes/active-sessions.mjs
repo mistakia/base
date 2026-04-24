@@ -433,8 +433,9 @@ router.post('/', require_hook_auth, async (req, res) => {
       session.job_id || 'none',
       session.thread_id || 'none'
     )
+    const register_verb = is_new ? 'Registered' : 'Re-registered'
     log(
-      `Registered active session: ${session_id} (job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`
+      `${register_verb} active session: ${session_id} (trigger=${start_trigger || 'none'}, job_id=${session.job_id || 'none'}, thread_id=${session.thread_id || 'none'})`
     )
     res.status(201).json(session)
   } catch (error) {
