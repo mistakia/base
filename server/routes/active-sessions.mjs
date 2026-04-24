@@ -348,6 +348,11 @@ router.post('/', require_hook_auth, async (req, res) => {
     // so the tombstone guard is cleared rather than blocking registration.
     const resume = hook_source === 'resume'
 
+    // Snapshot pre-existing state so a second SessionStart POST for the same
+    // session (e.g. Claude Code firing the hook twice on startup) emits
+    // ACTIVE_SESSION_UPDATED instead of a duplicate ACTIVE_SESSION_STARTED.
+    const existing_before = await get_active_session(session_id)
+
     // Register the session
     const session = await register_active_session({
       session_id,
@@ -402,8 +407,15 @@ router.post('/', require_hook_auth, async (req, res) => {
       })
     }
 
-    // Emit WebSocket event
-    await emit_active_session_started(session)
+    // Emit WebSocket event. Re-registration of a still-live session (no
+    // tombstone, entry already in store) is emitted as UPDATED to avoid
+    // duplicate STARTED events when the SessionStart hook fires more than
+    // once for the same Claude session.
+    if (existing_before) {
+      await emit_active_session_updated(session)
+    } else {
+      await emit_active_session_started(session)
+    }
 
     log_lifecycle(
       'POST session_registered session_id=%s job_id=%s thread_id=%s',
@@ -573,6 +585,10 @@ router.delete('/:session_id', require_hook_auth, async (req, res) => {
       log(
         `Session ${session_id} was not in store (already removed or never registered)`
       )
+      // Skip the ENDED emit when the session was already removed -- a second
+      // DELETE (Claude Code firing SessionEnd twice, or DELETE after tombstone)
+      // must not broadcast a duplicate ACTIVE_SESSION_ENDED to clients.
+      return res.status(200).json({ success: true, session_id })
     }
 
     // Emit WebSocket event with session data for permission checks

@@ -1,4 +1,5 @@
 import express from 'express'
+import path from 'path'
 import debug from 'debug'
 import { safe_error_message } from '#server/utils/error-response.mjs'
 
@@ -33,7 +34,11 @@ import { emit_thread_updated } from '#server/services/threads/event-emitter.mjs'
 import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
-import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
+import {
+  get_user_base_directory,
+  is_valid_base_uri,
+  create_base_uri_from_path
+} from '#libs-server/base-uri/index.mjs'
 import {
   is_per_user_container,
   build_execution_attribution
@@ -961,8 +966,13 @@ router.post('/:thread_id/resume', async (req, res) => {
       })
     }
 
-    // Use provided working_directory or fall back to thread's stored directory
-    const working_directory =
+    // Use provided working_directory or fall back to thread's stored
+    // directory. provider_metadata stores the resolved absolute path (as
+    // reported by the Claude CLI transcript), but the validator only accepts
+    // base URIs -- convert absolute paths under user_base_directory back to
+    // a 'user:' URI so resume doesn't require callers to pass working_directory
+    // explicitly.
+    let working_directory =
       req.body.working_directory ||
       thread.external_session?.provider_metadata?.working_directory
     if (!working_directory) {
@@ -971,6 +981,21 @@ router.post('/:thread_id/resume', async (req, res) => {
         message:
           'working_directory is required and could not be inferred from thread metadata'
       })
+    }
+    if (
+      working_directory &&
+      !is_valid_base_uri(working_directory) &&
+      path.isAbsolute(working_directory)
+    ) {
+      try {
+        working_directory = create_base_uri_from_path(working_directory, {
+          user_base_directory: get_user_base_directory()
+        })
+      } catch (uri_error) {
+        log(
+          `Resume could not rewrite stored absolute working_directory to base URI: ${uri_error.message}`
+        )
+      }
     }
 
     // Fast-fail with a 400 for invalid base URIs. See create-session for why

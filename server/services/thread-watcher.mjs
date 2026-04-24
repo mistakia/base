@@ -433,9 +433,25 @@ const handle_metadata_added = async (file_path) => {
 
   const { thread_id } = metadata
 
+  // @parcel/watcher can emit 'create' events for an already-tracked
+  // metadata.json when the writer uses an atomic rename pattern or when the
+  // watcher re-initializes. Detect that case via the metadata cache and route
+  // to the update path so clients don't see duplicate THREAD_CREATED events.
+  const already_tracked = metadata_cache.has(thread_id)
+
   // Cache metadata for use by timeline change handler
   cache_metadata(thread_id, metadata)
   index_thread_metadata(thread_id, metadata)
+
+  if (already_tracked) {
+    log_lifecycle('WATCHER metadata_added_as_update thread_id=%s', thread_id)
+    log(`Emitting THREAD_UPDATED for existing thread: ${thread_id}`)
+    emit_thread_updated(metadata)
+    if (metadata.thread_id) {
+      schedule_thread_index_sync(metadata.thread_id)
+    }
+    return
+  }
 
   log_lifecycle('WATCHER metadata_added thread_id=%s', thread_id)
   log(`Emitting THREAD_CREATED for thread: ${thread_id}`)
