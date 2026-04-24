@@ -127,18 +127,37 @@ function upsert_thread_in_basic_list(state, thread_id, updated_data) {
 }
 
 /**
- * Appends a timeline entry to a cached thread
+ * Builds the shape used for an optimistic user message, before the real
+ * timeline entry arrives via THREAD_TIMELINE_ENTRY_ADDED.
+ */
+function build_optimistic_user_entry({ thread_id, prompt, timestamp }) {
+  return {
+    id: `optimistic-${thread_id}-${Date.now()}`,
+    type: 'message',
+    role: 'user',
+    content: prompt,
+    timestamp,
+    created_at: timestamp,
+    _optimistic: true
+  }
+}
+
+function append_to_timeline_array(timeline, entry) {
+  if (!timeline || !Array.isArray(timeline)) return [entry]
+  if (timeline.some((e) => e.id === entry.id)) return timeline
+  return [...timeline, entry]
+}
+
+/**
+ * Appends a timeline entry to a cached thread. No-ops if the thread is not
+ * already in cache -- use append_or_seed_timeline_entry when the caller needs
+ * the entry to land before the thread has been fetched.
  */
 function append_timeline_entry(state, thread_id, entry) {
   return update_thread_cache_entry(state, thread_id, (thread_data) =>
-    thread_data.update('timeline', (timeline) => {
-      if (timeline && Array.isArray(timeline)) {
-        const exists = timeline.some((e) => e.id === entry.id)
-        if (exists) return timeline
-        return [...timeline, entry]
-      }
-      return [entry]
-    })
+    thread_data.update('timeline', (timeline) =>
+      append_to_timeline_array(timeline, entry)
+    )
   )
 }
 
@@ -155,6 +174,44 @@ function remove_optimistic_entries(state, thread_id) {
 }
 
 /**
+ * Like append_timeline_entry, but seeds a minimal cache entry if none exists.
+ * Needed for newly-created threads whose cache has not been populated yet by
+ * GET_(SHEET_)THREAD_FULFILLED.
+ */
+function append_or_seed_timeline_entry(state, thread_id, entry, seed = {}) {
+  if (state.hasIn(['thread_cache', thread_id])) {
+    return append_timeline_entry(state, thread_id, entry)
+  }
+  return state.setIn(
+    ['thread_cache', thread_id],
+    Map({ thread_id, ...seed, timeline: [entry] })
+  )
+}
+
+function preserve_optimistic_entries(existing_timeline, fresh_timeline) {
+  if (!existing_timeline || !Array.isArray(existing_timeline)) {
+    return fresh_timeline
+  }
+  const optimistic = existing_timeline.filter((e) => e._optimistic)
+  if (optimistic.length === 0) return fresh_timeline
+  const base = Array.isArray(fresh_timeline) ? fresh_timeline : []
+  // Drop optimistic entries whose real counterpart is already present. User
+  // messages carry distinct ids but arrive with role=user+type=message, so
+  // match by (role, type, content) within a small time window.
+  const kept = optimistic.filter((opt) => {
+    return !base.some(
+      (e) =>
+        !e._optimistic &&
+        e.type === opt.type &&
+        e.role === opt.role &&
+        (e.content === opt.content ||
+          e.content?.parts?.[0]?.text === opt.content)
+    )
+  })
+  return kept.length ? [...base, ...kept] : base
+}
+
+/**
  * After loading thread data into cache, re-inject optimistic entry if a pending
  * resume exists and the loaded timeline does not already contain a user message
  * timestamped after the pending resume's submitted_at.
@@ -167,7 +224,6 @@ function reinject_optimistic_entry_if_needed(state, thread_id) {
   const timeline = state.getIn(['thread_cache', thread_id, 'timeline'])
   if (!timeline || !Array.isArray(timeline)) return state
 
-  // Check if timeline already has a user message after submitted_at
   // Timeline entries from the server use `timestamp`, not `created_at`
   const has_recent_user_message = timeline.some(
     (e) =>
@@ -178,20 +234,17 @@ function reinject_optimistic_entry_if_needed(state, thread_id) {
   )
   if (has_recent_user_message) return state
 
-  // Check if an optimistic entry already exists
-  const has_optimistic = timeline.some((e) => e._optimistic)
-  if (has_optimistic) return state
+  if (timeline.some((e) => e._optimistic)) return state
 
-  const optimistic_entry = {
-    id: `optimistic-${thread_id}-${Date.now()}`,
-    type: 'message',
-    role: 'user',
-    content: pending_resume.get('prompt'),
-    timestamp: submitted_at,
-    created_at: submitted_at,
-    _optimistic: true
-  }
-  return append_timeline_entry(state, thread_id, optimistic_entry)
+  return append_timeline_entry(
+    state,
+    thread_id,
+    build_optimistic_user_entry({
+      thread_id,
+      prompt: pending_resume.get('prompt'),
+      timestamp: submitted_at
+    })
+  )
 }
 
 // ============================================================================
@@ -404,8 +457,26 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const thread_id = thread_data?.thread_id
       if (!thread_id) return state
 
+      // Preserve optimistic entries from the existing cache so a fetch during
+      // queued/starting (or immediately after create/resume) does not erase
+      // the user-visible prompt before the real entry arrives via
+      // THREAD_TIMELINE_ENTRY_ADDED.
+      const existing_timeline = state.getIn([
+        'thread_cache',
+        thread_id,
+        'timeline'
+      ])
+      const merged_timeline = preserve_optimistic_entries(
+        existing_timeline,
+        thread_data.timeline
+      )
+      const merged_data = Map({
+        ...thread_data,
+        timeline: merged_timeline
+      })
+
       let new_state = state
-        .setIn(['thread_cache', thread_id], Map(thread_data))
+        .setIn(['thread_cache', thread_id], merged_data)
         .setIn(
           ['thread_loading', thread_id],
           Map({ is_loading: false, error: null })
@@ -649,22 +720,15 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       new_state = new_state.set('session_created_at', Date.now())
 
       // Insert optimistic user message so the timeline is not empty while
-      // the session is queued / starting up.
+      // the session is queued / starting up. The cache entry has not been
+      // fetched yet for a brand-new thread, so seed it rather than no-op.
       if (prompt) {
         const now = new Date().toISOString()
-        const optimistic_entry = {
-          id: `optimistic-${thread_id}-${Date.now()}`,
-          type: 'message',
-          role: 'user',
-          content: prompt,
-          timestamp: now,
-          created_at: now,
-          _optimistic: true
-        }
-        new_state = append_timeline_entry(
+        new_state = append_or_seed_timeline_entry(
           new_state,
           thread_id,
-          optimistic_entry
+          build_optimistic_user_entry({ thread_id, prompt, timestamp: now }),
+          { session_status: 'queued', job_id, thread_state: 'active' }
         )
       }
 
@@ -798,19 +862,14 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       // reinject_optimistic_entry_if_needed restores it after a later fetch
       // populates the cache.
       if (opts.prompt) {
-        const optimistic_entry = {
-          id: `optimistic-${thread_id}-${Date.now()}`,
-          type: 'message',
-          role: 'user',
-          content: opts.prompt,
-          timestamp: submitted_at,
-          created_at: submitted_at,
-          _optimistic: true
-        }
         new_state = append_timeline_entry(
           new_state,
           thread_id,
-          optimistic_entry
+          build_optimistic_user_entry({
+            thread_id,
+            prompt: opts.prompt,
+            timestamp: submitted_at
+          })
         )
       }
       return new_state

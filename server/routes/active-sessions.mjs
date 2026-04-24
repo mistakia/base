@@ -245,20 +245,23 @@ router.get('/', async (req, res) => {
     // owned by a different user. Unauthenticated (public) callers retain the
     // prior behavior and rely on permission-based redaction below.
     const active_thread_sessions = enriched_sessions.filter((session) => {
-      // Drop terminal thread_states (archived/completed) and any session
-      // whose underlying metadata.session_status is no longer in the active
-      // set. Without this gate, stale Redis-resident sessions whose hook
-      // never fired SessionEnd (e.g. CLI killed) leak onto the panel on
-      // page reload.
+      // Drop terminal thread_states and any session whose thread metadata
+      // does not report an active session_status. Stale Redis-resident
+      // sessions whose hook never fired SessionEnd (e.g. CLI killed) leave
+      // behind a metadata.session_status that is null or a terminal value;
+      // in both cases we must not show them as active.
       if (session.thread_state === 'archived') return false
       if (session.thread_state === 'completed') return false
-      const meta_status = session._thread_metadata?.session_status
-      if (meta_status && !active_status_set.has(meta_status)) return false
       if (!session.thread_id && !session.job_id) return false
 
-      if (user_public_key && session.thread_id) {
-        const owner = session._thread_metadata?.user_public_key || null
-        if (owner && owner !== user_public_key) return false
+      if (session.thread_id) {
+        const meta_status = session._thread_metadata?.session_status
+        if (!active_status_set.has(meta_status)) return false
+
+        if (user_public_key) {
+          const owner = session._thread_metadata?.user_public_key || null
+          if (owner && owner !== user_public_key) return false
+        }
       }
 
       return true

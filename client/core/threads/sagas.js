@@ -32,6 +32,13 @@ import { show_error_notification } from '@core/notification/sagas'
 import { dialog_actions } from '@core/dialog/actions'
 import { thread_sheet_actions } from '@core/thread-sheet/actions'
 import { get_thread_sheet_active_sheet } from '@core/thread-sheet/selectors'
+import { subscribe_to_thread } from '@core/websocket/service'
+
+// Window during which THREAD_TIMELINE_ENTRY_ADDED events arriving before the
+// server applies the SUBSCRIBE_THREAD message would be delivered as
+// truncated and dropped by the reducer. After this delay, refetch the thread
+// to backstop any missed entries.
+const RESUME_BACKSTOP_REFETCH_MS = 2000
 
 //= ====================================
 //  UTILITY SAGAS
@@ -261,7 +268,23 @@ export function* create_thread_session_saga({ payload }) {
 
 export function* resume_thread_session_saga({ payload }) {
   const { thread_id, prompt, working_directory } = payload
+
+  // Ensure we are subscribed before the harness emits timeline entries.
+  // Callers may submit resume from any page; without this, entries arrive
+  // truncated and the reducer drops them, forcing the user to refresh.
+  if (thread_id) subscribe_to_thread(thread_id)
+
   yield call(resume_thread_session, { thread_id, prompt, working_directory })
+
+  if (!thread_id) return
+
+  // Backstop: the SUBSCRIBE_THREAD message races with the first timeline
+  // entries emitted by the resumed session. If the server sees the append
+  // before the subscription is applied, the entry arrives truncated and is
+  // filtered out. A short delayed refetch pulls in anything we missed and is
+  // cheap enough to run unconditionally.
+  yield delay(RESUME_BACKSTOP_REFETCH_MS)
+  yield call(get_thread, { thread_id })
 }
 
 //= ====================================
