@@ -62,6 +62,13 @@ const metadata_cache = new Map()
 // instead of O(all threads ever observed).
 const active_session_thread_ids = new Set()
 
+// Tracks thread_ids for which we've already emitted THREAD_CREATED so a
+// spurious 'create' event from @parcel/watcher (atomic rename, re-init)
+// doesn't broadcast a duplicate. This is separate from metadata_cache because
+// metadata_cache can be populated by timeline handlers (via get_or_read_metadata)
+// before the metadata.json 'create' event lands.
+const emitted_created_thread_ids = new Set()
+
 const ACTIVE_STATUS_SET = new Set(ACTIVE_SESSION_STATUSES)
 const update_active_session_index = (thread_id, metadata) => {
   if (ACTIVE_STATUS_SET.has(metadata?.session_status)) {
@@ -435,15 +442,16 @@ const handle_metadata_added = async (file_path) => {
 
   // @parcel/watcher can emit 'create' events for an already-tracked
   // metadata.json when the writer uses an atomic rename pattern or when the
-  // watcher re-initializes. Detect that case via the metadata cache and route
-  // to the update path so clients don't see duplicate THREAD_CREATED events.
-  const already_tracked = metadata_cache.has(thread_id)
+  // watcher re-initializes. emitted_created_thread_ids tracks what we've
+  // already broadcast as THREAD_CREATED so a second 'create' is downgraded
+  // to THREAD_UPDATED instead of fanning out a duplicate to all clients.
+  const already_emitted_created = emitted_created_thread_ids.has(thread_id)
 
   // Cache metadata for use by timeline change handler
   cache_metadata(thread_id, metadata)
   index_thread_metadata(thread_id, metadata)
 
-  if (already_tracked) {
+  if (already_emitted_created) {
     log_lifecycle('WATCHER metadata_added_as_update thread_id=%s', thread_id)
     log(`Emitting THREAD_UPDATED for existing thread: ${thread_id}`)
     emit_thread_updated(metadata)
@@ -453,6 +461,7 @@ const handle_metadata_added = async (file_path) => {
     return
   }
 
+  emitted_created_thread_ids.add(thread_id)
   log_lifecycle('WATCHER metadata_added thread_id=%s', thread_id)
   log(`Emitting THREAD_CREATED for thread: ${thread_id}`)
   emit_thread_created(metadata)
@@ -827,6 +836,7 @@ export const stop_thread_watcher = async () => {
     latest_timeline_entry_cache.clear()
     metadata_cache.clear()
     active_session_thread_ids.clear()
+    emitted_created_thread_ids.clear()
     index_sync_hooks = null
 
     // Clear reconciliation timer
