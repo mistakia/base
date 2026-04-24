@@ -78,7 +78,17 @@ const update_active_session_index = (thread_id, metadata) => {
   }
 }
 
+// Terminal thread states trigger cache eviction so metadata_cache and
+// emitted_created_thread_ids do not grow without bound over time.
+const TERMINAL_THREAD_STATES = new Set(['archived', 'completed'])
+
 const cache_metadata = (thread_id, metadata) => {
+  if (TERMINAL_THREAD_STATES.has(metadata?.thread_state)) {
+    metadata_cache.delete(thread_id)
+    emitted_created_thread_ids.delete(thread_id)
+    active_session_thread_ids.delete(thread_id)
+    return
+  }
   metadata_cache.set(thread_id, metadata)
   update_active_session_index(thread_id, metadata)
 }
@@ -130,6 +140,17 @@ export const get_metadata_cache = () => metadata_cache
 
 // Read-only view of thread_ids currently in an active session lifecycle.
 export const get_active_session_thread_ids = () => active_session_thread_ids
+
+/**
+ * Mark a thread_id as already having broadcast THREAD_CREATED. Used by
+ * write-site emitters (e.g. create_thread) so the subsequent watcher event
+ * for the same metadata.json is treated as an update, not a duplicate create.
+ *
+ * @param {string} thread_id
+ */
+export const mark_thread_created_emitted = (thread_id) => {
+  if (thread_id) emitted_created_thread_ids.add(thread_id)
+}
 
 // ============================================================================
 // Index Sync Hook Debouncing
@@ -498,6 +519,14 @@ const handle_metadata_changed = async (file_path) => {
   const metadata = await read_thread_metadata(file_path)
   if (!metadata) {
     return
+  }
+
+  // On Linux, @parcel/watcher emits 'update' (not 'create') when a new
+  // metadata.json lands via atomic rename. If this is our first sight of
+  // thread_id, promote to THREAD_CREATED so clients receive the create fanout
+  // and run create-time initialization (timeline tracking, title queueing).
+  if (metadata.thread_id && !emitted_created_thread_ids.has(metadata.thread_id)) {
+    return handle_metadata_added(file_path)
   }
 
   // Update metadata cache and reverse index

@@ -20,6 +20,8 @@ import { write_timeline_jsonl } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
+import { emit_thread_created } from '#server/services/threads/event-emitter.mjs'
+import { mark_thread_created_emitted } from '#server/services/thread-watcher.mjs'
 
 const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:create')
@@ -403,6 +405,19 @@ export default async function create_thread({
       log(`Failed to create git branches or worktrees: ${error.message}`)
       // Continue thread creation even if branch creation fails
     }
+  }
+
+  // Broadcast THREAD_CREATED directly from the write site. The thread-watcher
+  // remains as a safety net for out-of-process creates, but on Linux the
+  // atomic-rename write pattern reports as 'update', so relying on the watcher
+  // alone would never fire handle_metadata_added. Marking the thread_id as
+  // already-emitted prevents the watcher's subsequent update event from
+  // broadcasting a duplicate THREAD_CREATED.
+  try {
+    mark_thread_created_emitted(metadata.thread_id)
+    emit_thread_created(metadata)
+  } catch (err) {
+    log(`Failed to emit THREAD_CREATED for ${metadata.thread_id}: ${err.message}`)
   }
 
   // Return thread information
