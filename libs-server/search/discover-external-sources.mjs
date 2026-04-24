@@ -70,7 +70,3 @@ export async function discover_external_search_sources() {
   cached = found
   return cached
 }
-
-export function clear_external_sources_cache() {
-  cached = null
-}

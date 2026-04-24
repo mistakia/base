@@ -205,14 +205,7 @@ export async function search({
 }) {
   return embedded_index_manager._with_reader(async () => {
     const config = await load_search_config()
-    const { adapters, timed_sources, external_names } = await (async () => {
-      const registry = await resolve_sources_registry()
-      return {
-        adapters: registry.adapters,
-        timed_sources: registry.timed,
-        external_names: registry.external_names
-      }
-    })()
+    const { adapters, timed: timed_sources, external_names } = await resolve_sources_registry()
     const sources_config = config.sources || {}
     const configured_default = sources_config.enabled_by_default || [
       'entity',
