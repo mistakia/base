@@ -496,6 +496,23 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const thread_id =
         payload.opts?.thread_id || payload.opts?.params?.thread_id
       if (!thread_id) return state
+
+      // Brand-new threads can 404 briefly after CREATE_THREAD_SESSION_FULFILLED
+      // seeds the cache, before the worker writes metadata.json to disk. In
+      // that window the cache already holds the optimistic user message and
+      // subsequent WebSocket entries will land via THREAD_TIMELINE_ENTRY_ADDED,
+      // so surfacing an error would unnecessarily blank the timeline. If the
+      // cache was seeded with an optimistic entry, swallow the error.
+      const timeline = state.getIn(['thread_cache', thread_id, 'timeline'])
+      const has_optimistic =
+        Array.isArray(timeline) && timeline.some((e) => e._optimistic)
+      if (has_optimistic) {
+        return state.setIn(
+          ['thread_loading', thread_id],
+          Map({ is_loading: false, error: null })
+        )
+      }
+
       return state.setIn(
         ['thread_loading', thread_id],
         Map({ is_loading: false, error: payload.error })
