@@ -1,7 +1,10 @@
 import path from 'path'
 import debug from 'debug'
 
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import {
+  execute_git_command,
+  is_unknown_revision_error
+} from '#libs-server/git/execute-git-command.mjs'
 
 const log = debug('git:repo-statistics')
 
@@ -12,9 +15,10 @@ const log = debug('git:repo-statistics')
  * @returns {Promise<number>} Total number of commits
  */
 export async function get_total_commits({ repo_path }) {
-  const { stdout } = await execute_shell_command('git rev-list --count HEAD', {
-    cwd: repo_path
-  })
+  const { stdout } = await execute_git_command(
+    ['rev-list', '--count', 'HEAD'],
+    { cwd: repo_path }
+  )
   return parseInt(stdout.trim(), 10) || 0
 }
 
@@ -29,8 +33,8 @@ export async function get_last_commit({ repo_path }) {
   // %x1e = record separator (ASCII 30)
   // %x1f = unit separator (ASCII 31)
   const format = '%H%x1f%h%x1f%s%x1f%b%x1f%aI%x1f%an%x1e'
-  const { stdout } = await execute_shell_command(
-    `git log -1 --format='${format}'`,
+  const { stdout } = await execute_git_command(
+    ['log', '-1', `--format=${format}`],
     { cwd: repo_path }
   )
 
@@ -69,8 +73,8 @@ export async function get_last_commit({ repo_path }) {
  */
 export async function get_first_commit({ repo_path }) {
   // Get the root commit hash first (commits with no parents)
-  const { stdout: root_hash_output } = await execute_shell_command(
-    'git rev-list --max-parents=0 HEAD',
+  const { stdout: root_hash_output } = await execute_git_command(
+    ['rev-list', '--max-parents=0', 'HEAD'],
     { cwd: repo_path }
   )
 
@@ -81,8 +85,8 @@ export async function get_first_commit({ repo_path }) {
 
   // Then get the commit info for that hash
   const format = '%H%x1f%h%x1f%aI'
-  const { stdout } = await execute_shell_command(
-    `git log -1 --format='${format}' ${root_hash}`,
+  const { stdout } = await execute_git_command(
+    ['log', '-1', `--format=${format}`, root_hash],
     { cwd: repo_path }
   )
 
@@ -107,7 +111,7 @@ export async function get_first_commit({ repo_path }) {
  * @returns {Promise<number>} Number of branches (local + remote)
  */
 export async function get_branch_count({ repo_path }) {
-  const { stdout } = await execute_shell_command('git branch -a --list', {
+  const { stdout } = await execute_git_command(['branch', '-a', '--list'], {
     cwd: repo_path
   })
 
@@ -202,13 +206,6 @@ function parse_commit_record(record) {
 }
 
 /**
- * Sanitize a user-provided string for use in a shell single-quoted argument
- */
-function sanitize_shell_arg(value) {
-  return value.replace(/[\r\n]/g, '').replace(/'/g, "'\\''")
-}
-
-/**
  * Get paginated commit log for a repository
  * @param {Object} params Parameters
  * @param {string} params.repo_path Path to the repository
@@ -229,35 +226,30 @@ export async function get_commit_log({
 }) {
   const fetch_limit = limit + 1
 
-  const args = [`git log --format='${COMMIT_LOG_FORMAT}' -n ${fetch_limit}`]
-
-  if (before) {
-    args.push(`${before}~1`)
-  }
+  const args = ['log', `--format=${COMMIT_LOG_FORMAT}`, '-n', String(fetch_limit)]
 
   if (skip > 0) {
     args.push(`--skip=${skip}`)
   }
 
   if (author) {
-    args.push(`--author='${sanitize_shell_arg(author)}'`)
+    args.push(`--author=${author}`)
   }
 
   if (search) {
-    args.push(`--grep='${sanitize_shell_arg(search)}'`)
+    args.push(`--grep=${search}`)
+  }
+
+  if (before) {
+    args.push(`${before}~1`)
   }
 
   let stdout
   try {
-    const result = await execute_shell_command(args.join(' '), {
-      cwd: repo_path
-    })
+    const result = await execute_git_command(args, { cwd: repo_path })
     stdout = result.stdout
   } catch (error) {
-    if (
-      error.message?.includes('unknown revision') ||
-      error.stderr?.includes('unknown revision')
-    ) {
+    if (is_unknown_revision_error(error)) {
       return { commits: [], has_more: false }
     }
     throw error
@@ -284,10 +276,19 @@ export async function get_commit_log({
  * @returns {Promise<Object|null>} Commit metadata or null if not found
  */
 export async function get_single_commit({ repo_path, hash }) {
-  const { stdout } = await execute_shell_command(
-    `git log -1 --format='${COMMIT_LOG_FORMAT}' ${hash}`,
-    { cwd: repo_path }
-  )
+  let stdout
+  try {
+    const result = await execute_git_command(
+      ['log', '-1', `--format=${COMMIT_LOG_FORMAT}`, hash],
+      { cwd: repo_path }
+    )
+    stdout = result.stdout
+  } catch (error) {
+    if (is_unknown_revision_error(error)) {
+      return null
+    }
+    throw error
+  }
 
   const trimmed = stdout.trim()
   if (!trimmed) {
@@ -336,8 +337,6 @@ export async function get_file_history({
   const effective_page = Math.min(Math.max(1, page), max_page)
   const skip = before ? 0 : (effective_page - 1) * fetch_limit
 
-  const safe_path = sanitize_shell_arg(relative_path)
-
   // Record sentinel sits on its own line so it can never collide with patch
   // content. %x1f separates metadata fields within the header line.
   const commit_sentinel = '\x1eFILE_HISTORY_COMMIT\x1f'
@@ -361,25 +360,27 @@ export async function get_file_history({
   )
 
   const log_args = [
-    `git log --follow -p --pretty=format:'${header_format}' -n ${total_to_fetch}`
+    'log',
+    '--follow',
+    '-p',
+    `--pretty=format:${header_format}`,
+    '-n',
+    String(total_to_fetch)
   ]
   if (before) {
     log_args.push(`${before}~1`)
   }
-  log_args.push(`-- '${safe_path}'`)
+  log_args.push('--', relative_path)
 
   let stdout = ''
   try {
-    const result = await execute_shell_command(log_args.join(' '), {
+    const result = await execute_git_command(log_args, {
       cwd: repo_path,
       maxBuffer: max_buffer
     })
     stdout = result.stdout || ''
   } catch (error) {
-    if (
-      error.message?.includes('unknown revision') ||
-      error.stderr?.includes('unknown revision')
-    ) {
+    if (is_unknown_revision_error(error)) {
       stdout = ''
     } else {
       throw error
@@ -395,8 +396,17 @@ export async function get_file_history({
   let count_capped = false
   if (!before) {
     try {
-      const { stdout: count_stdout } = await execute_shell_command(
-        `git log --follow --format=%H HEAD -n ${FILE_HISTORY_MAX_COUNT + 1} -- '${safe_path}'`,
+      const { stdout: count_stdout } = await execute_git_command(
+        [
+          'log',
+          '--follow',
+          '--format=%H',
+          'HEAD',
+          '-n',
+          String(FILE_HISTORY_MAX_COUNT + 1),
+          '--',
+          relative_path
+        ],
         { cwd: repo_path, maxBuffer: 2 * 1024 * 1024 }
       )
       const hashes = count_stdout.split('\n').filter((line) => line.trim())
@@ -417,8 +427,8 @@ export async function get_file_history({
 
   let branch = null
   try {
-    const { stdout: branch_stdout } = await execute_shell_command(
-      'git rev-parse --abbrev-ref HEAD',
+    const { stdout: branch_stdout } = await execute_git_command(
+      ['rev-parse', '--abbrev-ref', 'HEAD'],
       { cwd: repo_path }
     )
     branch = branch_stdout.trim() || null

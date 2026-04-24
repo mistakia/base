@@ -39,7 +39,7 @@ import {
   get_user_base_directory
 } from '#libs-server/base-uri/index.mjs'
 import { redact_text_content } from '#server/middleware/content-redactor.mjs'
-import { execute_shell_command } from '#libs-server/utils/execute-shell-command.mjs'
+import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 import { generate_commit_message } from '#libs-server/git/generate-commit-message.mjs'
 import {
   get_cached_status_all,
@@ -267,8 +267,8 @@ const get_known_repositories = async () => {
     const active_checks = await Promise.all(
       submodule_paths.map(async (relative_path) => {
         try {
-          const { stdout } = await execute_shell_command(
-            `git config --get submodule.${relative_path}.active`,
+          const { stdout } = await execute_git_command(
+            ['config', '--get', `submodule.${relative_path}.active`],
             { cwd: user_base_dir }
           )
           return stdout.trim() !== 'false'
@@ -326,8 +326,8 @@ const get_known_repositories = async () => {
   const worktree_results = await Promise.all(
     repos_with_git_dirs.filter(Boolean).map(async (repo_path) => {
       try {
-        const { stdout } = await execute_shell_command(
-          'git worktree list --porcelain',
+        const { stdout } = await execute_git_command(
+          ['worktree', 'list', '--porcelain'],
           { cwd: repo_path }
         )
         const worktree_paths = parse_worktree_list(stdout)
@@ -1796,14 +1796,14 @@ router.get(
       // Get total commit count for pagination
       let total_count = 0
       try {
-        const count_args = ['git rev-list --count HEAD']
+        const count_args = ['rev-list', '--count', 'HEAD']
         if (author) {
-          count_args.push(`--author='${author.replace(/'/g, "'\\''")}'`)
+          count_args.push(`--author=${author}`)
         }
         if (search) {
-          count_args.push(`--grep='${search.replace(/'/g, "'\\''")}'`)
+          count_args.push(`--grep=${search}`)
         }
-        const { stdout } = await execute_shell_command(count_args.join(' '), {
+        const { stdout } = await execute_git_command(count_args, {
           cwd: repo_path
         })
         total_count = parseInt(stdout.trim(), 10) || 0
@@ -1864,8 +1864,16 @@ router.get(
       // filenames render unquoted here AND in the patch output below; the
       // redact_diff_by_files matcher relies on consistent path encoding
       // between the name-status list and the diff sections.
-      const { stdout: files_output } = await execute_shell_command(
-        `git -c core.quotePath=false diff-tree --no-commit-id -r --name-status ${hash}`,
+      const { stdout: files_output } = await execute_git_command(
+        [
+          '-c',
+          'core.quotePath=false',
+          'diff-tree',
+          '--no-commit-id',
+          '-r',
+          '--name-status',
+          hash
+        ],
         { cwd: repo_path }
       )
 
@@ -1894,8 +1902,8 @@ router.get(
       // Get full diff with explicit buffer limit
       let diff_output = ''
       try {
-        const diff_result = await execute_shell_command(
-          `git -c core.quotePath=false diff-tree -p ${hash}`,
+        const diff_result = await execute_git_command(
+          ['-c', 'core.quotePath=false', 'diff-tree', '-p', hash],
           { cwd: repo_path, maxBuffer: 10 * 1024 * 1024 }
         )
         diff_output = diff_result.stdout
