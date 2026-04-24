@@ -36,7 +36,6 @@ const ResumeStatusIndicator = ({ pending_resume }) => {
   const status = pending_resume.get('status')
   const queue_position = pending_resume.get('queue_position')
   const error_message = pending_resume.get('error_message')
-  const prompt_snippet = pending_resume.get('prompt_snippet')
 
   let badge_label
   switch (status) {
@@ -62,16 +61,10 @@ const ResumeStatusIndicator = ({ pending_resume }) => {
       <div className='thread-sheet__resume-status-header'>
         <span className='thread-sheet__resume-status-badge'>{badge_label}</span>
       </div>
-      {status === 'failed' ? (
+      {status === 'failed' && (
         <span className='thread-sheet__resume-status-error'>
           {error_message || 'Unknown error'}
         </span>
-      ) : (
-        prompt_snippet && (
-          <span className='thread-sheet__resume-status-prompt'>
-            {prompt_snippet}
-          </span>
-        )
       )}
     </div>
   )

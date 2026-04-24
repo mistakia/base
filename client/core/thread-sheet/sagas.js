@@ -1,7 +1,14 @@
-import { takeEvery, fork, call, select, delay } from 'redux-saga/effects'
+import {
+  takeEvery,
+  fork,
+  call,
+  select,
+  delay,
+  put
+} from 'redux-saga/effects'
 
 import { get_sheet_thread } from '@core/api/sagas'
-import { thread_sheet_action_types } from './actions'
+import { thread_sheet_action_types, thread_sheet_actions } from './actions'
 import { active_sessions_action_types } from '@core/active-sessions/actions'
 import { threads_action_types } from '@core/threads/actions'
 import { subscribe_to_thread } from '@core/websocket/service'
@@ -95,6 +102,26 @@ export function* handle_session_ended({ payload }) {
   yield call(get_sheet_thread, { thread_id })
 }
 
+/**
+ * After a new thread is created via the global input, auto-open the floating
+ * thread sheet for it so the user can click in and watch the timeline as the
+ * harness spins up. The sheet's load saga handles the queued/starting refetch.
+ */
+export function* handle_create_thread_session_fulfilled({ payload }) {
+  const thread_id = payload?.data?.thread_id
+  if (!thread_id) return
+
+  yield put(thread_sheet_actions.open_thread_sheet({ thread_id }))
+  yield put(thread_sheet_actions.load_sheet_thread(thread_id))
+}
+
+export function* watch_create_thread_session_fulfilled() {
+  yield takeEvery(
+    threads_action_types.CREATE_THREAD_SESSION_FULFILLED,
+    handle_create_thread_session_fulfilled
+  )
+}
+
 export function* watch_load_sheet_thread() {
   yield takeEvery(
     thread_sheet_action_types.LOAD_SHEET_THREAD,
@@ -121,6 +148,7 @@ export function* watch_session_ended() {
 
 export const thread_sheet_sagas = [
   fork(watch_load_sheet_thread),
+  fork(watch_create_thread_session_fulfilled),
   fork(watch_session_sheet_transitions),
   fork(watch_session_ended)
 ]

@@ -17,12 +17,6 @@ export const group_tool_entries = (timeline_events) => {
   const pending_tool_calls = new Map() // Track tool calls waiting for results
 
   timeline_events.forEach((timeline_event, index) => {
-    // Optimistic entries are pre-rendered elsewhere (ThreadSheet prompt
-    // snippet); skip them here to avoid double-rendering the same content.
-    if (timeline_event._optimistic) {
-      return
-    }
-
     // Skip entries already paired as skill invocations
     if (paired_indices.has(index)) {
       // Insert skill_invocation group at the first index of each group

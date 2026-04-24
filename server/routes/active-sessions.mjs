@@ -23,7 +23,10 @@ import {
   get_metadata_cache,
   get_active_session_thread_ids
 } from '#server/services/thread-watcher.mjs'
-import { SESSION_STATUS_DISPLAY_MAP } from '#libs-shared/session-status-display.mjs'
+import {
+  ACTIVE_SESSION_STATUSES,
+  SESSION_STATUS_DISPLAY_MAP
+} from '#libs-shared/session-status-display.mjs'
 import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
@@ -191,6 +194,7 @@ router.get('/', async (req, res) => {
     // inline so a failed metadata disk read downstream cannot leak them.
     const metadata_cache = get_metadata_cache()
     const virtual_sessions = []
+    const active_status_set = new Set(ACTIVE_SESSION_STATUSES)
     const redis_thread_ids = new Set(
       sessions.map((s) => s.thread_id).filter(Boolean)
     )
@@ -198,6 +202,10 @@ router.get('/', async (req, res) => {
       if (redis_thread_ids.has(thread_id)) continue
       const metadata = metadata_cache.get(thread_id)
       if (!metadata) continue
+      // Defense in depth: the watcher's index already filters by
+      // ACTIVE_SESSION_STATUSES, but if a stale entry slips through, do not
+      // mask it by defaulting to 'active' below.
+      if (!active_status_set.has(metadata.session_status)) continue
       if (
         user_public_key &&
         metadata.user_public_key &&
@@ -237,7 +245,15 @@ router.get('/', async (req, res) => {
     // owned by a different user. Unauthenticated (public) callers retain the
     // prior behavior and rely on permission-based redaction below.
     const active_thread_sessions = enriched_sessions.filter((session) => {
+      // Drop terminal thread_states (archived/completed) and any session
+      // whose underlying metadata.session_status is no longer in the active
+      // set. Without this gate, stale Redis-resident sessions whose hook
+      // never fired SessionEnd (e.g. CLI killed) leak onto the panel on
+      // page reload.
       if (session.thread_state === 'archived') return false
+      if (session.thread_state === 'completed') return false
+      const meta_status = session._thread_metadata?.session_status
+      if (meta_status && !active_status_set.has(meta_status)) return false
       if (!session.thread_id && !session.job_id) return false
 
       if (user_public_key && session.thread_id) {
