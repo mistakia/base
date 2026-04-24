@@ -545,6 +545,8 @@ thread_id (client has this from create-session response)
 
 The thread-first architecture simplifies client state. The active-sessions reducer is a thin ephemeral store keyed by `session_id` holding only transient fields: `{ thread_id, latest_timeline_event, context_percentage, last_activity_at }`. No more `pending_sessions`, `ended_sessions`, or `prompt_snippets` maps. The panel renders threads directly, enriched with ephemeral data where available.
 
+The canonical `session_status -> UI display-status` mapping (plus the `ACTIVE_SESSION_STATUSES` set used for active-sessions routing and reverse indexing) lives in `libs-shared/session-status-display.mjs`. Server (active-sessions route, thread-watcher) and client (ThreadHeader and related views) import from this single source so display rules cannot drift.
+
 Session state is driven by the `session_status` field on the thread metadata:
 
 ```
