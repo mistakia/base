@@ -163,27 +163,32 @@ const index_sync_debouncer = create_keyed_debouncer(500)
  * Keys by thread_id so that metadata.json and timeline.jsonl changes
  * for the same thread coalesce into a single sync operation.
  *
+ * Metadata is captured at schedule time, not resolved from the cache at
+ * fire time. The cache evicts terminal-state threads (archived/completed)
+ * immediately on write, so a fire-time lookup would silently drop the sync
+ * for the very transition that needs to propagate.
+ *
  * @param {string} thread_id - UUID of the thread
+ * @param {Object} metadata - Thread metadata to forward to the sync hook
  */
-const schedule_thread_index_sync = (thread_id) => {
+const schedule_thread_index_sync = (thread_id, metadata) => {
   if (!index_sync_hooks?.on_thread_sync) return
+  if (!metadata) {
+    log('No metadata provided for thread %s, skipping index sync', thread_id)
+    return
+  }
 
   const scheduled_at = Date.now()
   log_perf('schedule_thread_index_sync thread_id=%s', thread_id)
 
   index_sync_debouncer.call(thread_id, () => {
-    const cached_metadata = metadata_cache.get(thread_id)
-    if (!cached_metadata) {
-      log('No cached metadata for thread %s, skipping index sync', thread_id)
-      return
-    }
     const debounce_ms = Date.now() - scheduled_at
     log_perf(
       'thread_index_sync thread_id=%s debounce_wait_ms=%d',
       thread_id,
       debounce_ms
     )
-    index_sync_hooks.on_thread_sync({ thread_id, metadata: cached_metadata })
+    index_sync_hooks.on_thread_sync({ thread_id, metadata })
   })
 }
 
@@ -477,7 +482,7 @@ const handle_metadata_added = async (file_path) => {
     log(`Emitting THREAD_UPDATED for existing thread: ${thread_id}`)
     emit_thread_updated(metadata)
     if (metadata.thread_id) {
-      schedule_thread_index_sync(metadata.thread_id)
+      schedule_thread_index_sync(metadata.thread_id, metadata)
     }
     return
   }
@@ -504,7 +509,7 @@ const handle_metadata_added = async (file_path) => {
 
   // Notify index sync hooks (debounced by thread_id)
   if (metadata.thread_id) {
-    schedule_thread_index_sync(metadata.thread_id)
+    schedule_thread_index_sync(metadata.thread_id, metadata)
   }
 }
 
@@ -554,7 +559,7 @@ const handle_metadata_changed = async (file_path) => {
 
   // Notify index sync hooks (debounced by thread_id)
   if (metadata.thread_id) {
-    schedule_thread_index_sync(metadata.thread_id)
+    schedule_thread_index_sync(metadata.thread_id, metadata)
   }
 }
 
@@ -621,7 +626,7 @@ const handle_timeline_changed = async (file_path) => {
   emit_timeline_entry_events(thread_id, new_entries, metadata)
 
   // Notify index sync hooks (debounced by thread_id)
-  schedule_thread_index_sync(thread_id)
+  schedule_thread_index_sync(thread_id, metadata)
 }
 
 // ============================================================================
@@ -692,7 +697,7 @@ const reconcile_tracked_threads = async (thread_directory) => {
 
         if (metadata) {
           emit_timeline_entry_events(thread_id, new_entries, metadata)
-          schedule_thread_index_sync(thread_id)
+          schedule_thread_index_sync(thread_id, metadata)
         }
       }
     } catch (error) {

@@ -19,6 +19,7 @@ import {
 } from '#libs-server/threads/timeline/index.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
+import { write_thread_sync_request } from '#libs-server/embedded-database-index/sync/thread-sync-ipc.mjs'
 
 const {
   THREAD_STATE,
@@ -27,6 +28,18 @@ const {
   validate_archive_reason
 } = thread_constants
 const log = debug('threads:update')
+
+// Defense-in-depth: enqueue an index sync directly after a write, so SQLite
+// reflects user-initiated mutations without depending on the file watcher
+// (which can drop events during its startup window or skip terminal-state
+// updates if its metadata cache has been evicted).
+async function enqueue_index_sync(thread_id) {
+  try {
+    await write_thread_sync_request({ thread_id })
+  } catch (error) {
+    log(`Failed to enqueue index sync for ${thread_id}: ${error.message}`)
+  }
+}
 
 /**
  * Update thread state
@@ -143,6 +156,8 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     }
   }
 
+  await enqueue_index_sync(thread_id)
+
   // Return updated thread data
   return {
     ...metadata,
@@ -243,6 +258,8 @@ export async function update_thread_metadata({
     }
   })
   const updated_metadata = JSON.parse(written)
+
+  await enqueue_index_sync(thread_id)
 
   // Return updated thread data
   return {
