@@ -1,42 +1,53 @@
 /**
  * Thread Sync IPC
  *
- * File-based IPC for forwarding thread sync requests from the API process
- * to the index sync service. Uses a queue file where each line is either:
+ * Per-request file IPC for forwarding thread sync requests from the API
+ * process to the index sync service. Each request is its own file under
+ * `embedded-database-index/thread-sync-queue/` containing one of:
  *   - a JSON object {"thread_id":"...","metadata":{...}} for sync requests
  *     where the writer has the metadata in scope
  *   - a bare {thread_id} for sync requests without metadata (consumer reads
  *     metadata.json from disk)
  *   - DELETE:{thread_id} for removals
- *   - OVERFLOW:{timestamp} when the queue exceeded its size cap
  *
- * The API process appends to the queue file when state changes occur. The
- * sync service watches the queue file via fs.watch and processes entries.
+ * Why per-request files instead of an append-only queue file:
+ *   - Bun's fs.watch on Linux reliably surfaces directory entry creates
+ *     ("rename" events with filename), but does NOT surface modify events
+ *     for files inside a watched directory after the directory inode's
+ *     internal state advances past the file's original inode. An append-
+ *     only queue file with atomic-rename processing therefore goes silent
+ *     after the first drain cycle.
+ *   - Per-file requests give every enqueue a fresh inode, fire a reliable
+ *     event, and avoid any read-modify-write race between concurrent API
+ *     writers.
  *
- * Queue processing uses atomic rename to prevent data loss:
- * 1. Rename queue file to .processing (atomic on POSIX)
- * 2. Read and process entries from .processing file
- * 3. Delete .processing file when done
- * New writes from the API create a fresh queue file during processing.
+ * Crash safety: each request file is an atomic write. If the consumer
+ * crashes mid-drain, unprocessed files remain on disk and are picked up on
+ * the next start. The consumer reads, processes, and unlinks each file in
+ * sequence; idempotent SQLite UPSERTs make a duplicate read harmless.
+ *
+ * Backward compatibility: a legacy single `.thread-sync-queue` file from
+ * prior versions is drained once on startup if present, then unlinked.
  */
 
 import fs from 'fs/promises'
 import { watch as fs_watch } from 'fs'
 import path from 'path'
+import { randomUUID } from 'crypto'
 import debug from 'debug'
 
 import config from '#config'
 
 const log = debug('embedded-index:sync:thread-ipc')
 
-const QUEUE_FILE_NAME = '.thread-sync-queue'
+const QUEUE_DIR_NAME = 'thread-sync-queue'
+const REQUEST_SUFFIX = '.req'
+const LEGACY_QUEUE_FILE_NAME = '.thread-sync-queue'
 const DELETE_PREFIX = 'DELETE:'
-const OVERFLOW_PREFIX = 'OVERFLOW:'
-const PROCESSING_SUFFIX = '.processing'
-// Larger cap to accommodate JSON-line payloads (~500B each) while preserving
-// roughly the same headroom in entries as the prior 1MB cap held for bare IDs.
-const MAX_QUEUE_SIZE_BYTES = 8 * 1024 * 1024
 const OPERATION_TIMEOUT_MS = 30000
+// Trigger overflow recovery if the directory grows past this many pending
+// requests -- indicates the consumer is hopelessly behind.
+const MAX_QUEUE_FILES = 10000
 // Safety net: if fs.watch ever drops an event, this catches it.
 const FALLBACK_POLL_INTERVAL_MS = 60000
 // Coalesce rapid bursts of writes into a single process_queue invocation.
@@ -48,16 +59,19 @@ let fallback_interval = null
 let debounce_timer = null
 let is_processing = false
 
-/**
- * Get the queue file path
- * @returns {string} Path to the thread sync queue file
- */
-function get_queue_file_path() {
-  const user_base_directory = config.user_base_directory
+function get_queue_dir() {
   return path.join(
-    user_base_directory,
+    config.user_base_directory,
     'embedded-database-index',
-    QUEUE_FILE_NAME
+    QUEUE_DIR_NAME
+  )
+}
+
+function get_legacy_queue_file_path() {
+  return path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    LEGACY_QUEUE_FILE_NAME
   )
 }
 
@@ -66,50 +80,21 @@ function get_queue_file_path() {
 // ============================================================================
 
 /**
- * Append a line to the queue file with directory auto-creation and size limits.
- *
- * @param {string} payload - Line content to append (including newline)
- * @param {string} description - Human-readable description for logging
+ * Write a single request file with the given payload. Each call creates a
+ * fresh file with a unique name so the directory watcher fires reliably.
  */
-async function append_to_queue(payload, description) {
-  const queue_path = get_queue_file_path()
+async function write_request_file(payload, description) {
+  const queue_dir = get_queue_dir()
+  const filename = `${Date.now()}-${process.pid}-${randomUUID()}${REQUEST_SUFFIX}`
+  const target = path.join(queue_dir, filename)
 
   try {
-    try {
-      const stats = await fs.stat(queue_path)
-      if (stats.size > MAX_QUEUE_SIZE_BYTES) {
-        log(
-          'Queue file exceeds size limit (%d bytes), writing overflow marker: %s',
-          stats.size,
-          description
-        )
-        // Write overflow marker only once -- avoid growing the file further
-        // with repeated markers on every subsequent write attempt.
-        try {
-          const existing = await fs.readFile(queue_path, 'utf-8')
-          const last_line = existing.trimEnd().split('\n').pop() || ''
-          if (!last_line.startsWith(OVERFLOW_PREFIX)) {
-            await fs.appendFile(
-              queue_path,
-              `${OVERFLOW_PREFIX}${Date.now()}\n`,
-              'utf-8'
-            )
-          }
-        } catch {
-          // Best-effort overflow marker
-        }
-        return
-      }
-    } catch {
-      // File doesn't exist yet, proceed with append
-    }
-
-    await fs.appendFile(queue_path, payload, 'utf-8')
+    await fs.writeFile(target, payload, 'utf-8')
     log('Queued %s', description)
   } catch (error) {
     if (error.code === 'ENOENT') {
-      await fs.mkdir(path.dirname(queue_path), { recursive: true })
-      await fs.appendFile(queue_path, payload, 'utf-8')
+      await fs.mkdir(queue_dir, { recursive: true })
+      await fs.writeFile(target, payload, 'utf-8')
       log('Queued %s (created dir)', description)
     } else {
       log('Failed to queue %s: %s', description, error.message)
@@ -118,7 +103,7 @@ async function append_to_queue(payload, description) {
 }
 
 /**
- * Append a thread sync request to the queue file.
+ * Append a thread sync request to the queue.
  * Called by the API process when the thread watcher detects changes or when
  * a thread state/metadata write completes.
  *
@@ -132,21 +117,21 @@ async function append_to_queue(payload, description) {
 export async function write_thread_sync_request({ thread_id, metadata }) {
   const payload =
     metadata != null
-      ? `${JSON.stringify({ thread_id, metadata })}\n`
-      : `${thread_id}\n`
-  await append_to_queue(payload, `thread sync: ${thread_id}`)
+      ? JSON.stringify({ thread_id, metadata })
+      : thread_id
+  await write_request_file(payload, `thread sync: ${thread_id}`)
 }
 
 /**
- * Append a thread delete request to the queue file.
+ * Append a thread delete request to the queue.
  * Called by the API process when a thread metadata file is deleted.
  *
  * @param {Object} params
  * @param {string} params.thread_id - Thread ID to remove
  */
 export async function write_thread_delete_request({ thread_id }) {
-  await append_to_queue(
-    `${DELETE_PREFIX}${thread_id}\n`,
+  await write_request_file(
+    `${DELETE_PREFIX}${thread_id}`,
     `thread delete: ${thread_id}`
   )
 }
@@ -156,51 +141,28 @@ export async function write_thread_delete_request({ thread_id }) {
 // ============================================================================
 
 /**
- * Atomically acquire the queue file for processing by renaming it.
- * New writes from the API process will create a fresh queue file.
- * Handles crash recovery by detecting leftover processing files.
- *
- * @returns {Promise<string|null>} Path to processing file, or null if nothing to process
- */
-async function acquire_queue_for_processing() {
-  const queue_path = get_queue_file_path()
-  const processing_path = queue_path + PROCESSING_SUFFIX
-
-  // Check for leftover processing file from a previous crash
-  try {
-    await fs.access(processing_path)
-    log('Found leftover processing file, resuming')
-    return processing_path
-  } catch {
-    // No leftover processing file
-  }
-
-  try {
-    await fs.rename(queue_path, processing_path)
-    return processing_path
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return null
-    }
-    log('Failed to acquire queue for processing: %s', error.message)
-    return null
-  }
-}
-
-/**
- * Parse a single sync line. Supports both formats:
+ * Parse a single request payload. Supports:
  *   - JSON object: {"thread_id":"...","metadata":{...}}
  *   - Bare thread_id (legacy / metadata-less callers)
+ *   - DELETE:{thread_id}
  *
- * Returns { thread_id, metadata } where metadata may be null.
- * Returns null on malformed JSON.
+ * Returns { kind: 'sync', thread_id, metadata } or { kind: 'delete', thread_id }
+ * or null on malformed input.
  */
-function parse_sync_line(line) {
-  if (line.startsWith('{')) {
+function parse_request_payload(payload) {
+  const trimmed = payload.trim()
+  if (!trimmed) return null
+
+  if (trimmed.startsWith(DELETE_PREFIX)) {
+    return { kind: 'delete', thread_id: trimmed.slice(DELETE_PREFIX.length) }
+  }
+
+  if (trimmed.startsWith('{')) {
     try {
-      const parsed = JSON.parse(line)
+      const parsed = JSON.parse(trimmed)
       if (parsed && typeof parsed.thread_id === 'string') {
         return {
+          kind: 'sync',
           thread_id: parsed.thread_id,
           metadata: parsed.metadata ?? null
         }
@@ -210,90 +172,131 @@ function parse_sync_line(line) {
       return null
     }
   }
-  return { thread_id: line, metadata: null }
+
+  return { kind: 'sync', thread_id: trimmed, metadata: null }
 }
 
 /**
- * Read and parse entries from a queue file.
+ * Drain a one-time legacy queue file (from versions of this module that used
+ * a single append-only file). Returns the parsed entries in chronological
+ * order, then unlinks the file. No-op if the legacy file does not exist.
+ */
+async function drain_legacy_queue() {
+  const legacy_path = get_legacy_queue_file_path()
+  let content
+  try {
+    content = await fs.readFile(legacy_path, 'utf-8')
+  } catch (error) {
+    if (error.code === 'ENOENT') return []
+    log('Failed to read legacy queue file: %s', error.message)
+    return []
+  }
+
+  const entries = []
+  for (const line of content.split('\n')) {
+    const parsed = parse_request_payload(line)
+    if (parsed) entries.push(parsed)
+  }
+
+  try {
+    await fs.unlink(legacy_path)
+    log('Drained and removed legacy queue file (%d entries)', entries.length)
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      log('Failed to unlink legacy queue file: %s', error.message)
+    }
+  }
+
+  return entries
+}
+
+/**
+ * List request files in the queue directory in chronological order. Uses the
+ * filename's leading timestamp prefix; two files written in the same ms by
+ * different processes are ordered by their PID and UUID suffix.
+ */
+async function list_request_files() {
+  const queue_dir = get_queue_dir()
+  let names
+  try {
+    names = await fs.readdir(queue_dir)
+  } catch (error) {
+    if (error.code === 'ENOENT') return []
+    log('Failed to readdir queue: %s', error.message)
+    return []
+  }
+  return names.filter((n) => n.endsWith(REQUEST_SUFFIX)).sort()
+}
+
+/**
+ * Read and parse all pending request files plus any legacy entries.
  * Deduplicates by thread_id with last-write-wins semantics; the latest entry
  * for a thread_id is the one applied. Delete requests take precedence over
  * any preceding sync for the same thread_id, but a sync after a delete is
- * resurrected (rare, but the file order is canonical).
+ * resurrected (file order is canonical).
  *
- * @param {string} file_path - Path to the file to read
- * @returns {Promise<{ syncs: Array<{thread_id: string, metadata: Object|null}>, deletes: string[], has_overflow: boolean }>}
+ * Returns { syncs, deletes, processed_files, has_overflow }.
  */
-async function read_and_parse_queue(file_path) {
-  try {
-    const content = await fs.readFile(file_path, 'utf-8')
-    const lines = content
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0)
+async function read_pending_requests(legacy_entries) {
+  const queue_dir = get_queue_dir()
+  const filenames = await list_request_files()
+  const has_overflow = filenames.length > MAX_QUEUE_FILES
 
-    const delete_set = new Set()
-    const sync_map = new Map()
-    let has_overflow = false
+  const sync_map = new Map()
+  const delete_set = new Set()
+  const processed_files = []
 
-    for (const line of lines) {
-      if (line.startsWith(OVERFLOW_PREFIX)) {
-        has_overflow = true
-      } else if (line.startsWith(DELETE_PREFIX)) {
-        const thread_id = line.slice(DELETE_PREFIX.length)
-        delete_set.add(thread_id)
-        sync_map.delete(thread_id)
-      } else {
-        const parsed = parse_sync_line(line)
-        if (!parsed) {
-          log('Skipping malformed queue line: %s', line.slice(0, 80))
-          continue
-        }
-        // A sync after a delete in the same batch resurrects the thread; the
-        // file order is canonical so we honor it.
-        delete_set.delete(parsed.thread_id)
-        sync_map.set(parsed.thread_id, parsed.metadata)
-      }
+  function apply(entry) {
+    if (!entry) return
+    if (entry.kind === 'delete') {
+      delete_set.add(entry.thread_id)
+      sync_map.delete(entry.thread_id)
+    } else {
+      delete_set.delete(entry.thread_id)
+      sync_map.set(entry.thread_id, entry.metadata)
     }
+  }
 
-    const syncs = [...sync_map.entries()].map(([thread_id, metadata]) => ({
-      thread_id,
-      metadata
-    }))
+  for (const entry of legacy_entries) apply(entry)
 
-    return {
-      syncs,
-      deletes: [...delete_set],
-      has_overflow
+  for (const filename of filenames) {
+    const file_path = path.join(queue_dir, filename)
+    try {
+      const content = await fs.readFile(file_path, 'utf-8')
+      apply(parse_request_payload(content))
+      processed_files.push(file_path)
+    } catch (error) {
+      if (error.code === 'ENOENT') continue
+      log('Failed to read request file %s: %s', filename, error.message)
     }
-  } catch (error) {
-    if (error.code === 'ENOENT') {
-      return { syncs: [], deletes: [], has_overflow: false }
-    }
-    log('Failed to read queue file: %s', error.message)
-    return { syncs: [], deletes: [], has_overflow: false }
+  }
+
+  const syncs = [...sync_map.entries()].map(([thread_id, metadata]) => ({
+    thread_id,
+    metadata
+  }))
+  return {
+    syncs,
+    deletes: [...delete_set],
+    processed_files,
+    has_overflow
   }
 }
 
-/**
- * Remove the processing file after entries have been processed.
- */
-async function remove_processing_file() {
-  const processing_path = get_queue_file_path() + PROCESSING_SUFFIX
-  try {
-    await fs.unlink(processing_path)
-  } catch (error) {
-    if (error.code !== 'ENOENT') {
-      log('Failed to remove processing file: %s', error.message)
+async function unlink_processed_files(file_paths) {
+  for (const file_path of file_paths) {
+    try {
+      await fs.unlink(file_path)
+    } catch (error) {
+      if (error.code !== 'ENOENT') {
+        log('Failed to unlink request file %s: %s', file_path, error.message)
+      }
     }
   }
 }
 
 /**
  * Wrap a promise with a timeout.
- *
- * @param {Promise} promise - Promise to wrap
- * @param {number} ms - Timeout in milliseconds
- * @returns {Promise}
  */
 function with_timeout(promise, ms) {
   let timeout_id
@@ -309,11 +312,13 @@ function with_timeout(promise, ms) {
 }
 
 /**
- * Process all entries in the queue using atomic rename.
+ * Process all pending request files plus any one-shot legacy queue entries.
  *
  * @param {Object} callbacks
  * @param {Function} callbacks.on_thread_sync - Called with { thread_id, metadata }
  * @param {Function} callbacks.on_thread_delete - Called with { thread_id }
+ * @param {Function} [callbacks.on_overflow]
+ * @param {Object} [callbacks.metrics]
  */
 async function process_queue({
   on_thread_sync,
@@ -330,18 +335,14 @@ async function process_queue({
   is_processing = true
 
   try {
-    const processing_path = await acquire_queue_for_processing()
-    if (!processing_path) {
-      return
-    }
+    const legacy_entries = await drain_legacy_queue()
 
-    const { syncs, deletes, has_overflow } =
-      await read_and_parse_queue(processing_path)
+    const { syncs, deletes, processed_files, has_overflow } =
+      await read_pending_requests(legacy_entries)
 
     if (metrics) metrics.gauge('ipc_queue_depth', syncs.length + deletes.length)
 
     if (syncs.length === 0 && deletes.length === 0 && !has_overflow) {
-      await remove_processing_file()
       return
     }
 
@@ -360,10 +361,8 @@ async function process_queue({
         if (metrics) metrics.increment('ipc_deletes_processed')
       } catch (error) {
         log('Error processing thread delete %s: %s', thread_id, error.message)
-        if (metrics) {
-          if (error.message?.includes('timed out')) {
-            metrics.increment('ipc_timeouts')
-          }
+        if (metrics && error.message?.includes('timed out')) {
+          metrics.increment('ipc_timeouts')
         }
       }
     }
@@ -377,15 +376,12 @@ async function process_queue({
         if (metrics) metrics.increment('ipc_syncs_processed')
       } catch (error) {
         log('Error processing thread sync %s: %s', thread_id, error.message)
-        if (metrics) {
-          if (error.message?.includes('timed out')) {
-            metrics.increment('ipc_timeouts')
-          }
+        if (metrics && error.message?.includes('timed out')) {
+          metrics.increment('ipc_timeouts')
         }
       }
     }
 
-    // Handle overflow: trigger thread directory re-scan to recover missed syncs
     if (has_overflow && on_overflow) {
       log('Queue overflow detected, triggering thread directory re-scan')
       if (metrics) metrics.increment('ipc_overflow_events')
@@ -396,7 +392,7 @@ async function process_queue({
       }
     }
 
-    await remove_processing_file()
+    await unlink_processed_files(processed_files)
     log('Thread sync queue processing complete')
   } catch (error) {
     log('Thread sync queue processing failed: %s', error.message)
@@ -418,30 +414,26 @@ function schedule_process(callbacks) {
   }, WATCH_DEBOUNCE_MS)
 }
 
-/**
- * Ensure the parent directory exists so fs.watch can attach to it.
- */
 async function ensure_queue_dir_exists() {
-  const queue_path = get_queue_file_path()
   try {
-    await fs.mkdir(path.dirname(queue_path), { recursive: true })
+    await fs.mkdir(get_queue_dir(), { recursive: true })
   } catch (error) {
     log('Failed to ensure queue dir exists: %s', error.message)
   }
 }
 
 /**
- * Attach fs.watch to the queue file's parent directory and filter by
- * filename. The queue uses atomic rename for processing, so the queue file's
- * inode changes on every drain cycle -- a file-level watcher would lose its
- * inotify reference. Watching the directory is stable across rename/recreate.
+ * Watch the queue directory. Each enqueue creates a fresh file under the
+ * directory, which fires a reliable "rename" (entry-create) event in Bun's
+ * fs.watch. The directory inode is stable for the entire process lifetime.
  */
 function start_fs_watcher(callbacks) {
-  const queue_path = get_queue_file_path()
-  const parent_dir = path.dirname(queue_path)
+  const queue_dir = get_queue_dir()
   try {
-    fs_watcher = fs_watch(parent_dir, (_event_type, filename) => {
-      if (filename === QUEUE_FILE_NAME) schedule_process(callbacks)
+    fs_watcher = fs_watch(queue_dir, (_event_type, filename) => {
+      if (!filename || filename.endsWith(REQUEST_SUFFIX)) {
+        schedule_process(callbacks)
+      }
     })
     fs_watcher.on('error', (error) => {
       log('fs.watch error on queue directory: %s', error.message)
@@ -455,15 +447,17 @@ function start_fs_watcher(callbacks) {
   }
 }
 
+// Test-only exports for unit tests of the queue parser. These are internal
+// to the IPC implementation and should not be relied upon outside tests.
+export const __test__ = {
+  parse_request_payload,
+  read_pending_requests,
+  drain_legacy_queue
+}
+
 /**
  * Start watching for thread sync queue entries via fs.watch with a slow
  * fallback interval as a safety net for dropped events.
- *
- * @param {Object} params
- * @param {Function} params.on_thread_sync - Called with { thread_id, metadata } for each sync request
- * @param {Function} params.on_thread_delete - Called with { thread_id } for each delete request
- * @param {Function} [params.on_overflow] - Called when queue overflow is detected
- * @param {Object} [params.metrics] - Metrics collector
  */
 export async function start_thread_sync_request_watcher({
   on_thread_sync,
@@ -476,14 +470,15 @@ export async function start_thread_sync_request_watcher({
     return
   }
 
-  log('Starting thread sync request watcher for %s', get_queue_file_path())
+  log('Starting thread sync request watcher for %s', get_queue_dir())
 
   const callbacks = { on_thread_sync, on_thread_delete, on_overflow, metrics }
   watcher_active = true
 
   await ensure_queue_dir_exists()
 
-  // Drain any entries left from a prior process before we begin watching.
+  // Drain any pending entries (including legacy queue file) before we begin
+  // watching so a write that arrives before the watcher attaches isn't lost.
   process_queue(callbacks).catch((error) => {
     log('Initial drain failed: %s', error.message)
   })
@@ -496,10 +491,6 @@ export async function start_thread_sync_request_watcher({
   )
   if (fallback_interval.unref) fallback_interval.unref()
 }
-
-// Test-only exports for unit tests of the queue parser. These are internal
-// to the IPC implementation and should not be relied upon outside tests.
-export const __test__ = { parse_sync_line, read_and_parse_queue }
 
 /**
  * Stop the thread sync request watcher.
