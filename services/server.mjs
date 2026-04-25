@@ -8,7 +8,8 @@ import {
   start_thread_watcher,
   stop_thread_watcher,
   set_thread_watcher_hooks,
-  get_metadata_cache
+  get_metadata_cache,
+  reconcile_threads_since
 } from '#server/services/thread-watcher.mjs'
 import { register_metadata_cache } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 import {
@@ -118,6 +119,11 @@ try {
 } catch (error) {
   logger(`Failed to mount extension routes: ${error.message}`)
 }
+
+// Captured before any watcher subscription begins so the post-startup
+// reconcile scan can find thread files that landed during the
+// @parcel/watcher initial-scan dead window.
+const process_start_time_ms = Date.now()
 
 try {
   const { server_port, server_host } = config
@@ -322,6 +328,35 @@ try {
     }
 
     logger('All watchers initialized')
+
+    // Reconcile any thread files written during the @parcel/watcher startup
+    // dead window. The thread watcher subscription does not replay events
+    // from before it became ready, so threads created during the
+    // (sometimes multi-minute) initial directory scan are otherwise
+    // invisible until the next manual change. This scan re-emits
+    // THREAD_CREATED + seeds last_seen_state for any missed threads so
+    // active-sessions visibility and timeline streaming work normally.
+    if (file_watcher_config.thread_watcher_enabled !== false) {
+      try {
+        const thread_directory = path.join(
+          config.user_base_directory,
+          'thread'
+        )
+        const reconcile_result = await reconcile_threads_since({
+          thread_directory,
+          since_timestamp_ms: process_start_time_ms
+        })
+        logger(
+          `Thread watcher reconcile: scanned=${reconcile_result.scanned} ` +
+            `metadata=${reconcile_result.reconciled_metadata} ` +
+            `timeline=${reconcile_result.reconciled_timeline}`
+        )
+      } catch (reconcile_error) {
+        logger(
+          `Thread watcher reconcile failed: ${reconcile_error.message}`
+        )
+      }
+    }
   })
 } catch (err) {
   // Output to stderr for visibility to operators and container orchestration

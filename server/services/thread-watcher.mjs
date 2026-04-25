@@ -888,3 +888,116 @@ export const stop_thread_watcher = async () => {
     throw error
   }
 }
+
+/**
+ * Reconcile any thread directories whose metadata.json or timeline.jsonl
+ * was written between `since_timestamp_ms` and the moment the watcher
+ * subscription actually started receiving events.
+ *
+ * @parcel/watcher's initial directory scan can take several minutes on a
+ * large user-base. During that window the subscription is alive but does
+ * not replay filesystem events that occurred before it became ready, so
+ * any thread created in that gap is invisible to the watcher: no
+ * metadata_cache entry, no last_seen_state seed, no THREAD_CREATED
+ * fanout, and (because the timeline handler depends on the metadata
+ * cache being seeded) no THREAD_TIMELINE_ENTRY_ADDED emits either.
+ *
+ * Re-using handle_metadata_added is safe: it gates on
+ * emitted_created_thread_ids, so a later watcher 'create'/'update' event
+ * for the same metadata.json is downgraded to THREAD_UPDATED instead of
+ * fanning out a duplicate THREAD_CREATED.
+ *
+ * @param {Object} params
+ * @param {string} params.thread_directory - Absolute path to thread directory
+ * @param {number} params.since_timestamp_ms - Process start time (Date.now() reference)
+ * @returns {Promise<{scanned: number, reconciled_metadata: number, reconciled_timeline: number}>}
+ */
+export const reconcile_threads_since = async ({
+  thread_directory,
+  since_timestamp_ms
+}) => {
+  const result = {
+    scanned: 0,
+    reconciled_metadata: 0,
+    reconciled_timeline: 0
+  }
+
+  let entries
+  try {
+    entries = await fs.readdir(thread_directory)
+  } catch (error) {
+    log(`Reconcile failed to read thread directory: ${error.message}`)
+    return result
+  }
+
+  const uuid_pattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+  for (const entry of entries) {
+    if (!uuid_pattern.test(entry)) continue
+    result.scanned++
+
+    const metadata_path = path.join(
+      thread_directory,
+      entry,
+      FILE_NAMES.METADATA
+    )
+    const timeline_path = path.join(
+      thread_directory,
+      entry,
+      FILE_NAMES.TIMELINE
+    )
+
+    let metadata_stat = null
+    try {
+      metadata_stat = await fs.stat(metadata_path)
+    } catch {
+      continue
+    }
+
+    // Reconcile metadata if file changed at or after process start AND we
+    // have no in-memory record of it (i.e. the event was missed).
+    const metadata_changed = metadata_stat.mtimeMs >= since_timestamp_ms
+    if (metadata_changed && !metadata_cache.has(entry)) {
+      try {
+        await handle_metadata_added(metadata_path)
+        result.reconciled_metadata++
+      } catch (error) {
+        log(
+          `Reconcile metadata failed for ${entry}: ${error.message}`
+        )
+      }
+    }
+
+    // Reconcile timeline if file changed at or after process start.
+    // handle_timeline_changed uses byte-offset tracking, so re-running it
+    // when there are no new bytes is a no-op.
+    let timeline_stat = null
+    try {
+      timeline_stat = await fs.stat(timeline_path)
+    } catch {
+      continue
+    }
+    if (timeline_stat.mtimeMs >= since_timestamp_ms) {
+      try {
+        await handle_timeline_changed(timeline_path)
+        result.reconciled_timeline++
+      } catch (error) {
+        log(
+          `Reconcile timeline failed for ${entry}: ${error.message}`
+        )
+      }
+    }
+  }
+
+  log_lifecycle(
+    'WATCHER reconcile scanned=%d reconciled_metadata=%d reconciled_timeline=%d',
+    result.scanned,
+    result.reconciled_metadata,
+    result.reconciled_timeline
+  )
+  log(
+    `Reconcile complete: scanned=${result.scanned} metadata=${result.reconciled_metadata} timeline=${result.reconciled_timeline}`
+  )
+  return result
+}

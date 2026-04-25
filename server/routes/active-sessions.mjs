@@ -255,8 +255,14 @@ router.get('/', async (req, res) => {
       if (!session.thread_id && !session.job_id) return false
 
       if (session.thread_id) {
+        // Only drop when the metadata explicitly reports a non-active status.
+        // Threads imported via the external-session sync hook never write a
+        // top-level `session_status` field (it lives only in Redis from the
+        // SessionStart hook), so a strict null check would drop every
+        // synced session on reload. Trust Redis presence as authoritative
+        // when metadata.session_status is absent.
         const meta_status = session._thread_metadata?.session_status
-        if (!active_status_set.has(meta_status)) return false
+        if (meta_status && !active_status_set.has(meta_status)) return false
 
         if (user_public_key) {
           const owner = session._thread_metadata?.user_public_key || null
