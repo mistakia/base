@@ -419,33 +419,34 @@ function schedule_process(callbacks) {
 }
 
 /**
- * Ensure the queue file exists so fs.watch can attach to it directly. Without
- * this, startup would have to watch the parent directory and upgrade once the
- * file appears -- a path that leaks watchers and double-fires events on every
- * subsequent write under inotify.
+ * Ensure the parent directory exists so fs.watch can attach to it.
  */
-async function ensure_queue_file_exists() {
+async function ensure_queue_dir_exists() {
   const queue_path = get_queue_file_path()
   try {
     await fs.mkdir(path.dirname(queue_path), { recursive: true })
-    const handle = await fs.open(queue_path, 'a')
-    await handle.close()
   } catch (error) {
-    log('Failed to ensure queue file exists: %s', error.message)
+    log('Failed to ensure queue dir exists: %s', error.message)
   }
 }
 
 /**
- * Attach an fs.watch to the queue file. Caller must ensure the file exists.
+ * Attach fs.watch to the queue file's parent directory and filter by
+ * filename. The queue uses atomic rename for processing, so the queue file's
+ * inode changes on every drain cycle -- a file-level watcher would lose its
+ * inotify reference. Watching the directory is stable across rename/recreate.
  */
 function start_fs_watcher(callbacks) {
   const queue_path = get_queue_file_path()
+  const parent_dir = path.dirname(queue_path)
   try {
-    fs_watcher = fs_watch(queue_path, () => schedule_process(callbacks))
-    fs_watcher.on('error', (error) => {
-      log('fs.watch error on queue file: %s', error.message)
+    fs_watcher = fs_watch(parent_dir, (_event_type, filename) => {
+      if (filename === QUEUE_FILE_NAME) schedule_process(callbacks)
     })
-    log('fs.watch attached to queue file')
+    fs_watcher.on('error', (error) => {
+      log('fs.watch error on queue directory: %s', error.message)
+    })
+    log('fs.watch attached to queue directory')
   } catch (error) {
     log(
       'Failed to attach fs.watch (relying on fallback poll): %s',
@@ -480,7 +481,7 @@ export async function start_thread_sync_request_watcher({
   const callbacks = { on_thread_sync, on_thread_delete, on_overflow, metrics }
   watcher_active = true
 
-  await ensure_queue_file_exists()
+  await ensure_queue_dir_exists()
 
   // Drain any entries left from a prior process before we begin watching.
   process_queue(callbacks).catch((error) => {
