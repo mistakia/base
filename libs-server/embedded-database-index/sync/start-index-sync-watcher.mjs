@@ -80,14 +80,14 @@ export const thread_index_sync_hooks = {
  * Used when the API runs with read-only database access.
  */
 export const thread_sync_forwarding_hooks = {
-  on_thread_sync: async ({ thread_id }) => {
+  on_thread_sync: async ({ thread_id, metadata }) => {
     try {
       if (!thread_id) {
         log('Missing thread_id in forwarding hook')
         return
       }
 
-      await write_thread_sync_request({ thread_id })
+      await write_thread_sync_request({ thread_id, metadata })
     } catch (error) {
       log('Error forwarding thread sync %s: %s', thread_id, error.message)
     }

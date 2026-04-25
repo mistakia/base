@@ -454,7 +454,10 @@ router.post('/tags', async (req, res) => {
       last_tag_result = remove_result
     }
 
-    // Sync thread tags to SQLite when operating on a thread entity
+    // Sync thread tags to SQLite when operating on a thread entity.
+    // Metadata is intentionally omitted here: the consumer falls back to a
+    // disk read, which keeps this route path free of an extra metadata.json
+    // load just to populate the IPC payload.
     if (last_tag_result && last_tag_result.thread_id) {
       await write_thread_sync_request({
         thread_id: last_tag_result.thread_id

@@ -33,9 +33,9 @@ const log = debug('threads:update')
 // reflects user-initiated mutations without depending on the file watcher
 // (which can drop events during its startup window or skip terminal-state
 // updates if its metadata cache has been evicted).
-async function enqueue_index_sync(thread_id) {
+async function enqueue_index_sync(thread_id, metadata) {
   try {
-    await write_thread_sync_request({ thread_id })
+    await write_thread_sync_request({ thread_id, metadata })
   } catch (error) {
     log(`Failed to enqueue index sync for ${thread_id}: ${error.message}`)
   }
@@ -156,7 +156,7 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     }
   }
 
-  await enqueue_index_sync(thread_id)
+  await enqueue_index_sync(thread_id, metadata)
 
   // Return updated thread data
   return {
@@ -259,7 +259,7 @@ export async function update_thread_metadata({
   })
   const updated_metadata = JSON.parse(written)
 
-  await enqueue_index_sync(thread_id)
+  await enqueue_index_sync(thread_id, updated_metadata)
 
   // Return updated thread data
   return {

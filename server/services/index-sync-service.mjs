@@ -239,15 +239,20 @@ export const start_index_sync_service = async () => {
 
   // Start thread sync request watcher for forwarded thread syncs from API
   try {
-    start_thread_sync_request_watcher({
+    await start_thread_sync_request_watcher({
       metrics,
       on_overflow: async () => {
         log('Thread IPC overflow recovery: re-syncing all threads')
         await embedded_index_manager._populate_threads_from_filesystem()
         log('Thread IPC overflow recovery complete')
       },
-      on_thread_sync: async ({ thread_id }) => {
-        let metadata = await read_thread_metadata_from_disk(thread_id)
+      on_thread_sync: async ({ thread_id, metadata: payload_metadata }) => {
+        // Fast path: writer included the metadata snapshot in the IPC payload,
+        // so we skip the disk re-read entirely.
+        let metadata = payload_metadata ?? null
+        if (!metadata) {
+          metadata = await read_thread_metadata_from_disk(thread_id)
+        }
         if (!metadata) {
           // Retry once after delay - file may still be written by another process
           await new Promise((resolve) => setTimeout(resolve, 500))
