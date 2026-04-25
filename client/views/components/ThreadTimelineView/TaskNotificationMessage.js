@@ -60,6 +60,10 @@ const TaskNotificationMessage = ({ message }) => {
 
   const has_details = output_file || trailing_content
 
+  if (!summary && !task_id && !has_details) {
+    return null
+  }
+
   return (
     <div
       className={`task-notification task-notification--${status_class}${has_details ? ' task-notification--clickable' : ''}`}
