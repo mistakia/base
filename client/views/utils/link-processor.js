@@ -16,6 +16,48 @@ export const process_links_in_markdown = (
 
   let processed_content = content
 
+  // Transform base URI references wrapped in single backticks BEFORE the regular
+  // transforms. Markdown-it would otherwise treat the backticks as an inline-code
+  // span and never render the inner link as an anchor. We rewrite each pattern to
+  // `[`label`](client_path)`, which renders as an anchor wrapping a code-styled
+  // label so the visual code styling is preserved AND the link is clickable.
+  //
+  // Wiki link in backticks: `[[scheme:path]]` or `[[scheme:path|Display Text]]`
+  processed_content = processed_content.replace(
+    /`\[\[(sys|user):([^\]|]+)(?:\|([^\]]*))?\]\]`/g,
+    (match, scheme, path, display_text) => {
+      const base_uri = `${scheme}:${path}`
+      const client_path = convert_base_uri_to_path(base_uri)
+      const label =
+        display_text != null
+          ? display_text
+          : client_path.startsWith('/')
+            ? client_path.slice(1)
+            : client_path
+      return `[\`${label}\`](${client_path})`
+    }
+  )
+
+  // Markdown link in backticks: `[text](scheme:path)`
+  processed_content = processed_content.replace(
+    /`\[([^\]]*)\]\((sys|user):([^)]+)\)`/g,
+    (match, text, scheme, path) => {
+      const base_uri = `${scheme}:${path}`
+      const client_path = convert_base_uri_to_path(base_uri)
+      return `[\`${text}\`](${client_path})`
+    }
+  )
+
+  // Bare base URI in backticks: `scheme:path/file.ext`
+  processed_content = processed_content.replace(
+    /`((?:sys|user):[^\s`]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)(?:#[a-zA-Z0-9_-]+)?)`/g,
+    (match, base_uri) => {
+      const client_path = convert_base_uri_to_path(base_uri)
+      const filename = base_uri.split('/').pop()
+      return `[\`${filename}\`](${client_path})`
+    }
+  )
+
   // Transform wiki links [[scheme:path]] or [[scheme:path|Display Text]] to markdown links
   processed_content = processed_content.replace(
     BASE_URI_PATTERNS.WIKI_LINK,
