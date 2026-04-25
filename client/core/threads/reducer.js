@@ -192,13 +192,23 @@ function preserve_optimistic_entries(existing_timeline, fresh_timeline) {
   if (!existing_timeline || !Array.isArray(existing_timeline)) {
     return fresh_timeline
   }
-  const optimistic = existing_timeline.filter((e) => e._optimistic)
-  if (optimistic.length === 0) return fresh_timeline
   const base = Array.isArray(fresh_timeline) ? fresh_timeline : []
+  const base_ids = new Set(base.map((e) => e?.id).filter(Boolean))
+
+  // Preserve real (non-optimistic) entries that landed in cache via
+  // THREAD_TIMELINE_ENTRY_ADDED while this fetch was in flight. The server
+  // snapshot reflects timeline state at request time and can omit entries
+  // written between request and response; without this merge those entries
+  // are silently overwritten and only reappear on manual refresh.
+  const real_kept = existing_timeline.filter(
+    (e) => e && !e._optimistic && e.id && !base_ids.has(e.id)
+  )
+
   // Drop optimistic entries whose real counterpart is already present. User
   // messages carry distinct ids but arrive with role=user+type=message, so
   // match by (role, type, content) within a small time window.
-  const kept = optimistic.filter((opt) => {
+  const optimistic = existing_timeline.filter((e) => e._optimistic)
+  const optimistic_kept = optimistic.filter((opt) => {
     return !base.some(
       (e) =>
         !e._optimistic &&
@@ -208,7 +218,9 @@ function preserve_optimistic_entries(existing_timeline, fresh_timeline) {
           e.content?.parts?.[0]?.text === opt.content)
     )
   })
-  return kept.length ? [...base, ...kept] : base
+
+  if (real_kept.length === 0 && optimistic_kept.length === 0) return base
+  return [...base, ...real_kept, ...optimistic_kept]
 }
 
 /**
@@ -809,6 +821,14 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       // Only append full (non-truncated) entries to cached thread timelines.
       // Truncated entries are received when the client is not subscribed to the
       // thread and contain only summary fields for session card display.
+      //
+      // Seed the cache when missing: WS events for a freshly-created or
+      // freshly-opened thread can arrive before GET_(SHEET_)THREAD_FULFILLED
+      // populates the cache. Without seeding, those entries silently no-op
+      // and the GET response (taken at request time) may not include them
+      // either, leaving the assistant message invisible until manual refresh.
+      // The matching merge in preserve_optimistic_entries keeps the seeded
+      // entries when the GET response lands.
       let new_state = state
       if (!entry.truncated) {
         // If this is a user message, check for and replace any optimistic entry
@@ -841,10 +861,14 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
             Array.isArray(current_timeline) &&
             current_timeline.some((e) => e.id === entry.id)
           if (!already_has_entry) {
-            new_state = append_timeline_entry(new_state, thread_id, entry)
+            new_state = append_or_seed_timeline_entry(
+              new_state,
+              thread_id,
+              entry
+            )
           }
         } else {
-          new_state = append_timeline_entry(new_state, thread_id, entry)
+          new_state = append_or_seed_timeline_entry(new_state, thread_id, entry)
         }
       }
 
