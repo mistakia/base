@@ -575,6 +575,10 @@ export default function GlobalThreadInput() {
       selection.getRangeAt(0).insertNode(text_node)
       selection.collapseToEnd()
     }
+    // Programmatic DOM insertion does not fire `input`, so sync Redux manually
+    // to keep `message` aligned with the DOM and prevent the sync effect from
+    // overwriting the pasted content on a subsequent click.
+    handle_input_change()
   }
 
   const handle_toggle_mode = () => {
