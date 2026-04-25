@@ -35,6 +35,33 @@ const ACTIVE_SESSION_STATUSES = new Set([
   'idle'
 ])
 
+// Server emits THREAD_UPDATED with terminal status (completed/failed)
+// before flushing the final timeline writes -- in observed runs the
+// remaining THREAD_TIMELINE_ENTRY_ADDED burst trails the status change
+// by ~100ms. Unsubscribing on the status edge causes the server to send
+// those late entries truncated, and the reducer drops them. Defer the
+// unsubscribe long enough to absorb the trailing burst, and cancel the
+// pending unsubscribe if the thread re-enters an active status (resume).
+const UNSUBSCRIBE_DEFERRAL_MS = 10000
+const pending_unsubscribe_timers = new Map()
+
+const cancel_pending_unsubscribe = (thread_id) => {
+  const handle = pending_unsubscribe_timers.get(thread_id)
+  if (handle) {
+    clearTimeout(handle)
+    pending_unsubscribe_timers.delete(thread_id)
+  }
+}
+
+const schedule_unsubscribe = (thread_id) => {
+  cancel_pending_unsubscribe(thread_id)
+  const handle = setTimeout(() => {
+    pending_unsubscribe_timers.delete(thread_id)
+    unsubscribe_from_thread(thread_id)
+  }, UNSUBSCRIBE_DEFERRAL_MS)
+  pending_unsubscribe_timers.set(thread_id, handle)
+}
+
 export function* handle_thread_auto_subscribe({ payload }) {
   const thread = payload.thread || payload.data || {}
   const thread_id = thread.thread_id
@@ -43,9 +70,10 @@ export function* handle_thread_auto_subscribe({ payload }) {
   if (!thread_id) return
 
   if (ACTIVE_SESSION_STATUSES.has(session_status)) {
+    cancel_pending_unsubscribe(thread_id)
     yield call(() => subscribe_to_thread(thread_id))
   } else if (session_status === 'completed' || session_status === 'failed') {
-    yield call(() => unsubscribe_from_thread(thread_id))
+    yield call(() => schedule_unsubscribe(thread_id))
   }
 }
 
