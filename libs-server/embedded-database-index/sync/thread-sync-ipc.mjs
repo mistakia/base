@@ -58,6 +58,8 @@ let fs_watcher = null
 let fallback_interval = null
 let debounce_timer = null
 let is_processing = false
+let pending_reprocess = false
+let active_callbacks = null
 
 function get_queue_dir() {
   return path.join(
@@ -327,12 +329,17 @@ async function process_queue({
   metrics
 }) {
   // Reentrancy guard: fs.watch may fire a second event while we are mid-batch.
+  // Record that a re-invocation was attempted so we can re-schedule once the
+  // current pass finishes -- otherwise the trigger event for newly-arrived
+  // request files would be silently dropped.
   if (is_processing) {
-    log('Already processing thread sync queue, skipping')
+    pending_reprocess = true
+    log('Already processing thread sync queue, will re-run after current pass')
     return
   }
 
   is_processing = true
+  pending_reprocess = false
 
   try {
     const legacy_entries = await drain_legacy_queue()
@@ -398,6 +405,10 @@ async function process_queue({
     log('Thread sync queue processing failed: %s', error.message)
   } finally {
     is_processing = false
+    if (pending_reprocess && active_callbacks) {
+      pending_reprocess = false
+      schedule_process(active_callbacks)
+    }
   }
 }
 
@@ -474,6 +485,7 @@ export async function start_thread_sync_request_watcher({
 
   const callbacks = { on_thread_sync, on_thread_delete, on_overflow, metrics }
   watcher_active = true
+  active_callbacks = callbacks
 
   await ensure_queue_dir_exists()
 
@@ -502,6 +514,8 @@ export function stop_thread_sync_request_watcher() {
 
   log('Stopping thread sync request watcher')
   watcher_active = false
+  active_callbacks = null
+  pending_reprocess = false
 
   if (fs_watcher) {
     try {
