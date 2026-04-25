@@ -47,7 +47,9 @@ const USER_BASE_IGNORE = [
   // Non-entity data directories (frequent writes, no entity content)
   'database',
   'data',
-  'files'
+  'files',
+  // Large bulk-data subdirectories under text/ (not entity content)
+  'text/epstein'
 ]
 
 // Directories excluded from file subscription event routing.
