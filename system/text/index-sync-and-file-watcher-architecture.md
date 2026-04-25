@@ -33,7 +33,7 @@ File Watchers (detect changes)
     |
     v
 IPC Queues (cross-process communication)
-    |   Thread sync: API writes thread_id to .thread-sync-queue (poll 5s)
+    |   Thread sync: API writes per-request files under thread-sync-queue/ (fs.watch)
     |   Entity change: sync service writes to .entity-change-queue (poll 2s)
     |
     v
@@ -60,14 +60,15 @@ Four watcher strategies serve different scope and reliability needs:
 | User-base watcher (base-api)     | @parcel/watcher         | user-base/ (recursive, with exclusions) | WebSocket file notifications, repo unstaged detection |
 | Thread watcher                   | @parcel/watcher         | thread/ (recursive)                     | Thread metadata/timeline changes                      |
 | Git status watcher               | chokidar                | ~280 specific .git file patterns        | Git index, HEAD, refs changes                         |
-| Thread sync IPC                  | polling (5s setTimeout) | .thread-sync-queue file                 | Thread sync request forwarding                        |
+| Thread sync IPC                  | fs.watch (dir, 50ms)    | thread-sync-queue/ per-request files    | Thread sync request forwarding                        |
 | Entity change IPC                | polling (2s setTimeout) | .entity-change-queue file               | Entity change notification to base-api                |
 
 ### Library Selection Rationale
 
 - **@parcel/watcher**: Directory-level native OS watchers (FSEvents on macOS, inotify on Linux). Low overhead for broad directory trees. Cannot filter to specific file patterns within a directory.
 - **chokidar**: File-level watching with glob pattern support. Required for git-status-watcher which watches specific patterns like `refs/heads/**` across ~280 files. Not worth migrating to @parcel/watcher for this use case.
-- **Polling (setTimeout)**: Used for single IPC queue files. Immune to FSEvents event drops. 5-second interval with sequential execution via recursive setTimeout. Cross-platform reliable.
+- **Polling (setTimeout)**: Used for the entity-change-queue (single append-only file). Immune to FSEvents event drops. 2-second interval with sequential execution via recursive setTimeout. Cross-platform reliable.
+- **fs.watch (directory)**: Used for the thread-sync-queue. Each enqueue creates a fresh per-request file under a stable directory inode, so Bun's `fs.watch` reliably surfaces a "rename" entry-create event. A 60-second `setInterval` poll runs as a dropped-event safety net. See "Bun fs.watch quirk" below.
 
 ### User-Base Watcher Event Routing
 
@@ -102,18 +103,22 @@ Both watchers implement error recovery:
 
 ## Thread Sync IPC
 
-The API and sync service run in separate PM2 processes. Thread state changes flow through a file-based IPC queue:
+The API and sync service run in separate PM2 processes. Thread state changes flow through a per-request file IPC queue under `embedded-database-index/thread-sync-queue/`. The implementation lives in `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs`.
 
-1. **Writer (API)**: Thread watcher detects metadata.json change, appends `{thread_id}\n` to `embedded-database-index/.thread-sync-queue`
-2. **Reader (sync service)**: Polls queue file every 5 seconds
-3. **Processing**: Atomically renames queue to `.processing`, deduplicates entries, processes each sync/delete, removes `.processing` file
-4. **Crash recovery**: Detects leftover `.processing` files on startup and resumes
+1. **Writer (API)**: The thread watcher debounces by `thread_id` (50ms) to coalesce metadata.json + timeline.jsonl writes from the same tick, then atomically writes a single request file at `thread-sync-queue/<ts>-<pid>-<uuid>.req`. Each enqueue is a fresh inode in a stable parent directory.
+2. **Reader (sync service)**: A `fs.watch` subscription on the queue directory fires a "rename" entry-create event for each new `.req` file and schedules `process_queue` after a 50ms debounce. A 60-second `setInterval` runs as a safety-net poll for any missed event.
+3. **Processing**: `process_queue` reads every pending `.req` file, deduplicates by `thread_id` with last-write-wins (delete entries supersede preceding syncs; a sync after a delete is resurrected), invokes `on_thread_sync` / `on_thread_delete` per thread, then unlinks the processed files. A reentrancy guard plus `pending_reprocess` flag re-runs once after the current pass if `fs.watch` fires mid-batch.
+4. **Crash recovery**: Each request file is an atomic write. Files left behind by a mid-drain crash are picked up on the next consumer start; idempotent SQLite UPSERTs make duplicate reads harmless.
+5. **Legacy migration**: A single one-shot drain of the prior `.thread-sync-queue` append-only file runs on startup if present, then the file is unlinked.
 
-Delete requests use `DELETE:{thread_id}` prefix and take precedence over sync requests for the same thread.
+Request payloads are one of:
+- JSON object `{"thread_id":"...","metadata":{...}}` when the writer has metadata in scope (skips a consumer disk re-read)
+- bare `{thread_id}` when the writer does not (consumer re-reads `metadata.json`)
+- `DELETE:{thread_id}` for removals
 
 ### Queue Overflow Recovery
 
-When the queue file exceeds 1MB, the writer appends an `OVERFLOW:{timestamp}` marker instead of silently dropping requests. On processing, if an overflow marker is detected, the sync service triggers a full thread directory re-scan via `_populate_threads_from_filesystem()` to recover any missed syncs. Overflow events are tracked by metrics.
+When the queue directory accumulates more than `MAX_QUEUE_FILES` (10,000) `.req` entries, the consumer flags `has_overflow` and invokes `on_overflow`, which triggers a full thread directory re-scan via `_populate_threads_from_filesystem()`. Overflow events are tracked by metrics.
 
 ## Entity Change IPC
 
@@ -144,7 +149,7 @@ Both create independent @parcel/watcher subscriptions on the same user-base dire
 | `libs-server/file-subscriptions/user-base-watcher.mjs`             | Consolidated @parcel/watcher with event routing and reconciliation |
 | `libs-server/file-subscriptions/parcel-watcher-adapter.mjs`        | Shared adapter with default ignore patterns and error callback     |
 | `libs-server/file-subscriptions/git-status-watcher.mjs`            | Chokidar-based .git internal file watching                         |
-| `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs`     | Polling-based IPC queue for thread sync forwarding                 |
+| `libs-server/embedded-database-index/sync/thread-sync-ipc.mjs`     | Per-request file IPC queue with fs.watch for thread sync forwarding |
 | `libs-server/embedded-database-index/sync/entity-change-ipc.mjs`   | Polling-based IPC queue for entity change notifications            |
 | `libs-server/embedded-database-index/sync/sync-metrics.mjs`        | In-process metrics collection with periodic log dump               |
 | `libs-server/embedded-database-index/sync/stream-entity-files.mjs` | Async generator for streaming entity population                    |

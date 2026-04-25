@@ -156,7 +156,13 @@ export const mark_thread_created_emitted = (thread_id) => {
 // Index Sync Hook Debouncing
 // ============================================================================
 
-const index_sync_debouncer = create_keyed_debouncer(500)
+// 50ms keyed debounce coalesces the metadata.json + timeline.jsonl writes
+// from a single session tick (typically <10ms apart) into one IPC enqueue
+// while keeping Path 2 (external-writer atomic-rename) latency dominated by
+// disk I/O rather than this timer. The IPC consumer additionally dedupes by
+// thread_id with last-write-wins, so any pair of writes that escapes this
+// window collapses to a single SQLite UPSERT downstream.
+const index_sync_debouncer = create_keyed_debouncer(50)
 
 /**
  * Schedule a debounced index sync for a thread.
