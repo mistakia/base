@@ -507,6 +507,9 @@ const EntityFrontmatter = ({
 
   const parsed_forward_relations = parse_relations_for_display({ relations })
 
+  const pinned_relation_types =
+    type === 'physical_item' ? ['current_location'] : []
+
   if (is_full_width) {
     const has_relations = will_related_entities_render(
       base_uri,
@@ -586,6 +589,7 @@ const EntityFrontmatter = ({
                       show_header={true}
                       header_text='Relations'
                       is_first={true}
+                      pinned_relation_types={pinned_relation_types}
                     />
                   </Box>
                 )}
@@ -763,6 +767,7 @@ const EntityFrontmatter = ({
             exclude_types={['file', 'directory']}
             show_header={true}
             header_text='Relations'
+            pinned_relation_types={pinned_relation_types}
           />
         )}
 

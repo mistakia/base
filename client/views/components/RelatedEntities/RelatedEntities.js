@@ -81,7 +81,8 @@ const RelatedEntities = ({
   is_first = false,
   token,
   default_collapsed = true,
-  visible_count = DEFAULT_VISIBLE_COUNT
+  visible_count = DEFAULT_VISIBLE_COUNT,
+  pinned_relation_types = []
 }) => {
   const [api_relations, set_api_relations] = useState([])
   const [is_expanded, set_is_expanded] = useState(!default_collapsed)
@@ -155,8 +156,17 @@ const RelatedEntities = ({
     }
 
     const merged = Array.from(relation_map.values())
-    return sort_relations_by_weighted_score({ relations: merged })
-  }, [api_relations, forward_relations, exclude_types])
+    const sorted = sort_relations_by_weighted_score({ relations: merged })
+
+    if (pinned_relation_types.length === 0) {
+      return sorted
+    }
+
+    const pinned_set = new Set(pinned_relation_types)
+    const pinned = sorted.filter((r) => pinned_set.has(r.relation_type))
+    const rest = sorted.filter((r) => !pinned_set.has(r.relation_type))
+    return [...pinned, ...rest]
+  }, [api_relations, forward_relations, exclude_types, pinned_relation_types])
 
   // Filter invalid relations (they have the invalid flag set by relation-parser)
   const valid_relations = useMemo(
@@ -249,7 +259,8 @@ RelatedEntities.propTypes = {
   is_first: PropTypes.bool,
   token: PropTypes.string,
   default_collapsed: PropTypes.bool,
-  visible_count: PropTypes.number
+  visible_count: PropTypes.number,
+  pinned_relation_types: PropTypes.arrayOf(PropTypes.string)
 }
 
 export default RelatedEntities
