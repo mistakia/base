@@ -64,6 +64,12 @@
     "session_ttl_seconds": 3600,
     "cleanup_interval_seconds": 60
   },
+  "thread_config": {
+    "lease_ttl_minutes": 120,
+    "lease_keepalive_events": ["UserPromptSubmit", "Stop"],
+    "lease_acquire_timeout_ms": 5000,
+    "field_ownership_enforce": false
+  },
   "opencode": {
     "default_model": "",
     "timeout_ms": 120000,
