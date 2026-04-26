@@ -1,20 +1,25 @@
 .assistant-message
-  border-radius $radius_sm
-  margin-bottom $space_xs
-  padding $space_base
+  padding 0
   width 100%
   overflow hidden
-  background-color $color_white
+  background-color transparent
   position relative
 
 .assistant-message__header
   position absolute
-  top 8px
-  right 8px
+  top 0
+  right 0
   z-index 1
   display flex
   align-items center
   gap 4px
+
+.assistant-message__header .MuiIconButton-root
+  opacity 0
+  transition opacity $transition_fast
+
+.assistant-message:hover .assistant-message__header .MuiIconButton-root
+  opacity 1
 
 .assistant-message__content
   font-family $font_family_mono
@@ -24,8 +29,8 @@
   white-space pre-wrap
   word-break break-word
   margin 0
-  padding-top $space_lg
-    
+  padding $space_lg 0 0 0
+
   &--reasoning
     font-style italic
     color $color_text_secondary

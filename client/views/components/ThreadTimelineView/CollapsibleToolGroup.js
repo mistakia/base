@@ -66,7 +66,6 @@ const CollapsibleToolGroup = ({ entries, render_event, group_key }) => {
         sx={{
           display: 'block',
           padding: '8px 0',
-          margin: '8px 0',
           cursor: 'pointer',
           color: 'var(--color-text-tertiary)',
           fontSize: '0.75rem',

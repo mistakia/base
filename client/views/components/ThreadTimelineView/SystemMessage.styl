@@ -21,32 +21,32 @@
 
   // Severity-based styles
   &--warning
-    background-color: rgba(255, 152, 0, 0.1)
-    color: #e65100
+    background-color: rgba($color_warning, 0.1)
+    color: darken($color_warning, 15%)
 
     .system-message__icon
-      color: #ff9800
+      color: $color_warning
 
   &--error
-    background-color: rgba(244, 67, 54, 0.1)
-    color: #c62828
+    background-color: rgba($color_error, 0.1)
+    color: darken($color_error, 10%)
 
     .system-message__icon
-      color: #f44336
+      color: $color_error
 
   &--interrupt
-    background-color: rgba(158, 158, 158, 0.1)
+    background-color: rgba($color_text_secondary, 0.1)
     color: $color_text_secondary
 
     .system-message__icon
-      color: #9e9e9e
+      color: $color_text_secondary
 
   &--info
-    background-color: rgba(33, 150, 243, 0.1)
-    color: #1565c0
+    background-color: rgba($color_info, 0.1)
+    color: darken($color_info, 10%)
 
     .system-message__icon
-      color: #2196f3
+      color: $color_info
 
 .system-message__icon
   flex-shrink: 0

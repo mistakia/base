@@ -1,0 +1,40 @@
+.hook-message
+  border: 1px solid $color_border
+  border-radius: $radius_base
+  overflow: hidden
+
+.hook-message__header
+  display: flex
+  align-items: center
+  justify-content: space-between
+  padding: 0 $space_sm
+  cursor: pointer
+  transition: background-color $transition_fast
+
+  &:hover
+    background-color: $color_surface_hover
+
+.hook-message__title
+  font-family: $font_family_mono
+  font-size: $font_size_sm
+  font-weight: $font_weight_semibold
+  color: $color_text_tertiary
+
+.hook-message__toggle
+  transition: transform $transition_base
+
+  &--expanded
+    transform: rotate(180deg)
+
+.hook-message__body
+  padding: $space_base
+  border-top: 1px solid $color_border
+
+.hook-message__output
+  white-space: pre-wrap
+  font-family: $font_family_mono
+  font-size: $font_size_sm
+  color: $color_text
+  overflow: auto
+  max-height: 400px
+  margin: 0

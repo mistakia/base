@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import PropTypes from 'prop-types'
 
 import '@styles/chip.styl'
+import './UserMessage.styl'
 import './SkillInvocationEvent.styl'
 import MarkdownViewer from '@components/primitives/MarkdownViewer.js'
 import ExpandToggle from '@components/primitives/ExpandToggle'
@@ -92,11 +93,11 @@ SkillChip.propTypes = {
 
 const SkillInvocationEvent = ({ skills, user_text }) => {
   return (
-    <div className='skill-invocation'>
-      <div className='skill-invocation__header'>
-        <span className='chip skill-invocation__chip'>user</span>
+    <div className='user-message skill-invocation'>
+      <div className='user-message__header'>
+        <span className='chip user-message__chip'>user</span>
       </div>
-      <div className='skill-invocation__content'>
+      <div className='user-message__content'>
         {user_text && (
           <div className='skill-invocation__user-text'>
             <MarkdownViewer content={user_text} />

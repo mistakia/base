@@ -1,10 +1,7 @@
-$user_message_bg = hsl(32, 21.30%, 94.00%)
-
 .user-message
-  background-color: $user_message_bg
-  border-radius: $radius_sm
+  background-color: $color_user_message_bg
+  border-radius: $radius_base
   padding: $space_base
-  margin-bottom: $space_xs
   position: relative
   width: 100%
 
@@ -25,14 +22,27 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
   align-items: center
   gap: 4px
 
+.user-message__header .MuiIconButton-root
+  opacity: 0
+  transition: opacity $transition_fast
+
+.user-message:hover .user-message__header .MuiIconButton-root
+  opacity: 1
+
 .user-message__chip
   text-transform: uppercase
-  background: darken($user_message_bg, 6%)
-  border-color: darken($user_message_bg, 6%)
+  font-size: $font_size_xs
+  font-weight: $font_weight_bold
+  letter-spacing: 0.06em
+  padding: 4px 10px
+  color: $color_white
+  background: $color_user_chip_bg
+  border-color: $color_user_chip_bg
 
   &:hover
-    background: darken($user_message_bg, 6%)
-    border-color: darken($user_message_bg, 6%)
+    color: $color_white
+    background: darken($color_user_chip_bg, 5%)
+    border-color: darken($color_user_chip_bg, 5%)
 
 .user-message__content
   margin-bottom: 0
@@ -52,27 +62,27 @@ $user_message_bg = hsl(32, 21.30%, 94.00%)
   word-break: break-word
 
 .user-message__command-prompt
-  color: $color_text_secondary
+  color: $color_text
 
 .user-message__command-name
   font-weight: $font_weight_medium
   color: $color_text
 
 .user-message__command-args
-  color: $color_text_secondary
+  color: $color_text
   margin-left: $space_lg
 
 .user-message__command-message
   width: 100%
-  font-size: $font_size_sm
-  color: $color_text_secondary
+  font-size: $font_size_base
+  color: $color_text
   margin-top: $space_xs
   display: flex
   gap: $space_xs
   align-items: flex-start
 
 .user-message__command-prefix
-  color: $color_text_secondary
+  color: $color_text
   flex-shrink: 0
 
 .user-message__command-message-text

@@ -1,43 +1,8 @@
-$user_message_bg = hsl(32, 21.30%, 94.00%)
-
-.skill-invocation
-  background-color: $user_message_bg
-  border-radius: $radius_sm
-  padding: $space_base
-  margin-bottom: $space_xs
-  position: relative
-  width: 100%
-  font-family: $font_family_mono
-  font-size: $font_size_base
-  line-height: 1.5
-  color: $color_text
-
-.skill-invocation__header
-  position: absolute
-  top: 8px
-  right: 8px
-  z-index: 1
-  display: flex
-  align-items: center
-  gap: 4px
-
-.skill-invocation__chip
-  text-transform: uppercase
-  background: darken($user_message_bg, 6%)
-  border-color: darken($user_message_bg, 6%)
-
-  &:hover
-    background: darken($user_message_bg, 6%)
-    border-color: darken($user_message_bg, 6%)
-
-.skill-invocation__content
-  padding-top: $space_lg
-
 .skill-invocation__user-text
   margin-bottom: $space_sm
   white-space: normal
   word-break: normal
-  color: $color_text_secondary
+  color: $color_text
 
 .skill-invocation__skills
   display: flex

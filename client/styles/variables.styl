@@ -3,6 +3,7 @@
 // =====================================================
 
 $font_family_mono = 'IBM Plex Mono', 'Monaco', 'Menlo', 'Ubuntu Mono', monospace
+$font_size_xxs = 10px
 $font_size_xs = 11px
 $font_size_sm = 12px
 $font_size_base = 15px
@@ -39,6 +40,10 @@ $color_border_light = #e9ecef
 $color_surface = #F7F7F4
 $color_surface_hover = #fafafa
 $color_surface_secondary = #f8f9fa
+
+// User Message Surfaces (shared by user-message and skill-invocation)
+$color_user_message_bg = hsl(32, 26%, 90%)
+$color_user_chip_bg = darken($color_user_message_bg, 55%)
 
 // overwrite react-table background TODO fix in the upstream library via config or classname
 $backgroundColor = $color_surface

@@ -2,6 +2,11 @@
   // Shared accent color for timeline elements (used in TimelineList and SubThreadTool)
   --timeline-accent: var(--color-border)
 
+.timeline-list
+  display: flex
+  flex-direction: column
+  gap: $space_sm
+
 .timeline-scroll-button
   position: sticky
   bottom: var(--space-lg)

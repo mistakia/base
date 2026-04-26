@@ -385,7 +385,10 @@ const TimelineList = ({
   }
 
   return (
-    <Box sx={{ py: 3, position: 'relative' }} ref={timeline_container_ref}>
+    <Box
+      className='timeline-list'
+      sx={{ py: 3, position: 'relative' }}
+      ref={timeline_container_ref}>
       {/* Render timeline events */}
       {render_content()}
 
