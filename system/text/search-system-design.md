@@ -11,7 +11,7 @@ relations:
   - relates_to [[sys:system/text/permission-system-design.md]]
   - relates_to [[sys:system/text/database-and-indexing.md]]
   - relates_to [[sys:system/text/background-services.md]]
-updated_at: '2026-03-02T00:00:00.000Z'
+updated_at: '2026-04-26T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 visibility_analyzed_at: '2026-02-16T04:37:40.256Z'
 ---
@@ -20,168 +20,187 @@ visibility_analyzed_at: '2026-02-16T04:37:40.256Z'
 
 ## Overview
 
-The search system provides unified search across files, directories, entities, and threads using ripgrep for file discovery and a native fuzzy scoring algorithm for ranking. Results are permission-filtered and ranked by relevance.
+The search system serves the Command Palette and any other client that needs unified, permission-filtered results across entities, threads, and files. It is built around a **source-orchestrator** model: a small set of independent search sources run in parallel against the SQLite index (and a few other backends), and an orchestrator deduplicates, ranks, paginates, and permission-filters the merged results.
 
-## Search Modes
+There is no single "search mode" toggle. Callers select which sources to run via a `source` parameter; the default set covers the common case.
 
-Two distinct modes optimize for different use cases:
+## Architecture
 
-1. **Paths Mode**: Fast path matching combining files and directories. Ripgrep's `--files` enumerates all files, and directories are derived from file paths. Both are scored using a native fuzzy algorithm that supports full path matching. Multi-word queries match each word independently against the full path. Used for autocomplete features.
+```
+GET /api/search
+   |
+   v
+orchestrator
+   |-- entity            (FTS5 over entities_fts)
+   |-- thread_metadata   (FTS5 over threads_fts)
+   |-- thread_timeline   (FTS5 over thread_timeline_fts)
+   |-- path              (file enumeration + native fuzzy scorer)
+   |-- semantic          (embedding similarity, optional)
+   |-- <external>        (extension-registered adapters)
+   |
+   v
+dedupe -> attach metadata -> filter -> rank -> paginate -> permission filter -> response
+```
 
-2. **Full Mode**: Content search combining four parallel searches:
-   - File content search via ripgrep
-   - Entity search via SQLite ILIKE on title and description (with fallback to path-based scoring if SQLite is unavailable)
-   - Directory search
-   - Thread metadata search
+All sources implement the same interface: given `{ query, candidate_limit, ... }`, return an array of hits `{ entity_uri, raw_score, matched_field, snippet, extras, source }`. This keeps the orchestrator agnostic to backend details and makes new sources cheap to add.
 
-## Directory Search
+Key files:
 
-Directories are derived from file paths returned by ripgrep, rather than using separate filesystem traversal. This approach is significantly faster because:
+- Route: `server/routes/search.mjs`
+- Orchestrator: `libs-server/search/orchestrator.mjs`
+- Sources: `libs-server/search/sources/{entity,thread-metadata,thread-timeline,path,semantic}.mjs`
+- Filters / ranking / permissions: `libs-server/search/{filters,ranker,permission}.mjs`
+- Fuzzy scorer: `libs-server/search/fuzzy-scorer.mjs`
+- FTS schema: `libs-server/embedded-database-index/sqlite/sqlite-schema-definitions.mjs`
+- Entity sync: `libs-server/embedded-database-index/sqlite/sqlite-entity-sync.mjs`
 
-1. Ripgrep already respects .gitignore and exclude patterns
-2. No separate traversal into node_modules or other excluded directories
-3. Processes paths already in memory
+## Sources
 
-Results include:
+### Entity (`sources/entity.mjs`)
 
-- Relative path with trailing slash (e.g., "repository/active/league/")
-- Absolute path for permission checking
-- Category marker for UI display
+Queries the FTS5 virtual table `entities_fts(base_uri UNINDEXED, title, description, body)` with `MATCH` and ranks by `bm25(entities_fts, 10.0, 3.0, 1.0)`. Title hits dominate, description is mid-weighted, body is the long tail.
 
-## Thread Search Architecture
+The `entities` table extracts a fixed set of fields from frontmatter (title, description, status, priority, archived, public_read, timestamps, user_public_key) into typed columns, plus the markdown body and the full frontmatter JSON in a `frontmatter` TEXT column. Only `title`, `description`, and `body` are indexed by FTS5 today; arbitrary structured frontmatter fields (e.g. `manufacturer`, `model_number`) are stored but **not searchable**.
 
-Threads present a unique challenge: metadata is stored in individual JSON files across thousands of directories.
+Snippets are produced via FTS5 `snippet()` per field; the source returns whichever snippet actually contains a match (title preferred).
 
-**Key Design Decisions:**
+There is no ILIKE fallback. If the SQLite query fails the source returns an empty result set.
 
-- **Ripgrep PCRE2 field search**: Uses ripgrep with PCRE2 regex to search specific JSON fields across all thread metadata files. The regex pattern targets only designated searchable fields, avoiding false matches on JSON structure.
+The FTS tables are kept in lockstep with their content tables (`entities`, `threads`, `thread_timeline`) by SQLite `AFTER INSERT/UPDATE/DELETE` triggers defined alongside the schema. The sync layer writes only to the content tables; FTS rows follow automatically.
 
-- **No artificial limits**: All threads are searched (~60-80ms for thousands of files). Results are sorted by `updated_at` after matching.
+### Thread Metadata (`sources/thread-metadata.mjs`)
 
-- **Field-specific matching**: A PCRE2 regex pattern matches only values within designated JSON keys:
-  - `title`, `short_description`, `thread_id`
-  - `workflow_base_uri`, `working_directory`, `git_branch`
+FTS5 over `threads_fts(thread_id UNINDEXED, title, short_description)` with `bm25(5.0, 1.0)`. `thread_id` is `UNINDEXED` — searching for a literal thread UUID will not match here.
 
-- **Metadata-only by default**: Timeline content search is disabled by default due to performance cost. Can be enabled via configuration.
+This replaces the earlier ripgrep-PCRE2 scan over thread metadata files. The rich field list documented previously (`workflow_base_uri`, `working_directory`, `git_branch`) is no longer searched; only `title` and `short_description` are indexed. If thread search needs to span more fields again, extend `threads_fts` and the sync layer.
 
-- **Two-phase search**: Ripgrep finds matching files first, then only matched metadata files are read for result formatting and date sorting.
+### Thread Timeline (`sources/thread-timeline.mjs`)
 
-## Result Ranking
+FTS5 over `thread_timeline_fts(turn_text)`, one row per turn in the `thread_timeline` table. Returns one hit per matched turn, carrying `thread_id` and `turn_index` in `extras`. The orchestrator collapses timeline hits into the parent thread URI during dedupe.
 
-### Entity Ranking (SQLite)
+### Path (`sources/path.mjs`)
 
-Entity results in full mode are ranked by SQLite using a relevance heuristic: title ILIKE matches rank first, then description-only matches, with `updated_at` as tiebreaker. Entity type and tag filtering use SQLite WHERE clauses and tag joins, eliminating post-hoc filtering. The search API route queries SQLite directly and merges results into the unified response.
+Enumerates file paths (ripgrep `--files`, honoring `.gitignore` and configured exclude patterns), optionally scoped to a `base_uri` prefix, and fuzzy-scores every candidate against the query. See [Fuzzy Scoring](#fuzzy-scoring) below.
 
-### File and Directory Ranking (Fuzzy Scorer)
+Path hits arrive with only `file_path` and a fuzzy score; `type`, `status`, and `title` are filled in later by the orchestrator's batch metadata fetch (or remain null for files that aren't tracked entities). Status and tag filters are skipped for path hits because they don't apply.
 
-Files and directories are ranked using a native fuzzy scoring algorithm inspired by VS Code's Quick Open feature.
+Directories are no longer a separate source; if directory results are needed, derive them from path hits. Empty directories cannot be discovered this way.
 
-**VS Code Approach: Score Before Limit**
+### Semantic (`sources/semantic.mjs`)
 
-Following VS Code's architecture, all files (up to 20,000) are collected first, then fuzzy scored, then limited to the top results. This ensures high-quality matches are never truncated before scoring. The flow is:
+Thin wrapper over the embedding-similarity service. Runs under an `AbortController` with a configurable timeout (default 2000 ms). Any failure mode — timeout, abort, backend unavailable, exception — collapses to an empty result set with no surfaced error. Semantic is treated as best-effort and silent.
 
-1. Ripgrep returns all file paths (up to `max_search_results: 20000`)
-2. All paths are fuzzy scored against the query
-3. Top results selected by score (e.g., 512 for UI display)
+### External
 
-This differs from approaches that truncate results before scoring, which can miss highly relevant files that appear later in the directory traversal order.
+Extensions register additional sources via `discover_external_search_sources()` (see `libs-server/search/discover-external-sources.mjs`). They follow the same hit shape and participate in dedupe/ranking like any builtin source. The permission filter recognizes only `user:` and `sys:` URI schemes; hits with any other scheme (e.g. `discord://`) **bypass permission checks entirely** and are returned as-is. External sources are responsible for their own access control.
 
-**Scoring Components** (values configurable in `search-config.json`):
+## Orchestration
 
-- Base match score for character matching
-- Consecutive match bonus for sequential character matches
-- Word boundary bonuses (highest at start, then after path separators, then other separators)
-- CamelCase bonus for uppercase after lowercase
-- Case match bonus for exact case
-- Path length penalty to prefer shorter paths
+For each request the orchestrator:
 
-**Multi-word Handling:**
+1. **Dispatches** all selected sources in parallel with a per-source `candidate_limit` (default 100). Timed sources (currently only semantic) receive an `AbortSignal`.
+2. **Deduplicates** by `entity_uri`. Multiple matches against the same URI collapse into a single hit whose `matches` array preserves per-source `{ source, raw_score, matched_field, snippet }` so the UI can show why a result appeared.
+3. **Attaches metadata** (`type`, `status`, `title`, `updated_at`) by batch-querying SQLite. `IN` clauses are chunked at 900 to stay under SQLite's parameter limit.
+4. **Filters** by `type`, `status`, `tag`, `path_glob`. Tag filtering joins through `entity_tags` / `thread_tags`. The path source skips status/tag filters (it has neither).
+5. **Ranks** (see below).
+6. **Paginates** with `offset` / `limit`.
+7. **Permission-filters** the page through the permission system (deny-by-default for `user:`/`sys:` URIs). External-scheme hits pass through.
 
-- Query is split on whitespace
-- Each word is scored independently against the full path
-- Final score is the sum of word scores
-- All words must match for a result to be included (AND logic)
+Pagination happens **before** permission filtering, so a page may return fewer than `limit` results when some are denied. This is a deliberate trade-off: it bounds the permission check to one page worth of URIs and avoids over-fetching for users with broad read access.
 
-This native implementation removes the previous dependency on the fzf external binary while providing similar ranking quality.
+## Ranking
 
-## Permission Integration
+The ranker (`libs-server/search/ranker.mjs`) combines three signals:
 
-Search results are batch-filtered through the permission system before returning:
+1. **Per-source min/max normalization** of `raw_score` to `[0, 1]`. Sources with different score scales (BM25 vs. fuzzy vs. cosine similarity) are made comparable.
+2. **Source weights**: entity 1.0, thread_metadata 0.9, semantic 0.8, thread_timeline 0.7, path 0.5. When a hit appears in multiple sources, the orchestrator takes the best weighted score per source and sums across sources.
+3. **Recency boost**: up to +0.1 with exponential decay over a 365-day half-life, applied from `updated_at`.
 
-1. Execute search query
-2. Convert result paths to base-URIs
-3. Batch check permissions
-4. Filter results where read access is denied
+Final ordering is by total score descending.
+
+## Fuzzy Scoring
+
+Used by the path source. Native scorer inspired by VS Code's Quick Open.
+
+- Query is split on whitespace; each word is scored independently against the full path. **All words must match** (AND) or the path is rejected.
+- Per-word score sums the following bonuses along a greedy left-to-right match (values configurable):
+  - Consecutive match bonus
+  - Word boundary bonus (start > path-separator > other separator)
+  - CamelCase bonus
+  - Case-match bonus
+- A small per-character path length penalty favors shorter paths.
+- The first character is tried at up to its first 10 occurrences, taking the best result.
+
+The scorer replaces the previous external `fzf` dependency.
+
+## API
+
+`GET /api/search` accepts:
+
+| Param | Notes |
+| --- | --- |
+| `q` | Query string; required unless filters narrow results. Minimum 2 chars. |
+| `source` | CSV of source names. Defaults to the configured set (entity, thread_metadata, thread_timeline, path). |
+| `type` | CSV of entity types. |
+| `tag` | CSV of tag base-URIs. |
+| `status` | CSV of statuses. |
+| `path_glob` | Glob pattern restricting `entity_uri`. |
+| `scope` | Base-URI prefix; only the path source uses it today. |
+| `limit` | Default 20, capped at `search.max_limit` (100). |
+| `offset` | Non-negative integer. |
+
+Response: `{ query, total, results: Hit[] }`. `total` reflects the post-permission-filter count for the returned page.
+
+CSV parameters reject duplicate occurrences with HTTP 400 to keep semantics unambiguous.
+
+## Command Palette (Client)
+
+Client state lives in `client/core/search/`. The query field accepts inline operators that are parsed into chips and translated into API parameters.
+
+| Operator | Wired | Maps to |
+| --- | --- | --- |
+| `?` (semantic) | yes | `source=semantic` |
+| `source:` | yes | `source` |
+| `type:` / `t:` | yes | `type` |
+| `tag:` | yes | `tag` |
+| `status:` | yes | `status` |
+| `path:` | yes | `path_glob` |
+| `#` (content) | not yet | — |
+| `in:` / `dir:` | not yet | — |
+| `-term` (exclude) | not yet | — |
+
+The reducer holds chips as an Immutable List; sagas debounce input by 300 ms before issuing the API call.
 
 ## Configuration
 
-Search behavior is controlled by a JSON configuration file in the user base directory. Key settings:
+`config/search-config.json` controls behavior. Notable keys:
 
-- **Exclude patterns**: Directories and file patterns to skip (e.g., node_modules, .git)
-- **Result type toggles**: Enable/disable files, threads, entities independently
-- **Timeline search toggle**: Enable thread timeline content search (disabled by default)
-- **Limits**: Max file size, timeout, result counts
-
-## Search Operators
-
-The Command Palette supports operator-based filtering via typed chips. Users type operator syntax which converts to visual chip elements on space.
-
-### Operator Syntax
-
-| Operator        | Aliases       | Example                | Chip label          |
-| --------------- | ------------- | ---------------------- | ------------------- |
-| Content mode    | `#`           | `# docker config`      | `Content`           |
-| Semantic mode   | `?`           | `? how does auth work` | `Semantic`          |
-| Entity type     | `type:`, `t:` | `type:task deploy`     | `type: task`        |
-| Tag             | `tag:`        | `tag:base-project`     | `tag: base-project` |
-| Directory scope | `in:`, `dir:` | `in:task/ migration`   | `in: task/`         |
-| Exclude         | `-term`       | `search -archived`     | `-archived`         |
-
-### Conversion Triggers
-
-- **Mode prefixes** (`#`, `?`): Convert on first character typed after the prefix
-- **Value operators** (`type:value`, `tag:value`, `in:path`, `-term`): Convert on space after the complete token
-
-### Chip Interaction
-
-- Chips render inline before the text input in the Command Palette
-- Backspace with empty input removes the last chip
-- Hover reveals an X button for click removal
-- Removing a chip re-triggers search with updated filters
-
-### API Parameters
-
-The search API (`GET /api/search`) accepts these filter parameters alongside existing ones:
-
-- `entity_types`: Comma-separated entity type names, filters entity results via SQLite type column
-- `tags`: Comma-separated tag base URIs, filters entity results via SQLite tag join
-- `exclude`: Comma-separated terms, post-filtered from result titles and paths (case-insensitive)
-- When `entity_types` includes `thread`, threads are automatically included in result types
-
-### Implementation
-
-Chip state is managed in the Redux search reducer as an Immutable List. Selectors derive filter values from chips for the saga to pass to the API. Entity type and tag filtering are handled by SQLite WHERE clauses in the API route. Exclude filtering is a post-filter on result titles/paths.
+- `search.default_limit`, `search.max_limit`, `search.timeout_ms`
+- `sources.enabled_by_default` — sources that run when no explicit `source` is given
+- `sources.per_source_candidate_cap` — default `candidate_limit` per source (100)
+- `sources.semantic_timeout_ms`
+- Path source ripgrep excludes (e.g. `node_modules`, `.git`, `.system`)
 
 ## Trade-offs
 
-| Decision                 | Trade-off                                                                   |
-| ------------------------ | --------------------------------------------------------------------------- |
-| PCRE2 field regex        | Slower than simple search vs. precise field matching                        |
-| Timeline search disabled | Missing conversation content vs. sub-second response                        |
-| Native fuzzy scorer      | Simpler architecture (no external dependency) vs. potential ranking quality |
-| Score-then-limit (20k)   | Higher memory for large codebases vs. accurate multi-word path matching     |
-| Dirs from file paths     | Cannot discover empty directories vs. fast extraction                       |
-| Read-after-match         | Additional file reads for matched threads vs. streaming results             |
-| Operator chip parsing    | Parsing complexity on each keystroke vs. discoverable filter syntax         |
-| SQLite entity search     | Requires SQLite index to be ready vs. accurate title/description ranking    |
+| Decision | Trade-off |
+| --- | --- |
+| FTS5 BM25 for entities | Fast and ranks well on title/description/body; cannot match arbitrary frontmatter fields without indexing them. |
+| Source-orchestrator model | Adds normalization complexity vs. one query plan; pays back in pluggability and per-source tuning. |
+| Per-source min/max normalization | Comparable scores across heterogeneous backends; loses absolute score meaning. |
+| Source weights + recency boost | Tunable relevance; opaque to users. |
+| Pagination before permission filter | Bounds permission checks to one page; pages may under-fill when denials occur. |
+| Frontmatter not indexed | Simple schema, fast sync; structured fields (manufacturer, model_number, etc.) are invisible to search. |
+| Semantic as best-effort | Search degrades gracefully when embeddings are unavailable; results are non-deterministic across deploys. |
+| Native fuzzy scorer | No external dependency; ranking quality is "good enough" rather than identical to fzf. |
+| Empty directories not discoverable | Path source only sees what ripgrep returns. |
 
 ## Performance
 
-Target response times are sub-second for typical queries. The bottleneck is usually ripgrep file enumeration, not fuzzy scoring. Fuzzy scoring thousands of items takes only a few milliseconds.
+Sub-second response is the target for typical queries. The dominant cost varies by source: ripgrep enumeration for path, BM25 over the FTS index for entity/thread, network round-trip for semantic. Per-source candidate caps (100 by default) keep ranking work bounded; final pagination caps response size at 100.
 
-Key performance characteristics:
+## Known Gaps
 
-- Paths mode is fastest (file enumeration + scoring only)
-- Full mode adds content search and thread metadata search
-- Directory extraction from file paths is essentially free (~0ms)
-- Score-then-limit approach has minimal overhead for codebases under 20k files
+- Structured frontmatter fields are not searchable (e.g. `manufacturer`, `model_number` on `physical-item`). Extending `entities_fts` with a `metadata` column populated from a per-type allowlist is the natural fix.
+- Operators `#`, `in:`, and `-term` are documented in the UI but not yet wired through the API.
+- Thread metadata search no longer covers `workflow_base_uri`, `working_directory`, or `git_branch`. If those become important again, add them to `threads_fts` and the sync layer.
