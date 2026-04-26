@@ -61,7 +61,8 @@ export const import_cursor_conversations_to_threads = async (options = {}) => {
       provider_name: 'cursor',
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
-      provider_options: { cursor_conversations: valid_conversations }
+      provider_options: { cursor_conversations: valid_conversations },
+      bulk_import: options.bulk_import === true
     })
 
     return {

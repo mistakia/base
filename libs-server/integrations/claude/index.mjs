@@ -89,7 +89,8 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       },
       ...(options.known_thread_id
         ? { known_thread_id: options.known_thread_id }
-        : {})
+        : {}),
+      bulk_import: options.bulk_import === true
     })
 
     const sessions_processed =

@@ -7,6 +7,7 @@ import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
 import { write_thread_metadata } from '#libs-server/threads/write-thread-metadata.mjs'
 import { build_thread_audit_context } from '#libs-server/threads/build-thread-audit-context.mjs'
+import { check_thread_fields_writable } from '#libs-server/threads/check-thread-fields.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import config from '#config'
 import is_main from '#libs-server/utils/is-main.mjs'
@@ -85,6 +86,16 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     }
     validate_archive_reason(reason)
   }
+
+  const fields_changing = ['thread_state']
+  if (thread_state === THREAD_STATE.ARCHIVED) {
+    fields_changing.push('archived_at', 'archive_reason')
+  }
+  check_thread_fields_writable({
+    thread_id,
+    fields: fields_changing,
+    op: 'state_change'
+  })
 
   // Atomic read-modify-write with optimistic concurrency
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
@@ -245,6 +256,12 @@ export async function update_thread_metadata({
       user_base_directory
     })
   }
+
+  check_thread_fields_writable({
+    thread_id,
+    fields: Object.keys(metadata),
+    op: 'patch'
+  })
 
   // Atomic read-modify-write with optimistic concurrency
   const updated_metadata = await write_thread_metadata({

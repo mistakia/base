@@ -235,7 +235,8 @@ export const create_threads_from_session_provider = async ({
   include_warm_agents = false,
   provider_options = {},
   execution_overrides = null,
-  known_thread_id = null
+  known_thread_id = null,
+  bulk_import = false
 }) => {
   if (!provider_name) {
     throw new Error('provider_name is required')
@@ -337,7 +338,8 @@ export const create_threads_from_session_provider = async ({
         allow_updates,
         verbose,
         execution_overrides,
-        known_thread_id
+        known_thread_id,
+        bulk_import
       })
 
       // Add result to appropriate category
@@ -398,7 +400,8 @@ export const process_single_session = async ({
   allow_updates,
   verbose,
   execution_overrides = null,
-  known_thread_id = null
+  known_thread_id = null,
+  bulk_import = false
 }) => {
   const session_id = session_provider.get_session_id(raw_session)
 
@@ -420,7 +423,8 @@ export const process_single_session = async ({
       thread_id: known_thread_id,
       thread_dir,
       session_id,
-      execution_overrides
+      execution_overrides,
+        bulk_import
     })
   }
 
@@ -439,7 +443,8 @@ export const process_single_session = async ({
         thread_id,
         thread_dir,
         session_id,
-        execution_overrides
+        execution_overrides,
+        bulk_import
       })
     } else {
       return {
@@ -514,7 +519,8 @@ export const process_single_session = async ({
         thread_id: existing_thread_id,
         thread_dir: existing_thread_dir,
         session_id,
-        execution_overrides
+        execution_overrides,
+        bulk_import
       })
     }
   } catch (matcher_error) {
@@ -649,7 +655,8 @@ const update_existing_session_thread = async ({
   thread_id,
   thread_dir,
   session_id,
-  execution_overrides = null
+  execution_overrides = null,
+  bulk_import = false
 }) => {
   // Normalize session just-in-time
   let normalized_session = session_provider.normalize_session(raw_session)
@@ -659,7 +666,8 @@ const update_existing_session_thread = async ({
     thread_id,
     thread_dir,
     raw_session_data: raw_session,
-    execution_overrides
+    execution_overrides,
+    bulk_import
   })
 
   // Timeline write + integrity check succeeded inside update_existing_thread --
