@@ -18,7 +18,8 @@ import {
   execute_sqlite_run,
   checkpoint_sqlite,
   with_sqlite_reader,
-  is_sqlite_initialized
+  is_sqlite_initialized,
+  register_default_sqlite_path
 } from './sqlite/sqlite-database-client.mjs'
 import {
   create_sqlite_schema,
@@ -183,6 +184,13 @@ class EmbeddedIndexManager {
         `${user_base_directory}/embedded-database-index/sqlite.db`,
       file_watcher_enabled: embedded_config.file_watcher_enabled !== false
     }
+
+    // Make the SQLite path available to the read-only fallback in
+    // sqlite-database-client so reader-only processes (base-api) can serve
+    // queries without the manager being initialized in-process.
+    register_default_sqlite_path({
+      database_path: this.index_config.sqlite_path
+    })
 
     return this.index_config
   }
@@ -1273,6 +1281,14 @@ class EmbeddedIndexManager {
 }
 
 const embedded_index_manager = new EmbeddedIndexManager()
+
+// Eagerly resolve the index config so the SQLite client knows the on-disk
+// path for transient read-only fallback even before any query runs.
+try {
+  embedded_index_manager.get_index_config()
+} catch (error) {
+  log('Eager index config resolution failed: %s', error.message)
+}
 
 export default embedded_index_manager
 export { EmbeddedIndexManager }

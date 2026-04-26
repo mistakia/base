@@ -1,9 +1,6 @@
 import debug from 'debug'
 
-import {
-  execute_sqlite_query,
-  is_sqlite_initialized
-} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('activity:task-stats')
 
@@ -12,11 +9,6 @@ const log = debug('activity:task-stats')
  * @returns {Promise<Object>} Summary stats with period breakdowns
  */
 export async function get_task_summary_stats() {
-  if (!is_sqlite_initialized()) {
-    log('SQLite not initialized, returning empty stats')
-    return null
-  }
-
   try {
     const now = new Date()
     const periods = [3, 10, 30]
@@ -100,11 +92,6 @@ export async function get_task_summary_stats() {
  * @returns {Promise<Array>} Array of tag stats sorted by staleness
  */
 export async function get_task_stats_by_tag({ days = 90 } = {}) {
-  if (!is_sqlite_initialized()) {
-    log('SQLite not initialized, returning empty tag stats')
-    return []
-  }
-
   try {
     const since = new Date()
     since.setDate(since.getDate() - days)
@@ -194,11 +181,6 @@ export async function get_task_stats_by_tag({ days = 90 } = {}) {
  * @returns {Promise<Array>} Array of { week, completed, created, open }
  */
 export async function get_task_completion_series({ weeks = 52 } = {}) {
-  if (!is_sqlite_initialized()) {
-    log('SQLite not initialized, returning empty series')
-    return []
-  }
-
   try {
     const since = new Date()
     since.setDate(since.getDate() - weeks * 7)

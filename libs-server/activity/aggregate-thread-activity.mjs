@@ -3,10 +3,7 @@ import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
-import {
-  execute_sqlite_query,
-  is_sqlite_initialized
-} from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/index.mjs'
 
 const log = debug('activity:thread')
@@ -20,11 +17,6 @@ const log = debug('activity:thread')
  */
 async function get_token_usage_by_date({ since_date, until_date }) {
   const token_by_date = new Map()
-
-  if (!is_sqlite_initialized()) {
-    log('SQLite not initialized, skipping token usage aggregation')
-    return token_by_date
-  }
 
   try {
     const query = `

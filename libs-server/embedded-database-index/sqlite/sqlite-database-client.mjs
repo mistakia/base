@@ -6,6 +6,7 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 import fs from 'fs/promises'
+import fs_sync from 'fs'
 import path from 'path'
 import debug from 'debug'
 
@@ -13,8 +14,19 @@ const log = debug('embedded-index:sqlite')
 
 let sqlite_database = null
 let database_path = null
+let default_reader_path = null
 
 const reader_context = new AsyncLocalStorage()
+
+/**
+ * Register the on-disk SQLite path that read-only callers should fall back to
+ * when no writer handle and no scoped reader are available. Set once per
+ * process from `embedded_index_manager.get_index_config()`. Safe to call
+ * repeatedly with the same path.
+ */
+export function register_default_sqlite_path({ database_path: db_path }) {
+  default_reader_path = db_path || null
+}
 
 export async function initialize_sqlite_client({
   database_path: db_path,
@@ -64,22 +76,56 @@ function get_active_database() {
   return sqlite_database
 }
 
-export async function execute_sqlite_query({ query, parameters = [] }) {
-  const db = get_active_database()
+// Returns a scoped/global handle when available; otherwise null. Reads use
+// this to opt into a transient reader fallback without throwing.
+function get_active_database_or_null() {
+  const store = reader_context.getStore()
+  if (store?.db) return store.db
+  return sqlite_database
+}
 
+async function open_transient_reader() {
+  if (!default_reader_path) return null
+  if (!fs_sync.existsSync(default_reader_path)) return null
+  const { Database } = await import('bun:sqlite')
+  const db = new Database(default_reader_path, { readonly: true })
+  db.exec('PRAGMA busy_timeout=5000')
+  return db
+}
+
+export async function execute_sqlite_query({ query, parameters = [] }) {
   log('Executing SQLite query: %s', query.substring(0, 100))
 
   const sanitized_parameters = parameters.map((p) =>
     p === undefined ? null : p
   )
 
+  const active = get_active_database_or_null()
+  if (active) {
+    try {
+      const stmt = active.prepare(query)
+      return stmt.all(...sanitized_parameters)
+    } catch (error) {
+      log('SQLite query error: %s', error.message)
+      throw error
+    }
+  }
+
+  // No scoped reader, no global writer handle. Open a short-lived read-only
+  // connection against the registered default path so reader-only processes
+  // (e.g. base-api) can serve queries without the manager being initialized.
+  const transient = await open_transient_reader()
+  if (!transient) {
+    throw new Error('SQLite client not initialized')
+  }
   try {
-    const stmt = db.prepare(query)
-    const result = stmt.all(...sanitized_parameters)
-    return result
+    const stmt = transient.prepare(query)
+    return stmt.all(...sanitized_parameters)
   } catch (error) {
     log('SQLite query error: %s', error.message)
     throw error
+  } finally {
+    transient.close()
   }
 }
 
@@ -168,5 +214,6 @@ export const sqlite_database_client = {
   execute_run: execute_sqlite_run,
   close: close_sqlite_connection,
   get_database_path: get_sqlite_database_path,
-  checkpoint: checkpoint_sqlite
+  checkpoint: checkpoint_sqlite,
+  register_default_sqlite_path
 }

@@ -11,7 +11,8 @@ import {
   execute_sqlite_run,
   close_sqlite_connection,
   is_sqlite_initialized,
-  with_sqlite_reader
+  with_sqlite_reader,
+  register_default_sqlite_path
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 describe('SQLite Database Client', () => {
@@ -153,6 +154,88 @@ describe('SQLite Database Client', () => {
       }
       expect(caught).to.be.an('error')
       expect(caught.message).to.equal('scoped-reader-error')
+    })
+  })
+
+  describe('transient reader fallback', () => {
+    let tmp_dir
+    let tmp_path
+
+    before(async () => {
+      const os = await import('node:os')
+      const path = await import('node:path')
+      const fs = await import('node:fs/promises')
+      tmp_dir = await fs.mkdtemp(
+        path.join(os.tmpdir(), 'sqlite-fallback-unit-')
+      )
+      tmp_path = path.join(tmp_dir, 'fallback.db')
+
+      const { Database } = await import('bun:sqlite')
+      const seed = new Database(tmp_path)
+      seed.exec('PRAGMA journal_mode=WAL')
+      seed.exec('CREATE TABLE fallback_test (id INTEGER, value TEXT)')
+      seed.prepare("INSERT INTO fallback_test VALUES (7, 'transient')").run()
+      seed.close()
+    })
+
+    afterEach(() => {
+      register_default_sqlite_path({ database_path: null })
+    })
+
+    after(async () => {
+      const fs = await import('node:fs/promises')
+      try {
+        await fs.rm(tmp_dir, { recursive: true, force: true })
+      } catch {
+        // ignore
+      }
+      // Restore the in-memory client for the rest of the suite (if any).
+      if (!is_sqlite_initialized()) {
+        await initialize_sqlite_client({ in_memory: true })
+      }
+    })
+
+    it('serves reads from the registered file when no writer is initialized', async () => {
+      await close_sqlite_connection()
+      register_default_sqlite_path({ database_path: tmp_path })
+
+      const rows = await execute_sqlite_query({
+        query: 'SELECT value FROM fallback_test WHERE id = 7'
+      })
+      expect(rows).to.be.an('array')
+      expect(rows.length).to.equal(1)
+      expect(rows[0].value).to.equal('transient')
+      // The transient handle must not leak as a global writer.
+      expect(is_sqlite_initialized()).to.equal(false)
+    })
+
+    it('throws when no writer, no scoped reader, and no registered path', async () => {
+      await close_sqlite_connection()
+      let caught
+      try {
+        await execute_sqlite_query({ query: 'SELECT 1' })
+      } catch (error) {
+        caught = error
+      }
+      expect(caught).to.be.an('error')
+      expect(caught.message).to.equal('SQLite client not initialized')
+    })
+
+    it('keeps execute_sqlite_run strict (no transient writer fallback)', async () => {
+      await close_sqlite_connection()
+      register_default_sqlite_path({ database_path: tmp_path })
+
+      let caught
+      try {
+        await execute_sqlite_run({
+          query: 'INSERT INTO fallback_test VALUES (8, ?)',
+          parameters: ['nope']
+        })
+      } catch (error) {
+        caught = error
+      }
+      expect(caught).to.be.an('error')
+      expect(caught.message).to.equal('SQLite client not initialized')
     })
   })
 })
