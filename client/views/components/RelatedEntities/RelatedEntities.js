@@ -82,13 +82,14 @@ const RelatedEntities = ({
   token,
   default_collapsed = true,
   visible_count = DEFAULT_VISIBLE_COUNT,
-  pinned_relation_types = []
+  pinned_relation_types = [],
+  forward_only = false
 }) => {
   const [api_relations, set_api_relations] = useState([])
   const [is_expanded, set_is_expanded] = useState(!default_collapsed)
 
   const fetch_relations = useCallback(async () => {
-    if (!base_uri) {
+    if (!base_uri || forward_only) {
       return
     }
 
@@ -103,7 +104,7 @@ const RelatedEntities = ({
     } catch (err) {
       console.error('Error fetching entity relations:', err)
     }
-  }, [base_uri, token])
+  }, [base_uri, token, forward_only])
 
   useEffect(() => {
     fetch_relations()
@@ -260,7 +261,8 @@ RelatedEntities.propTypes = {
   token: PropTypes.string,
   default_collapsed: PropTypes.bool,
   visible_count: PropTypes.number,
-  pinned_relation_types: PropTypes.arrayOf(PropTypes.string)
+  pinned_relation_types: PropTypes.arrayOf(PropTypes.string),
+  forward_only: PropTypes.bool
 }
 
 export default RelatedEntities

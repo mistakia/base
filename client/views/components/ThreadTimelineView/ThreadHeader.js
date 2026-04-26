@@ -284,6 +284,8 @@ const use_first_row_tracker = () => {
   }
 }
 
+const CHANGE_RELATION_TYPES = new Set(['creates', 'modifies'])
+
 const ThreadStats = ({
   total_tokens,
   session_id,
@@ -308,6 +310,22 @@ const ThreadStats = ({
     user_message_count > 0 || assistant_message_count > 0
   const has_both_tool_calls_and_cost =
     tool_call_count > 0 && thread_cost_display
+
+  const { changed_relations, other_relations } = useMemo(() => {
+    const parsed = parse_relations_for_display({ relations })
+    const changed = []
+    const other = []
+    for (const relation of parsed) {
+      // Drop fully-redacted entries (no relation_type) — they cannot be classified.
+      if (relation.redacted && !relation.relation_type) continue
+      if (CHANGE_RELATION_TYPES.has(relation.relation_type)) {
+        changed.push(relation)
+      } else {
+        other.push(relation)
+      }
+    }
+    return { changed_relations: changed, other_relations: other }
+  }, [relations])
 
   // Track which row is rendered first
   const get_is_first = use_first_row_tracker()
@@ -335,6 +353,19 @@ const ThreadStats = ({
         />
       )}
 
+      {/* Changes - entities the thread created or modified. Separated from the
+          general Relations list so writes are visually distinct from reads/refs. */}
+      {thread_id && (
+        <RelatedEntities
+          base_uri={`user:thread/${thread_id}`}
+          forward_relations={changed_relations}
+          exclude_types={['file', 'directory']}
+          show_header={true}
+          header_text='Changes'
+          forward_only
+        />
+      )}
+
       {/* Related resources - forward relations from thread metadata + reverse from API.
           Note: RelatedEntities does not participate in is_first tracking because
           it loads asynchronously and may return null after loading completes,
@@ -343,7 +374,7 @@ const ThreadStats = ({
       {thread_id && (
         <RelatedEntities
           base_uri={`user:thread/${thread_id}`}
-          forward_relations={parse_relations_for_display({ relations })}
+          forward_relations={other_relations}
           exclude_types={['file', 'directory']}
           show_header={true}
           header_text='Relations'
