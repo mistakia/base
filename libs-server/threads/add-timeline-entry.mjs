@@ -7,7 +7,8 @@ import {
   append_timeline_entry_jsonl,
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
-import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { write_thread_metadata } from '#libs-server/threads/write-thread-metadata.mjs'
+import { build_thread_audit_context } from '#libs-server/threads/build-thread-audit-context.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
 import { increment_timeline_backstop_counter } from '#libs-server/threads/timeline-backstop-counter.mjs'
 import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
@@ -187,15 +188,17 @@ export default async function add_timeline_entry({ thread_id, entry }) {
 
   // Update metadata.updated_at with optimistic concurrency
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
-  const written = await read_modify_write({
+  const metadata = await write_thread_metadata({
     absolute_path: metadata_path,
-    modify: (content) => {
-      const metadata = JSON.parse(content)
-      metadata.updated_at = new_entry.timestamp
-      return JSON.stringify(metadata, null, 2)
-    }
+    modify: (m) => {
+      m.updated_at = new_entry.timestamp
+      return m
+    },
+    audit_context: build_thread_audit_context({
+      thread_id,
+      op: 'timeline_append'
+    })
   })
-  const metadata = JSON.parse(written)
 
   // Read updated timeline for return value
   const timeline = await read_timeline_jsonl_or_default({
