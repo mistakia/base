@@ -23,6 +23,9 @@
     "secret": "",
     "algorithms": ["HS256"]
   },
+  "service_token": {
+    "secret": ""
+  },
   "claude_session_import_service": {
     "storage_server": {
       "host": "",
