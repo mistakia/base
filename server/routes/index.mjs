@@ -3,6 +3,7 @@ import tags from './tags.mjs'
 import tasks from './tasks.mjs'
 import github from './github.mjs'
 import threads from './threads.mjs'
+import threads_lease from './threads-lease.mjs'
 import models from './models.mjs'
 import filesystem from './filesystem.mjs'
 import active_sessions from './active-sessions.mjs'
@@ -24,6 +25,7 @@ export default {
   tasks,
   github,
   threads,
+  threads_lease,
   models,
   filesystem,
   active_sessions,
