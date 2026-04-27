@@ -345,15 +345,11 @@ export default async function create_thread({
     short_description
   })
 
-  // Stamp _lease_token if a lease has already been acquired upstream
-  // (BullMQ job-worker acquire fires before create_thread for active sessions).
-  // External-session imports and bulk imports run without an active lease and
-  // skip the stamp; those paths are exempted from field-ownership checks via
-  // op:create + bulk_import flags.
+  // Snapshot the upstream lease (BullMQ job-worker acquires before create_thread
+  // for active sessions; external-session and bulk imports run without one).
+  // Used below for audit emission only -- lease epoch is recorded in audit.jsonl,
+  // not on the metadata file.
   const create_lease_snapshot = get_cached_lease_snapshot({ thread_id })
-  if (create_lease_snapshot?.lease_token != null) {
-    metadata._lease_token = create_lease_snapshot.lease_token
-  }
 
   await assert_valid_thread_metadata(metadata)
 

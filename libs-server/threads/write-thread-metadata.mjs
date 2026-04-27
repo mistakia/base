@@ -1,17 +1,17 @@
 // JSON-aware shim around `read_modify_write` for thread metadata writes.
 //
-// This wrapper carries thread-specific knowledge -- path matching, audit
-// emission, lease-token stamping -- that does not belong in the generic
-// filesystem helper. The underlying `read_modify_write` in
-// libs-server/filesystem/optimistic-write.mjs is unchanged: it stays
-// string-in / string-out, and this module composes over it.
+// This wrapper carries thread-specific knowledge -- path matching and audit
+// emission -- that does not belong in the generic filesystem helper. The
+// underlying `read_modify_write` in libs-server/filesystem/optimistic-write.mjs
+// is unchanged: it stays string-in / string-out, and this module composes
+// over it.
 //
 // Contract: `modify(object) => object`. The wrapper parses the file,
-// invokes modify, stamps `_lease_token` for paths matching
-// `thread/<id>/metadata.json` (writer's machine_id is recorded only on the
-// audit entry, not on the metadata file), serializes with the existing
-// 2-space indent, delegates to read_modify_write for the optimistic loop,
-// then on success appends one audit entry capturing the field diff.
+// invokes modify, serializes with the existing 2-space indent, delegates to
+// read_modify_write for the optimistic loop, then on success appends one
+// audit entry capturing the field diff. The audit entry carries lease_token
+// from audit_context; it is the canonical record of which lease epoch
+// produced the write.
 
 import { dirname, basename, sep } from 'path'
 import debug from 'debug'
@@ -54,9 +54,6 @@ export const write_thread_metadata = async ({
       const before = JSON.parse(content)
       captured_before = before
       const after = await modify(before)
-      if (is_metadata && audit_context?.lease_token != null) {
-        after._lease_token = audit_context.lease_token
-      }
       captured_after = after
       return JSON.stringify(after, null, 2)
     }

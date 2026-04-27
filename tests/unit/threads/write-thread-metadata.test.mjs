@@ -47,7 +47,7 @@ describe('libs-server/threads/write-thread-metadata', () => {
     const written = JSON.parse(await readFile(metadata_path, 'utf8'))
     expect(written.title).to.equal('new')
     expect(written.message_count).to.equal(2)
-    expect(written._lease_token).to.equal(7)
+    expect(written._lease_token).to.equal(undefined)
 
     const audit = await readFile(join(thread_dir, 'audit.jsonl'), 'utf8')
     const entry = JSON.parse(audit.trim().split('\n')[0])
@@ -66,9 +66,7 @@ describe('libs-server/threads/write-thread-metadata', () => {
     })
   })
 
-  it('does not emit audit entry when modify produces no diff and no token stamp', async () => {
-    // Identity modify + null lease_token avoids the _lease_token stamp,
-    // so before/after are deeply equal and the audit early-return triggers.
+  it('does not emit audit entry when modify produces no diff', async () => {
     await write_thread_metadata({
       absolute_path: metadata_path,
       modify: (m) => ({ ...m }),
@@ -91,7 +89,7 @@ describe('libs-server/threads/write-thread-metadata', () => {
     expect(audit_exists).to.equal(false)
   })
 
-  it('does not stamp _lease_token or emit audit for non-thread-metadata paths', async () => {
+  it('does not emit an audit entry for non-thread-metadata paths', async () => {
     const other_path = join(tmp_dir, 'other.json')
     await writeFile(other_path, JSON.stringify({ foo: 1 }, null, 2), 'utf8')
     await write_thread_metadata({
@@ -104,12 +102,12 @@ describe('libs-server/threads/write-thread-metadata', () => {
         lease_token: 9
       }
     })
+    await _drain_for_tests()
     const written = JSON.parse(await readFile(other_path, 'utf8'))
-    expect(written._lease_token).to.equal(undefined)
     expect(written.foo).to.equal(2)
   })
 
-  it('does not stamp _lease_token when audit_context.lease_token is null', async () => {
+  it('never writes _lease_token to the metadata file', async () => {
     await write_thread_metadata({
       absolute_path: metadata_path,
       modify: (m) => ({ ...m, title: 'next' }),
@@ -117,12 +115,16 @@ describe('libs-server/threads/write-thread-metadata', () => {
         thread_id: 't-1',
         machine_id: 'macbook',
         op: 'patch',
-        lease_token: null
+        lease_token: 42
       }
     })
     await _drain_for_tests()
     const written = JSON.parse(await readFile(metadata_path, 'utf8'))
     expect(written._lease_token).to.equal(undefined)
+
+    const audit = await readFile(join(thread_dir, 'audit.jsonl'), 'utf8')
+    const entry = JSON.parse(audit.trim().split('\n')[0])
+    expect(entry.lease_token).to.equal(42)
   })
 
   it('throws on missing absolute_path or modify', async () => {
