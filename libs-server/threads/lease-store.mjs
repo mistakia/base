@@ -1,7 +1,7 @@
-import os from 'os'
 import IORedis from 'ioredis'
 import debug from 'debug'
 import config from '#config'
+import { assert_on_machine, WrongMachineError } from '#libs-server/machine/assert-machine.mjs'
 
 const log = debug('threads:lease-store')
 
@@ -9,38 +9,22 @@ const LEASE_KEY_PREFIX = 'lease:thread:'
 const TOKEN_KEY_PREFIX = 'lease_token:thread:'
 const SCAN_COUNT = 100
 
-export class LeaseStoreNotOnStorage extends Error {
+export class LeaseStoreNotOnStorage extends WrongMachineError {
   constructor(actual_hostname, expected_hostname) {
-    super(
-      `lease-store can only run on the storage machine (hostname=${actual_hostname}, expected=${expected_hostname || '<unresolved>'})`
-    )
+    super(actual_hostname, expected_hostname, 'storage')
     this.name = 'LeaseStoreNotOnStorage'
   }
 }
 
-const _resolve_storage_hostname = () => {
-  const registry = config.machine_registry
-  if (!registry || typeof registry !== 'object') return null
-  for (const entry of Object.values(registry)) {
-    if (entry?.storage?.enabled) return entry.hostname || null
-  }
-  return null
-}
-
-let _on_storage_checked = false
-
 const _assert_on_storage = () => {
-  if (_on_storage_checked) return
-  if (process.env.NODE_ENV === 'test') {
-    _on_storage_checked = true
-    return
+  try {
+    assert_on_machine('storage')
+  } catch (err) {
+    if (err instanceof WrongMachineError) {
+      throw new LeaseStoreNotOnStorage(err.actual, err.expected)
+    }
+    throw err
   }
-  const expected = _resolve_storage_hostname()
-  const actual = os.hostname()
-  if (!expected || actual !== expected) {
-    throw new LeaseStoreNotOnStorage(actual, expected)
-  }
-  _on_storage_checked = true
 }
 
 let _redis = null
@@ -253,5 +237,4 @@ export const _close_for_tests = async () => {
     await _redis.quit()
     _redis = null
   }
-  _on_storage_checked = false
 }
