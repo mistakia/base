@@ -6,6 +6,7 @@ import {
 } from '#libs-server/queue/file-based-queue-processor.mjs'
 import { analyze_thread_for_metadata } from '#libs-server/metadata/analyze-thread.mjs'
 import { analyze_thread_for_tags } from '#libs-server/metadata/analyze-thread-tags.mjs'
+import { inspect_lease } from '#libs-server/threads/lease-client.mjs'
 import config from '#config'
 import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
 
@@ -30,6 +31,9 @@ const PROCESSED_FILE_PATH = resolve_queue_path(
 
 const log = debug('metadata:queue')
 
+const _is_lease_active = (snapshot) =>
+  Boolean(snapshot) && snapshot.expires_at > Date.now()
+
 /**
  * Process a single thread for metadata and tag analysis
  *
@@ -42,6 +46,18 @@ const log = debug('metadata:queue')
  */
 const process_thread = async (thread_id) => {
   log(`Processing thread ${thread_id}`)
+
+  // Defer when an active session holds the lease to avoid racing live writes.
+  // Returns 'partial' so the processor re-queues with backoff rather than dropping the item.
+  try {
+    const lease = await inspect_lease({ thread_id })
+    if (_is_lease_active(lease)) {
+      log(`Thread ${thread_id} has active lease on ${lease.machine_id}; deferring`)
+      return { thread_id, status: 'partial', metadata: null, tags: null }
+    }
+  } catch (err) {
+    log(`Failed to inspect lease for ${thread_id}: ${err.message}`)
+  }
 
   const result = {
     thread_id,

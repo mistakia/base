@@ -10,6 +10,7 @@ import {
   analyze_thread_relations,
   RELATION_ANALYSIS_CONFIG
 } from '#libs-server/metadata/analyze-thread-relations.mjs'
+import { inspect_lease } from '#libs-server/threads/lease-client.mjs'
 
 /**
  * Queue processor for thread relation analysis
@@ -36,12 +37,27 @@ const PROCESSED_FILE_PATH = resolve_queue_path(
   '/tmp/claude-relation-analysis-processed.log'
 )
 
+const _is_lease_active = (snapshot) =>
+  Boolean(snapshot) && snapshot.expires_at > Date.now()
+
 /**
  * Process a single thread for relation analysis
  * @param {string} thread_id - Thread ID to process
  * @returns {Promise<Object>} Processing result
  */
 const process_thread = async (thread_id) => {
+  // Defer when an active session holds the lease to avoid racing live writes.
+  // Returns 'partial' so the processor re-queues with backoff rather than dropping the item.
+  try {
+    const lease = await inspect_lease({ thread_id })
+    if (_is_lease_active(lease)) {
+      return { thread_id, status: 'partial' }
+    }
+  } catch (err) {
+    const log = debug('metadata:relation-queue')
+    log(`Failed to inspect lease for ${thread_id}: ${err.message}`)
+  }
+
   const result = await analyze_thread_relations({
     thread_id,
     dry_run: false
