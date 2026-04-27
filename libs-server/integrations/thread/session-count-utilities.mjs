@@ -89,20 +89,29 @@ export function calculate_detailed_message_counts(timeline_entries) {
 export function aggregate_token_counts(provider_metadata) {
   if (!provider_metadata || typeof provider_metadata !== 'object') {
     return {
-      input_tokens: 0,
-      output_tokens: 0,
-      cache_creation_input_tokens: 0,
-      cache_read_input_tokens: 0,
+      context_input_tokens: 0,
+      context_cache_creation_input_tokens: 0,
+      context_cache_read_input_tokens: 0,
+      cumulative_input_tokens: 0,
+      cumulative_output_tokens: 0,
+      cumulative_cache_creation_input_tokens: 0,
+      cumulative_cache_read_input_tokens: 0,
       total_tokens: 0
     }
   }
 
   return {
-    input_tokens: provider_metadata.input_tokens || 0,
-    output_tokens: provider_metadata.output_tokens || 0,
-    cache_creation_input_tokens:
-      provider_metadata.cache_creation_input_tokens || 0,
-    cache_read_input_tokens: provider_metadata.cache_read_input_tokens || 0,
+    context_input_tokens: provider_metadata.context_input_tokens || 0,
+    context_cache_creation_input_tokens:
+      provider_metadata.context_cache_creation_input_tokens || 0,
+    context_cache_read_input_tokens:
+      provider_metadata.context_cache_read_input_tokens || 0,
+    cumulative_input_tokens: provider_metadata.cumulative_input_tokens || 0,
+    cumulative_output_tokens: provider_metadata.cumulative_output_tokens || 0,
+    cumulative_cache_creation_input_tokens:
+      provider_metadata.cumulative_cache_creation_input_tokens || 0,
+    cumulative_cache_read_input_tokens:
+      provider_metadata.cumulative_cache_read_input_tokens || 0,
     total_tokens: provider_metadata.total_tokens || 0
   }
 }

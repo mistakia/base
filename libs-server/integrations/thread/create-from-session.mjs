@@ -171,10 +171,17 @@ export const create_thread_from_session = async ({
         ...(normalized_session.session_provider === 'claude' && {
           user_message_count: detailed_counts.user_message_count,
           assistant_message_count: detailed_counts.assistant_message_count,
-          input_tokens: token_counts.input_tokens,
-          output_tokens: token_counts.output_tokens,
-          cache_creation_input_tokens: token_counts.cache_creation_input_tokens,
-          cache_read_input_tokens: token_counts.cache_read_input_tokens
+          context_input_tokens: token_counts.context_input_tokens,
+          context_cache_creation_input_tokens:
+            token_counts.context_cache_creation_input_tokens,
+          context_cache_read_input_tokens:
+            token_counts.context_cache_read_input_tokens,
+          cumulative_input_tokens: token_counts.cumulative_input_tokens,
+          cumulative_output_tokens: token_counts.cumulative_output_tokens,
+          cumulative_cache_creation_input_tokens:
+            token_counts.cumulative_cache_creation_input_tokens,
+          cumulative_cache_read_input_tokens:
+            token_counts.cumulative_cache_read_input_tokens
         })
       },
       created_at: timeline_created_at,
@@ -660,10 +667,17 @@ export const update_thread_metadata = async (
     : calculate_detailed_message_counts(normalized_session.messages || [])
   const token_counts = precomputed
     ? {
-        input_tokens: precomputed.input_tokens,
-        output_tokens: precomputed.output_tokens,
-        cache_creation_input_tokens: precomputed.cache_creation_input_tokens,
-        cache_read_input_tokens: precomputed.cache_read_input_tokens
+        context_input_tokens: precomputed.context_input_tokens,
+        context_cache_creation_input_tokens:
+          precomputed.context_cache_creation_input_tokens,
+        context_cache_read_input_tokens:
+          precomputed.context_cache_read_input_tokens,
+        cumulative_input_tokens: precomputed.cumulative_input_tokens,
+        cumulative_output_tokens: precomputed.cumulative_output_tokens,
+        cumulative_cache_creation_input_tokens:
+          precomputed.cumulative_cache_creation_input_tokens,
+        cumulative_cache_read_input_tokens:
+          precomputed.cumulative_cache_read_input_tokens
       }
     : aggregate_token_counts(normalized_session.metadata || {})
 
@@ -749,11 +763,17 @@ export const update_thread_metadata = async (
           patch.user_message_count = detailed_counts.user_message_count
           patch.assistant_message_count =
             detailed_counts.assistant_message_count
-          patch.input_tokens = token_counts.input_tokens
-          patch.output_tokens = token_counts.output_tokens
-          patch.cache_creation_input_tokens =
-            token_counts.cache_creation_input_tokens
-          patch.cache_read_input_tokens = token_counts.cache_read_input_tokens
+          patch.context_input_tokens = token_counts.context_input_tokens
+          patch.context_cache_creation_input_tokens =
+            token_counts.context_cache_creation_input_tokens
+          patch.context_cache_read_input_tokens =
+            token_counts.context_cache_read_input_tokens
+          patch.cumulative_input_tokens = token_counts.cumulative_input_tokens
+          patch.cumulative_output_tokens = token_counts.cumulative_output_tokens
+          patch.cumulative_cache_creation_input_tokens =
+            token_counts.cumulative_cache_creation_input_tokens
+          patch.cumulative_cache_read_input_tokens =
+            token_counts.cumulative_cache_read_input_tokens
         }
 
         Object.assign(current, patch)

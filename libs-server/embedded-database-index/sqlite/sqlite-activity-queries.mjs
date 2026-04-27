@@ -115,7 +115,7 @@ export async function query_thread_activity_aggregated({ days = 365 } = {}) {
     query: `
       SELECT
         date(created_at) as date,
-        COALESCE(SUM(total_input_tokens), 0) + COALESCE(SUM(total_output_tokens), 0) as total_tokens,
+        COALESCE(SUM(cumulative_input_tokens), 0) + COALESCE(SUM(cumulative_output_tokens), 0) as total_tokens,
         COALESCE(SUM(edit_count), 0) as edit_count,
         COALESCE(SUM(lines_changed), 0) as lines_changed
       FROM threads

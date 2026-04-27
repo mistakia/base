@@ -47,14 +47,24 @@ const NUMERIC_MAX_FIELDS = new Set([
   'tool_call_count',
   'user_message_count',
   'assistant_message_count',
-  'input_tokens',
-  'output_tokens',
-  'cache_creation_input_tokens',
-  'cache_read_input_tokens',
+  'cumulative_input_tokens',
+  'cumulative_output_tokens',
+  'cumulative_cache_creation_input_tokens',
+  'cumulative_cache_read_input_tokens',
   'entry_count',
   'total_tokens',
   'duration_minutes',
   'duration_ms'
+])
+
+// context_* fields are a snapshot of the latest assistant turn, not a sum.
+// Taking the max would resurrect an older diverged branch's value, so resolve
+// them as a group by picking the side with the higher cumulative_input_tokens
+// (which side has done more turns, and therefore has the newer snapshot).
+const CONTEXT_GROUP_FIELDS = new Set([
+  'context_input_tokens',
+  'context_cache_creation_input_tokens',
+  'context_cache_read_input_tokens'
 ])
 
 export function merge_json({ base, ours, theirs }) {
@@ -64,6 +74,8 @@ export function merge_json({ base, ours, theirs }) {
     ...Object.keys(ours),
     ...Object.keys(theirs)
   ])
+
+  const context_winner = pick_context_winner(ours, theirs)
 
   for (const key of all_keys) {
     const base_val = base[key]
@@ -100,7 +112,13 @@ export function merge_json({ base, ours, theirs }) {
     }
 
     // conflict - apply field-specific resolution
-    const resolved = resolve_conflict({ key, base_val, ours_val, theirs_val })
+    const resolved = resolve_conflict({
+      key,
+      base_val,
+      ours_val,
+      theirs_val,
+      context_winner
+    })
     if (resolved === undefined) {
       // unresolvable conflict
       return null
@@ -111,7 +129,13 @@ export function merge_json({ base, ours, theirs }) {
   return result
 }
 
-function resolve_conflict({ key, base_val, ours_val, theirs_val }) {
+function resolve_conflict({
+  key,
+  base_val,
+  ours_val,
+  theirs_val,
+  context_winner
+}) {
   if (TIMESTAMP_FIELDS.has(key)) {
     return resolve_timestamp(ours_val, theirs_val)
   }
@@ -128,8 +152,30 @@ function resolve_conflict({ key, base_val, ours_val, theirs_val }) {
     return resolve_numeric_max(ours_val, theirs_val)
   }
 
+  if (CONTEXT_GROUP_FIELDS.has(key)) {
+    return context_winner === 'theirs' ? theirs_val : ours_val
+  }
+
   // unknown scalar conflict - take theirs (both sides produce acceptable values)
   return resolve_unknown_scalar({ theirs_val })
+}
+
+function pick_context_winner(ours, theirs) {
+  const ours_progress =
+    typeof ours.cumulative_input_tokens === 'number'
+      ? ours.cumulative_input_tokens
+      : 0
+  const theirs_progress =
+    typeof theirs.cumulative_input_tokens === 'number'
+      ? theirs.cumulative_input_tokens
+      : 0
+  if (theirs_progress > ours_progress) return 'theirs'
+  if (ours_progress > theirs_progress) return 'ours'
+  // tiebreaker: later updated_at
+  if (ours.updated_at && theirs.updated_at) {
+    return theirs.updated_at > ours.updated_at ? 'theirs' : 'ours'
+  }
+  return 'ours'
 }
 
 function resolve_timestamp(ours_val, theirs_val) {

@@ -22,10 +22,10 @@ async function get_token_usage_by_date({ since_date, until_date }) {
     const query = `
       SELECT
         date(created_at) as date,
-        SUM(COALESCE(total_input_tokens, 0)) as input_tokens,
-        SUM(COALESCE(total_output_tokens, 0)) as output_tokens,
-        SUM(COALESCE(cache_creation_input_tokens, 0)) as cache_creation_tokens,
-        SUM(COALESCE(cache_read_input_tokens, 0)) as cache_read_tokens,
+        SUM(COALESCE(cumulative_input_tokens, 0)) as input_tokens,
+        SUM(COALESCE(cumulative_output_tokens, 0)) as output_tokens,
+        SUM(COALESCE(cumulative_cache_creation_input_tokens, 0)) as cache_creation_tokens,
+        SUM(COALESCE(cumulative_cache_read_input_tokens, 0)) as cache_read_tokens,
         SUM(COALESCE(total_tokens, 0)) as total_tokens
       FROM threads
       WHERE created_at >= ? AND created_at <= ?

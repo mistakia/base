@@ -46,8 +46,8 @@ export async function collect_thread_metrics({ snapshot_date }) {
     query: `
       SELECT
         COALESCE(SUM(CAST(total_tokens AS BIGINT)), 0) as total_tokens,
-        COALESCE(SUM(CAST(total_input_tokens AS BIGINT)), 0) as total_input_tokens,
-        COALESCE(SUM(CAST(total_output_tokens AS BIGINT)), 0) as total_output_tokens
+        COALESCE(SUM(CAST(cumulative_input_tokens AS BIGINT)), 0) as cumulative_input_tokens,
+        COALESCE(SUM(CAST(cumulative_output_tokens AS BIGINT)), 0) as cumulative_output_tokens
       FROM threads
     `
   })
@@ -64,16 +64,16 @@ export async function collect_thread_metrics({ snapshot_date }) {
     metrics.push({
       snapshot_date,
       category: 'threads',
-      metric_name: 'total_input_tokens',
-      metric_value: Number(token_rows[0].total_input_tokens),
+      metric_name: 'cumulative_input_tokens',
+      metric_value: Number(token_rows[0].cumulative_input_tokens),
       unit: 'tokens',
       dimensions: {}
     })
     metrics.push({
       snapshot_date,
       category: 'threads',
-      metric_name: 'total_output_tokens',
-      metric_value: Number(token_rows[0].total_output_tokens),
+      metric_name: 'cumulative_output_tokens',
+      metric_value: Number(token_rows[0].cumulative_output_tokens),
       unit: 'tokens',
       dimensions: {}
     })

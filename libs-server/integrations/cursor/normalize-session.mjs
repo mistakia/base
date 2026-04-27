@@ -126,6 +126,35 @@ export const normalize_cursor_conversation = (conversation) => {
     return timeA - timeB
   })
 
+  // Cursor messages only expose input_tokens / output_tokens, so cache fields
+  // stay zero. context_* = latest assistant turn; cumulative_* = sum across
+  // every turn (used for cost accounting).
+  let context_input = 0
+  let cumulative_input = 0
+  let cumulative_output = 0
+  for (const entry of session.messages) {
+    const usage = entry.usage
+    if (usage) {
+      if (typeof usage.input_tokens === 'number') {
+        context_input = usage.input_tokens
+        cumulative_input += usage.input_tokens
+      }
+      if (typeof usage.output_tokens === 'number') {
+        cumulative_output += usage.output_tokens
+      }
+    }
+    entry.context_input_tokens = context_input
+    entry.context_cache_creation_input_tokens = 0
+    entry.context_cache_read_input_tokens = 0
+  }
+  session.metadata.context_input_tokens = context_input
+  session.metadata.context_cache_creation_input_tokens = 0
+  session.metadata.context_cache_read_input_tokens = 0
+  session.metadata.cumulative_input_tokens = cumulative_input
+  session.metadata.cumulative_output_tokens = cumulative_output
+  session.metadata.cumulative_cache_creation_input_tokens = 0
+  session.metadata.cumulative_cache_read_input_tokens = 0
+
   // Calculate session duration
   if (session.messages.length > 0) {
     const firstMsg = session.messages[0]

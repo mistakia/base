@@ -66,6 +66,80 @@ export const extract_total_tokens = (thread) => {
 }
 
 /**
+ * Extract context-state and cumulative token fields. The context_* triple is
+ * the LATEST assistant turn's usage (== current prompt size, what Claude CLI
+ * shows as '% context'). The cumulative_* quartet is the sum across every
+ * assistant turn (used for cost accounting).
+ * @param {Object} thread - Thread object (Immutable or plain JS)
+ * @returns {{
+ *   context_input_tokens: number,
+ *   context_cache_creation_input_tokens: number,
+ *   context_cache_read_input_tokens: number,
+ *   cumulative_input_tokens: number,
+ *   cumulative_output_tokens: number,
+ *   cumulative_cache_creation_input_tokens: number,
+ *   cumulative_cache_read_input_tokens: number,
+ *   context_size: number,
+ *   cache_efficiency: number|null
+ * }}
+ */
+export const extract_context_token_state = (thread) => {
+  const empty = {
+    context_input_tokens: 0,
+    context_cache_creation_input_tokens: 0,
+    context_cache_read_input_tokens: 0,
+    cumulative_input_tokens: 0,
+    cumulative_output_tokens: 0,
+    cumulative_cache_creation_input_tokens: 0,
+    cumulative_cache_read_input_tokens: 0,
+    context_size: 0,
+    cache_efficiency: null
+  }
+  if (!thread) return empty
+
+  const get_value = (key) => {
+    const raw = thread.get ? thread.get(key) : thread[key]
+    return typeof raw === 'number' ? raw : 0
+  }
+
+  const context_input_tokens = get_value('context_input_tokens')
+  const context_cache_creation_input_tokens = get_value(
+    'context_cache_creation_input_tokens'
+  )
+  const context_cache_read_input_tokens = get_value(
+    'context_cache_read_input_tokens'
+  )
+  const context_size =
+    context_input_tokens +
+    context_cache_creation_input_tokens +
+    context_cache_read_input_tokens
+
+  const cache_efficiency =
+    context_size > 0 ? context_cache_read_input_tokens / context_size : null
+
+  const cumulative_input_tokens = get_value('cumulative_input_tokens')
+  const cumulative_output_tokens = get_value('cumulative_output_tokens')
+  const cumulative_cache_creation_input_tokens = get_value(
+    'cumulative_cache_creation_input_tokens'
+  )
+  const cumulative_cache_read_input_tokens = get_value(
+    'cumulative_cache_read_input_tokens'
+  )
+
+  return {
+    context_input_tokens,
+    context_cache_creation_input_tokens,
+    context_cache_read_input_tokens,
+    cumulative_input_tokens,
+    cumulative_output_tokens,
+    cumulative_cache_creation_input_tokens,
+    cumulative_cache_read_input_tokens,
+    context_size,
+    cache_efficiency
+  }
+}
+
+/**
  * Extract duration from thread metadata
  * @param {Object} thread - Thread object (can be Immutable or plain JS)
  * @returns {string|null} Formatted duration string

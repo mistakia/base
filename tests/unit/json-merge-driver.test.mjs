@@ -287,14 +287,14 @@ describe('json-merge-driver', () => {
     })
 
     it('should take the higher token counts', () => {
-      const base = { input_tokens: 100, output_tokens: 200 }
-      const ours = { input_tokens: 150, output_tokens: 250 }
-      const theirs = { input_tokens: 120, output_tokens: 300 }
+      const base = { cumulative_input_tokens: 100, cumulative_output_tokens: 200 }
+      const ours = { cumulative_input_tokens: 150, cumulative_output_tokens: 250 }
+      const theirs = { cumulative_input_tokens: 120, cumulative_output_tokens: 300 }
 
       const result = merge_json({ base, ours, theirs })
 
-      expect(result.input_tokens).to.equal(150)
-      expect(result.output_tokens).to.equal(300)
+      expect(result.cumulative_input_tokens).to.equal(150)
+      expect(result.cumulative_output_tokens).to.equal(300)
     })
   })
 

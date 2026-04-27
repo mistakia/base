@@ -73,10 +73,21 @@ export function normalize_sqlite_thread(thread, models_data) {
 
     // Token information (convert BigInt from SQLite)
     total_tokens: to_number(thread.total_tokens),
-    total_input_tokens: to_number(thread.total_input_tokens),
-    total_output_tokens: to_number(thread.total_output_tokens),
-    cache_creation_input_tokens: to_number(thread.cache_creation_input_tokens),
-    cache_read_input_tokens: to_number(thread.cache_read_input_tokens),
+    context_input_tokens: to_number(thread.context_input_tokens),
+    context_cache_creation_input_tokens: to_number(
+      thread.context_cache_creation_input_tokens
+    ),
+    context_cache_read_input_tokens: to_number(
+      thread.context_cache_read_input_tokens
+    ),
+    cumulative_input_tokens: to_number(thread.cumulative_input_tokens),
+    cumulative_output_tokens: to_number(thread.cumulative_output_tokens),
+    cumulative_cache_creation_input_tokens: to_number(
+      thread.cumulative_cache_creation_input_tokens
+    ),
+    cumulative_cache_read_input_tokens: to_number(
+      thread.cumulative_cache_read_input_tokens
+    ),
 
     // Cost information (calculated from models pricing)
     total_cost: cost_data.total_cost,

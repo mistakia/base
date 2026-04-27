@@ -109,8 +109,8 @@ describe('SQLite Table Queries Integration', () => {
         created_at: '2025-01-01T10:00:00Z',
         updated_at: '2025-01-01T10:00:00Z',
         message_count: 10,
-        total_input_tokens: 3000,
-        total_output_tokens: 2000,
+        cumulative_input_tokens: 3000,
+        cumulative_output_tokens: 2000,
         file_references: JSON.stringify([
           'user:config/settings.json',
           'user:task/my-task.md'
@@ -125,8 +125,8 @@ describe('SQLite Table Queries Integration', () => {
         created_at: '2025-01-02T10:00:00Z',
         updated_at: '2025-01-02T10:00:00Z',
         message_count: 5,
-        total_input_tokens: 1500,
-        total_output_tokens: 1000,
+        cumulative_input_tokens: 1500,
+        cumulative_output_tokens: 1000,
         file_references: JSON.stringify(['user:workflow/deploy.md']),
         directory_references: JSON.stringify(['user:workflow/'])
       },
@@ -138,8 +138,8 @@ describe('SQLite Table Queries Integration', () => {
         created_at: '2025-01-03T10:00:00Z',
         updated_at: '2025-01-03T10:00:00Z',
         message_count: 3,
-        total_input_tokens: 800,
-        total_output_tokens: 500,
+        cumulative_input_tokens: 800,
+        cumulative_output_tokens: 500,
         file_references: null,
         directory_references: null
       }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useSelector } from 'react-redux'
 import { Box, useMediaQuery } from '@mui/material'
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -11,9 +11,7 @@ import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { COLORS } from '@theme/colors.js'
 import TwoColumnLayout from '@components/primitives/TwoColumnLayout.js'
 import PathBreadcrumb from '@components/PathBreadcrumb/PathBreadcrumb.js'
-import FileActions from '@components/FileActions/index.js'
 import SharedViewBadge from '@components/SharedViewBadge/SharedViewBadge.js'
-import FileSystemBrowser from '@components/FileSystemBrowser/index.js'
 import { extract_working_directory } from '@views/utils/thread-metadata-extractor.js'
 
 import ThreadHeader from './ThreadHeader'
@@ -24,7 +22,6 @@ const ThreadTimelineView = () => {
   const location = useLocation()
   const navigate = useNavigate()
   const current_path = location.pathname
-  const [is_file_browser_visible, set_is_file_browser_visible] = useState(false)
   const is_mobile = useMediaQuery('(max-width: 991px)')
   const is_mobile_breadcrumb = useMediaQuery('(max-width: 768px)')
 
@@ -78,30 +75,12 @@ const ThreadTimelineView = () => {
   // empty/unavailable metadata -- extractor returns defaults.
   const working_directory = extract_working_directory(metadata)
 
-  // Keyboard shortcut handler for toggling file browser (Cmd/Ctrl+B)
-  useEffect(() => {
-    const handle_keydown = (event) => {
-      // Cmd/Ctrl+B to toggle file browser
-      if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
-        event.preventDefault()
-        set_is_file_browser_visible((prev) => !prev)
-      }
-    }
-
-    document.addEventListener('keydown', handle_keydown)
-    return () => document.removeEventListener('keydown', handle_keydown)
-  }, [])
-
   if (!thread_data) {
     return (
       <Box sx={{ p: 3 }}>
         <span>No thread data available</span>
       </Box>
     )
-  }
-
-  const toggle_file_browser = () => {
-    set_is_file_browser_visible((prev) => !prev)
   }
 
   const left_content = has_timeline_entries ? (
@@ -125,26 +104,6 @@ const ThreadTimelineView = () => {
         default_collapsed={is_mobile}
       />
       <SharedViewBadge />
-      {thread_data && (
-        <FileActions>
-          <button
-            className='file-browser-toggle-button'
-            onClick={toggle_file_browser}
-            title='Toggle file browser (⌘B / Ctrl+B)'
-            aria-label={
-              is_file_browser_visible
-                ? 'Hide file browser'
-                : 'Show file browser'
-            }>
-            {is_file_browser_visible ? 'hide files' : 'show files'}
-          </button>
-        </FileActions>
-      )}
-      {is_file_browser_visible && (
-        <div className='file-browser-container'>
-          <FileSystemBrowser />
-        </div>
-      )}
     </Box>
   )
 

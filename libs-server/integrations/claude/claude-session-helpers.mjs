@@ -18,7 +18,11 @@ import {
   extract_claude_session_metadata
 } from './parse-jsonl.mjs'
 import { load_sync_state, save_sync_state } from './sync-state.mjs'
-import { normalize_claude_session } from './normalize-session.mjs'
+import {
+  normalize_claude_session,
+  create_token_counts_accumulator,
+  apply_usage_to_token_counts
+} from './normalize-session.mjs'
 import { CLAUDE_DEFAULT_PATHS } from './claude-config.mjs'
 
 const log = debug('integrations:claude:session-helpers')
@@ -689,10 +693,7 @@ const compute_session_counts = (entries) => {
   let user_message_count = 0
   let assistant_message_count = 0
   let tool_call_count = 0
-  let input_tokens = 0
-  let output_tokens = 0
-  let cache_creation_input_tokens = 0
-  let cache_read_input_tokens = 0
+  const tokens = create_token_counts_accumulator()
   const model_set = new Set()
 
   for (const entry of entries) {
@@ -700,14 +701,7 @@ const compute_session_counts = (entries) => {
       user_message_count++
     } else if (entry.type === 'assistant') {
       assistant_message_count++
-
-      if (entry.message?.usage) {
-        const u = entry.message.usage
-        input_tokens += u.input_tokens || 0
-        output_tokens += u.output_tokens || 0
-        cache_creation_input_tokens += u.cache_creation_input_tokens || 0
-        cache_read_input_tokens += u.cache_read_input_tokens || 0
-      }
+      apply_usage_to_token_counts(tokens, entry.message?.usage)
 
       if (entry.message?.model) {
         model_set.add(entry.message.model)
@@ -726,10 +720,7 @@ const compute_session_counts = (entries) => {
     user_message_count,
     assistant_message_count,
     tool_call_count,
-    input_tokens,
-    output_tokens,
-    cache_creation_input_tokens,
-    cache_read_input_tokens,
+    ...tokens,
     models: Array.from(model_set)
   }
 }

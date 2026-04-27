@@ -62,27 +62,27 @@ function calculate_token_costs(thread_data, pricing) {
   // Get token counts - check both direct fields and nested paths
   // Use nullish coalescing (??) to preserve explicit zeros
   // Convert BigInts from DuckDB to Numbers for arithmetic operations
+  // Cost is based on cumulative_* (sum across every turn — each turn pays
+  // separately for its input, cache writes, cache reads, and output).
   const provider_metadata = thread_data.external_session?.provider_metadata
   const input_tokens = to_number(
-    thread_data.total_input_tokens ??
-      thread_data.input_tokens ??
-      provider_metadata?.input_tokens
+    thread_data.cumulative_input_tokens ??
+      provider_metadata?.cumulative_input_tokens
   )
 
   const output_tokens = to_number(
-    thread_data.total_output_tokens ??
-      thread_data.output_tokens ??
-      provider_metadata?.output_tokens
+    thread_data.cumulative_output_tokens ??
+      provider_metadata?.cumulative_output_tokens
   )
 
   const cache_read_tokens = to_number(
-    thread_data.cache_read_input_tokens ??
-      provider_metadata?.cache_read_input_tokens
+    thread_data.cumulative_cache_read_input_tokens ??
+      provider_metadata?.cumulative_cache_read_input_tokens
   )
 
   const cache_creation_tokens = to_number(
-    thread_data.cache_creation_input_tokens ??
-      provider_metadata?.cache_creation_input_tokens
+    thread_data.cumulative_cache_creation_input_tokens ??
+      provider_metadata?.cumulative_cache_creation_input_tokens
   )
 
   // Input tokens cost

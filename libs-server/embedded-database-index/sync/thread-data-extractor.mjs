@@ -146,19 +146,20 @@ export function extract_thread_index_data({ thread_id, metadata }) {
 
   const provider_metadata = metadata.external_session?.provider_metadata || {}
 
-  // Extract token counts - check multiple locations
-  const total_input_tokens =
-    metadata.input_tokens || provider_metadata.input_tokens || null
-  const total_output_tokens =
-    metadata.output_tokens || provider_metadata.output_tokens || null
-  const cache_creation_input_tokens =
-    metadata.cache_creation_input_tokens ||
-    provider_metadata.cache_creation_input_tokens ||
-    null
-  const cache_read_input_tokens =
-    metadata.cache_read_input_tokens ||
-    provider_metadata.cache_read_input_tokens ||
-    null
+  // context_* = latest assistant turn (current context state shown in UI).
+  // cumulative_* = sum across every assistant turn (used for cost accounting).
+  // These live at the top level of normalized metadata; no provider-metadata fallback.
+  const context_input_tokens = metadata.context_input_tokens ?? null
+  const context_cache_creation_input_tokens =
+    metadata.context_cache_creation_input_tokens ?? null
+  const context_cache_read_input_tokens =
+    metadata.context_cache_read_input_tokens ?? null
+  const cumulative_input_tokens = metadata.cumulative_input_tokens ?? null
+  const cumulative_output_tokens = metadata.cumulative_output_tokens ?? null
+  const cumulative_cache_creation_input_tokens =
+    metadata.cumulative_cache_creation_input_tokens ?? null
+  const cumulative_cache_read_input_tokens =
+    metadata.cumulative_cache_read_input_tokens ?? null
   const total_tokens = provider_metadata.total_tokens || null
 
   // Calculate duration
@@ -228,10 +229,13 @@ export function extract_thread_index_data({ thread_id, metadata }) {
     user_message_count: metadata.user_message_count || null,
     assistant_message_count: metadata.assistant_message_count || null,
     tool_call_count,
-    total_input_tokens,
-    total_output_tokens,
-    cache_creation_input_tokens,
-    cache_read_input_tokens,
+    context_input_tokens,
+    context_cache_creation_input_tokens,
+    context_cache_read_input_tokens,
+    cumulative_input_tokens,
+    cumulative_output_tokens,
+    cumulative_cache_creation_input_tokens,
+    cumulative_cache_read_input_tokens,
     total_tokens,
     duration_ms,
     duration_minutes,

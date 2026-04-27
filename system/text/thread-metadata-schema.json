@@ -178,21 +178,33 @@
       "type": "integer",
       "description": "Total number of assistant messages in this thread"
     },
-    "input_tokens": {
+    "context_input_tokens": {
       "type": "integer",
-      "description": "Total number of input tokens consumed in this thread"
+      "description": "Uncached input tokens of the latest assistant turn — current context state, not a thread-lifetime sum. Combined with context_cache_creation_input_tokens and context_cache_read_input_tokens, this gives the current prompt size (what Claude CLI surfaces as '% context')."
     },
-    "output_tokens": {
+    "context_cache_creation_input_tokens": {
       "type": "integer",
-      "description": "Total number of output tokens generated in this thread"
+      "description": "Cache-creation input tokens of the latest assistant turn. See context_input_tokens."
     },
-    "cache_creation_input_tokens": {
+    "context_cache_read_input_tokens": {
       "type": "integer",
-      "description": "Total number of input tokens used for cache creation in this thread"
+      "description": "Cache-read input tokens of the latest assistant turn. See context_input_tokens."
     },
-    "cache_read_input_tokens": {
+    "cumulative_input_tokens": {
       "type": "integer",
-      "description": "Total number of input tokens read from cache in this thread"
+      "description": "Sum of input_tokens across every assistant turn in the thread. Used for cost accounting (each turn pays for its own input)."
+    },
+    "cumulative_output_tokens": {
+      "type": "integer",
+      "description": "Sum of output_tokens across every assistant turn in the thread. Used for cost accounting and generation totals."
+    },
+    "cumulative_cache_creation_input_tokens": {
+      "type": "integer",
+      "description": "Sum of cache_creation_input_tokens across every assistant turn in the thread. Used for cost accounting (cache writes are billed per turn)."
+    },
+    "cumulative_cache_read_input_tokens": {
+      "type": "integer",
+      "description": "Sum of cache_read_input_tokens across every assistant turn in the thread. Used for cost accounting (cache reads are billed per turn)."
     },
     "prompt_properties": {
       "type": "object",

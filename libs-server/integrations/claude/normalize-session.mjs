@@ -20,6 +20,33 @@ const UNSUPPORTED_TRACKING = {
   metadata_fields: new Set()
 }
 
+// Build a fresh token-counts accumulator. Shared between the per-session
+// metadata extractor and the precomputed-counts path so context_* (latest
+// assistant turn) and cumulative_* (sum across turns) accounting stays in
+// sync between callers.
+export const create_token_counts_accumulator = () => ({
+  context_input_tokens: 0,
+  context_cache_creation_input_tokens: 0,
+  context_cache_read_input_tokens: 0,
+  cumulative_input_tokens: 0,
+  cumulative_output_tokens: 0,
+  cumulative_cache_creation_input_tokens: 0,
+  cumulative_cache_read_input_tokens: 0
+})
+
+export const apply_usage_to_token_counts = (acc, usage) => {
+  if (!usage) return
+  acc.context_input_tokens = usage.input_tokens || 0
+  acc.context_cache_creation_input_tokens =
+    usage.cache_creation_input_tokens || 0
+  acc.context_cache_read_input_tokens = usage.cache_read_input_tokens || 0
+  acc.cumulative_input_tokens += usage.input_tokens || 0
+  acc.cumulative_output_tokens += usage.output_tokens || 0
+  acc.cumulative_cache_creation_input_tokens +=
+    usage.cache_creation_input_tokens || 0
+  acc.cumulative_cache_read_input_tokens += usage.cache_read_input_tokens || 0
+}
+
 // Drop null/undefined values from an Anthropic `usage` object. Anthropic
 // occasionally returns `service_tier: null` on non-metered responses, which
 // violates the timeline schema's `service_tier: string` contract. Exported
@@ -233,6 +260,12 @@ export const normalize_claude_session = (claude_session) => {
     // Sort by timestamp (primary) with ordering.sequence as tie-breaker
     sort_timeline_entries(normalized_messages)
 
+    // Stamp running context state on each timeline entry so per-event context
+    // size is visible downstream. The "context" of an event is the prompt size
+    // of the most recent assistant turn at or before that event — i.e. the
+    // last seen metadata.usage carried forward.
+    stamp_running_context_state(normalized_messages)
+
     // Extract session metadata
     const session_metadata = extract_session_metadata(entries, metadata)
 
@@ -254,11 +287,17 @@ export const normalize_claude_session = (claude_session) => {
     if (claude_session.precomputed_counts) {
       const pc = claude_session.precomputed_counts
       result.precomputed_counts = pc
-      result.metadata.input_tokens = pc.input_tokens
-      result.metadata.output_tokens = pc.output_tokens
-      result.metadata.cache_creation_input_tokens =
-        pc.cache_creation_input_tokens
-      result.metadata.cache_read_input_tokens = pc.cache_read_input_tokens
+      result.metadata.context_input_tokens = pc.context_input_tokens
+      result.metadata.context_cache_creation_input_tokens =
+        pc.context_cache_creation_input_tokens
+      result.metadata.context_cache_read_input_tokens =
+        pc.context_cache_read_input_tokens
+      result.metadata.cumulative_input_tokens = pc.cumulative_input_tokens
+      result.metadata.cumulative_output_tokens = pc.cumulative_output_tokens
+      result.metadata.cumulative_cache_creation_input_tokens =
+        pc.cumulative_cache_creation_input_tokens
+      result.metadata.cumulative_cache_read_input_tokens =
+        pc.cumulative_cache_read_input_tokens
       result.metadata.models = pc.models
     }
 
@@ -913,6 +952,25 @@ const extract_assistant_content = (message) => {
   return JSON.stringify(message.content)
 }
 
+const stamp_running_context_state = (entries) => {
+  let last_input = 0
+  let last_cache_creation = 0
+  let last_cache_read = 0
+  for (const entry of entries) {
+    const usage = entry?.metadata?.usage
+    if (usage) {
+      last_input = usage.input_tokens ?? last_input
+      last_cache_creation =
+        usage.cache_creation_input_tokens ?? last_cache_creation
+      last_cache_read = usage.cache_read_input_tokens ?? last_cache_read
+    }
+    if (!entry.metadata) entry.metadata = {}
+    entry.metadata.context_input_tokens = last_input
+    entry.metadata.context_cache_creation_input_tokens = last_cache_creation
+    entry.metadata.context_cache_read_input_tokens = last_cache_read
+  }
+}
+
 const extract_session_metadata = (entries, file_metadata) => {
   const timestamps = entries
     .map((e) => new Date(e.timestamp))
@@ -931,13 +989,12 @@ const extract_session_metadata = (entries, file_metadata) => {
     }
   }
 
-  // Extract model information from assistant messages and calculate token breakdowns
+  // Extract model information from assistant messages and calculate token breakdowns.
+  // context_* = latest assistant turn (current context state).
+  // cumulative_* = sum across every assistant turn (used for cost accounting).
   const models = new Set()
   let total_tokens = 0
-  let input_tokens = 0
-  let output_tokens = 0
-  let cache_creation_input_tokens = 0
-  let cache_read_input_tokens = 0
+  const tokens = create_token_counts_accumulator()
 
   // Count messages by type
   let user_message_count = 0
@@ -955,13 +1012,9 @@ const extract_session_metadata = (entries, file_metadata) => {
     } else if (entry.type === 'assistant') {
       assistant_message_count++
 
-      // Extract token information from assistant messages
       if (entry.message?.usage) {
         const usage = entry.message.usage
-        input_tokens += usage.input_tokens || 0
-        output_tokens += usage.output_tokens || 0
-        cache_creation_input_tokens += usage.cache_creation_input_tokens || 0
-        cache_read_input_tokens += usage.cache_read_input_tokens || 0
+        apply_usage_to_token_counts(tokens, usage)
 
         total_tokens +=
           (usage.input_tokens || 0) +
@@ -1013,10 +1066,7 @@ const extract_session_metadata = (entries, file_metadata) => {
     duration_minutes:
       start_time && end_time ? (end_time - start_time) / (1000 * 60) : null,
     total_tokens,
-    input_tokens,
-    output_tokens,
-    cache_creation_input_tokens,
-    cache_read_input_tokens,
+    ...tokens,
     user_message_count,
     assistant_message_count,
     entry_count: entries.length,

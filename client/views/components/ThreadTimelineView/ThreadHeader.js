@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import PropTypes from 'prop-types'
-import { Box } from '@mui/material'
+import {
+  Box,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow
+} from '@mui/material'
 import { useSelector } from 'react-redux'
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined'
 import CheckIcon from '@mui/icons-material/Check'
@@ -9,7 +16,7 @@ import { COLORS } from '@theme/colors.js'
 import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
-import { get_app } from '@core/app/selectors'
+import { get_app, get_user_token } from '@core/app/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import {
   MetadataContainer,
@@ -18,9 +25,18 @@ import {
   DateDisplay,
   ThreadStateField,
   ModelsField,
-  CollapsibleFileReferences
+  CollapsibleFileReferences,
+  format_token_shorthand
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
+import { api, api_request } from '@core/api/service'
+import {
+  Folder as FolderIcon,
+  InsertDriveFile as FileIcon,
+  Description as DescriptionIcon,
+  Code as CodeIcon
+} from '@mui/icons-material'
+import { format_relative_time } from '@views/utils/date-formatting.js'
 import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
 import { EditableTagsField } from '@views/components/InlineSelect'
 import {
@@ -32,7 +48,8 @@ import {
   extract_thread_title,
   extract_thread_description,
   extract_user_public_key,
-  extract_tags
+  extract_tags,
+  extract_context_token_state
 } from '@views/utils/thread-metadata-extractor.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
 import { SESSION_STATUS_DISPLAY_MAP } from '#libs-shared/session-status-display.mjs'
@@ -47,6 +64,30 @@ const HEADER_STYLES = {
   TEXT_DARK: COLORS.text,
   BG_HOVER: COLORS.surface_hover,
   BG_ACTIVE: COLORS.border_light
+}
+
+const ExpandChevron = ({ expanded }) => (
+  <svg
+    width='10'
+    height='10'
+    viewBox='0 0 10 10'
+    fill='none'
+    style={{
+      transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)',
+      transition: 'transform 0.15s ease'
+    }}>
+    <path
+      d='M2.5 4l2.5 2.5L7.5 4'
+      stroke='currentColor'
+      strokeWidth='1.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    />
+  </svg>
+)
+
+ExpandChevron.propTypes = {
+  expanded: PropTypes.bool.isRequired
 }
 
 const extract_models = (metadata) => {
@@ -152,6 +193,7 @@ const use_thread_metadata = (metadata) => {
     const execution = extract_execution(metadata)
     const inference_provider = extract_inference_provider(metadata)
     const git_branch = extract_git_branch(metadata)
+    const context_tokens = extract_context_token_state(metadata)
 
     return {
       title,
@@ -173,7 +215,8 @@ const use_thread_metadata = (metadata) => {
       working_directory_formatted: working_directory.formatted,
       thread_user_public_key,
       relations,
-      tags
+      tags,
+      context_tokens
     }
   }, [metadata])
 }
@@ -300,17 +343,335 @@ ExternalSessionIdDisplay.propTypes = {
   session_id: PropTypes.string.isRequired
 }
 
-// Helper to determine if a metadata row should be marked as first
-const use_first_row_tracker = () => {
-  let has_rendered_row = false
+const TokenBreakdownRows = ({ context_tokens }) => {
+  const [expanded, set_expanded] = useState(false)
 
-  return () => {
-    if (has_rendered_row) {
-      return false
-    }
-    has_rendered_row = true
-    return true
+  const has_context =
+    context_tokens.context_input_tokens > 0 ||
+    context_tokens.context_cache_creation_input_tokens > 0 ||
+    context_tokens.context_cache_read_input_tokens > 0
+  const has_cumulative =
+    context_tokens.cumulative_input_tokens > 0 ||
+    context_tokens.cumulative_output_tokens > 0 ||
+    context_tokens.cumulative_cache_creation_input_tokens > 0 ||
+    context_tokens.cumulative_cache_read_input_tokens > 0
+
+  if (!has_context && !has_cumulative) return null
+
+  return (
+    <Box sx={{ backgroundColor: COLORS.surface_hover }}>
+      <Box
+        onClick={() => set_expanded((v) => !v)}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          cursor: 'pointer',
+          userSelect: 'none',
+          fontSize: '11px',
+          color: HEADER_STYLES.TEXT_LIGHT,
+          px: '12px',
+          py: '6px',
+          borderTop: `1px solid ${COLORS.border}`,
+          '&:hover': { color: HEADER_STYLES.TEXT_MEDIUM }
+        }}>
+        <ExpandChevron expanded={expanded} />
+        {expanded ? 'hide token breakdown' : 'show token breakdown'}
+      </Box>
+      {expanded && has_context && (
+        <>
+          <MetadataRow
+            label='Context — Input'
+            value={format_token_shorthand({
+              count: context_tokens.context_input_tokens
+            })}
+          />
+          <TwoCellRow
+            left_label='Context — Cache Creation'
+            left_value={format_token_shorthand({
+              count: context_tokens.context_cache_creation_input_tokens
+            })}
+            right_label='Context — Cache Read'
+            right_value={format_token_shorthand({
+              count: context_tokens.context_cache_read_input_tokens
+            })}
+          />
+        </>
+      )}
+      {expanded && has_cumulative && (
+        <>
+          <TwoCellRow
+            left_label='Cumulative — Input'
+            left_value={format_token_shorthand({
+              count: context_tokens.cumulative_input_tokens
+            })}
+            right_label='Cumulative — Output'
+            right_value={format_token_shorthand({
+              count: context_tokens.cumulative_output_tokens
+            })}
+          />
+          <TwoCellRow
+            left_label='Cumulative — Cache Creation'
+            left_value={format_token_shorthand({
+              count: context_tokens.cumulative_cache_creation_input_tokens
+            })}
+            right_label='Cumulative — Cache Read'
+            right_value={format_token_shorthand({
+              count: context_tokens.cumulative_cache_read_input_tokens
+            })}
+          />
+        </>
+      )}
+    </Box>
+  )
+}
+
+TokenBreakdownRows.propTypes = {
+  context_tokens: PropTypes.shape({
+    context_input_tokens: PropTypes.number,
+    context_cache_creation_input_tokens: PropTypes.number,
+    context_cache_read_input_tokens: PropTypes.number,
+    cumulative_input_tokens: PropTypes.number,
+    cumulative_output_tokens: PropTypes.number,
+    cumulative_cache_creation_input_tokens: PropTypes.number,
+    cumulative_cache_read_input_tokens: PropTypes.number
+  }).isRequired
+}
+
+const get_folder_item_icon = (item) => {
+  if (item.type === 'directory') {
+    return <FolderIcon sx={{ color: COLORS.icon_folder, fontSize: 16 }} />
   }
+  const ext = item.name.split('.').pop().toLowerCase()
+  switch (ext) {
+    case 'md':
+    case 'txt':
+      return <DescriptionIcon sx={{ color: COLORS.icon_file, fontSize: 16 }} />
+    case 'js':
+    case 'mjs':
+    case 'json':
+    case 'jsonl':
+    case 'ts':
+    case 'tsx':
+      return <CodeIcon sx={{ color: COLORS.icon_file, fontSize: 16 }} />
+    default:
+      return <FileIcon sx={{ color: COLORS.icon_file, fontSize: 16 }} />
+  }
+}
+
+const format_folder_item_size = (bytes) => {
+  if (bytes == null) return '-'
+  if (bytes === 0) return '0 B'
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`
+}
+
+const ThreadFolderContents = ({ thread_id }) => {
+  const [expanded, set_expanded] = useState(false)
+  const [items, set_items] = useState(null)
+  const [loading, set_loading] = useState(false)
+  const [error, set_error] = useState(null)
+  const token = useSelector(get_user_token)
+  const folder_path = `thread/${thread_id}`
+
+  useEffect(() => {
+    if (!expanded || items !== null) return
+    let cancelled = false
+    set_loading(true)
+    set_error(null)
+    ;(async () => {
+      try {
+        const { request } = api_request(
+          api.get_directories,
+          { path: folder_path },
+          token
+        )
+        const data = await request()
+        if (cancelled) return
+        set_items(Array.isArray(data?.items) ? data.items : [])
+      } catch (err) {
+        if (cancelled) return
+        set_error(err.message || 'Failed to load folder contents')
+      } finally {
+        if (!cancelled) set_loading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [expanded, folder_path, token])
+
+  return (
+    <Box sx={{ backgroundColor: COLORS.surface_hover }}>
+      <Box
+        onClick={() => set_expanded((v) => !v)}
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.5,
+          cursor: 'pointer',
+          userSelect: 'none',
+          fontSize: '11px',
+          color: HEADER_STYLES.TEXT_LIGHT,
+          px: '12px',
+          py: '6px',
+          borderTop: `1px solid ${COLORS.border}`,
+          '&:hover': { color: HEADER_STYLES.TEXT_MEDIUM }
+        }}>
+        <ExpandChevron expanded={expanded} />
+        {expanded ? 'hide thread folder contents' : 'show thread folder contents'}
+      </Box>
+      {expanded && (
+        <Box>
+          {loading && (
+            <Box
+              sx={{
+                px: '12px',
+                py: '10px',
+                fontSize: '12px',
+                color: HEADER_STYLES.TEXT_LIGHT
+              }}>
+              loading…
+            </Box>
+          )}
+          {error && (
+            <Box
+              sx={{
+                px: '12px',
+                py: '10px',
+                fontSize: '12px',
+                color: COLORS.error
+              }}>
+              {error}
+            </Box>
+          )}
+          {!loading && !error && items && items.length === 0 && (
+            <Box
+              sx={{
+                px: '12px',
+                py: '10px',
+                fontSize: '12px',
+                color: HEADER_STYLES.TEXT_LIGHT
+              }}>
+              empty
+            </Box>
+          )}
+          {!loading && !error && items && items.length > 0 && (
+            <TableContainer>
+              <Table size='small' sx={{ width: '100%', tableLayout: 'fixed' }}>
+                <TableBody>
+                  {items.map((item, index) => {
+                    const href = `/${folder_path}/${item.name}`
+                    const is_last = index === items.length - 1
+                    const cell_border = is_last
+                      ? 'none'
+                      : `1px solid ${COLORS.border_light}`
+                    return (
+                      <TableRow
+                        key={item.name}
+                        hover
+                        component='a'
+                        href={href}
+                        data-internal-link='true'
+                        sx={{
+                          cursor: 'pointer',
+                          height: 36,
+                          textDecoration: 'none',
+                          display: 'table-row',
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                          }
+                        }}>
+                        <TableCell
+                          sx={{
+                            py: 0,
+                            px: 1.5,
+                            width: '60%',
+                            borderBottom: cell_border,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                          <Box
+                            sx={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 0.75,
+                              minWidth: 0
+                            }}>
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                width: 18,
+                                height: 18,
+                                flexShrink: 0
+                              }}>
+                              {get_folder_item_icon(item)}
+                            </Box>
+                            <span
+                              title={item.name}
+                              style={{
+                                color: COLORS.icon_link,
+                                fontSize: '12px',
+                                lineHeight: '18px',
+                                minWidth: 0,
+                                flex: 1,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap'
+                              }}>
+                              {item.name}
+                            </span>
+                          </Box>
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            py: 0,
+                            px: 1.5,
+                            width: '70px',
+                            borderBottom: cell_border,
+                            fontSize: '11px',
+                            color: COLORS.text_secondary
+                          }}>
+                          {item.type === 'directory'
+                            ? '-'
+                            : format_folder_item_size(item.size)}
+                        </TableCell>
+                        <TableCell
+                          align='right'
+                          sx={{
+                            py: 0,
+                            px: 1.5,
+                            width: '90px',
+                            borderBottom: cell_border,
+                            fontSize: '11px',
+                            color: COLORS.text_secondary,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                          {item.modified
+                            ? format_relative_time(new Date(item.modified))
+                            : '-'}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+ThreadFolderContents.propTypes = {
+  thread_id: PropTypes.string.isRequired
 }
 
 const CHANGE_RELATION_TYPES = new Set(['creates', 'modifies'])
@@ -333,8 +694,11 @@ const ThreadStats = ({
   tags,
   execution,
   inference_provider,
-  git_branch
+  git_branch,
+  context_tokens
 }) => {
+  const [details_expanded, set_details_expanded] = useState(false)
+
   const working_directory = source_info?.working_directory
   const session_provider = source_info?.provider
   const has_dates = created_at || updated_at
@@ -359,9 +723,6 @@ const ThreadStats = ({
     return { changed_relations: changed, other_relations: other }
   }, [relations])
 
-  // Track which row is rendered first
-  const get_is_first = use_first_row_tracker()
-
   return (
     <Box>
       {session_provider && inference_provider ? (
@@ -370,7 +731,6 @@ const ThreadStats = ({
           left_value={session_provider}
           right_label='Inference Provider'
           right_value={inference_provider}
-          is_first={get_is_first()}
         />
       ) : (
         <>
@@ -378,14 +738,12 @@ const ThreadStats = ({
             <MetadataRow
               label='Session Provider'
               value={session_provider}
-              is_first={get_is_first()}
             />
           )}
           {inference_provider && !session_provider && (
             <MetadataRow
               label='Inference Provider'
               value={inference_provider}
-              is_first={get_is_first()}
             />
           )}
         </>
@@ -409,7 +767,6 @@ const ThreadStats = ({
               base_uri={`user:thread/${thread_id}`}
             />
           }
-          is_first={get_is_first()}
         />
       )}
 
@@ -452,8 +809,26 @@ const ThreadStats = ({
           left_value={<DateDisplay date={created_at} />}
           right_label='Last Updated'
           right_value={<DateDisplay date={updated_at} />}
-          is_first={get_is_first()}
         />
+      )}
+
+      {context_tokens?.context_size > 0 && (
+        <TwoCellRow
+          left_label='Context Size'
+          left_value={format_token_shorthand({
+            count: context_tokens.context_size
+          })}
+          right_label='Cache Efficiency'
+          right_value={
+            context_tokens.cache_efficiency != null
+              ? `${(context_tokens.cache_efficiency * 100).toFixed(1)}%`
+              : '—'
+          }
+        />
+      )}
+
+      {context_tokens?.context_size > 0 && (
+        <TokenBreakdownRows context_tokens={context_tokens} />
       )}
 
       {/* Display tokens with duration if available */}
@@ -461,67 +836,91 @@ const ThreadStats = ({
         <MetadataRow
           label='Duration'
           value={duration}
-          is_first={get_is_first()}
         />
       )}
 
-      {/* Message counts - show detailed breakdown if available, otherwise show total */}
-      {has_message_breakdown ? (
-        <TwoCellRow
-          left_label='User Messages'
-          left_value={user_message_count.toLocaleString()}
-          right_label='Assistant Messages'
-          right_value={assistant_message_count.toLocaleString()}
-        />
-      ) : (
-        message_count > 0 && (
-          <MetadataRow
-            label='Messages'
-            value={message_count.toLocaleString()}
-          />
-        )
-      )}
+      <Box sx={{ backgroundColor: COLORS.surface_hover }}>
+        <Box
+          onClick={() => set_details_expanded((v) => !v)}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.5,
+            cursor: 'pointer',
+            userSelect: 'none',
+            fontSize: '11px',
+            color: HEADER_STYLES.TEXT_LIGHT,
+            px: '12px',
+            py: '6px',
+            borderTop: `1px solid ${COLORS.border}`,
+            '&:hover': { color: HEADER_STYLES.TEXT_MEDIUM }
+          }}>
+          <ExpandChevron expanded={details_expanded} />
+          {details_expanded
+            ? 'hide counts, cost, and directory'
+            : 'show counts, cost, and directory'}
+        </Box>
 
-      {/* Tool calls and cost - use TwoCellRow if both exist, otherwise show individually */}
-      {has_both_tool_calls_and_cost ? (
-        <TwoCellRow
-          left_label='Tool Calls'
-          left_value={tool_call_count.toLocaleString()}
-          right_label='Estimated API Cost'
-          right_value={thread_cost_display}
-        />
-      ) : (
-        <>
-          {tool_call_count > 0 && (
-            <MetadataRow
-              label='Tool Calls'
-              value={tool_call_count.toLocaleString()}
+        {details_expanded && (
+          <>
+            {/* Message counts - show detailed breakdown if available, otherwise show total */}
+            {has_message_breakdown ? (
+            <TwoCellRow
+              left_label='User Messages'
+              left_value={user_message_count.toLocaleString()}
+              right_label='Assistant Messages'
+              right_value={assistant_message_count.toLocaleString()}
             />
+          ) : (
+            message_count > 0 && (
+              <MetadataRow
+                label='Messages'
+                value={message_count.toLocaleString()}
+              />
+            )
           )}
-          {thread_cost_display && (
-            <MetadataRow
-              label='Estimated API Cost'
-              value={thread_cost_display}
-            />
-          )}
-        </>
-      )}
 
-      {working_directory && (
-        <MetadataRow
-          label='Directory'
-          value={working_directory}
-          scrollable={true}
-          is_first={get_is_first()}
-        />
-      )}
+          {/* Tool calls and cost - use TwoCellRow if both exist, otherwise show individually */}
+          {has_both_tool_calls_and_cost ? (
+            <TwoCellRow
+              left_label='Tool Calls'
+              left_value={tool_call_count.toLocaleString()}
+              right_label='Estimated API Cost'
+              right_value={thread_cost_display}
+            />
+          ) : (
+            <>
+              {tool_call_count > 0 && (
+                <MetadataRow
+                  label='Tool Calls'
+                  value={tool_call_count.toLocaleString()}
+                />
+              )}
+              {thread_cost_display && (
+                <MetadataRow
+                  label='Estimated API Cost'
+                  value={thread_cost_display}
+                />
+              )}
+            </>
+          )}
+
+            {working_directory && (
+              <MetadataRow
+                label='Directory'
+                value={working_directory}
+                scrollable={true}
+              />
+            )}
+          </>
+        )}
+      </Box>
 
       {git_branch && (
         <MetadataRow
           label='Git Branch'
           value={git_branch}
           scrollable={true}
-          is_first={get_is_first()}
         />
       )}
 
@@ -541,9 +940,11 @@ const ThreadStats = ({
             </span>
           }
           scrollable={true}
-          is_first={get_is_first()}
         />
       )}
+
+      {/* Thread folder contents - lists files/subdirs under thread/<id>/ */}
+      {thread_id && <ThreadFolderContents thread_id={thread_id} />}
     </Box>
   )
 }
@@ -574,7 +975,18 @@ ThreadStats.propTypes = {
     container_name: PropTypes.string
   }),
   inference_provider: PropTypes.string,
-  git_branch: PropTypes.string
+  git_branch: PropTypes.string,
+  context_tokens: PropTypes.shape({
+    context_input_tokens: PropTypes.number,
+    context_cache_creation_input_tokens: PropTypes.number,
+    context_cache_read_input_tokens: PropTypes.number,
+    cumulative_input_tokens: PropTypes.number,
+    cumulative_output_tokens: PropTypes.number,
+    cumulative_cache_creation_input_tokens: PropTypes.number,
+    cumulative_cache_read_input_tokens: PropTypes.number,
+    context_size: PropTypes.number,
+    cache_efficiency: PropTypes.number
+  })
 }
 
 const SourceChips = ({ source_info, thread_state }) => {
@@ -639,7 +1051,8 @@ const ThreadHeader = ({
     tags,
     execution,
     inference_provider,
-    git_branch
+    git_branch,
+    context_tokens
   } = use_thread_metadata(metadata)
 
   // Get current user's public key and cost display from Redux store
@@ -781,23 +1194,7 @@ const ThreadHeader = ({
             borderTop: `1px solid ${COLORS.border_light}`,
             '&:hover': { color: HEADER_STYLES.TEXT_MEDIUM }
           }}>
-          <svg
-            width='10'
-            height='10'
-            viewBox='0 0 10 10'
-            fill='none'
-            style={{
-              transform: is_collapsed ? 'rotate(-90deg)' : 'rotate(0deg)',
-              transition: 'transform 0.15s ease'
-            }}>
-            <path
-              d='M2.5 4l2.5 2.5L7.5 4'
-              stroke='currentColor'
-              strokeWidth='1.5'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
+          <ExpandChevron expanded={!is_collapsed} />
           {is_collapsed ? 'show details' : 'hide details'}
         </Box>
       )}
@@ -822,6 +1219,7 @@ const ThreadHeader = ({
           execution={execution}
           inference_provider={inference_provider}
           git_branch={git_branch}
+          context_tokens={context_tokens}
         />
       )}
     </MetadataContainer>

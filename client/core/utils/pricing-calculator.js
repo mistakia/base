@@ -69,41 +69,41 @@ function calculate_specific_token_costs(thread_metadata, pricing) {
   let has_all_required_data = true
 
   // Input tokens cost
-  if (thread_metadata.input_tokens && pricing.input_cost_per_token) {
+  if (thread_metadata.cumulative_input_tokens && pricing.input_cost_per_token) {
     costs.input_tokens_cost =
-      thread_metadata.input_tokens * pricing.input_cost_per_token
+      thread_metadata.cumulative_input_tokens * pricing.input_cost_per_token
     total_cost += costs.input_tokens_cost
-  } else if (thread_metadata.input_tokens) {
+  } else if (thread_metadata.cumulative_input_tokens) {
     has_all_required_data = false
   }
 
   // Output tokens cost
-  if (thread_metadata.output_tokens && pricing.output_cost_per_token) {
+  if (thread_metadata.cumulative_output_tokens && pricing.output_cost_per_token) {
     costs.output_tokens_cost =
-      thread_metadata.output_tokens * pricing.output_cost_per_token
+      thread_metadata.cumulative_output_tokens * pricing.output_cost_per_token
     total_cost += costs.output_tokens_cost
-  } else if (thread_metadata.output_tokens) {
+  } else if (thread_metadata.cumulative_output_tokens) {
     has_all_required_data = false
   }
 
   // Cache read tokens cost (optional)
   if (
-    thread_metadata.cache_read_input_tokens &&
+    thread_metadata.cumulative_cache_read_input_tokens &&
     pricing.cache_read_cost_per_token
   ) {
     costs.cache_read_cost =
-      thread_metadata.cache_read_input_tokens *
+      thread_metadata.cumulative_cache_read_input_tokens *
       pricing.cache_read_cost_per_token
     total_cost += costs.cache_read_cost
   }
 
   // Cache write tokens cost (optional)
   if (
-    thread_metadata.cache_creation_input_tokens &&
+    thread_metadata.cumulative_cache_creation_input_tokens &&
     pricing.cache_write_cost_per_token
   ) {
     costs.cache_write_cost =
-      thread_metadata.cache_creation_input_tokens *
+      thread_metadata.cumulative_cache_creation_input_tokens *
       pricing.cache_write_cost_per_token
     total_cost += costs.cache_write_cost
   }
@@ -122,7 +122,7 @@ function calculate_estimated_cost(thread_metadata, pricing) {
   // Use total tokens as a rough estimate
   // Assume 60% input tokens, 40% output tokens as a typical distribution
   const total_tokens =
-    (thread_metadata.input_tokens || 0) + (thread_metadata.output_tokens || 0)
+    (thread_metadata.cumulative_input_tokens || 0) + (thread_metadata.cumulative_output_tokens || 0)
 
   if (
     !total_tokens ||
@@ -195,7 +195,7 @@ export function calculate_thread_cost(thread_metadata, models_data) {
   // If we don't have complete specific data, try estimation
   if (
     !calculation.has_complete_data &&
-    (thread_metadata.input_tokens || thread_metadata.output_tokens)
+    (thread_metadata.cumulative_input_tokens || thread_metadata.cumulative_output_tokens)
   ) {
     const estimated_calculation = calculate_estimated_cost(
       thread_metadata,
