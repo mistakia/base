@@ -1,4 +1,9 @@
-import React, { useState, useCallback } from 'react'
+import React, {
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState
+} from 'react'
 import PropTypes from 'prop-types'
 import { Box } from '@mui/material'
 import { useDispatch, useSelector } from 'react-redux'
@@ -67,6 +72,38 @@ const EntityRenderer = ({
     }
     set_is_diff_view_active(!is_diff_view_active)
   }, [is_diff_view_active, git_context, dispatch])
+
+  // Disable sticky right column when its content is taller than the viewport,
+  // otherwise the bottom of the frontmatter sits below the fold and is only
+  // reachable by scrolling past the entire main content.
+  const right_column_ref = useRef(null)
+  const [sticky_right, set_sticky_right] = useState(true)
+
+  useLayoutEffect(() => {
+    if (!frontmatter) return undefined
+    const node = right_column_ref.current
+    if (!node) return undefined
+    const STICKY_GAP = 32
+
+    let raf = 0
+    const update = () => {
+      raf = 0
+      set_sticky_right(node.offsetHeight + STICKY_GAP <= window.innerHeight)
+    }
+    const schedule = () => {
+      if (!raf) raf = requestAnimationFrame(update)
+    }
+    const ro = new ResizeObserver(schedule)
+    ro.observe(node)
+    window.addEventListener('resize', schedule, { passive: true })
+    update()
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', schedule)
+      if (raf) cancelAnimationFrame(raf)
+    }
+  }, [frontmatter])
+
   const entity_metadata = React.useMemo(() => {
     return {
       title: frontmatter?.title || 'Untitled',
@@ -103,10 +140,9 @@ const EntityRenderer = ({
   ) : null
 
   const right_content = frontmatter ? (
-    <Box>
+    <Box ref={right_column_ref}>
       <EntityFrontmatter
         frontmatter={frontmatter}
-        is_sticky={Boolean(markdown)}
         markdown={markdown}
         path={path}
         can_write={can_write}
@@ -164,7 +200,6 @@ const EntityRenderer = ({
           ) : (
             <EntityFrontmatter
               frontmatter={frontmatter}
-              is_sticky={false}
               markdown={markdown}
               path={path}
               layout='full-width'
@@ -210,7 +245,7 @@ const EntityRenderer = ({
           left_column_width={8}
           right_column_width={4}
           container_padding={0}
-          sticky_right={true}
+          sticky_right={sticky_right}
         />
         {is_tag_entity && (
           <Box sx={{ px: 3, pb: 3 }}>

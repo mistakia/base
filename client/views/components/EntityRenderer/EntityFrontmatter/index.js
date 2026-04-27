@@ -285,6 +285,70 @@ const observations_expand_button_sx = {
 }
 
 const DEFAULT_VISIBLE_OBSERVATIONS = 3
+const OBSERVATION_CONTENT_CHAR_LIMIT = 200
+
+const observation_item_toggle_sx = {
+  marginLeft: '6px',
+  background: 'none',
+  border: 'none',
+  padding: 0,
+  cursor: 'pointer',
+  color: COLORS.icon_link,
+  fontSize: '11px',
+  fontFamily: 'inherit',
+  '&:hover': {
+    textDecoration: 'underline',
+    color: COLORS.info
+  }
+}
+
+const parse_observation_text = (text) => {
+  const match = text.match(bracket_and_content_regex)
+  if (match) {
+    const [, bracket_text, content] = match
+    return { bracket_text, content: content.trim() }
+  }
+  return { bracket_text: null, content: text }
+}
+
+const ObservationItem = ({ text }) => {
+  const [is_expanded, set_is_expanded] = useState(false)
+  const { bracket_text, content } = parse_observation_text(text)
+  const is_truncatable = content.length > OBSERVATION_CONTENT_CHAR_LIMIT
+  const displayed_content =
+    is_truncatable && !is_expanded
+      ? `${content.slice(0, OBSERVATION_CONTENT_CHAR_LIMIT).trimEnd()}…`
+      : content
+
+  return (
+    <Box sx={observation_line_sx}>
+      {bracket_text ? (
+        <Box component='span' sx={observation_label_sx}>
+          {bracket_text}
+        </Box>
+      ) : null}
+      <Box component='span' sx={observation_content_sx}>
+        {displayed_content}
+      </Box>
+      {is_truncatable && (
+        <Box
+          component='button'
+          type='button'
+          onClick={() => set_is_expanded((prev) => !prev)}
+          sx={observation_item_toggle_sx}
+          aria-label={
+            is_expanded ? 'Show less of observation' : 'Show more of observation'
+          }>
+          {is_expanded ? 'show less' : 'show more'}
+        </Box>
+      )}
+    </Box>
+  )
+}
+
+ObservationItem.propTypes = {
+  text: PropTypes.string.isRequired
+}
 
 const ObservationsSection = ({ observations, visible_count }) => {
   if (!Array.isArray(observations) || observations.length === 0) return null
@@ -299,41 +363,15 @@ const ObservationsSection = ({ observations, visible_count }) => {
     : observations.slice(0, effective_visible_count)
   const hidden_count = observations.length - displayed_observations.length
 
-  const parse_observation_text = (text) => {
-    // Match text in brackets followed by content
-    const match = text.match(bracket_and_content_regex)
-
-    if (match) {
-      const [, bracket_text, content] = match
-      return { bracket_text, content: content.trim() }
-    }
-
-    // If no brackets found, return the whole text as content
-    return { bracket_text: null, content: text }
-  }
-
   return (
     <MetadataRow
       label='Observations'
       value={
         <Box>
           <Box sx={observations_container_sx}>
-            {displayed_observations.map((text, idx) => {
-              const { bracket_text, content } = parse_observation_text(text)
-
-              return (
-                <Box key={idx} sx={observation_line_sx}>
-                  {bracket_text ? (
-                    <Box component='span' sx={observation_label_sx}>
-                      {bracket_text}
-                    </Box>
-                  ) : null}
-                  <Box component='span' sx={observation_content_sx}>
-                    {content}
-                  </Box>
-                </Box>
-              )
-            })}
+            {displayed_observations.map((text, idx) => (
+              <ObservationItem key={idx} text={text} />
+            ))}
           </Box>
           {should_collapse && (
             <Box sx={observations_expand_toggle_sx}>
@@ -472,7 +510,6 @@ GridCell.propTypes = {
 
 const EntityFrontmatter = ({
   frontmatter,
-  is_sticky = false,
   markdown,
   path,
   layout = 'sidebar',
@@ -549,12 +586,10 @@ const EntityFrontmatter = ({
         />
 
         {/* Tags + Relations row */}
-        {(has_tags || has_relations || has_observations) &&
+        {(has_tags || has_relations) &&
           (() => {
             const section_count =
-              (has_tags && base_uri ? 1 : 0) +
-              (has_relations ? 1 : 0) +
-              (has_observations ? 1 : 0)
+              (has_tags && base_uri ? 1 : 0) + (has_relations ? 1 : 0)
             return (
               <Box
                 sx={{
@@ -591,11 +626,6 @@ const EntityFrontmatter = ({
                       is_first={true}
                       pinned_relation_types={pinned_relation_types}
                     />
-                  </Box>
-                )}
-                {has_observations && (
-                  <Box sx={{ minWidth: 0 }}>
-                    <ObservationsSection observations={observations} />
                   </Box>
                 )}
               </Box>
@@ -680,6 +710,10 @@ const EntityFrontmatter = ({
           </Box>
         )}
 
+        {has_observations && (
+          <ObservationsSection observations={observations} />
+        )}
+
         {/* Expandable section */}
         <Collapse in={expanded}>
           <Box>
@@ -744,10 +778,7 @@ const EntityFrontmatter = ({
     <MetadataContainer
       background_color='white'
       border_radius={2}
-      sx={{
-        marginTop: '16px',
-        ...(is_sticky && { position: 'sticky', top: 16 })
-      }}>
+      sx={{ marginTop: '16px' }}>
       <EntityTitle
         title={display_title}
         type={type}
@@ -757,8 +788,6 @@ const EntityFrontmatter = ({
 
       {/* Core metadata section */}
       <Box>
-        {observations && <ObservationsSection observations={observations} />}
-
         {/* Unified relations - forward from frontmatter + reverse from API */}
         {base_uri && (
           <RelatedEntities
@@ -778,9 +807,10 @@ const EntityFrontmatter = ({
             return null // Handle dates separately below
           }
 
-          const has_content_above =
-            observations ||
-            will_related_entities_render(base_uri, parsed_forward_relations)
+          const has_content_above = will_related_entities_render(
+            base_uri,
+            parsed_forward_relations
+          )
 
           // Render editable fields for task status and priority
           if (type === 'task' && key === 'status' && base_uri) {
@@ -871,6 +901,8 @@ const EntityFrontmatter = ({
           />
         )}
 
+        {observations && <ObservationsSection observations={observations} />}
+
         {/* Expandable section */}
         <Collapse in={expanded}>
           <Box>
@@ -937,7 +969,6 @@ const EntityFrontmatter = ({
 
 EntityFrontmatter.propTypes = {
   frontmatter: PropTypes.object,
-  is_sticky: PropTypes.bool,
   markdown: PropTypes.string,
   path: PropTypes.string,
   layout: PropTypes.oneOf(['sidebar', 'full-width']),
