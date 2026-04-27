@@ -161,6 +161,70 @@ export async function write_timeline_jsonl({ timeline_path, entries }) {
 }
 
 /**
+ * Read the last entry from a JSONL timeline file by tail-reading bytes.
+ * Avoids loading the full timeline. Returns null if the file is missing,
+ * empty, or the last line cannot be parsed.
+ *
+ * @param {Object} params Parameters
+ * @param {string} params.timeline_path Path to the timeline.jsonl file
+ * @returns {Promise<Object|null>} The last parsed entry, or null
+ */
+export async function read_last_timeline_entry({ timeline_path }) {
+  let stat
+  try {
+    stat = await fs.stat(timeline_path)
+  } catch {
+    return null
+  }
+  if (stat.size === 0) return null
+
+  const fh = await fs.open(timeline_path, 'r')
+  try {
+    let chunk_size = 16 * 1024
+    let pos = stat.size
+    let buffer = Buffer.alloc(0)
+
+    while (pos > 0) {
+      const read_size = Math.min(chunk_size, pos)
+      pos -= read_size
+      const chunk = Buffer.alloc(read_size)
+      await fh.read(chunk, 0, read_size, pos)
+      buffer = Buffer.concat([chunk, buffer])
+
+      let end = buffer.length
+      while (end > 0 && (buffer[end - 1] === 0x0a || buffer[end - 1] === 0x0d)) {
+        end--
+      }
+      if (end === 0) {
+        // Only newlines so far — keep reading backward
+        if (pos === 0) return null
+        chunk_size *= 2
+        continue
+      }
+
+      const newline_idx = buffer.lastIndexOf(0x0a, end - 1)
+      const start = newline_idx >= 0 ? newline_idx + 1 : 0
+
+      if (newline_idx < 0 && pos > 0) {
+        // Last line not yet fully captured — expand window
+        chunk_size *= 2
+        continue
+      }
+
+      const line = buffer.slice(start, end).toString('utf-8')
+      try {
+        return JSON.parse(line)
+      } catch {
+        return null
+      }
+    }
+    return null
+  } finally {
+    await fh.close()
+  }
+}
+
+/**
  * Append a single entry to a JSONL timeline file
  * Main performance optimization - avoids read-modify-write cycle
  *

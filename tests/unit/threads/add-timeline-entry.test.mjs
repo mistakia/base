@@ -239,6 +239,83 @@ describe('add_timeline_entry', () => {
     expect(read_and_reset_timeline_backstop_counter()).to.equal(0)
   })
 
+  it('should stamp context_* tokens from metadata.usage on the same entry', async () => {
+    const assistant_entry = {
+      id: 'ctx_msg_001',
+      timestamp: '2023-05-10T14:30:00Z',
+      type: 'message',
+      role: 'assistant',
+      content: 'hello',
+      schema_version: 2,
+      metadata: {
+        usage: {
+          input_tokens: 1234,
+          cache_creation_input_tokens: 56,
+          cache_read_input_tokens: 78,
+          output_tokens: 9
+        }
+      }
+    }
+
+    await add_timeline_entry({
+      thread_id: test_thread.thread_id,
+      entry: assistant_entry
+    })
+
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+    const timeline = await read_timeline_jsonl({ timeline_path })
+    expect(timeline[0].metadata.context_input_tokens).to.equal(1234)
+    expect(timeline[0].metadata.context_cache_creation_input_tokens).to.equal(
+      56
+    )
+    expect(timeline[0].metadata.context_cache_read_input_tokens).to.equal(78)
+  })
+
+  it('should carry forward context_* tokens onto entries without usage', async () => {
+    const timeline_path = path.join(test_thread.context_dir, 'timeline.jsonl')
+
+    await add_timeline_entry({
+      thread_id: test_thread.thread_id,
+      entry: {
+        id: 'ctx_assistant_001',
+        timestamp: '2023-05-10T14:30:00Z',
+        type: 'message',
+        role: 'assistant',
+        content: 'first',
+        schema_version: 2,
+        metadata: {
+          usage: {
+            input_tokens: 100,
+            cache_creation_input_tokens: 10,
+            cache_read_input_tokens: 5,
+            output_tokens: 1
+          }
+        }
+      }
+    })
+
+    await add_timeline_entry({
+      thread_id: test_thread.thread_id,
+      entry: {
+        id: 'ctx_tool_001',
+        timestamp: '2023-05-10T14:30:01Z',
+        type: 'tool_call',
+        content: {
+          tool_name: 'web_search',
+          tool_parameters: { query: 'foo' }
+        },
+        schema_version: 2
+      }
+    })
+
+    const timeline = await read_timeline_jsonl({ timeline_path })
+    expect(timeline[1].metadata.context_input_tokens).to.equal(100)
+    expect(timeline[1].metadata.context_cache_creation_input_tokens).to.equal(
+      10
+    )
+    expect(timeline[1].metadata.context_cache_read_input_tokens).to.equal(5)
+  })
+
   it('should handle non-existent thread gracefully', async () => {
     const user_message = timeline_fixtures.find(
       (f) => f.name === 'user_message'

@@ -5,6 +5,7 @@ import get_thread from './get-thread.mjs'
 import { validate_thread_message_role } from './threads-constants.mjs'
 import {
   append_timeline_entry_jsonl,
+  read_last_timeline_entry,
   read_timeline_jsonl_or_default
 } from '#libs-server/threads/timeline/index.mjs'
 import { write_thread_metadata } from '#libs-server/threads/write-thread-metadata.mjs'
@@ -100,6 +101,34 @@ export const entry_validators = {
   }
 }
 
+const stamp_running_context_state = async ({ timeline_path, entry }) => {
+  const usage = entry?.metadata?.usage
+  let last_input
+  let last_cache_creation
+  let last_cache_read
+
+  if (usage) {
+    last_input = usage.input_tokens ?? 0
+    last_cache_creation = usage.cache_creation_input_tokens ?? 0
+    last_cache_read = usage.cache_read_input_tokens ?? 0
+  } else {
+    const previous = await read_last_timeline_entry({ timeline_path })
+    const prev_meta = previous?.metadata
+    if (prev_meta) {
+      last_input = prev_meta.context_input_tokens
+      last_cache_creation = prev_meta.context_cache_creation_input_tokens
+      last_cache_read = prev_meta.context_cache_read_input_tokens
+    }
+  }
+
+  if (last_input == null) return
+
+  if (!entry.metadata) entry.metadata = {}
+  entry.metadata.context_input_tokens = last_input
+  entry.metadata.context_cache_creation_input_tokens = last_cache_creation ?? 0
+  entry.metadata.context_cache_read_input_tokens = last_cache_read ?? 0
+}
+
 /**
  * Add an entry to a thread's timeline
  *
@@ -183,6 +212,13 @@ export default async function add_timeline_entry({ thread_id, entry }) {
   log(`Adding ${new_entry.type} entry to thread ${thread_id}`)
 
   const timeline_path = path.join(thread.context_dir, 'timeline.jsonl')
+
+  // Stamp running context state so per-event context size is visible on live
+  // timelines. Mirrors stamp_running_context_state in the Claude importer:
+  // carry forward the most recent assistant usage; if the new entry itself
+  // carries metadata.usage, that usage takes effect on this entry and all
+  // subsequent entries until another usage arrives.
+  await stamp_running_context_state({ timeline_path, entry: new_entry })
 
   // Append entry to timeline (streaming write - avoids read-modify-write)
   await append_timeline_entry_jsonl({ timeline_path, entry: new_entry })
