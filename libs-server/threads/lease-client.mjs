@@ -164,15 +164,27 @@ export const renew_lease = async ({ thread_id, lease_token, ttl_ms }) => {
   if (lease_token == null) throw new Error('renew_lease: lease_token required')
   if (!ttl_ms || ttl_ms <= 0) throw new Error('renew_lease: ttl_ms required')
 
+  let result
   if (_is_on_storage()) {
     const store = await _load_local_store()
-    return store.renew_lease({ thread_id, lease_token, ttl_ms })
+    result = await store.renew_lease({ thread_id, lease_token, ttl_ms })
+  } else {
+    result = await _http_request({
+      method: 'POST',
+      path: `/api/threads/${encodeURIComponent(thread_id)}/lease/renew`,
+      body: { lease_token, ttl_ms }
+    })
   }
-  return _http_request({
-    method: 'POST',
-    path: `/api/threads/${encodeURIComponent(thread_id)}/lease/renew`,
-    body: { lease_token, ttl_ms }
-  })
+  // Renew returns { renewed, expires_at } -- merge expires_at into the
+  // existing snapshot so callers reading via get_cached_lease_snapshot do
+  // not see the pre-renew expiration window.
+  if (result?.renewed && result.expires_at) {
+    const existing = _snapshot_cache.get(thread_id)
+    if (existing) {
+      _set_snapshot(thread_id, { ...existing, expires_at: result.expires_at })
+    }
+  }
+  return result
 }
 
 export const release_lease = async ({ thread_id, lease_token }) => {

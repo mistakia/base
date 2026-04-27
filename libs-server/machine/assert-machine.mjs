@@ -25,6 +25,12 @@ const _resolve_hostname = (role) => {
   return registry[role]?.hostname || null
 }
 
+// _checked is a per-process boot-time guard: once a role has been verified,
+// it is never re-evaluated. This is intentional under PM2 fork-mode-1 --
+// hostname and machine_registry do not change at runtime, so re-checking on
+// every call would only add overhead. If machine_registry is hot-reloaded
+// elsewhere, callers must restart the process for assertions to pick up the
+// new mapping. Tests reset the cache via _reset_for_tests.
 const _checked = new Set()
 
 export const assert_on_machine = (role) => {

@@ -45,6 +45,13 @@ export const apply_read_lease_routing = async ({ thread_id, req, res }) => {
   return { redirect: false }
 }
 
+// Precondition gate: inspect_lease is called once and the snapshot drives the
+// per-field decisions. The check is NOT atomic with the subsequent write --
+// the lease can change between this function returning and write_thread_metadata
+// running on the caller. Callers must honor { block: true } by returning
+// immediately without performing any writes; partial-success semantics are
+// not defined. The TOCTOU window is intrinsic to the lease/HTTP boundary;
+// strict atomicity would require gating the write at the storage tier.
 export const check_write_lease_routing = async ({ thread_id, patches, req, res }) => {
   const fields = Object.keys(patches || {})
   if (fields.length === 0) return { block: false }

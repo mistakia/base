@@ -222,6 +222,68 @@ describe('libs-server/threads/lease-client', function () {
       expect(captured_url).to.match(/\/api\/threads\/t-ren\/lease\/renew$/)
     })
 
+    it('renew_lease refreshes the cached snapshot expires_at', async () => {
+      restore_registry = _setup_remote_storage()
+      const initial_expires_at = Date.now() + 1000
+      const renewed_expires_at = Date.now() + 60000
+      // Seed the snapshot via inspect_lease.
+      global.fetch = async () =>
+        _make_response({
+          body: {
+            thread_id: 't-renew-cache',
+            machine_id: 'macbook_test',
+            lease_token: 7,
+            expires_at: initial_expires_at
+          }
+        })
+      await inspect_lease({ thread_id: 't-renew-cache' })
+      expect(
+        get_cached_lease_snapshot({ thread_id: 't-renew-cache' })
+      ).to.have.property('expires_at', initial_expires_at)
+      // Renew and assert the cached snapshot picks up the new expires_at while
+      // preserving machine_id and lease_token.
+      global.fetch = async () =>
+        _make_response({
+          body: { renewed: true, expires_at: renewed_expires_at }
+        })
+      await renew_lease({
+        thread_id: 't-renew-cache',
+        lease_token: 7,
+        ttl_ms: 60000
+      })
+      const refreshed = get_cached_lease_snapshot({
+        thread_id: 't-renew-cache'
+      })
+      expect(refreshed.expires_at).to.equal(renewed_expires_at)
+      expect(refreshed.machine_id).to.equal('macbook_test')
+      expect(refreshed.lease_token).to.equal(7)
+    })
+
+    it('renew_lease leaves snapshot untouched when renewed:false', async () => {
+      restore_registry = _setup_remote_storage()
+      const initial_expires_at = Date.now() + 1000
+      global.fetch = async () =>
+        _make_response({
+          body: {
+            thread_id: 't-renew-fail',
+            machine_id: 'macbook_test',
+            lease_token: 9,
+            expires_at: initial_expires_at
+          }
+        })
+      await inspect_lease({ thread_id: 't-renew-fail' })
+      global.fetch = async () =>
+        _make_response({ body: { renewed: false } })
+      await renew_lease({
+        thread_id: 't-renew-fail',
+        lease_token: 9,
+        ttl_ms: 60000
+      })
+      expect(
+        get_cached_lease_snapshot({ thread_id: 't-renew-fail' })
+      ).to.have.property('expires_at', initial_expires_at)
+    })
+
     it('list_active_leases passes filter as query param', async () => {
       restore_registry = _setup_remote_storage()
       let captured_url
