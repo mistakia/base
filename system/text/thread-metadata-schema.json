@@ -71,26 +71,30 @@
       "type": ["object", "null"],
       "description": "Canonical execution attribution: where and how this thread's session ran. May be null for legacy threads that cannot be classified. See system/text/thread-execution-attribution.md.",
       "properties": {
-        "mode": {
+        "environment": {
           "type": "string",
-          "enum": ["host", "container"],
-          "description": "host = ran directly on the machine; container = ran inside a container"
+          "enum": ["controlled_host", "controlled_container", "provider_hosted"],
+          "description": "controlled_host = ran directly on a machine we own; controlled_container = ran in a container on a machine we own; provider_hosted = ran on third-party infrastructure (e.g. claude.ai web, ChatGPT API)"
         },
         "machine_id": {
           "type": ["string", "null"],
-          "description": "machine_registry key for the host that ran the session; null only when no registry entry matches"
+          "description": "machine_registry key for the host that ran the session; null when provider_hosted or when no registry entry matches"
         },
         "container_runtime": {
           "type": ["string", "null"],
           "enum": ["docker", null],
-          "description": "Container runtime binary name; null for host mode"
+          "description": "Container runtime binary name; null unless controlled_container"
         },
         "container_name": {
           "type": ["string", "null"],
-          "description": "Container name; null for host mode. A container_name starting with 'base-user-' indicates per-user isolation."
+          "description": "Container name; null unless controlled_container. A container_name starting with 'base-user-' indicates per-user isolation."
+        },
+        "account_namespace": {
+          "type": "string",
+          "description": "Optional account namespace identifying which Claude account was used (e.g. 'fee.trace.wrap')"
         }
       },
-      "required": ["mode", "machine_id", "container_runtime", "container_name"],
+      "required": ["environment", "machine_id", "container_runtime", "container_name"],
       "additionalProperties": false
     },
     "inference_provider": {

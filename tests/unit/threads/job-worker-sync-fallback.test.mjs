@@ -24,7 +24,7 @@ describe('job-worker sync_session_fallback', function () {
         }
       }
       const execution_overrides = {
-        mode: 'host',
+        environment: 'controlled_host',
         machine_id: null,
         container_runtime: null,
         container_name: null
@@ -54,7 +54,7 @@ describe('job-worker sync_session_fallback', function () {
         }
       }
       const execution_overrides = {
-        mode: 'host',
+        environment: 'controlled_host',
         machine_id: null,
         container_runtime: null,
         container_name: null
@@ -75,7 +75,7 @@ describe('job-worker sync_session_fallback', function () {
         }
       }
       const execution_overrides = {
-        mode: 'container',
+        environment: 'controlled_container',
         machine_id: 'storage',
         container_runtime: 'docker',
         container_name: 'base-user-test'

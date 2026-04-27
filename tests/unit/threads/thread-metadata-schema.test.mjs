@@ -288,11 +288,11 @@ describe('Thread Metadata Schema Validation', () => {
       updated_at: '2023-01-01T00:00:00.000Z'
     })
 
-    it('should validate metadata with host execution', () => {
+    it('should validate metadata with controlled_host execution', () => {
       const metadata = {
         ...base_metadata(),
         execution: {
-          mode: 'host',
+          environment: 'controlled_host',
           machine_id: 'macbook',
           container_runtime: null,
           container_name: null
@@ -302,11 +302,26 @@ describe('Thread Metadata Schema Validation', () => {
       expect(validate.errors).to.be.null
     })
 
-    it('should validate metadata with shared container execution', () => {
+    it('should validate metadata with controlled_host execution and account_namespace', () => {
       const metadata = {
         ...base_metadata(),
         execution: {
-          mode: 'container',
+          environment: 'controlled_host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null,
+          account_namespace: 'fee.trace.wrap'
+        }
+      }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should validate metadata with shared controlled_container execution', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          environment: 'controlled_container',
           machine_id: 'storage',
           container_runtime: 'docker',
           container_name: 'base-container'
@@ -320,10 +335,24 @@ describe('Thread Metadata Schema Validation', () => {
       const metadata = {
         ...base_metadata(),
         execution: {
-          mode: 'container',
+          environment: 'controlled_container',
           machine_id: 'storage',
           container_runtime: 'docker',
           container_name: 'base-user-arrin'
+        }
+      }
+      expect(validate(metadata)).to.equal(true)
+      expect(validate.errors).to.be.null
+    })
+
+    it('should validate metadata with provider_hosted execution', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          environment: 'provider_hosted',
+          machine_id: null,
+          container_runtime: null,
+          container_name: null
         }
       }
       expect(validate(metadata)).to.equal(true)
@@ -336,11 +365,24 @@ describe('Thread Metadata Schema Validation', () => {
       expect(validate.errors).to.be.null
     })
 
-    it('should reject execution with unknown mode', () => {
+    it('should reject execution with legacy mode field', () => {
       const metadata = {
         ...base_metadata(),
         execution: {
-          mode: 'wat',
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
+      }
+      expect(validate(metadata)).to.equal(false)
+    })
+
+    it('should reject execution with unknown environment value', () => {
+      const metadata = {
+        ...base_metadata(),
+        execution: {
+          environment: 'wat',
           machine_id: 'macbook',
           container_runtime: null,
           container_name: null
@@ -353,7 +395,7 @@ describe('Thread Metadata Schema Validation', () => {
       const metadata = {
         ...base_metadata(),
         execution: {
-          mode: 'host',
+          environment: 'controlled_host',
           machine_id: 'macbook',
           container_runtime: null,
           container_name: null,
@@ -366,7 +408,7 @@ describe('Thread Metadata Schema Validation', () => {
     it('should reject execution missing required keys', () => {
       const metadata = {
         ...base_metadata(),
-        execution: { mode: 'host' }
+        execution: { environment: 'controlled_host' }
       }
       expect(validate(metadata)).to.equal(false)
     })

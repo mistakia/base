@@ -235,6 +235,7 @@ export const create_threads_from_session_provider = async ({
   include_warm_agents = false,
   provider_options = {},
   execution_overrides = null,
+  execution_resolver = null,
   known_thread_id = null,
   bulk_import = false
 }) => {
@@ -330,6 +331,11 @@ export const create_threads_from_session_provider = async ({
     }
 
     try {
+      const per_session_overrides = execution_resolver
+        ? execution_resolver(raw_session)
+        : null
+      const final_execution_overrides = per_session_overrides ?? execution_overrides
+
       const session_result = await process_single_session({
         raw_session: session_to_process,
         session_provider,
@@ -337,7 +343,7 @@ export const create_threads_from_session_provider = async ({
         user_base_directory,
         allow_updates,
         verbose,
-        execution_overrides,
+        execution_overrides: final_execution_overrides,
         known_thread_id,
         bulk_import
       })

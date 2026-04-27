@@ -17,14 +17,51 @@ describe('assert_valid_thread_metadata', () => {
     await assert_valid_thread_metadata(valid_base())
   })
 
-  it('accepts a record with a valid execution object', async () => {
+  it('accepts a record with a valid controlled_host execution object', async () => {
     await assert_valid_thread_metadata({
       ...valid_base(),
       execution: {
-        mode: 'host',
+        environment: 'controlled_host',
         machine_id: 'macbook',
         container_runtime: null,
         container_name: null
+      }
+    })
+  })
+
+  it('accepts a record with a valid controlled_container execution object', async () => {
+    await assert_valid_thread_metadata({
+      ...valid_base(),
+      execution: {
+        environment: 'controlled_container',
+        machine_id: 'storage',
+        container_runtime: 'docker',
+        container_name: 'base-container'
+      }
+    })
+  })
+
+  it('accepts a record with a valid provider_hosted execution object', async () => {
+    await assert_valid_thread_metadata({
+      ...valid_base(),
+      execution: {
+        environment: 'provider_hosted',
+        machine_id: null,
+        container_runtime: null,
+        container_name: null
+      }
+    })
+  })
+
+  it('accepts execution with optional account_namespace', async () => {
+    await assert_valid_thread_metadata({
+      ...valid_base(),
+      execution: {
+        environment: 'controlled_host',
+        machine_id: 'macbook',
+        container_runtime: null,
+        container_name: null,
+        account_namespace: 'fee.trace.wrap'
       }
     })
   })
@@ -54,12 +91,36 @@ describe('assert_valid_thread_metadata', () => {
     expect(err.code).to.equal('THREAD_METADATA_SCHEMA_VIOLATION')
   })
 
-  it('rejects a malformed execution object', async () => {
+  it('rejects a malformed execution object (unknown environment)', async () => {
     let err
     try {
       await assert_valid_thread_metadata({
         ...valid_base(),
-        execution: { mode: 'wat' }
+        execution: {
+          environment: 'wat',
+          machine_id: null,
+          container_runtime: null,
+          container_name: null
+        }
+      })
+    } catch (e) {
+      err = e
+    }
+    expect(err).to.exist
+    expect(err.code).to.equal('THREAD_METADATA_SCHEMA_VIOLATION')
+  })
+
+  it('rejects execution with legacy mode field', async () => {
+    let err
+    try {
+      await assert_valid_thread_metadata({
+        ...valid_base(),
+        execution: {
+          mode: 'host',
+          machine_id: 'macbook',
+          container_runtime: null,
+          container_name: null
+        }
       })
     } catch (e) {
       err = e
