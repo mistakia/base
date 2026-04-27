@@ -741,13 +741,13 @@ router.post('/create-session', async (req, res) => {
     // a post-session sync hook to backfill it.
     const create_execution =
       execution_mode === 'container_user'
-        ? build_execution_attribution({ mode: 'container', username })
+        ? build_execution_attribution({ environment: 'controlled_container', username })
         : execution_mode === 'container'
           ? build_execution_attribution({
-              mode: 'container',
+              environment: 'controlled_container',
               container_name: 'base-container'
             })
-          : build_execution_attribution({ mode: 'host' })
+          : build_execution_attribution({ environment: 'controlled_host' })
 
     // The claude sync hook is the sole writer of the initial user entry.
     // Writing it here too produced duplicates because server-generated ids
@@ -869,7 +869,7 @@ router.put(
               const owner_username = owner?.username || null
               if (owner_username) {
                 patches.execution = build_execution_attribution({
-                  mode: 'container',
+                  environment: 'controlled_container',
                   username: owner_username
                 })
               }
@@ -1209,7 +1209,7 @@ router.post('/sync-user-session', async (req, res) => {
       },
       user_public_key,
       execution_overrides: build_execution_attribution({
-        mode: 'container',
+        environment: 'controlled_container',
         username
       })
     }

@@ -10,7 +10,9 @@ import debug from 'debug'
 import { ClaudeSessionProvider } from './claude-session-provider.mjs'
 import { get_claude_config } from './claude-config.mjs'
 import { parse_all_claude_files, get_session_summary } from './parse-jsonl.mjs'
+import { build_claude_attribution_resolver } from './claude-attribution-resolver.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import config from '#config'
 
 const log = debug('integrations:claude')
 
@@ -68,6 +70,15 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
       }
     }
 
+    // Build per-session execution resolver from the machine registry.
+    // Only wired when no explicit session_file override is set (ad-hoc single-file
+    // imports bypass the resolver and rely on null attribution).
+    const execution_resolver = !options.session_file
+      ? build_claude_attribution_resolver({
+          machine_registry: config.machine_registry
+        })
+      : null
+
     // Create threads using unified provider system with streaming
     // Agent sessions are attached during streaming, merged during processing
     // Warm/initialization agents are excluded during streaming
@@ -87,6 +98,7 @@ export const import_claude_sessions_to_threads = async (options = {}) => {
         from_date: config.from_date,
         to_date: config.to_date
       },
+      execution_resolver,
       ...(options.known_thread_id
         ? { known_thread_id: options.known_thread_id }
         : {}),

@@ -10,6 +10,7 @@ import { CursorSessionProvider } from './cursor-session-provider.mjs'
 import { get_cursor_config } from './cursor-config.mjs'
 import { get_conversation_summary } from './read-database.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import { build_execution_attribution } from '#libs-server/threads/execution-attribution.mjs'
 
 const log = debug('integrations:cursor')
 
@@ -62,6 +63,9 @@ export const import_cursor_conversations_to_threads = async (options = {}) => {
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
       provider_options: { cursor_conversations: valid_conversations },
+      execution_overrides: build_execution_attribution({
+        environment: 'controlled_host'
+      }),
       bulk_import: options.bulk_import === true
     })
 

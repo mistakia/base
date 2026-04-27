@@ -24,10 +24,11 @@ resume-permission model.
 ```json
 {
   "execution": {
-    "mode": "host" | "container",
+    "environment": "controlled_host" | "controlled_container" | "provider_hosted",
     "machine_id": "macbook" | "storage" | null,
     "container_runtime": "docker" | null,
-    "container_name": "base-container" | "base-user-arrin" | null
+    "container_name": "base-container" | "base-user-arrin" | null,
+    "account_namespace": "fee.trace.wrap"
   }
 }
 ```
@@ -36,27 +37,39 @@ resume-permission model.
 cannot be classified from raw-data signals. Code that consumes `execution` must
 tolerate this (treat null as host-fallback for routing).
 
+`account_namespace` is an optional string; omit it when not applicable rather
+than writing `null`.
+
+## Environment Values
+
+| Value | Meaning |
+|-------|---------|
+| `controlled_host` | Ran directly on a machine we own (no container) |
+| `controlled_container` | Ran inside a container on a machine we own |
+| `provider_hosted` | Ran on third-party infrastructure (ChatGPT API, claude.ai web, etc.) |
+
 ## Invariants
 
 The factory `libs-server/threads/execution-attribution.mjs` is the only place
 these invariants are constructed and enforced:
 
-- `mode === 'host'` => `container_runtime === null` and `container_name === null`.
-- `mode === 'container'` => both `container_runtime` and `container_name` are non-null.
+- `environment === 'controlled_host'` => `container_runtime === null` and `container_name === null`.
+- `environment === 'controlled_container'` => both `container_runtime` and `container_name` are non-null.
+- `environment === 'provider_hosted'` => `machine_id === null`, `container_runtime === null`, `container_name === null`.
 - A `container_name` that starts with `base-user-` indicates per-user isolation.
-- `machine_id` is `null` only when `machine_registry` has no matching entry for
-  the current host.
+- `machine_id` is `null` when `machine_registry` has no matching entry for the current host, or for `provider_hosted`.
 
 ## Examples
 
-### Host (macbook)
+### Controlled host (macbook)
 
 ```json
 {
-  "mode": "host",
+  "environment": "controlled_host",
   "machine_id": "macbook",
   "container_runtime": null,
-  "container_name": null
+  "container_name": null,
+  "account_namespace": "fee.trace.wrap"
 }
 ```
 
@@ -64,10 +77,11 @@ these invariants are constructed and enforced:
 
 ```json
 {
-  "mode": "container",
+  "environment": "controlled_container",
   "machine_id": "storage",
   "container_runtime": "docker",
-  "container_name": "base-container"
+  "container_name": "base-container",
+  "account_namespace": "fee.trace.wrap"
 }
 ```
 
@@ -75,17 +89,28 @@ these invariants are constructed and enforced:
 
 ```json
 {
-  "mode": "container",
+  "environment": "controlled_container",
   "machine_id": "storage",
   "container_runtime": "docker",
   "container_name": "base-user-arrin"
 }
 ```
 
+### Provider hosted (ChatGPT)
+
+```json
+{
+  "environment": "provider_hosted",
+  "machine_id": null,
+  "container_runtime": null,
+  "container_name": null
+}
+```
+
 ## Resume Permission Rule
 
 The resume route (`POST /api/threads/:thread_id/resume`) decides authorization
-in two steps, with no reference to `execution.mode` or `container_name`:
+in two steps, with no reference to `execution.environment` or `container_name`:
 
 1. **Ownership check** via `validate_thread_ownership` -- if the requester
    wrote the thread, they may resume it.
@@ -96,10 +121,6 @@ in two steps, with no reference to `execution.mode` or `container_name`:
 Per-user isolation is governed by container dispatch, not by ownership. After
 the permission decision passes, the route derives a local routing variable
 from `execution.container_name` to choose the correct container target.
-
-A consequence: a host thread owned by a user who later received `thread_config`
-becomes resumable by that user (it would have been blocked under the previous
-mode-string model). This is strictly an improvement.
 
 ## Stamping
 
@@ -116,6 +137,19 @@ Threads are stamped with `execution` at three points:
    The integration layer guards against downgrading a per-user-container stamp
    to a less-specific one.
 
+## Overwrite Guards
+
+`update_thread_metadata` applies two-step logic when deciding whether to
+write an incoming `execution_overrides`:
+
+1. **Downgrade guard** (always enforced): if the existing stamp is per-user
+   container and the incoming is not, refuse and log.
+2. **Equality guard** (always enforced): if both existing and incoming are
+   non-null and differ, refuse and log. There is no escape hatch.
+
+When neither guard fires, the incoming attribution is written when non-null,
+or the existing value is preserved when incoming is null.
+
 ## Container Runtime Selection
 
 `container_runtime` in the stored attribution is whichever runtime
@@ -128,6 +162,20 @@ precedence is:
 
 Per-machine values win over the global so a single deployment file can mix
 host platforms.
+
+## Claude Import Resolver
+
+For bulk Claude session imports, attribution is resolved per-session by
+`libs-server/integrations/claude/claude-attribution-resolver.mjs`. It maps
+`raw_session.metadata.file_path` against `config.machine_registry[*].claude_paths`
+using a longest-prefix match across all machines in the registry (not just
+the current host):
+
+- `host_config_dir.<account>` -> `controlled_host`, account_namespace from `<account>`
+- `admin_data_dir.<account>` -> `controlled_container`, container_name=`base-container`
+- `user_data_dirs.<username>.<account>` -> `controlled_container`, container_name=`base-user-<username>`
+
+Paths under archive prefixes return `null` (excluded — must re-import from raw source).
 
 ## Migration
 

@@ -362,13 +362,13 @@ const sync_session_fallback = async (job, { override_session_id } = {}) => {
 
   const execution_overrides =
     execution_mode === 'container_user'
-      ? build_execution_attribution({ mode: 'container', username })
+      ? build_execution_attribution({ environment: 'controlled_container', username })
       : execution_mode === 'container'
         ? build_execution_attribution({
-            mode: 'container',
+            environment: 'controlled_container',
             container_name: 'base-container'
           })
-        : build_execution_attribution({ mode: 'host' })
+        : build_execution_attribution({ environment: 'controlled_host' })
 
   if (session_id && thread_id) {
     // Resume case or recovered session_id: import the specific session file

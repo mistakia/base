@@ -14,6 +14,7 @@ import {
 } from './chatgpt-config.mjs'
 import { create_chatgpt_client } from './api/index.mjs'
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
+import { build_execution_attribution } from '#libs-server/threads/execution-attribution.mjs'
 
 const log = debug('integrations:chatgpt')
 
@@ -71,6 +72,10 @@ export const import_chatgpt_conversations_to_threads = async (options = {}) => {
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
       provider_options: { chatgpt_conversations: valid_conversations },
+      execution_overrides: build_execution_attribution({
+        environment: 'provider_hosted',
+        machine_id: null
+      }),
       bulk_import: options.bulk_import === true
     })
 

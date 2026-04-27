@@ -22,7 +22,10 @@ import { build_timeline_from_session } from './build-timeline-entries.mjs'
 import { acquire_thread_import_lock } from '#libs-server/threads/timeline/thread-import-lock.mjs'
 import { assert_thread_metadata_present } from '#libs-server/threads/assert-thread-metadata-present.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
-import { would_downgrade_per_user_container } from '#libs-server/threads/execution-attribution.mjs'
+import {
+  would_downgrade_per_user_container,
+  would_overwrite_with_different
+} from '#libs-server/threads/execution-attribution.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 
 const log = debug('integrations:thread:create-from-session')
@@ -627,7 +630,11 @@ export const update_existing_thread = async (
 export const update_thread_metadata = async (
   thread_dir,
   normalized_session,
-  { execution_overrides = null, bulk_import = false, thread_id = null } = {}
+  {
+    execution_overrides = null,
+    bulk_import = false,
+    thread_id = null
+  } = {}
 ) => {
   const resolved_thread_id = thread_id || path.basename(thread_dir)
   // The full session-import patch touches session-owned fields (counts,
@@ -718,15 +725,28 @@ export const update_thread_metadata = async (
     }
   }
 
-  const effective_execution_overrides = would_downgrade_per_user_container(
-    initial_existing_execution,
-    execution_overrides
-  )
-    ? null
-    : execution_overrides
-  if (effective_execution_overrides === null && execution_overrides) {
+  let effective_execution_overrides = execution_overrides
+  if (
+    would_downgrade_per_user_container(
+      initial_existing_execution,
+      execution_overrides
+    )
+  ) {
+    // Step 1: Never downgrade per-user container.
+    effective_execution_overrides = null
     log(
       `Refusing to downgrade per-user container attribution on ${thread_dir} (incoming container_name=${execution_overrides?.container_name || 'null'})`
+    )
+  } else if (
+    would_overwrite_with_different(
+      initial_existing_execution,
+      execution_overrides
+    )
+  ) {
+    // Step 2: Both non-null and different — refuse unconditionally.
+    effective_execution_overrides = null
+    log(
+      `Refusing to overwrite execution attribution on ${thread_dir} (existing and incoming differ)`
     )
   }
 
