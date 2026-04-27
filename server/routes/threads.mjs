@@ -64,6 +64,41 @@ import {
 const router = express.Router()
 const log = debug('api:threads')
 
+// Translate patch_thread_metadata / readFile errors to HTTP responses.
+// Distinguishes ENOENT (404), schema violations (422), lease/field-ownership
+// rejections (409), optimistic-write conflicts (409), from unexpected (500).
+// Avoids the historical pattern of swallowing every error as "Thread not found".
+const handle_thread_metadata_error = (res, error) => {
+  if (error.code === 'ENOENT') {
+    return res.status(404).json({ error: 'Thread not found' })
+  }
+  if (error.code === 'THREAD_METADATA_SCHEMA_VIOLATION') {
+    return res.status(422).json({
+      error: 'Thread metadata schema violation',
+      message: error.message,
+      violations: error.violations || null
+    })
+  }
+  if (error.code === 'EMTIME_CONFLICT') {
+    return res.status(409).json({
+      error: 'Concurrent write conflict',
+      message: error.message
+    })
+  }
+  if (error.code === 'FIELD_NOT_WRITABLE' || error.code === 'LEASE_REQUIRED') {
+    return res.status(409).json({
+      error: 'Thread field write rejected',
+      message: error.message,
+      code: error.code
+    })
+  }
+  log(`unexpected thread metadata error: ${error.stack || error.message}`)
+  return res.status(500).json({
+    error: 'Internal error updating thread metadata',
+    message: error.message
+  })
+}
+
 // Short-lived in-memory cache for individual thread responses.
 // Prevents redundant full-timeline reads when the HTML render and API call
 // (or rapid browser refreshes) hit the same thread within a short window.
@@ -880,16 +915,19 @@ router.put(
               session_id
             }
           }
-        } catch {
-          return res.status(404).json({ error: 'Thread not found' })
+        } catch (error) {
+          if (error.code === 'ENOENT') {
+            return res.status(404).json({ error: 'Thread not found' })
+          }
+          return handle_thread_metadata_error(res, error)
         }
       }
 
       let metadata
       try {
         metadata = await patch_thread_metadata({ thread_id, patches })
-      } catch {
-        return res.status(404).json({ error: 'Thread not found' })
+      } catch (error) {
+        return handle_thread_metadata_error(res, error)
       }
 
       // Emit directly for immediate client feedback (bypass 2s watcher debounce)

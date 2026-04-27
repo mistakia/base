@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { readFile } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import path from 'path'
 
 import { request } from '#tests/utils/test-request.mjs'
@@ -157,6 +157,27 @@ describe('PUT /api/threads/:thread_id/session-status', () => {
 
     expect(metadata.external_session.session_id).to.equal(first_session_id)
     expect(metadata.session_status).to.equal('active')
+  })
+
+  it('should return 422 with validator detail when metadata fails schema validation', async () => {
+    const thread = await create_test_thread({
+      user_public_key: test_user.user_public_key,
+      test_directories
+    })
+
+    const metadata_path = path.join(thread.context_dir, 'metadata.json')
+    const raw = await readFile(metadata_path, 'utf-8')
+    const metadata = JSON.parse(raw)
+    delete metadata.thread_id
+    await writeFile(metadata_path, JSON.stringify(metadata, null, 2))
+
+    const response = await request(server)
+      .put(`/api/threads/${thread.thread_id}/session-status`)
+      .send({ session_status: 'active' })
+
+    expect(response.status).to.equal(422)
+    expect(response.body.error).to.include('schema violation')
+    expect(response.body.message).to.include('thread_id')
   })
 
   // Note: The test HTTP helper connects via 127.0.0.1 which is always treated
