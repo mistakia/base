@@ -36,9 +36,9 @@ const non_storage_guard = (req, res, next) => {
   next()
 }
 
-router.use(require_service_auth, non_storage_guard)
+const lease_auth = [require_service_auth, non_storage_guard]
 
-router.get('/lease', async (req, res) => {
+router.get('/lease', ...lease_auth, async (req, res) => {
   const filter = req.query.filter || 'all'
   if (!['owned-by-me', 'owned-by-remote', 'all'].includes(filter)) {
     return res.status(400).json({ error: 'invalid filter' })
@@ -58,7 +58,7 @@ router.get('/lease', async (req, res) => {
   }
 })
 
-router.get('/:thread_id/lease', async (req, res) => {
+router.get('/:thread_id/lease', ...lease_auth, async (req, res) => {
   try {
     const lease = await inspect_lease({ thread_id: req.params.thread_id })
     return res.json(lease)
@@ -68,7 +68,7 @@ router.get('/:thread_id/lease', async (req, res) => {
   }
 })
 
-router.post('/:thread_id/lease/acquire', async (req, res) => {
+router.post('/:thread_id/lease/acquire', ...lease_auth, async (req, res) => {
   const { machine_id, session_id, ttl_ms, mode } = req.body || {}
   if (!machine_id || !ttl_ms) {
     return res.status(400).json({ error: 'machine_id and ttl_ms required' })
@@ -93,7 +93,7 @@ router.post('/:thread_id/lease/acquire', async (req, res) => {
   }
 })
 
-router.post('/:thread_id/lease/renew', async (req, res) => {
+router.post('/:thread_id/lease/renew', ...lease_auth, async (req, res) => {
   const { lease_token, ttl_ms } = req.body || {}
   if (lease_token == null || !ttl_ms) {
     return res.status(400).json({ error: 'lease_token and ttl_ms required' })
@@ -111,7 +111,7 @@ router.post('/:thread_id/lease/renew', async (req, res) => {
   }
 })
 
-router.post('/:thread_id/lease/release', async (req, res) => {
+router.post('/:thread_id/lease/release', ...lease_auth, async (req, res) => {
   const { lease_token } = req.body || {}
   if (lease_token == null) {
     return res.status(400).json({ error: 'lease_token required' })
