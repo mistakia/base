@@ -40,7 +40,11 @@ const ARRAY_FIELDS = new Set([
   'directory_references'
 ])
 
-const NESTED_OBJECT_FIELDS = new Set(['source', 'prompt_properties'])
+const NESTED_OBJECT_FIELDS = new Set([
+  'source',
+  'prompt_properties',
+  'external_session'
+])
 
 const NUMERIC_MAX_FIELDS = new Set([
   'message_count',
