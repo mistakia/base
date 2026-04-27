@@ -456,6 +456,11 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
     type: 'boolean',
     default: false
   })
+  .option('privacy-filter', {
+    describe:
+      'Override privacy_filter.enabled per run (use --no-privacy-filter to force off)',
+    type: 'boolean'
+  })
   .example('$0 --path task/', 'Review all tasks')
   .example('$0 --path thread/ --regex-only', 'Regex-only scan of threads')
   .example(
@@ -484,6 +489,7 @@ async function main() {
     include_raw_data: argv.includeRawData,
     timeline_llm: argv.timelineLlm,
     force: argv.force,
+    privacy_filter_override: argv.privacyFilter,
     apply_visibility: argv.applyVisibility,
     propose_rules: argv.proposeRules,
     show_progress: argv.progress,
@@ -627,7 +633,8 @@ async function main() {
         file_path,
         model: options.model,
         regex_only: options.regex_only,
-        max_content_size: options.max_content_size
+        max_content_size: options.max_content_size,
+        privacy_filter_override: options.privacy_filter_override
       })
 
       if (result.method === 'llm_unavailable') {
@@ -751,7 +758,8 @@ async function main() {
         regex_only: options.regex_only,
         max_content_size: options.max_content_size,
         include_raw_data: options.include_raw_data,
-        timeline_llm: options.timeline_llm
+        timeline_llm: options.timeline_llm,
+        privacy_filter_override: options.privacy_filter_override
       })
 
       if (result.method === 'llm_unavailable') {

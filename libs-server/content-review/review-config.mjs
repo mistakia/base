@@ -24,7 +24,22 @@ const DEFAULT_CONFIG = {
   },
   guidance_notes: [],
   exclude_patterns: [],
-  forced_private_patterns: []
+  forced_private_patterns: [],
+  privacy_filter: {
+    enabled: false,
+    score_threshold: 0.85,
+    short_circuit_public: true,
+    label_floor: {
+      secret: 'private',
+      account_number: 'private',
+      private_address: 'private',
+      private_email: 'private',
+      private_phone: 'private',
+      private_url: 'private',
+      private_date: 'private',
+      private_person: 'acquaintance'
+    }
+  }
 }
 
 let cached_config = null

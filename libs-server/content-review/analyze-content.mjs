@@ -9,6 +9,11 @@ import { extract_json_from_response } from '#libs-server/metadata/parse-analysis
 import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import { scan_file_content } from './pattern-scanner.mjs'
 import { load_review_config } from './review-config.mjs'
+import {
+  apply_filter_floor,
+  apply_regex_floor
+} from './classification-floors.mjs'
+import { classify_text } from './privacy-filter-client.mjs'
 
 const log = debug('content-review:analyze')
 
@@ -94,6 +99,7 @@ async function build_review_prompt({
   content,
   file_path,
   regex_findings,
+  filter_spans = [],
   metadata
 }) {
   const review_config = await load_review_config()
@@ -113,6 +119,24 @@ async function build_review_prompt({
           .join('\n')}`
       : '\nRegex pattern scan found no issues.'
 
+  const FILTER_PROMPT_SPAN_CAP = 50
+  const filter_summary = (() => {
+    if (!filter_spans || filter_spans.length === 0) return ''
+    const sorted = [...filter_spans].sort(
+      (a, b) => (b.score ?? 0) - (a.score ?? 0)
+    )
+    const shown = sorted.slice(0, FILTER_PROMPT_SPAN_CAP)
+    const omitted = sorted.length - shown.length
+    const lines = shown.map(
+      (s) =>
+        `- ${s.label} @${s.start}-${s.end} (score ${s.score?.toFixed ? s.score.toFixed(2) : s.score}): "${s.text}"`
+    )
+    if (omitted > 0) {
+      lines.push(`(+${omitted} additional spans omitted; showing top ${FILTER_PROMPT_SPAN_CAP} by score)`)
+    }
+    return `\nPrivacy-filter token classifier found ${filter_spans.length} PII span(s). NOTE: These are model predictions and may include false positives; treat as supplementary evidence, not authority:\n${lines.join('\n')}`
+  })()
+
   const guidance_section =
     guidance_notes.length > 0
       ? `\n## Additional Classification Guidance\n${guidance_notes.map((n) => `- ${n}`).join('\n')}\n`
@@ -129,7 +153,7 @@ ${guideline_text}
 ${allowable_usernames.length > 0 ? `\n## Allowable Usernames\nThe following usernames are NOT considered personal information: ${allowable_usernames.map((u) => `"${u}"`).join(', ')}. These may appear in file paths, system references, and repository URLs without triggering a private classification.\n` : ''}${guidance_section}
 File: ${file_path || 'unknown'}
 ${metadata ? `Title: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}${metadata.relations && metadata.relations.length > 0 ? `\nRelations:\n${metadata.relations.map((r) => `- ${r}`).join('\n')}` : ''}${metadata.observations && metadata.observations.length > 0 ? `\nObservations (historical annotations -- these may be stale and should not override your independent analysis, but provide useful context about prior conclusions):\n${metadata.observations.map((o) => `- ${o}`).join('\n')}` : ''}` : ''}
-${findings_summary}
+${findings_summary}${filter_summary}
 
 --- FILE CONTENT ---
 ${content}
@@ -225,51 +249,6 @@ function chunk_content(content, max_size) {
 }
 
 /**
- * Enforce minimum classification when curated regex categories match.
- * Called after LLM analysis to prevent the LLM from dismissing known
- * personal name or property patterns as false positives.
- * Floors to private for both personal_names and personal_property,
- * matching the classify_from_regex behavior.
- *
- * @param {object} result - The analysis result object (mutated in place)
- * @param {Array} regex_findings - Regex findings from pattern scan
- * @returns {object} The mutated result
- */
-function apply_regex_floor(result, regex_findings) {
-  if (!regex_findings || regex_findings.length === 0) {
-    return result
-  }
-
-  const has_personal_names = regex_findings.some(
-    (f) => f.category === 'personal_names'
-  )
-  const has_personal_property = regex_findings.some(
-    (f) => f.category === 'personal_property'
-  )
-  const has_personal_locations = regex_findings.some(
-    (f) => f.category === 'personal_locations'
-  )
-
-  if (
-    (has_personal_property || has_personal_names || has_personal_locations) &&
-    result.classification !== 'private'
-  ) {
-    const original = result.classification
-    const trigger_category = has_personal_property
-      ? 'personal_property'
-      : has_personal_locations
-        ? 'personal_locations'
-        : 'personal_names'
-    result.classification = 'private'
-    result.reasoning = `${result.reasoning} [Regex floor: ${original} overridden to private due to curated ${trigger_category} pattern match]`
-    result.regex_floor_applied = true
-    log(`Regex floor applied: ${original} -> private (${trigger_category})`)
-  }
-
-  return result
-}
-
-/**
  * Analyze a single chunk of content via LLM.
  * Used for files that fit within the size limit (single prompt).
  */
@@ -278,6 +257,7 @@ async function analyze_single_chunk({
   file_path,
   metadata,
   regex_findings,
+  filter_spans = [],
   scan_result,
   model,
   timeout_ms
@@ -286,6 +266,7 @@ async function analyze_single_chunk({
     content,
     file_path,
     regex_findings,
+    filter_spans,
     metadata
   })
 
@@ -352,7 +333,8 @@ export async function analyze_content({
   model,
   regex_only = false,
   max_content_size,
-  timeout_ms
+  timeout_ms,
+  privacy_filter_override
 } = {}) {
   const review_config = await load_review_config()
   if (!model) model = review_config.default_model
@@ -410,6 +392,49 @@ export async function analyze_content({
     }
   }
 
+  // Stage 2b: Privacy-filter span scan (single pass over content_body even
+  // when chunking; filter handles 128K context natively)
+  let filter_result = null
+  const pf_config = { ...(review_config.privacy_filter || {}) }
+  if (typeof privacy_filter_override === 'boolean') {
+    pf_config.enabled = privacy_filter_override
+  }
+  if (pf_config.enabled) {
+    try {
+      filter_result = await classify_text({
+        text: content_body,
+        score_threshold: pf_config.score_threshold ?? 0.0
+      })
+    } catch (error) {
+      log(`Privacy filter unavailable: ${error.message}`)
+      filter_result = null
+    }
+  }
+  const filter_spans = filter_result?.spans || []
+
+  // Stage 2c: Short-circuit when both regex and filter are clean
+  if (
+    pf_config.enabled &&
+    pf_config.short_circuit_public &&
+    filter_result &&
+    scan_result.findings.length === 0 &&
+    filter_result.labels_found.length === 0
+  ) {
+    return {
+      file_path,
+      file_type: scan_result.file_type,
+      lines_scanned: scan_result.lines_scanned,
+      regex_findings: scan_result.findings,
+      filter_result,
+      llm_analysis: null,
+      classification: 'public',
+      confidence: 1.0,
+      reasoning: 'no regex matches and no filter spans',
+      findings: [],
+      method: 'regex_filter_short_circuit'
+    }
+  }
+
   // Stage 3: LLM analysis via Ollama (with chunking for large files)
   try {
     const chunks = chunk_content(content_body, max_content_size)
@@ -421,14 +446,17 @@ export async function analyze_content({
         file_path,
         metadata,
         regex_findings: scan_result.findings,
+        filter_spans,
         scan_result,
         model,
         timeout_ms
       })
+      if (filter_result) single_result.filter_result = filter_result
       // Skip floor for llm_unavailable — classification is null when
       // LLM output is unparseable, so there is nothing to floor
       if (single_result.method === 'llm') {
         apply_regex_floor(single_result, scan_result.findings)
+        apply_filter_floor(single_result, filter_result, pf_config)
       }
       return single_result
     }
@@ -450,6 +478,7 @@ export async function analyze_content({
           content: chunk,
           file_path: `${file_path} ${chunk_label}`,
           regex_findings: i === 0 ? scan_result.findings : [],
+          filter_spans: i === 0 ? filter_spans : [],
           metadata
         })
 
@@ -483,6 +512,7 @@ export async function analyze_content({
         file_type: scan_result.file_type,
         lines_scanned: scan_result.lines_scanned,
         regex_findings: scan_result.findings,
+        filter_result: filter_result || null,
         llm_analysis: null,
         classification: null,
         confidence: 0,
@@ -512,6 +542,7 @@ export async function analyze_content({
       file_type: scan_result.file_type,
       lines_scanned: scan_result.lines_scanned,
       regex_findings: scan_result.findings,
+      filter_result: filter_result || null,
       llm_analysis: most_restrictive,
       classification: most_restrictive.classification,
       confidence: most_restrictive.confidence || 0.5,
@@ -523,6 +554,7 @@ export async function analyze_content({
       chunks_total: chunks.length
     }
     apply_regex_floor(chunked_result, scan_result.findings)
+    apply_filter_floor(chunked_result, filter_result, pf_config)
     return chunked_result
   } catch (error) {
     // Ollama unreachable - do not classify without LLM
@@ -562,7 +594,8 @@ export async function analyze_thread({
   regex_only = false,
   max_content_size,
   include_raw_data = false,
-  timeline_llm = false
+  timeline_llm = false,
+  privacy_filter_override
 } = {}) {
   const review_config = await load_review_config()
   if (!model) model = review_config.default_model
@@ -602,7 +635,8 @@ export async function analyze_thread({
         file_path,
         model,
         regex_only: file_regex_only,
-        max_content_size
+        max_content_size,
+        privacy_filter_override
       })
       results.push(result)
     } catch (error) {
