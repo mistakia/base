@@ -5,13 +5,13 @@ import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 
 const AUDIT_FILE = 'audit.jsonl'
 
-const _format_entry = (entry) => {
+export const format_audit_entry = (entry) => {
   const fields = Object.keys(entry.fields_changed || {}).join(',') || '(none)'
   const token = entry.lease_token || '-'
   return `${entry.ts}  ${entry.op}  ${entry.actor || '-'}  fields=[${fields}]  lease_token=${token}`
 }
 
-const _passes_filters = (entry, { field, since, actor }) => {
+export const passes_audit_filters = (entry, { field, since, actor }) => {
   if (actor && entry.actor !== actor) return false
   if (since) {
     const entry_ts = new Date(entry.ts)
@@ -48,12 +48,12 @@ const handle_audit = async (argv) => {
       continue
     }
 
-    if (!_passes_filters(entry, { field: argv.field, since, actor: argv.actor })) continue
+    if (!passes_audit_filters(entry, { field: argv.field, since, actor: argv.actor })) continue
 
     if (argv.json) {
       process.stdout.write(`${JSON.stringify(entry)}\n`)
     } else {
-      process.stdout.write(`${_format_entry(entry)}\n`)
+      process.stdout.write(`${format_audit_entry(entry)}\n`)
     }
   }
 }
