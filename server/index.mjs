@@ -108,21 +108,13 @@ api.use(
     }
   })
 )
-// machine_registry[*].base_url is the single source of truth for both 307
-// Location construction (cross-machine read redirects) and CORS allow-list
-// derivation -- one config knob, no hand-edited duplicate origin list.
-const machine_registry_origins = Object.values(config.machine_registry || {})
-  .map((m) => m?.base_url)
-  .filter(Boolean)
-
 const allowedOrigins = new Set([
   config.public_url || '',
   'http://localhost:8080',
   'https://localhost:8080',
   'http://localhost:8081',
   'https://localhost:8081',
-  ...(config.cors_origins || []),
-  ...machine_registry_origins
+  ...(config.cors_origins || [])
 ])
 
 // Permissive CORS for raw file requests (cross-origin agent access)
