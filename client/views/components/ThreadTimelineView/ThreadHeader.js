@@ -17,10 +17,8 @@ import {
   TwoCellRow,
   DateDisplay,
   ThreadStateField,
-  TokenField,
   ModelsField,
-  CollapsibleFileReferences,
-  format_token_shorthand
+  CollapsibleFileReferences
 } from '@views/components/MetadataDisplay'
 import RelatedEntities from '@views/components/RelatedEntities'
 import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
@@ -28,7 +26,6 @@ import { EditableTagsField } from '@views/components/InlineSelect'
 import {
   extract_message_counts,
   extract_tool_call_count,
-  extract_total_tokens,
   extract_duration,
   extract_working_directory,
   extract_thread_state,
@@ -56,10 +53,16 @@ const extract_models = (metadata) => {
   if (!metadata || !metadata.getIn) {
     return []
   }
+  // Top-level `models` is an Immutable List; empty lists are truthy, so fall
+  // back to the provider_metadata copy whenever the top-level list has zero
+  // entries. This mirrors how older Claude imports left the top-level array
+  // unpopulated while writing the model name into provider_metadata.models.
+  const top_level = metadata.get('models')
+  const top_level_size =
+    top_level && (top_level.size ?? top_level.length ?? 0)
+  if (top_level_size > 0) return top_level
   return (
-    metadata.get('models') ||
-    metadata.getIn(['source', 'provider_metadata', 'models']) ||
-    []
+    metadata.getIn(['external_session', 'provider_metadata', 'models']) || []
   )
 }
 
@@ -68,16 +71,19 @@ const extract_source_info = (metadata) => {
     return null
   }
 
-  const source = metadata.get('source')
-  if (!source) return null
+  const external_session = metadata.get('external_session')
+  if (!external_session) return null
 
-  const session_provider = source.get?.('provider') || source.provider
-  const session_id = source.session_id || source.get?.('session_id')
+  const session_provider =
+    external_session.get?.('provider') || external_session.provider
+  const session_id =
+    external_session.get?.('session_id') || external_session.session_id
   const provider_metadata =
-    source.provider_metadata || source.get?.('provider_metadata')
+    external_session.get?.('provider_metadata') ||
+    external_session.provider_metadata
   const working_directory =
-    provider_metadata?.working_directory ||
-    provider_metadata?.get?.('working_directory')
+    provider_metadata?.get?.('working_directory') ||
+    provider_metadata?.working_directory
 
   return {
     provider: session_provider,
@@ -96,6 +102,25 @@ const extract_dates = (metadata) => {
 
   return { created_at, updated_at }
 }
+
+const extract_execution = (metadata) => {
+  if (!metadata || !metadata.get) return null
+  const execution = metadata.get('execution')
+  if (!execution) return null
+  const get = (key) => execution.get?.(key) ?? execution[key] ?? null
+  return {
+    mode: get('mode'),
+    machine_id: get('machine_id'),
+    container_runtime: get('container_runtime'),
+    container_name: get('container_name')
+  }
+}
+
+const extract_inference_provider = (metadata) =>
+  metadata?.get?.('inference_provider') || null
+
+const extract_git_branch = (metadata) =>
+  metadata?.get?.('git_branch') || null
 
 const extract_relations = (metadata) => {
   if (!metadata || !metadata.get) {
@@ -116,7 +141,6 @@ const use_thread_metadata = (metadata) => {
     const dates = extract_dates(metadata)
     const message_counts = extract_message_counts(metadata)
     const tool_call_count = extract_tool_call_count(metadata)
-    const total_tokens = extract_total_tokens(metadata)
     const duration = extract_duration(metadata)
     const working_directory = extract_working_directory(metadata)
     const thread_state = extract_thread_state(metadata)
@@ -125,14 +149,19 @@ const use_thread_metadata = (metadata) => {
     const thread_user_public_key = extract_user_public_key(metadata)
     const relations = extract_relations(metadata)
     const tags = extract_tags(metadata)
+    const execution = extract_execution(metadata)
+    const inference_provider = extract_inference_provider(metadata)
+    const git_branch = extract_git_branch(metadata)
 
     return {
       title,
       description,
-      total_tokens,
       duration,
       models: extract_models(metadata),
       source_info: extract_source_info(metadata),
+      execution,
+      inference_provider,
+      git_branch,
       thread_state,
       created_at: dates.created_at,
       updated_at: dates.updated_at,
@@ -286,8 +315,8 @@ const use_first_row_tracker = () => {
 
 const CHANGE_RELATION_TYPES = new Set(['creates', 'modifies'])
 
+
 const ThreadStats = ({
-  total_tokens,
   session_id,
   duration,
   models,
@@ -301,7 +330,10 @@ const ThreadStats = ({
   thread_cost_display,
   thread_id,
   relations,
-  tags
+  tags,
+  execution,
+  inference_provider,
+  git_branch
 }) => {
   const working_directory = source_info?.working_directory
   const session_provider = source_info?.provider
@@ -332,11 +364,39 @@ const ThreadStats = ({
 
   return (
     <Box>
-      {session_provider && (
-        <MetadataRow
-          label='Session Provider'
-          value={session_provider}
+      {session_provider && inference_provider ? (
+        <TwoCellRow
+          left_label='Session Provider'
+          left_value={session_provider}
+          right_label='Inference Provider'
+          right_value={inference_provider}
           is_first={get_is_first()}
+        />
+      ) : (
+        <>
+          {session_provider && (
+            <MetadataRow
+              label='Session Provider'
+              value={session_provider}
+              is_first={get_is_first()}
+            />
+          )}
+          {inference_provider && !session_provider && (
+            <MetadataRow
+              label='Inference Provider'
+              value={inference_provider}
+              is_first={get_is_first()}
+            />
+          )}
+        </>
+      )}
+
+      <ModelsField models={models} />
+
+      {session_id && (
+        <MetadataRow
+          label='External Session ID'
+          value={<ExternalSessionIdDisplay session_id={session_id} />}
         />
       )}
 
@@ -397,16 +457,12 @@ const ThreadStats = ({
       )}
 
       {/* Display tokens with duration if available */}
-      {duration ? (
-        <TwoCellRow
-          left_label='Tokens'
-          left_value={format_token_shorthand({ count: total_tokens })}
-          right_label='Duration'
-          right_value={duration}
+      {duration && (
+        <MetadataRow
+          label='Duration'
+          value={duration}
           is_first={get_is_first()}
         />
-      ) : (
-        <TokenField value={total_tokens} is_first={get_is_first()} />
       )}
 
       {/* Message counts - show detailed breakdown if available, otherwise show total */}
@@ -431,7 +487,7 @@ const ThreadStats = ({
         <TwoCellRow
           left_label='Tool Calls'
           left_value={tool_call_count.toLocaleString()}
-          right_label='Cost'
+          right_label='Estimated API Cost'
           right_value={thread_cost_display}
         />
       ) : (
@@ -443,18 +499,12 @@ const ThreadStats = ({
             />
           )}
           {thread_cost_display && (
-            <MetadataRow label='Cost' value={thread_cost_display} />
+            <MetadataRow
+              label='Estimated API Cost'
+              value={thread_cost_display}
+            />
           )}
         </>
-      )}
-
-      <ModelsField models={models} />
-
-      {session_id && (
-        <MetadataRow
-          label='External Session ID'
-          value={<ExternalSessionIdDisplay session_id={session_id} />}
-        />
       )}
 
       {working_directory && (
@@ -465,12 +515,40 @@ const ThreadStats = ({
           is_first={get_is_first()}
         />
       )}
+
+      {git_branch && (
+        <MetadataRow
+          label='Git Branch'
+          value={git_branch}
+          scrollable={true}
+          is_first={get_is_first()}
+        />
+      )}
+
+      {execution && execution.mode && (
+        <MetadataRow
+          label='Execution'
+          value={
+            <span style={{ fontFamily: 'monospace' }}>
+              {execution.mode}
+              {execution.machine_id ? ` · ${execution.machine_id}` : ''}
+              {execution.mode === 'container' && execution.container_name
+                ? ` · ${execution.container_name}`
+                : ''}
+              {execution.mode === 'container' && execution.container_runtime
+                ? ` (${execution.container_runtime})`
+                : ''}
+            </span>
+          }
+          scrollable={true}
+          is_first={get_is_first()}
+        />
+      )}
     </Box>
   )
 }
 
 ThreadStats.propTypes = {
-  total_tokens: PropTypes.number.isRequired,
   session_id: PropTypes.string,
   duration: PropTypes.string,
   models: PropTypes.arrayOf(PropTypes.string).isRequired,
@@ -488,7 +566,15 @@ ThreadStats.propTypes = {
   thread_cost_display: PropTypes.string,
   thread_id: PropTypes.string,
   relations: PropTypes.array,
-  tags: PropTypes.array
+  tags: PropTypes.array,
+  execution: PropTypes.shape({
+    mode: PropTypes.string,
+    machine_id: PropTypes.string,
+    container_runtime: PropTypes.string,
+    container_name: PropTypes.string
+  }),
+  inference_provider: PropTypes.string,
+  git_branch: PropTypes.string
 }
 
 const SourceChips = ({ source_info, thread_state }) => {
@@ -537,7 +623,6 @@ const ThreadHeader = ({
   const {
     title,
     description,
-    total_tokens,
     duration,
     models,
     source_info,
@@ -551,7 +636,10 @@ const ThreadHeader = ({
     working_directory_formatted,
     thread_user_public_key,
     relations,
-    tags
+    tags,
+    execution,
+    inference_provider,
+    git_branch
   } = use_thread_metadata(metadata)
 
   // Get current user's public key and cost display from Redux store
@@ -717,7 +805,6 @@ const ThreadHeader = ({
       {/* Collapsible detail stats */}
       {(!collapsible || !is_collapsed) && (
         <ThreadStats
-          total_tokens={total_tokens}
           session_id={source_info?.session_id}
           duration={duration}
           models={models}
@@ -732,6 +819,9 @@ const ThreadHeader = ({
           thread_id={thread_id}
           relations={relations}
           tags={tags}
+          execution={execution}
+          inference_provider={inference_provider}
+          git_branch={git_branch}
         />
       )}
     </MetadataContainer>
