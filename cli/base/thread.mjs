@@ -21,6 +21,7 @@ import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thre
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
 import { register_subcommand_extensions } from '#libs-server/extension/register-subcommand-extensions.mjs'
 import { register_lease_commands } from './thread-lease.mjs'
+import { register_audit_commands } from './thread-audit.mjs'
 import { get_system_base_directory } from '#libs-server/base-uri/index.mjs'
 import {
   flush_and_exit,
@@ -387,10 +388,11 @@ const builder_builtin = (yargs) =>
 export const builder = (yargs) => {
   yargs = builder_builtin(yargs)
   yargs = register_lease_commands(yargs)
+  yargs = register_audit_commands(yargs)
   yargs = register_subcommand_extensions(yargs, 'thread')
   return yargs.demandCommand(
     1,
-    'Specify a subcommand: list, get, status, timeline, messages, stale, archive, analyze, validate, lease, or an extension-contributed subcommand'
+    'Specify a subcommand: list, get, status, timeline, messages, stale, archive, analyze, validate, lease, audit, or an extension-contributed subcommand'
   )
 }
 
