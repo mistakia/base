@@ -51,6 +51,11 @@ import { thread_constants } from '#libs-shared'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { handle_errors } from '#libs-server/utils/api-error.mjs'
+import {
+  coemit_acquire_session_lease,
+  coemit_renew_session_lease,
+  coemit_release_session_lease
+} from '#libs-server/threads/session-lease-coemit.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -864,6 +869,20 @@ router.put(
 
       // Emit directly for immediate client feedback (bypass 2s watcher debounce)
       emit_thread_updated(metadata)
+
+      // Co-emit lease lifecycle: hook PUTs are the keepalive trigger.
+      // SessionStart-class statuses acquire (no-op when already cached);
+      // active/idle renew; terminal statuses release. All best-effort.
+      if (session_status === 'queued' || session_status === 'starting') {
+        await coemit_acquire_session_lease({ thread_id, session_id })
+      } else if (session_status === 'active' || session_status === 'idle') {
+        await coemit_renew_session_lease({ thread_id })
+      } else if (
+        session_status === 'completed' ||
+        session_status === 'failed'
+      ) {
+        await coemit_release_session_lease({ thread_id })
+      }
 
       log(`Thread ${thread_id}: session_status updated to '${session_status}'`)
 

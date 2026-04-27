@@ -27,6 +27,11 @@ import { translate_to_container_path } from '#libs-server/container/execution-mo
 import { create_threads_from_session_provider } from '#libs-server/integrations/thread/create-threads-from-session-provider.mjs'
 import { build_execution_attribution } from '#libs-server/threads/execution-attribution.mjs'
 import {
+  acquire_lease,
+  release_lease
+} from '#libs-server/threads/lease-client.mjs'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
+import {
   select_account,
   handle_rate_limit_failure,
   handle_auth_failure
@@ -42,6 +47,9 @@ const log = debug('threads:worker')
 const QUEUE_NAME = 'thread-creation'
 const DEFAULT_CONCURRENCY = 3
 const LOCK_DURATION_MS = 600000 // 10 minutes - long-running Claude CLI sessions
+// 15 minutes: outlives the BullMQ lock so a missed hook renewal does not
+// release the lease in the same window the lock expires.
+const LEASE_TTL_MS = 900000
 const STALLED_INTERVAL_MS = 30000 // Check for stalled jobs every 30 seconds
 const LOCK_EXTEND_INTERVAL_MS = 300000 // Extend lock every 5 minutes
 const MAX_STALLED_COUNT = 0 // Disable stall re-queuing (detached processes survive crashes)
@@ -223,6 +231,35 @@ const process_thread_creation_job = async (job) => {
     }
   }, LOCK_EXTEND_INTERVAL_MS)
 
+  // Acquire in processor (not 'active' listener) so throwing fails the job.
+  if (thread_id) {
+    const machine_id = get_current_machine_id()
+    if (!machine_id) {
+      throw new Error(
+        'lease_unavailable: cannot resolve current machine_id from machine_registry'
+      )
+    }
+    const lease_result = await acquire_lease({
+      thread_id,
+      machine_id,
+      session_id,
+      ttl_ms: LEASE_TTL_MS,
+      mode: 'session'
+    })
+    if (!lease_result?.acquired) {
+      throw new Error(
+        `lease_unavailable: thread ${thread_id} held by ${lease_result?.machine_id || 'unknown'}`
+      )
+    }
+    await job.updateData({
+      ...job.data,
+      lease_token: lease_result.lease_token
+    })
+    log(
+      `Job ${job.id}: acquired lease for ${thread_id} (token=${lease_result.lease_token})`
+    )
+  }
+
   // Declared outside try/catch so the catch block can access them
   let claude_config_dir = null
   let selected_account = null
@@ -243,7 +280,10 @@ const process_thread_creation_job = async (job) => {
     } catch (account_error) {
       if (account_error.name === 'AllAccountsExhaustedError') {
         // Delay job until earliest exhausted marker expires instead of
-        // consuming a retry attempt (markers may have TTLs of hours)
+        // consuming a retry attempt (markers may have TTLs of hours).
+        // Release the lease first: neither completion handler fires for
+        // delayed jobs, so a held lease would block the retry.
+        await release_lease_fallback(job)
         const delay_ms = await get_unavailable_delay_ms()
         log(`Job ${job.id}: all accounts exhausted, delaying %dms`, delay_ms)
         await job.moveToDelayed(Date.now() + delay_ms, job.token)
@@ -531,6 +571,8 @@ const handle_job_completed = async (job, result) => {
   // Re-import session as fallback for when SessionEnd hooks fail
   await sync_session_fallback(job, { override_session_id })
 
+  await release_lease_fallback(job)
+
   // Queue immediate push-threads to reduce sync delay after session completion
   try {
     await add_cli_job({
@@ -564,6 +606,20 @@ const handle_job_failed = async (job, error) => {
   }).catch((emit_error) => {
     log(`Job ${job.id}: failed to emit THREAD_JOB_FAILED -`, emit_error.message)
   })
+
+  await release_lease_fallback(job)
+}
+
+const release_lease_fallback = async (job) => {
+  const thread_id = job.data?.thread_id
+  const lease_token = job.data?.lease_token
+  if (!thread_id || lease_token == null) return
+  try {
+    await release_lease({ thread_id, lease_token })
+    log(`Job ${job.id}: released lease for ${thread_id}`)
+  } catch (error) {
+    log(`Job ${job.id}: release lease fallback error - ${error.message}`)
+  }
 }
 
 const handle_job_active = async (job) => {

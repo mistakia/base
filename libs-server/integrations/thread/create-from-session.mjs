@@ -6,6 +6,7 @@ import debug from 'debug'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { write_file_to_filesystem } from '#libs-server/filesystem/write-file-to-filesystem.mjs'
 import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { check_thread_fields_writable } from '#libs-server/threads/check-thread-fields.mjs'
 import config from '#config'
 import { THREAD_STATE } from '#libs-server/threads/threads-constants.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
@@ -517,7 +518,8 @@ export const update_existing_thread = async (
       thread_dir,
       raw_session_data,
       user_base_directory = get_user_base_directory(),
-      execution_overrides = null
+      execution_overrides = null,
+      bulk_import = false
     } = options
 
     log_debug(
@@ -537,7 +539,7 @@ export const update_existing_thread = async (
       metadata_changed = await update_thread_metadata(
         thread_dir,
         normalized_session,
-        { execution_overrides }
+        { execution_overrides, bulk_import, thread_id }
       )
 
       // Enforce the lifecycle-anchor invariant before any sibling file is
@@ -618,8 +620,25 @@ export const update_existing_thread = async (
 export const update_thread_metadata = async (
   thread_dir,
   normalized_session,
-  { execution_overrides = null } = {}
+  { execution_overrides = null, bulk_import = false, thread_id = null } = {}
 ) => {
+  const resolved_thread_id = thread_id || path.basename(thread_dir)
+  // The full session-import patch touches session-owned fields (counts,
+  // external_session, execution). When invoked outside an active session
+  // (CLI batch re-imports), bulk_import:true exempts the writes from the
+  // field-ownership classifier; live-session re-imports leave bulk_import
+  // false so the lease-holder check applies.
+  check_thread_fields_writable({
+    thread_id: resolved_thread_id,
+    fields: [
+      'message_count',
+      'tool_call_count',
+      'external_session',
+      'execution'
+    ],
+    op: 'patch',
+    caller_flag: { bulk_import }
+  })
   const metadata_start = Date.now()
   const metadata_path = path.join(thread_dir, 'metadata.json')
   const session_metadata = normalized_session.metadata || {}

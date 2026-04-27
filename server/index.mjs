@@ -171,6 +171,7 @@ api.use('/api/users', auth_limiter, routes.users)
 api.use('/api/search', search_limiter, routes.search)
 
 // Write-heavy endpoints - write limits (60 req/min)
+api.use('/api/threads', write_limiter, routes.threads_lease)
 api.use('/api/threads', write_limiter, routes.threads)
 api.use('/api/tasks', write_limiter, routes.tasks)
 api.use('/api/entities', write_limiter, routes.entities)

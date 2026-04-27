@@ -22,6 +22,12 @@ import { PROVENANCE } from '#libs-shared/timeline/entry-provenance.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
 import { emit_thread_created } from '#server/services/threads/event-emitter.mjs'
 import { mark_thread_created_emitted } from '#server/services/thread-watcher.mjs'
+import {
+  append_audit_entry,
+  compute_field_diff
+} from '#libs-server/threads/audit-log.mjs'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
+import { get_cached_lease_snapshot } from '#libs-server/threads/lease-client.mjs'
 
 const { THREAD_STATE, validate_thread_state } = thread_constants
 const log = debug('threads:create')
@@ -339,6 +345,16 @@ export default async function create_thread({
     short_description
   })
 
+  // Stamp _lease_token if a lease has already been acquired upstream
+  // (BullMQ job-worker acquire fires before create_thread for active sessions).
+  // External-session imports and bulk imports run without an active lease and
+  // skip the stamp; those paths are exempted from field-ownership checks via
+  // op:create + bulk_import flags.
+  const create_lease_snapshot = get_cached_lease_snapshot({ thread_id })
+  if (create_lease_snapshot?.lease_token != null) {
+    metadata._lease_token = create_lease_snapshot.lease_token
+  }
+
   await assert_valid_thread_metadata(metadata)
 
   await fs.mkdir(thread_dir, { recursive: true })
@@ -353,6 +369,30 @@ export default async function create_thread({
     // Tear down the freshly-created directory so no metadata-less shell survives
     await fs.rm(thread_dir, { recursive: true, force: true }).catch(() => {})
     throw error
+  }
+
+  // Audit op:create -- full initial metadata captured as fields_changed with
+  // before:null. Best-effort: failures are logged inside append_audit_entry's
+  // queue, never fail thread creation.
+  try {
+    const create_fields_changed = {}
+    for (const key of Object.keys(metadata)) {
+      create_fields_changed[key] = { before: null, after: metadata[key] }
+    }
+    await append_audit_entry({
+      thread_dir,
+      thread_id,
+      machine_id: get_current_machine_id(),
+      session_id: source?.session_id || null,
+      actor: user_public_key,
+      op: 'create',
+      fields_changed: create_fields_changed,
+      lease_holder: create_lease_snapshot?.machine_id || null,
+      lease_mode: create_lease_snapshot?.mode || null,
+      lease_token: create_lease_snapshot?.lease_token ?? null
+    })
+  } catch (error) {
+    log(`audit op:create emit failed for ${thread_id}: ${error.message}`)
   }
 
   // Create raw-data directory for external sessions (after metadata.json)
@@ -385,6 +425,7 @@ export default async function create_thread({
   // Create git branches and worktrees if requested
   if (create_git_branches) {
     try {
+      const before_worktree = { ...metadata }
       const worktree_paths = await create_thread_branch({
         thread_id
       })
@@ -401,6 +442,28 @@ export default async function create_thread({
         JSON.stringify(metadata, null, 2),
         'utf-8'
       )
+
+      try {
+        await append_audit_entry({
+          thread_dir,
+          thread_id,
+          machine_id: get_current_machine_id(),
+          session_id: source?.session_id || null,
+          actor: user_public_key,
+          op: 'patch',
+          fields_changed: compute_field_diff({
+            before: before_worktree,
+            after: metadata
+          }),
+          lease_holder: create_lease_snapshot?.machine_id || null,
+          lease_mode: create_lease_snapshot?.mode || null,
+          lease_token: create_lease_snapshot?.lease_token ?? null
+        })
+      } catch (audit_error) {
+        log(
+          `audit worktree-rewrite emit failed for ${thread_id}: ${audit_error.message}`
+        )
+      }
     } catch (error) {
       log(`Failed to create git branches or worktrees: ${error.message}`)
       // Continue thread creation even if branch creation fails

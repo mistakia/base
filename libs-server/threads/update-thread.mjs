@@ -5,7 +5,9 @@ import { hideBin } from 'yargs/helpers'
 
 import get_thread from './get-thread.mjs'
 import { thread_constants } from '#libs-shared'
-import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { write_thread_metadata } from '#libs-server/threads/write-thread-metadata.mjs'
+import { build_thread_audit_context } from '#libs-server/threads/build-thread-audit-context.mjs'
+import { check_thread_fields_writable } from '#libs-server/threads/check-thread-fields.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import config from '#config'
 import is_main from '#libs-server/utils/is-main.mjs'
@@ -85,30 +87,41 @@ export async function update_thread_state({ thread_id, thread_state, reason }) {
     validate_archive_reason(reason)
   }
 
+  const fields_changing = ['thread_state']
+  if (thread_state === THREAD_STATE.ARCHIVED) {
+    fields_changing.push('archived_at', 'archive_reason')
+  }
+  check_thread_fields_writable({
+    thread_id,
+    fields: fields_changing,
+    op: 'state_change'
+  })
+
   // Atomic read-modify-write with optimistic concurrency
   const metadata_path = path.join(thread.context_dir, 'metadata.json')
-  const written = await read_modify_write({
+  const metadata = await write_thread_metadata({
     absolute_path: metadata_path,
-    modify: (content) => {
-      const metadata = JSON.parse(content)
-
-      metadata.thread_state = thread_state
-      metadata.updated_at = new Date().toISOString()
+    modify: (m) => {
+      m.thread_state = thread_state
+      m.updated_at = new Date().toISOString()
 
       if (thread_state === THREAD_STATE.ARCHIVED) {
-        metadata.archived_at = new Date().toISOString()
-        metadata.archive_reason = reason
+        m.archived_at = new Date().toISOString()
+        m.archive_reason = reason
       }
 
       if (thread_state !== THREAD_STATE.ARCHIVED) {
-        delete metadata.archived_at
-        delete metadata.archive_reason
+        delete m.archived_at
+        delete m.archive_reason
       }
 
-      return JSON.stringify(metadata, null, 2)
-    }
+      return m
+    },
+    audit_context: build_thread_audit_context({
+      thread_id,
+      op: 'state_change'
+    })
   })
-  const metadata = JSON.parse(written)
 
   // Add thread state change as a system entry (system_type="state_change")
   const from_state = thread.thread_state
@@ -244,20 +257,22 @@ export async function update_thread_metadata({
     })
   }
 
-  // Atomic read-modify-write with optimistic concurrency
-  const written = await read_modify_write({
-    absolute_path: metadata_path,
-    modify: (content) => {
-      const current = JSON.parse(content)
-      const updated = {
-        ...current,
-        ...metadata,
-        updated_at: new Date().toISOString()
-      }
-      return JSON.stringify(updated, null, 2)
-    }
+  check_thread_fields_writable({
+    thread_id,
+    fields: Object.keys(metadata),
+    op: 'patch'
   })
-  const updated_metadata = JSON.parse(written)
+
+  // Atomic read-modify-write with optimistic concurrency
+  const updated_metadata = await write_thread_metadata({
+    absolute_path: metadata_path,
+    modify: (current) => ({
+      ...current,
+      ...metadata,
+      updated_at: new Date().toISOString()
+    }),
+    audit_context: build_thread_audit_context({ thread_id, op: 'patch' })
+  })
 
   await enqueue_index_sync(thread_id, updated_metadata)
 

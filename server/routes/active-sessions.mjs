@@ -31,6 +31,11 @@ import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 import require_hook_auth from '#server/middleware/hook-auth.mjs'
+import {
+  coemit_acquire_session_lease,
+  coemit_renew_session_lease,
+  coemit_release_session_lease
+} from '#libs-server/threads/session-lease-coemit.mjs'
 
 const log = debug('api:active-sessions')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -452,6 +457,13 @@ router.post('/', require_hook_auth, async (req, res) => {
       await emit_active_session_updated(session)
     }
 
+    if (session.thread_id) {
+      await coemit_acquire_session_lease({
+        thread_id: session.thread_id,
+        session_id
+      })
+    }
+
     log_lifecycle(
       'POST session_registered session_id=%s job_id=%s thread_id=%s',
       session_id,
@@ -579,6 +591,10 @@ router.put('/:session_id', require_hook_auth, async (req, res) => {
     // Emit WebSocket event
     await emit_active_session_updated(session)
 
+    if (session.thread_id) {
+      await coemit_renew_session_lease({ thread_id: session.thread_id })
+    }
+
     const thread_discovery =
       !had_thread_before && session.thread_id
         ? 'new'
@@ -629,6 +645,10 @@ router.delete('/:session_id', require_hook_auth, async (req, res) => {
 
     // Emit WebSocket event with session data for permission checks
     await emit_active_session_ended(session_id, session)
+
+    if (session?.thread_id) {
+      await coemit_release_session_lease({ thread_id: session.thread_id })
+    }
 
     log_lifecycle(
       'DELETE session_ended session_id=%s thread_id=%s',

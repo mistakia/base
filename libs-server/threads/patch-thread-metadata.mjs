@@ -4,7 +4,9 @@ import debug from 'debug'
 import { get_thread_base_directory } from '#libs-server/threads/threads-constants.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/index.mjs'
 import { assert_valid_thread_metadata } from '#libs-server/threads/validate-thread-metadata.mjs'
-import { read_modify_write } from '#libs-server/filesystem/optimistic-write.mjs'
+import { write_thread_metadata } from '#libs-server/threads/write-thread-metadata.mjs'
+import { build_thread_audit_context } from '#libs-server/threads/build-thread-audit-context.mjs'
+import { check_thread_fields_writable } from '#libs-server/threads/check-thread-fields.mjs'
 
 const log = debug('threads:patch-metadata')
 
@@ -27,16 +29,20 @@ const patch_thread_metadata = async ({ thread_id, patches }) => {
   })
   const metadata_path = join(thread_base_directory, thread_id, 'metadata.json')
 
-  let updated_metadata
-  await read_modify_write({
+  check_thread_fields_writable({
+    thread_id,
+    fields: Object.keys(patches),
+    op: 'patch'
+  })
+
+  const updated_metadata = await write_thread_metadata({
     absolute_path: metadata_path,
-    modify: async (content) => {
-      const metadata = JSON.parse(content)
+    modify: async (metadata) => {
       Object.assign(metadata, patches, { updated_at: new Date().toISOString() })
       await assert_valid_thread_metadata(metadata)
-      updated_metadata = metadata
-      return JSON.stringify(metadata, null, 2)
-    }
+      return metadata
+    },
+    audit_context: build_thread_audit_context({ thread_id, op: 'patch' })
   })
 
   log(

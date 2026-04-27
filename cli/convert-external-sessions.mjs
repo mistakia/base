@@ -805,6 +805,12 @@ const main = async () => {
             console.log(`Starting ${argv.provider} session import...\n`)
           }
 
+          // Bulk-import flag exempts session-import metadata writes from the
+          // field-ownership classifier. True for any historical batch import
+          // (--from-date / --from-days / no-filter); false only when a single
+          // --session-id is targeted (potentially a live session whose lease
+          // holder still owns session-owned fields).
+          const is_targeted_single_session = Boolean(argv.sessionId)
           const result = await import_sessions({
             provider: argv.provider,
             claude_projects_directory: argv.claudeProjectsDir,
@@ -820,7 +826,8 @@ const main = async () => {
             dry_run: argv.dryRun,
             allow_updates: argv.allowUpdates,
             verbose: argv.verbose,
-            known_thread_id: argv.knownThreadId
+            known_thread_id: argv.knownThreadId,
+            bulk_import: !is_targeted_single_session
           })
 
           // Use appropriate output format based on verbose flag

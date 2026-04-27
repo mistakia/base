@@ -70,7 +70,8 @@ export const import_chatgpt_conversations_to_threads = async (options = {}) => {
       provider_name: 'chatgpt',
       user_base_directory: config.user_base_directory,
       verbose: config.verbose,
-      provider_options: { chatgpt_conversations: valid_conversations }
+      provider_options: { chatgpt_conversations: valid_conversations },
+      bulk_import: options.bulk_import === true
     })
 
     return {
