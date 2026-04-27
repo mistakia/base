@@ -15,6 +15,8 @@
 // value. Once enforcement flips on (Phase 3), the alert path is dead code.
 
 import os from 'os'
+import fs from 'fs'
+import path from 'path'
 import debug from 'debug'
 
 import config from '#config'
@@ -95,6 +97,18 @@ const _send_discord_alert = async ({ count, field, reason }) => {
   }
 }
 
+const _append_violation_sink = (entry) => {
+  const base_dir = config.user_base_directory
+  if (!base_dir) return
+  try {
+    const sink_path = path.join(base_dir, 'data', 'field-ownership-violations.jsonl')
+    fs.mkdirSync(path.dirname(sink_path), { recursive: true })
+    fs.appendFileSync(sink_path, JSON.stringify(entry) + '\n')
+  } catch (error) {
+    log('violation sink write failed: %s', error.message)
+  }
+}
+
 const _record_violation = ({ field, current_machine, lease_state, op, reason }) => {
   const now = Date.now()
   _violation_window.push(now)
@@ -104,15 +118,27 @@ const _record_violation = ({ field, current_machine, lease_state, op, reason }) 
   ) {
     _violation_window.shift()
   }
+  const klass = classify_field(field)
   log(
     'field_ownership_violation field=%s class=%s reason=%s machine=%s lease_holder=%s op=%s',
     field,
-    classify_field(field),
+    klass,
     reason,
     current_machine,
     lease_state?.machine_id || 'none',
     op
   )
+  _append_violation_sink({
+    ts: new Date(now).toISOString(),
+    event: 'field_ownership_violation',
+    field,
+    class: klass,
+    reason,
+    op,
+    machine: current_machine,
+    lease_holder: lease_state?.machine_id || null,
+    host: os.hostname()
+  })
   if (
     _violation_window.length >= VIOLATION_THRESHOLD_PER_HOUR &&
     now - _last_discord_alert_ms > ALERT_COOLDOWN_MS
