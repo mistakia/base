@@ -56,6 +56,10 @@ import {
   coemit_renew_session_lease,
   coemit_release_session_lease
 } from '#libs-server/threads/session-lease-coemit.mjs'
+import {
+  apply_read_lease_routing,
+  check_write_lease_routing
+} from '#server/lib/threads/lease-routing.mjs'
 
 const router = express.Router()
 const log = debug('api:threads')
@@ -398,6 +402,9 @@ router.get('/:thread_id', async (req, res) => {
       res.set('Cache-Control', 'private, no-cache')
     }
 
+    const lease_route = await apply_read_lease_routing({ thread_id, req, res })
+    if (lease_route.redirect) return
+
     // Check short-lived cache to avoid redundant timeline reads on rapid reloads
     const cache_key = `${thread_id}:${requesting_user_key || 'public'}`
     const cached = get_cached_thread(cache_key)
@@ -533,6 +540,16 @@ router.put(
       if (!thread_state) {
         return res.status(400).json({ error: 'thread_state is required' })
       }
+
+      // Lease check runs before the write_allowed gate: a cross-machine write
+      // by a legitimate user should redirect to the lease holder, not 403.
+      const write_check = await check_write_lease_routing({
+        thread_id,
+        patches: { thread_state, archive_reason, archived_at: archive_reason ? Date.now() : undefined },
+        req,
+        res
+      })
+      if (write_check.block) return
 
       // Check if user has permission to modify this thread
       if (!req.access?.write_allowed) {
@@ -818,6 +835,14 @@ router.put(
           error: `Invalid session_status. Must be one of: ${valid_statuses.join(', ')}`
         })
       }
+
+      const write_check = await check_write_lease_routing({
+        thread_id,
+        patches: { session_status },
+        req,
+        res
+      })
+      if (write_check.block) return
 
       // Build patches for targeted field merge
       const patches = { session_status }
