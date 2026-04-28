@@ -143,10 +143,16 @@ properties:
     type: string
     required: false
     description: Notes about storing this item
-  - name: misc_notes
+
+  # Purchase reference
+  - name: amazon_order_id
     type: string
     required: false
-    description: Miscellaneous notes
+    description: Amazon order identifier (e.g., 123-4567890-1234567)
+  - name: amazon_asin
+    type: string
+    required: false
+    description: Amazon Standard Identification Number for the item
 relation_constraints:
   - type: target_area
     max_count: 1
@@ -158,7 +164,7 @@ relation_constraints:
       Multiple current_location relations found -- a physical item should have at most one current
       location
 type_name: physical_item
-updated_at: '2026-03-14T00:00:00.000Z'
+updated_at: '2026-04-28T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 

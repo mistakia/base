@@ -137,7 +137,8 @@ export const entity_field_config = {
       'large_drawer_units',
       'standard_drawer_units',
       'storage_notes',
-      'misc_notes',
+      'amazon_order_id',
+      'amazon_asin',
       'external_id',
       'import_cid'
     ]

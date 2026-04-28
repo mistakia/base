@@ -27,7 +27,6 @@ const DEFAULT_PHYSICAL_ITEM_TABLE_STATE = create_default_table_state({
     'home_activity',
     'importance',
     'frequency_of_use',
-    'misc_notes',
     'tags',
     'updated_at'
   ],
@@ -80,7 +79,7 @@ const DEFAULT_VIEWS = {
         'frequency_of_use',
         'current_quantity',
         'target_quantity',
-        'misc_notes'
+        'amazon_order_id'
       ],
       sort: DEFAULT_SORT,
       where: new List([
@@ -104,7 +103,6 @@ const DEFAULT_VIEWS = {
         'home_activity',
         'importance',
         'frequency_of_use',
-        'misc_notes',
         'tags'
       ],
       sort: DEFAULT_SORT,
