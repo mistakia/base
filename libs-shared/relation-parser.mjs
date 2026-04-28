@@ -22,13 +22,17 @@ export const RELATION_STRING_REGEX =
   /^(\S+)\s+\[\[([^\]]+)\]\](?:\s+\(([^)]*)\))?$/
 
 /**
- * Regex pattern to detect redacted content (strings of block characters)
- * Matches strings that are entirely composed of the Unicode block character (U+2588)
+ * Regex pattern to detect redacted content. Matches strings composed
+ * exclusively of the Unicode block character (U+2588) and structural
+ * separators (whitespace and the bracket/punctuation characters that
+ * may survive redaction of a relation string), with at least one block
+ * character present.
  */
-const REDACTED_CONTENT_REGEX = /^█+$/
+const REDACTED_CONTENT_REGEX = /^[█\s\-/.\[\]()]+$/
 
 /**
- * Check if a string is redacted content (all block characters)
+ * Check if a string is redacted content (only block characters and
+ * structural separators, with at least one block character).
  * @param {string} str - String to check
  * @returns {boolean} True if the string is redacted content
  */
@@ -36,7 +40,7 @@ export function is_redacted_content(str) {
   if (!str || typeof str !== 'string') {
     return false
   }
-  return REDACTED_CONTENT_REGEX.test(str)
+  return str.includes('█') && REDACTED_CONTENT_REGEX.test(str)
 }
 
 /**
@@ -110,9 +114,19 @@ export function parse_relations_for_display({ relations }) {
 
     // Handle redacted relations (permission-denied content)
     if (is_redacted_content(relation_string)) {
+      // Preserve the two-part structure (relation_type + base_uri) when
+      // the redacted string contains a whitespace separator between
+      // block runs, e.g. "████ ████████".
+      const whitespace_split = relation_string.trim().split(/\s+/)
+      const relation_type =
+        whitespace_split.length > 1 ? whitespace_split[0] : null
+      const base_uri =
+        whitespace_split.length > 1
+          ? whitespace_split.slice(1).join(' ')
+          : relation_string
       results.push({
-        relation_type: null,
-        base_uri: null,
+        relation_type,
+        base_uri,
         title: null,
         redacted: true,
         // Use index to ensure unique keys for redacted relations

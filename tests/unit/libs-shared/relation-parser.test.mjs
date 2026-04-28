@@ -370,6 +370,18 @@ describe('Relation Parser', () => {
 
       expect(result).to.be.false
     })
+
+    it('should return true for fully redacted relation with whitespace', () => {
+      const result = is_redacted_content('████████ ██████████████████████')
+
+      expect(result).to.be.true
+    })
+
+    it('should return true for redacted relation with bracket structure', () => {
+      const result = is_redacted_content('████████ [[████-████/██-████.██]]')
+
+      expect(result).to.be.true
+    })
   })
 
   describe('is_redacted_base_uri', () => {
