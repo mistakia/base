@@ -118,51 +118,55 @@ async function warm_activity_cache() {
     const days = 365
     log('Warming activity heatmap cache for %d days', days)
 
-    // When index is not ready, fall back to full computation
+    let heatmap_data
     if (!embedded_index_manager.is_ready()) {
       log('Index not ready, using full computation fallback')
-      cache.activity_heatmap = {
-        data: await get_activity_heatmap_data({ days }),
-        timestamp: Date.now(),
-        days
+      heatmap_data = await get_activity_heatmap_data({ days })
+    } else {
+      // base-api holds no writer handle, so the incremental strategy cannot
+      // persist daily entries to activity_heatmap_daily. Use frozen data from
+      // the table as a base but recompute from the last frozen date forward
+      // to fill gaps.
+      let frozen_days = []
+      try {
+        frozen_days = await embedded_index_manager.query_heatmap_daily({ days })
+      } catch (error) {
+        log(
+          'Failed to read frozen days, computing all fresh: %s',
+          error.message
+        )
       }
-      log('Activity heatmap cache warmed (fallback)')
+
+      let fresh_days = days
+      if (frozen_days.length > 0) {
+        const last_frozen = frozen_days[frozen_days.length - 1].date
+        const last_frozen_date = new Date(last_frozen + 'T00:00:00Z')
+        const now = new Date()
+        const diff_ms = now.getTime() - last_frozen_date.getTime()
+        fresh_days = Math.max(Math.ceil(diff_ms / (24 * 60 * 60 * 1000)) + 1, 2)
+        fresh_days = Math.min(fresh_days, days)
+      }
+
+      log(
+        '%d frozen rows, computing %d fresh days',
+        frozen_days.length,
+        fresh_days
+      )
+
+      const fresh_result = await compute_fresh_days(fresh_days)
+      heatmap_data = merge_and_finalize_heatmap({
+        frozen_entries: frozen_days,
+        fresh_entries: fresh_result.data,
+        days
+      })
+    }
+
+    // Skip caching empty results so the route falls through to a live query
+    // instead of serving an empty payload until the next refresh interval.
+    if (!heatmap_data?.data?.length) {
+      log('Skipping cache update -- computed heatmap is empty')
       return
     }
-
-    // base-api holds no writer handle, so the incremental strategy cannot
-    // persist daily entries to activity_heatmap_daily. Use frozen data from
-    // the table as a base but recompute from the last frozen date forward
-    // to fill gaps.
-    let frozen_days = []
-    try {
-      frozen_days = await embedded_index_manager.query_heatmap_daily({ days })
-    } catch (error) {
-      log('Failed to read frozen days, computing all fresh: %s', error.message)
-    }
-
-    let fresh_days = days
-    if (frozen_days.length > 0) {
-      const last_frozen = frozen_days[frozen_days.length - 1].date
-      const last_frozen_date = new Date(last_frozen + 'T00:00:00Z')
-      const now = new Date()
-      const diff_ms = now.getTime() - last_frozen_date.getTime()
-      fresh_days = Math.max(Math.ceil(diff_ms / (24 * 60 * 60 * 1000)) + 1, 2)
-      fresh_days = Math.min(fresh_days, days)
-    }
-
-    log(
-      '%d frozen rows, computing %d fresh days',
-      frozen_days.length,
-      fresh_days
-    )
-
-    const fresh_result = await compute_fresh_days(fresh_days)
-    const heatmap_data = merge_and_finalize_heatmap({
-      frozen_entries: frozen_days,
-      fresh_entries: fresh_result.data,
-      days
-    })
 
     cache.activity_heatmap = {
       data: heatmap_data,
@@ -261,13 +265,22 @@ export async function rebuild_activity_heatmap() {
 }
 
 /**
- * Invalidate activity cache (called by file watcher or on-demand)
+ * Invalidate activity cache (called by entity-change IPC or on-demand).
+ * Debounced to coalesce rapid-fire events -- entity-change IPC routinely
+ * delivers batches of hundreds of entries during sync bursts, and a full
+ * 365-day heatmap recomputation per batch is wasteful.
  */
+let activity_invalidation_timer = null
 export function invalidate_activity_cache() {
   cache.activity_heatmap.timestamp = 0
-  log('Activity cache invalidated')
-  // Immediately re-warm in background
-  warm_activity_cache()
+
+  if (activity_invalidation_timer) return
+
+  activity_invalidation_timer = setTimeout(() => {
+    activity_invalidation_timer = null
+    log('Activity cache invalidated, re-warming')
+    warm_activity_cache()
+  }, 2000)
 }
 
 /**
@@ -391,6 +404,11 @@ export function stop_cache_warmer() {
   if (tasks_invalidation_timer) {
     clearTimeout(tasks_invalidation_timer)
     tasks_invalidation_timer = null
+  }
+
+  if (activity_invalidation_timer) {
+    clearTimeout(activity_invalidation_timer)
+    activity_invalidation_timer = null
   }
 
   log('Cache warmer service stopped')

@@ -21,7 +21,8 @@ import { thread_sync_forwarding_hooks } from '#libs-server/embedded-database-ind
 import {
   start_cache_warmer,
   stop_cache_warmer,
-  invalidate_tasks_cache
+  invalidate_tasks_cache,
+  invalidate_activity_cache
 } from '#server/services/cache-warmer.mjs'
 import { set_watcher_status } from '#libs-server/watcher-state.mjs'
 import {
@@ -320,6 +321,7 @@ try {
             entries.length
           )
           invalidate_tasks_cache()
+          invalidate_activity_cache()
         }
       })
       logger('Entity change IPC watcher started')
