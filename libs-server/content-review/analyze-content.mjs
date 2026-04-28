@@ -4,7 +4,7 @@ import path from 'path'
 import debug from 'debug'
 import frontMatter from 'front-matter'
 
-import { call_ollama } from '#libs-server/llm/ollama-client.mjs'
+import { call_tier_classifier } from './tier-classifier-client.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import { scan_file_content } from './pattern-scanner.mjs'
@@ -142,28 +142,33 @@ async function build_review_prompt({
       ? `\n## Additional Classification Guidance\n${guidance_notes.map((n) => `- ${n}`).join('\n')}\n`
       : ''
 
-  return `You are a content reviewer classifying files for visibility permissions.
+  const system = `You are a content reviewer classifying files for visibility permissions.
 
-Classify this file into one of three tiers:
+Use BOTH the file path and the content to classify. Directory context often signals the privacy tier — for example, files describing the same topic may be public in one directory and private in another based on whether they reference real personal assets. Apply path-based policy from the classification guidance below.
+
+Classify each file into one of three tiers:
 - "public": ${tier_defs.public || 'Safe for unauthenticated public access.'}
 - "acquaintance": ${tier_defs.acquaintance || 'Contains information appropriate for known contacts but not the general public.'}
 - "private": ${tier_defs.private || 'Contains personal information, secrets, or other sensitive content that must remain restricted.'}
 
 ${guideline_text}
 ${allowable_usernames.length > 0 ? `\n## Allowable Usernames\nThe following usernames are NOT considered personal information: ${allowable_usernames.map((u) => `"${u}"`).join(', ')}. These may appear in file paths, system references, and repository URLs without triggering a private classification.\n` : ''}${guidance_section}
-File: ${file_path || 'unknown'}
-${metadata ? `Title: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}${metadata.relations && metadata.relations.length > 0 ? `\nRelations:\n${metadata.relations.map((r) => `- ${r}`).join('\n')}` : ''}${metadata.observations && metadata.observations.length > 0 ? `\nObservations (historical annotations -- these may be stale and should not override your independent analysis, but provide useful context about prior conclusions):\n${metadata.observations.map((o) => `- ${o}`).join('\n')}` : ''}` : ''}
-${findings_summary}${filter_summary}
-
---- FILE CONTENT ---
-${content}
---- END FILE CONTENT ---
 
 Respond with a JSON object containing:
 - "classification": one of "public", "acquaintance", "private"
 - "confidence": number 0-1 indicating confidence in classification
 - "reasoning": brief explanation of why this classification was chosen
 - "findings": array of specific findings, each with "category", "description", and "severity" (low/medium/high)`
+
+  const user = `File path: ${file_path || 'unknown'}
+${metadata ? `\nTitle: ${metadata.title || 'unknown'}\nType: ${metadata.type || 'unknown'}${metadata.description ? `\nDescription: ${metadata.description}` : ''}${metadata.tags ? `\nTags: ${metadata.tags.join(', ')}` : ''}${metadata.relations && metadata.relations.length > 0 ? `\nRelations:\n${metadata.relations.map((r) => `- ${r}`).join('\n')}` : ''}${metadata.observations && metadata.observations.length > 0 ? `\nObservations (historical annotations -- these may be stale and should not override your independent analysis, but provide useful context about prior conclusions):\n${metadata.observations.map((o) => `- ${o}`).join('\n')}` : ''}` : ''}
+${findings_summary}${filter_summary}
+
+--- FILE CONTENT ---
+${content}
+--- END FILE CONTENT ---`
+
+  return { system, user }
 }
 
 /**
@@ -262,7 +267,7 @@ async function analyze_single_chunk({
   model,
   timeout_ms
 }) {
-  const prompt = await build_review_prompt({
+  const { system, user } = await build_review_prompt({
     content,
     file_path,
     regex_findings,
@@ -270,8 +275,9 @@ async function analyze_single_chunk({
     metadata
   })
 
-  const { output, duration_ms } = await call_ollama({
-    prompt,
+  const { output, duration_ms } = await call_tier_classifier({
+    prompt: user,
+    system,
     model,
     timeout_ms,
     format: CONTENT_REVIEW_SCHEMA
@@ -474,7 +480,7 @@ export async function analyze_content({
       log(`Analyzing ${chunk_label} (${chunk.length} chars)`)
 
       try {
-        const prompt = await build_review_prompt({
+        const { system, user } = await build_review_prompt({
           content: chunk,
           file_path: `${file_path} ${chunk_label}`,
           regex_findings: i === 0 ? scan_result.findings : [],
@@ -482,8 +488,9 @@ export async function analyze_content({
           metadata
         })
 
-        const { output, duration_ms: chunk_duration } = await call_ollama({
-          prompt,
+        const { output, duration_ms: chunk_duration } = await call_tier_classifier({
+          prompt: user,
+          system,
           model,
           timeout_ms,
           format: CONTENT_REVIEW_SCHEMA

@@ -10,6 +10,12 @@ const DEFAULT_CONFIG = {
   default_model: 'ollama/devstral-small-2:24b',
   max_content_size: 32000,
   timeout_ms: 180000,
+  tier_classifier: {
+    backend: 'ollama',
+    model: 'ollama/devstral-small-2:24b',
+    endpoint: 'http://127.0.0.1:11434',
+    max_tokens: 2048
+  },
   guidelines: [
     'sys:system/guideline/review-for-personal-information.md',
     'sys:system/guideline/review-for-secret-information.md'
@@ -34,10 +40,7 @@ const DEFAULT_CONFIG = {
       account_number: 'private',
       private_address: 'private',
       private_email: 'private',
-      private_phone: 'private',
-      private_url: 'private',
-      private_date: 'private',
-      private_person: 'acquaintance'
+      private_phone: 'private'
     }
   }
 }
