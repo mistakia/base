@@ -12,20 +12,17 @@
  * See: task/base/reduce-inotify-watch-count.md
  */
 
-import fs from 'fs/promises'
 import path from 'path'
 import debug from 'debug'
 
 import { create_parcel_subscription } from './parcel-watcher-adapter.mjs'
 import { ENTITY_DIRECTORIES } from '#libs-server/embedded-database-index/sync/index-sync-filters.mjs'
+import { run_reconcile_sweep } from '#libs-server/embedded-database-index/sync/reconcile-sweep.mjs'
 
 const log = debug('file-subscriptions:user-base-watcher')
 
 const RECONCILIATION_DEBOUNCE_MS = 5000
-const RECONCILIATION_COOLDOWN_MS = 60000
 let reconciliation_timer = null
-let is_reconciling = false
-let last_reconciliation_completed_at = 0
 
 // Directories ignored by @parcel/watcher subscription.
 // These are either covered by dedicated watchers or contain non-entity data.
@@ -125,9 +122,9 @@ export async function start_user_base_watcher({
       }
     },
     on_error: () => {
-      log('FSEvents error received, scheduling entity reconciliation')
+      log('FSEvents error received, scheduling entity reconcile sweep')
       if (metrics) metrics.increment('fsevents_errors')
-      schedule_reconciliation({ user_base_directory, entity_index, metrics })
+      schedule_reconciliation({ user_base_directory, metrics })
     }
   })
 
@@ -201,91 +198,22 @@ function route_event({
 }
 
 /**
- * Scan entity directories for .md files and re-emit change events.
- * Called when FSEvents drops events so the entity index can catch up.
+ * Schedule a debounced reconcile sweep on FSEvents drop.
+ *
+ * Coalesces rapid FSEvents error bursts into a single sweep call.
+ * The sweep itself (`run_reconcile_sweep`) has its own single-flight guard,
+ * so concurrent invocations from the periodic scheduler and this on-error
+ * path are safe — the second caller returns {ran: false} immediately.
  */
-async function reconcile_entity_directories({
-  user_base_directory,
-  entity_index,
-  metrics
-}) {
-  if (!entity_index || is_reconciling) {
-    return
-  }
-
-  const elapsed = Date.now() - last_reconciliation_completed_at
-  if (elapsed < RECONCILIATION_COOLDOWN_MS) {
-    log(
-      'Skipping reconciliation, last completed %ds ago (cooldown: %ds)',
-      Math.round(elapsed / 1000),
-      RECONCILIATION_COOLDOWN_MS / 1000
-    )
-    return
-  }
-
-  is_reconciling = true
-  if (metrics) metrics.increment('reconciliations')
-  const reconcile_start = Date.now()
-  log('Starting entity reconciliation scan')
-  let file_count = 0
-
-  try {
-    for (const dir_name of ENTITY_DIRECTORIES) {
-      const dir_path = path.join(user_base_directory, dir_name)
-      try {
-        const entries = await fs.readdir(dir_path, {
-          withFileTypes: true,
-          recursive: true
-        })
-        for (const entry of entries) {
-          if (entry.isFile() && entry.name.endsWith('.md')) {
-            const file_path = path.join(entry.parentPath, entry.name)
-            entity_index.on_change(file_path)
-            file_count++
-          }
-        }
-      } catch (error) {
-        if (error.code !== 'ENOENT') {
-          log('Error scanning %s: %s', dir_name, error.message)
-        }
-      }
-      // Yield to event loop between directories to avoid blocking
-      await new Promise((resolve) => setImmediate(resolve))
-    }
-  } finally {
-    is_reconciling = false
-    last_reconciliation_completed_at = Date.now()
-
-    if (metrics) {
-      metrics.timing('reconciliation', Date.now() - reconcile_start)
-      metrics.gauge('reconciliation_files', file_count)
-    }
-  }
-
-  log('Entity reconciliation complete: %d files re-emitted', file_count)
-}
-
-/**
- * Schedule a debounced reconciliation scan for entity directories.
- * Coalesces rapid FSEvents error bursts into a single scan.
- */
-function schedule_reconciliation({
-  user_base_directory,
-  entity_index,
-  metrics
-}) {
+function schedule_reconciliation({ user_base_directory, metrics }) {
   if (reconciliation_timer) {
     clearTimeout(reconciliation_timer)
   }
 
   reconciliation_timer = setTimeout(() => {
     reconciliation_timer = null
-    reconcile_entity_directories({
-      user_base_directory,
-      entity_index,
-      metrics
-    }).catch((error) => {
-      log('Reconciliation scan failed: %s', error.message)
+    run_reconcile_sweep({ user_base_directory, metrics }).catch((error) => {
+      log('Reconcile sweep failed: %s', error.message)
     })
   }, RECONCILIATION_DEBOUNCE_MS)
 }
