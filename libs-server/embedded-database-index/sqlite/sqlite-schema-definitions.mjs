@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS entities (
   title TEXT,
   description TEXT,
   body TEXT,
+  attributes TEXT,
   status TEXT,
   priority TEXT,
   archived INTEGER DEFAULT 0,
@@ -241,6 +242,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS entities_fts USING fts5(
   base_uri UNINDEXED,
   title,
   description,
+  attributes,
   body,
   content=entities,
   content_rowid=rowid
@@ -282,18 +284,18 @@ CREATE VIRTUAL TABLE IF NOT EXISTS thread_timeline_fts USING fts5(
 // Triggers to keep FTS tables in sync with content tables
 const ENTITIES_FTS_TRIGGERS = [
   `CREATE TRIGGER IF NOT EXISTS entities_ai AFTER INSERT ON entities BEGIN
-    INSERT INTO entities_fts(rowid, base_uri, title, description, body)
-    VALUES (new.rowid, new.base_uri, new.title, new.description, new.body);
+    INSERT INTO entities_fts(rowid, base_uri, title, description, attributes, body)
+    VALUES (new.rowid, new.base_uri, new.title, new.description, new.attributes, new.body);
   END`,
   `CREATE TRIGGER IF NOT EXISTS entities_ad AFTER DELETE ON entities BEGIN
-    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, body)
-    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.body);
+    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, attributes, body)
+    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.attributes, old.body);
   END`,
   `CREATE TRIGGER IF NOT EXISTS entities_au AFTER UPDATE ON entities BEGIN
-    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, body)
-    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.body);
-    INSERT INTO entities_fts(rowid, base_uri, title, description, body)
-    VALUES (new.rowid, new.base_uri, new.title, new.description, new.body);
+    INSERT INTO entities_fts(entities_fts, rowid, base_uri, title, description, attributes, body)
+    VALUES ('delete', old.rowid, old.base_uri, old.title, old.description, old.attributes, old.body);
+    INSERT INTO entities_fts(rowid, base_uri, title, description, attributes, body)
+    VALUES (new.rowid, new.base_uri, new.title, new.description, new.attributes, new.body);
   END`
 ]
 

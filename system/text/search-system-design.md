@@ -58,11 +58,27 @@ Key files:
 
 ### Entity (`sources/entity.mjs`)
 
-Queries the FTS5 virtual table `entities_fts(base_uri UNINDEXED, title, description, body)` with `MATCH` and ranks by `bm25(entities_fts, 10.0, 3.0, 1.0)`. Title hits dominate, description is mid-weighted, body is the long tail.
+Queries the FTS5 virtual table `entities_fts(base_uri UNINDEXED, title, description, attributes, body)` with `MATCH` and ranks by `bm25(entities_fts, 10.0, 3.0, 4.0, 1.0)`. Title hits dominate, description is mid-weighted, attributes (structured frontmatter fields) outrank body, body is the long tail.
 
-The `entities` table extracts a fixed set of fields from frontmatter (title, description, status, priority, archived, public_read, timestamps, user_public_key) into typed columns, plus the markdown body and the full frontmatter JSON in a `frontmatter` TEXT column. Only `title`, `description`, and `body` are indexed by FTS5 today; arbitrary structured frontmatter fields (e.g. `manufacturer`, `model_number`) are stored but **not searchable**.
+The `entities` table extracts a fixed set of fields from frontmatter (title, description, status, priority, archived, public_read, timestamps, user_public_key) into typed columns, plus the markdown body, a derived `attributes` TEXT column (see below), and the full frontmatter JSON in a `frontmatter` TEXT column.
 
-Snippets are produced via FTS5 `snippet()` per field; the source returns whichever snippet actually contains a match (title preferred).
+Snippets are produced via FTS5 `snippet()` per field; the source returns whichever snippet actually contains a match (title > description > attributes > body).
+
+#### Attributes
+
+A per-type allowlist of frontmatter fields is concatenated (newline-joined) into the `attributes` column during entity sync, making structured fields searchable. The allowlist is configured in `config/search-config.json` under `entity_index.searchable_attributes`, e.g.:
+
+```json
+{
+  "entity_index": {
+    "searchable_attributes": {
+      "physical-item": ["manufacturer", "model_number", "serial_number"]
+    }
+  }
+}
+```
+
+Strings pass through; arrays of scalars are joined by spaces; non-strings are skipped. Tokenization follows the default `unicode61` tokenizer, so `"Joule 23F"` produces tokens `joule` and `23f`. A missing type or empty list yields a `null` `attributes` value. Config changes take effect after the search-config module cache resets (process restart) and require an index rebuild to backfill existing rows.
 
 There is no ILIKE fallback. If the SQLite query fails the source returns an empty result set.
 
@@ -179,18 +195,18 @@ The reducer holds chips as an Immutable List; sagas debounce input by 300 ms bef
 - `sources.enabled_by_default` — sources that run when no explicit `source` is given
 - `sources.per_source_candidate_cap` — default `candidate_limit` per source (100)
 - `sources.semantic_timeout_ms`
+- `entity_index.searchable_attributes` — per-entity-type frontmatter field allowlist for the `attributes` FTS column
 - Path source ripgrep excludes (e.g. `node_modules`, `.git`, `.system`)
 
 ## Trade-offs
 
 | Decision | Trade-off |
 | --- | --- |
-| FTS5 BM25 for entities | Fast and ranks well on title/description/body; cannot match arbitrary frontmatter fields without indexing them. |
+| FTS5 BM25 for entities | Fast and ranks well on title/description/attributes/body; per-type frontmatter allowlist controls which structured fields are indexed. |
 | Source-orchestrator model | Adds normalization complexity vs. one query plan; pays back in pluggability and per-source tuning. |
 | Per-source min/max normalization | Comparable scores across heterogeneous backends; loses absolute score meaning. |
 | Source weights + recency boost | Tunable relevance; opaque to users. |
 | Pagination before permission filter | Bounds permission checks to one page; pages may under-fill when denials occur. |
-| Frontmatter not indexed | Simple schema, fast sync; structured fields (manufacturer, model_number, etc.) are invisible to search. |
 | Semantic as best-effort | Search degrades gracefully when embeddings are unavailable; results are non-deterministic across deploys. |
 | Native fuzzy scorer | No external dependency; ranking quality is "good enough" rather than identical to fzf. |
 | Empty directories not discoverable | Path source only sees what ripgrep returns. |
@@ -201,6 +217,5 @@ Sub-second response is the target for typical queries. The dominant cost varies 
 
 ## Known Gaps
 
-- Structured frontmatter fields are not searchable (e.g. `manufacturer`, `model_number` on `physical-item`). Extending `entities_fts` with a `metadata` column populated from a per-type allowlist is the natural fix.
 - Operators `#`, `in:`, and `-term` are documented in the UI but not yet wired through the API.
 - Thread metadata search no longer covers `workflow_base_uri`, `working_directory`, or `git_branch`. If those become important again, add them to `threads_fts` and the sync layer.

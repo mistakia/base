@@ -321,15 +321,25 @@ class EmbeddedIndexManager {
           stored_version_for_migration,
           CURRENT_SCHEMA_VERSION
         )
-        try {
-          await migrate_to_v8({
-            user_base_directory: config.user_base_directory
-          })
-          log('Migration succeeded, continuing startup sync')
-        } catch (error) {
+        if (stored_version_for_migration === '7') {
+          try {
+            await migrate_to_v8({
+              user_base_directory: config.user_base_directory
+            })
+            log('Migration succeeded, continuing startup sync')
+          } catch (error) {
+            log(
+              'Migration failed (%s), falling back to reset and rebuild',
+              error.message
+            )
+            await this._reset_and_rebuild_index_internal()
+            return
+          }
+        } else {
           log(
-            'Migration failed (%s), falling back to reset and rebuild',
-            error.message
+            'No in-place migration for %s -> %s, performing reset and rebuild',
+            stored_version_for_migration,
+            CURRENT_SCHEMA_VERSION
           )
           await this._reset_and_rebuild_index_internal()
           return

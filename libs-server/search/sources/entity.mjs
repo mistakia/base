@@ -1,5 +1,5 @@
-// FTS5 MATCH over entities_fts with bm25(10.0, 3.0, 1.0) weighting
-// title > description > body.
+// FTS5 MATCH over entities_fts with bm25(10.0, 3.0, 4.0, 1.0) weighting
+// title > description > attributes > body.
 
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 import { build_fts_match_expression } from './fts-query.mjs'
@@ -14,10 +14,11 @@ export async function search({ query, candidate_limit = 100 }) {
     query: `
       SELECT
         base_uri,
-        -bm25(entities_fts, 10.0, 3.0, 1.0) AS raw_score,
+        -bm25(entities_fts, 10.0, 3.0, 4.0, 1.0) AS raw_score,
         snippet(entities_fts, 1, '[', ']', '...', 16) AS title_snippet,
         snippet(entities_fts, 2, '[', ']', '...', 24) AS description_snippet,
-        snippet(entities_fts, 3, '[', ']', '...', 24) AS body_snippet
+        snippet(entities_fts, 3, '[', ']', '...', 24) AS attributes_snippet,
+        snippet(entities_fts, 4, '[', ']', '...', 24) AS body_snippet
       FROM entities_fts
       WHERE entities_fts MATCH ?
       ORDER BY raw_score DESC
@@ -45,6 +46,9 @@ function pick_best_snippet(row) {
   }
   if (row.description_snippet && row.description_snippet.includes('[')) {
     return { matched_field: 'description', snippet: row.description_snippet }
+  }
+  if (row.attributes_snippet && row.attributes_snippet.includes('[')) {
+    return { matched_field: 'attributes', snippet: row.attributes_snippet }
   }
   if (row.body_snippet && row.body_snippet.includes('[')) {
     return { matched_field: 'body', snippet: row.body_snippet }

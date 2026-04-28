@@ -11,6 +11,7 @@ import {
   execute_sqlite_query,
   with_sqlite_transaction
 } from './sqlite-database-client.mjs'
+import { load_search_config } from '#libs-server/search/search-config.mjs'
 
 const log = debug('embedded-index:sqlite:sync')
 
@@ -572,6 +573,12 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
   const title = frontmatter?.title || null
   const description = frontmatter?.description || null
   const body = typeof entity_data.body === 'string' ? entity_data.body : null
+  const searchable_attributes = await get_searchable_attributes()
+  const attributes = build_attributes({
+    frontmatter,
+    type,
+    searchable_attributes
+  })
   const status = frontmatter?.status || null
   const priority = frontmatter?.priority || null
   const archived = frontmatter?.archived ? 1 : 0
@@ -587,16 +594,17 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
 
   const query = `
     INSERT INTO entities (
-      base_uri, entity_id, type, title, description, body, status, priority,
+      base_uri, entity_id, type, title, description, body, attributes, status, priority,
       archived, public_read, visibility_analyzed_at,
       user_public_key, created_at, updated_at, archived_at, frontmatter
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT (base_uri) DO UPDATE SET
       entity_id = excluded.entity_id,
       type = excluded.type,
       title = excluded.title,
       description = excluded.description,
       body = excluded.body,
+      attributes = excluded.attributes,
       status = excluded.status,
       priority = excluded.priority,
       archived = excluded.archived,
@@ -616,6 +624,7 @@ export async function upsert_entity_to_sqlite({ entity_data }) {
     title,
     description,
     body,
+    attributes,
     status,
     priority,
     archived,
@@ -753,8 +762,10 @@ export async function upsert_entities_batch({ entities }) {
     }
 
     const placeholders = chunk
-      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
       .join(', ')
+
+    const searchable_attributes = await get_searchable_attributes()
 
     const parameters = chunk.flatMap((entity_data) => {
       const { frontmatter, base_uri, entity_id, type } = entity_data
@@ -767,6 +778,7 @@ export async function upsert_entities_batch({ entities }) {
         frontmatter?.title || null,
         frontmatter?.description || null,
         typeof entity_data.body === 'string' ? entity_data.body : null,
+        build_attributes({ frontmatter, type, searchable_attributes }),
         frontmatter?.status || null,
         frontmatter?.priority || null,
         frontmatter?.archived ? 1 : 0,
@@ -787,7 +799,7 @@ export async function upsert_entities_batch({ entities }) {
     await execute_sqlite_run({
       query: `
         INSERT INTO entities (
-          base_uri, entity_id, type, title, description, body, status, priority,
+          base_uri, entity_id, type, title, description, body, attributes, status, priority,
           archived, public_read, visibility_analyzed_at,
           user_public_key, created_at, updated_at, archived_at, frontmatter
         ) VALUES ${placeholders}
@@ -797,6 +809,7 @@ export async function upsert_entities_batch({ entities }) {
           title = excluded.title,
           description = excluded.description,
           body = excluded.body,
+          attributes = excluded.attributes,
           status = excluded.status,
           priority = excluded.priority,
           archived = excluded.archived,
@@ -1036,4 +1049,32 @@ export async function sync_threads_tags_batch({ thread_tags }) {
     all_tag_pairs.length,
     thread_ids.length
   )
+}
+
+async function get_searchable_attributes() {
+  const config = await load_search_config()
+  return config?.entity_index?.searchable_attributes ?? {}
+}
+
+function build_attributes({ frontmatter, type, searchable_attributes }) {
+  if (!frontmatter || !type) return null
+
+  const fields = searchable_attributes[type] ?? []
+  if (fields.length === 0) return null
+
+  const parts = []
+  for (const field of fields) {
+    const value = frontmatter[field]
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed) parts.push(trimmed)
+    } else if (Array.isArray(value)) {
+      const scalars = value.filter(
+        (v) => typeof v === 'string' || typeof v === 'number'
+      )
+      if (scalars.length > 0) parts.push(scalars.join(' '))
+    }
+  }
+
+  return parts.length > 0 ? parts.join('\n') : null
 }

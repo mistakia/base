@@ -38,6 +38,9 @@ const DEFAULT_CONFIG = {
     per_source_candidate_cap: 100,
     semantic_timeout_ms: 2000
   },
+  entity_index: {
+    searchable_attributes: {}
+  },
   result_types: {
     files: {
       enabled: true,
