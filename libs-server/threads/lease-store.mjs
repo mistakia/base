@@ -80,6 +80,21 @@ redis.call('SET', KEYS[1], cjson.encode(decoded), 'PX', tonumber(ARGV[2]))
 return 1
 `
 
+// KEYS[1]=lease_key, ARGV[1]=expected_token, ARGV[2]=session_id
+// Sets session_id only when the current value is null. Preserves TTL.
+const BIND_SESSION_ID_LUA = `
+local existing = redis.call('GET', KEYS[1])
+if not existing then return 0 end
+local decoded = cjson.decode(existing)
+if tonumber(decoded.lease_token) ~= tonumber(ARGV[1]) then return 0 end
+if decoded.session_id and decoded.session_id ~= cjson.null then return 0 end
+decoded.session_id = ARGV[2]
+local pttl = redis.call('PTTL', KEYS[1])
+if pttl <= 0 then return 0 end
+redis.call('SET', KEYS[1], cjson.encode(decoded), 'PX', pttl)
+return 1
+`
+
 // KEYS[1]=lease_key, ARGV[1]=expected_token
 const RELEASE_LUA = `
 local existing = redis.call('GET', KEYS[1])
@@ -161,6 +176,38 @@ export const renew_lease = async ({ thread_id, lease_token, ttl_ms }) => {
     result
   )
   return { renewed: false }
+}
+
+export const bind_session_id = async ({
+  thread_id,
+  lease_token,
+  session_id
+}) => {
+  _assert_on_storage()
+  if (!thread_id) throw new Error('bind_session_id: thread_id required')
+  if (lease_token == null)
+    throw new Error('bind_session_id: lease_token required')
+  if (!session_id) throw new Error('bind_session_id: session_id required')
+
+  const redis = _get_redis()
+  const result = await redis.eval(
+    BIND_SESSION_ID_LUA,
+    1,
+    _lease_key(thread_id),
+    String(lease_token),
+    String(session_id)
+  )
+  if (result === 1) {
+    log('bound session_id %s to lease %s token=%s', session_id, thread_id, lease_token)
+    return { bound: true }
+  }
+  log(
+    'bind no-op for %s (token=%s, redis=%s)',
+    thread_id,
+    lease_token,
+    result
+  )
+  return { bound: false }
 }
 
 export const release_lease = async ({ thread_id, lease_token }) => {

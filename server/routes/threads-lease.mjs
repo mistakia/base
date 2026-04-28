@@ -8,6 +8,7 @@ import {
   acquire_lease,
   renew_lease,
   release_lease,
+  bind_session_id,
   inspect_lease,
   list_active_leases
 } from '#libs-server/threads/lease-store.mjs'
@@ -110,6 +111,30 @@ router.post('/:thread_id/lease/renew', ...lease_auth, async (req, res) => {
     return res.status(500).json({ error: 'lease renew failed' })
   }
 })
+
+router.post(
+  '/:thread_id/lease/bind-session-id',
+  ...lease_auth,
+  async (req, res) => {
+    const { lease_token, session_id } = req.body || {}
+    if (lease_token == null || !session_id) {
+      return res
+        .status(400)
+        .json({ error: 'lease_token and session_id required' })
+    }
+    try {
+      const result = await bind_session_id({
+        thread_id: req.params.thread_id,
+        lease_token,
+        session_id
+      })
+      return res.json(result)
+    } catch (error) {
+      log('bind_session_id error: %s', error.message)
+      return res.status(500).json({ error: 'bind_session_id failed' })
+    }
+  }
+)
 
 router.post('/:thread_id/lease/release', ...lease_auth, async (req, res) => {
   const { lease_token } = req.body || {}

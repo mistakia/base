@@ -14,6 +14,7 @@ import {
   acquire_lease,
   renew_lease,
   release_lease,
+  bind_session_id,
   inspect_lease,
   get_cached_lease_snapshot
 } from '#libs-server/threads/lease-client.mjs'
@@ -49,7 +50,23 @@ export const coemit_acquire_session_lease = async ({
     log('skip acquire %s: machine_id unresolved', thread_id)
     return
   }
-  if (_get_owned_snapshot({ thread_id, machine_id })) return
+  const owned = _get_owned_snapshot({ thread_id, machine_id })
+  if (owned) {
+    // Lease already held; bind a real session_id if the lease was acquired
+    // earlier with session_id=null (e.g. job-worker acquire before SessionStart).
+    if (session_id && owned.session_id == null) {
+      try {
+        await bind_session_id({
+          thread_id,
+          lease_token: owned.lease_token,
+          session_id
+        })
+      } catch (error) {
+        log('bind_session_id failed for %s: %s', thread_id, error.message)
+      }
+    }
+    return
+  }
   try {
     const result = await acquire_lease({
       thread_id,

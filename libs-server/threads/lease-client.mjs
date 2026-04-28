@@ -187,6 +187,34 @@ export const renew_lease = async ({ thread_id, lease_token, ttl_ms }) => {
   return result
 }
 
+export const bind_session_id = async ({
+  thread_id,
+  lease_token,
+  session_id
+}) => {
+  if (!thread_id) throw new Error('bind_session_id: thread_id required')
+  if (lease_token == null)
+    throw new Error('bind_session_id: lease_token required')
+  if (!session_id) throw new Error('bind_session_id: session_id required')
+
+  let result
+  if (_is_on_storage()) {
+    const store = await _load_local_store()
+    result = await store.bind_session_id({ thread_id, lease_token, session_id })
+  } else {
+    result = await _http_request({
+      method: 'POST',
+      path: `/api/threads/${encodeURIComponent(thread_id)}/lease/bind-session-id`,
+      body: { lease_token, session_id }
+    })
+  }
+  if (result?.bound) {
+    const existing = _snapshot_cache.get(thread_id)
+    if (existing) _set_snapshot(thread_id, { ...existing, session_id })
+  }
+  return result
+}
+
 export const release_lease = async ({ thread_id, lease_token }) => {
   if (!thread_id) throw new Error('release_lease: thread_id required')
   if (lease_token == null)
