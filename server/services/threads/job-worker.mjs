@@ -232,6 +232,8 @@ const process_thread_creation_job = async (job) => {
   }, LOCK_EXTEND_INTERVAL_MS)
 
   // Acquire in processor (not 'active' listener) so throwing fails the job.
+  // Lease must be acquired BEFORE the first session_status patch so the
+  // field-ownership check sees a local lease and does not record a violation.
   if (thread_id) {
     const machine_id = get_current_machine_id()
     if (!machine_id) {
@@ -258,6 +260,11 @@ const process_thread_creation_job = async (job) => {
     log(
       `Job ${job.id}: acquired lease for ${thread_id} (token=${lease_result.lease_token})`
     )
+
+    await update_thread_session_status({
+      thread_id,
+      session_status: 'starting'
+    })
   }
 
   // Declared outside try/catch so the catch block can access them
@@ -625,12 +632,9 @@ const release_lease_fallback = async (job) => {
 const handle_job_active = async (job) => {
   log(`Job ${job.id}: active`)
   if (job.data.thread_id) {
-    // Update thread session_status to 'starting' before spawning CLI
-    await update_thread_session_status({
-      thread_id: job.data.thread_id,
-      session_status: 'starting'
-    })
-
+    // session_status='starting' patch is now performed inside the processor
+    // after acquire_lease, to avoid racing the lease acquisition (which would
+    // otherwise produce a session-owned-without-local-lease violation).
     emit_thread_job_started({
       job_id: job.id,
       thread_id: job.data.thread_id

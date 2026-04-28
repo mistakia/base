@@ -871,6 +871,18 @@ router.put(
         })
       }
 
+      // Acquire/renew the session lease BEFORE the lease-routing check and
+      // the patch. SessionStart-class statuses (queued/starting) are the
+      // first writes from a new session; without acquiring first, the
+      // field-ownership check sees a null lease and emits a violation per
+      // session-owned field. Acquiring populates the lease snapshot cache so
+      // the subsequent check_write_lease_routing sees a local lease.
+      // For active/idle/terminal statuses, lease ops still fire after the
+      // patch (renew/release as before) since they require an existing lease.
+      if (session_status === 'queued' || session_status === 'starting') {
+        await coemit_acquire_session_lease({ thread_id, session_id })
+      }
+
       const write_check = await check_write_lease_routing({
         thread_id,
         patches: { session_status },
@@ -934,11 +946,9 @@ router.put(
       emit_thread_updated(metadata)
 
       // Co-emit lease lifecycle: hook PUTs are the keepalive trigger.
-      // SessionStart-class statuses acquire (no-op when already cached);
+      // SessionStart-class acquire moved above to precede the patch.
       // active/idle renew; terminal statuses release. All best-effort.
-      if (session_status === 'queued' || session_status === 'starting') {
-        await coemit_acquire_session_lease({ thread_id, session_id })
-      } else if (session_status === 'active' || session_status === 'idle') {
+      if (session_status === 'active' || session_status === 'idle') {
         await coemit_renew_session_lease({ thread_id })
       } else if (
         session_status === 'completed' ||
