@@ -16,7 +16,6 @@ const CONFIG = {
       'title',
       'description',
       'user_public_key',
-      'misc_notes',
       'home_area',
       'current_location',
       'home_activity'
@@ -62,7 +61,8 @@ function normalize_physical_item_for_table_response(item, defaults) {
     target_quantity: item.target_quantity,
     ethernet_connected: item.ethernet_connected,
     water_connection: item.water_connection,
-    misc_notes: item.misc_notes || null,
+    amazon_order_id: item.amazon_order_id || null,
+    amazon_asin: item.amazon_asin || null,
 
     // Relation-derived display fields
     home_area: item.home_area || null,

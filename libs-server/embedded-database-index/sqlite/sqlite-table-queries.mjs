@@ -82,7 +82,8 @@ const VALID_COLUMNS = new Set([
   'ethernet_connected',
   'water_connection',
   'category',
-  'misc_notes'
+  'amazon_order_id',
+  'amazon_asin'
 ])
 
 /**
@@ -123,7 +124,8 @@ const PHYSICAL_ITEM_FRONTMATTER_COLUMNS = {
   outlets_used: "CAST(json_extract(frontmatter, '$.outlets_used') AS REAL)",
   ethernet_connected: "json_extract(frontmatter, '$.ethernet_connected')",
   water_connection: "json_extract(frontmatter, '$.water_connection')",
-  misc_notes: "json_extract(frontmatter, '$.misc_notes')"
+  amazon_order_id: "json_extract(frontmatter, '$.amazon_order_id')",
+  amazon_asin: "json_extract(frontmatter, '$.amazon_asin')"
 }
 
 // Map client filter operators to SQL operators
@@ -1072,7 +1074,8 @@ function extract_physical_item_from_entity(entity) {
     outlets_used: frontmatter.outlets_used ?? null,
     ethernet_connected: frontmatter.ethernet_connected ?? null,
     water_connection: frontmatter.water_connection ?? null,
-    misc_notes: frontmatter.misc_notes || null,
+    amazon_order_id: frontmatter.amazon_order_id || null,
+    amazon_asin: frontmatter.amazon_asin || null,
 
     ...extract_relation_display_fields(frontmatter.relations),
 

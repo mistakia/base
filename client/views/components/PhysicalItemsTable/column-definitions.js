@@ -309,15 +309,25 @@ export const physical_item_columns = {
     minSize: 100,
     maxSize: 220
   },
-  misc_notes: {
-    column_id: 'misc_notes',
-    header_label: 'Notes',
-    accessorKey: 'misc_notes',
+  amazon_order_id: {
+    column_id: 'amazon_order_id',
+    header_label: 'Amazon Order ID',
+    accessorKey: 'amazon_order_id',
     data_type: TABLE_DATA_TYPES.TEXT,
     operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
-    size: 200,
+    size: 140,
     minSize: 100,
-    maxSize: 400
+    maxSize: 220
+  },
+  amazon_asin: {
+    column_id: 'amazon_asin',
+    header_label: 'ASIN',
+    accessorKey: 'amazon_asin',
+    data_type: TABLE_DATA_TYPES.TEXT,
+    operators: [TABLE_OPERATORS.LIKE, TABLE_OPERATORS.NOT_LIKE],
+    size: 140,
+    minSize: 100,
+    maxSize: 220
   },
   tags: {
     column_id: 'tags',
