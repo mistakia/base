@@ -5,8 +5,8 @@ import { get_service_token } from '#libs-server/threads/lease-auth.mjs'
 
 const log = debug('threads:lease-client')
 
-const DEFAULT_LIST_RETRIES = 3
-const LIST_RETRY_DELAY_MS = 250
+const DEFAULT_LIST_RETRIES = 5
+const LIST_RETRY_DELAY_MS = 500
 const DEFAULT_REQUEST_TIMEOUT_MS = 5000
 const VALID_FILTERS = new Set(['owned-by-me', 'owned-by-remote', 'all'])
 
