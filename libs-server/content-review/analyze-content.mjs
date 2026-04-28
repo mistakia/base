@@ -418,29 +418,6 @@ export async function analyze_content({
   }
   const filter_spans = filter_result?.spans || []
 
-  // Stage 2c: Short-circuit when both regex and filter are clean
-  if (
-    pf_config.enabled &&
-    pf_config.short_circuit_public &&
-    filter_result &&
-    scan_result.findings.length === 0 &&
-    filter_result.labels_found.length === 0
-  ) {
-    return {
-      file_path,
-      file_type: scan_result.file_type,
-      lines_scanned: scan_result.lines_scanned,
-      regex_findings: scan_result.findings,
-      filter_result,
-      llm_analysis: null,
-      classification: 'public',
-      confidence: 1.0,
-      reasoning: 'no regex matches and no filter spans',
-      findings: [],
-      method: 'regex_filter_short_circuit'
-    }
-  }
-
   // Stage 3: LLM analysis via Ollama (with chunking for large files)
   try {
     const chunks = chunk_content(content_body, max_content_size)

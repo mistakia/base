@@ -30,7 +30,6 @@ and the operational workflow.
 ```
 file -> regex scan (full content)
      -> privacy-filter span scan (content_body, gated by config.enabled)
-     -> optional short_circuit_public when both regex and filter are clean
      -> Ollama tier classifier (per chunk; receives regex + filter context)
      -> apply_regex_floor + apply_filter_floor (most-restrictive wins)
      -> classification

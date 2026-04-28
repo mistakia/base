@@ -27,10 +27,10 @@ describe('classification-floors', () => {
       expect(result.regex_floor_applied).to.be.undefined
     })
 
-    it('floors public to private on personal_names', () => {
+    it('floors public to acquaintance on personal_names', () => {
       const result = { classification: 'public', reasoning: 'r' }
       apply_regex_floor(result, [{ category: 'personal_names' }])
-      expect(result.classification).to.equal('private')
+      expect(result.classification).to.equal('acquaintance')
       expect(result.regex_floor_applied).to.be.true
     })
 
@@ -44,6 +44,21 @@ describe('classification-floors', () => {
       const result = { classification: 'public', reasoning: 'r' }
       apply_regex_floor(result, [{ category: 'personal_locations' }])
       expect(result.classification).to.equal('private')
+    })
+
+    it('chooses most-restrictive when personal_names and personal_property both match', () => {
+      const result = { classification: 'public', reasoning: 'r' }
+      apply_regex_floor(result, [
+        { category: 'personal_names' },
+        { category: 'personal_property' }
+      ])
+      expect(result.classification).to.equal('private')
+    })
+
+    it('does not modify an already-acquaintance result on personal_names', () => {
+      const result = { classification: 'acquaintance', reasoning: 'r' }
+      apply_regex_floor(result, [{ category: 'personal_names' }])
+      expect(result.regex_floor_applied).to.be.undefined
     })
 
     it('does not modify already-private classification', () => {
@@ -136,7 +151,7 @@ describe('classification-floors', () => {
   describe('combined floors', () => {
     it('regex floor + filter floor compose to most-restrictive', () => {
       const result = { classification: 'public', reasoning: 'r' }
-      apply_regex_floor(result, [{ category: 'personal_names' }])
+      apply_regex_floor(result, [{ category: 'personal_property' }])
       apply_filter_floor(
         result,
         { labels_found: ['private_person'] },

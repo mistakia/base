@@ -34,7 +34,6 @@ const DEFAULT_CONFIG = {
   privacy_filter: {
     enabled: false,
     score_threshold: 0.85,
-    short_circuit_public: true,
     label_floor: {
       secret: 'private',
       account_number: 'private',

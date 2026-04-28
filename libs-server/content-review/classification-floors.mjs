@@ -12,38 +12,49 @@ function most_restrictive(a, b) {
 
 /**
  * Enforce minimum classification when curated regex categories match.
- * Mutates result in place; floors `personal_names`, `personal_property`,
- * and `personal_locations` matches to private regardless of LLM verdict.
+ * Mutates result in place. Floors:
+ *   - personal_property -> private
+ *   - personal_locations -> private
+ *   - personal_names -> acquaintance (HARD RULE: curated real-person names
+ *     identify individuals but do not by themselves make a file private)
+ * Most-restrictive wins when multiple categories match.
  */
+const REGEX_CATEGORY_FLOOR = {
+  personal_property: 'private',
+  personal_locations: 'private',
+  personal_names: 'acquaintance'
+}
+
 export function apply_regex_floor(result, regex_findings) {
   if (!regex_findings || regex_findings.length === 0) {
     return result
   }
 
-  const has_personal_names = regex_findings.some(
-    (f) => f.category === 'personal_names'
-  )
-  const has_personal_property = regex_findings.some(
-    (f) => f.category === 'personal_property'
-  )
-  const has_personal_locations = regex_findings.some(
-    (f) => f.category === 'personal_locations'
-  )
+  let floor = 'public'
+  let trigger_category = null
+  for (const finding of regex_findings) {
+    const category_floor = REGEX_CATEGORY_FLOOR[finding.category]
+    if (!category_floor) continue
+    const next = most_restrictive(floor, category_floor)
+    if (next !== floor) {
+      floor = next
+      trigger_category = finding.category
+    }
+  }
 
-  if (
-    (has_personal_property || has_personal_names || has_personal_locations) &&
-    result.classification !== 'private'
-  ) {
-    const original = result.classification
-    const trigger_category = has_personal_property
-      ? 'personal_property'
-      : has_personal_locations
-        ? 'personal_locations'
-        : 'personal_names'
-    result.classification = 'private'
-    result.reasoning = `${result.reasoning} [Regex floor: ${original} overridden to private due to curated ${trigger_category} pattern match]`
+  if (floor === 'public' || !trigger_category) {
+    return result
+  }
+
+  const original = result.classification
+  const new_classification = most_restrictive(original, floor)
+  if (new_classification !== original) {
+    result.classification = new_classification
+    result.reasoning = `${result.reasoning} [Regex floor: ${original} overridden to ${new_classification} due to curated ${trigger_category} pattern match]`
     result.regex_floor_applied = true
-    log(`Regex floor applied: ${original} -> private (${trigger_category})`)
+    log(
+      `Regex floor applied: ${original} -> ${new_classification} (${trigger_category})`
+    )
   }
 
   return result
