@@ -3,12 +3,14 @@ import { expect } from 'chai'
 
 import {
   coemit_acquire_session_lease,
+  acquire_session_lease_strict,
   coemit_renew_session_lease,
   coemit_release_session_lease
 } from '#libs-server/threads/session-lease-coemit.mjs'
 import {
   _clear_cache_for_tests,
-  get_cached_lease_snapshot
+  get_cached_lease_snapshot,
+  LeaseStoreUnreachable
 } from '#libs-server/threads/lease-client.mjs'
 import config from '#config'
 
@@ -139,6 +141,52 @@ describe('libs-server/threads/session-lease-coemit', function () {
     })
   })
 
+  describe('acquire_session_lease_strict', () => {
+    it('rethrows LeaseStoreUnreachable on 5xx response', async () => {
+      global.fetch = async () =>
+        _make_response({ status: 503, body: { error: 'down' } })
+      let thrown = null
+      try {
+        await acquire_session_lease_strict({ thread_id: 't-strict-5xx' })
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).to.be.an.instanceOf(LeaseStoreUnreachable)
+    })
+
+    it('rethrows LeaseStoreUnreachable on network failure', async () => {
+      global.fetch = async () => {
+        throw new TypeError('connect ECONNREFUSED')
+      }
+      let thrown = null
+      try {
+        await acquire_session_lease_strict({ thread_id: 't-strict-net' })
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown).to.be.an.instanceOf(LeaseStoreUnreachable)
+    })
+
+    it('does not throw on a definitive 4xx (still best-effort for non-transient)', async () => {
+      global.fetch = async () =>
+        _make_response({ status: 403, body: { error: 'forbidden' } })
+      // 4xx is definitive (not LeaseStoreUnreachable). Strict variant only
+      // surfaces transient errors; other failures stay swallowed so a
+      // misconfigured token does not crash SessionStart.
+      await acquire_session_lease_strict({ thread_id: 't-strict-4xx' })
+    })
+
+    it('does not throw on a successful contended acquire', async () => {
+      global.fetch = async () =>
+        _make_response({
+          body: { acquired: false, machine_id: 'storage_test', lease_token: 1 }
+        })
+      // A foreign-held lease is not a lease-store outage; the route's
+      // write-check then handles it (403/redirect).
+      await acquire_session_lease_strict({ thread_id: 't-strict-contend' })
+    })
+  })
+
   describe('coemit_renew_session_lease', () => {
     it('renews using cached owned lease_token', async () => {
       global.fetch = async () =>
@@ -224,7 +272,11 @@ describe('libs-server/threads/session-lease-coemit', function () {
         if (url.endsWith('/lease/acquire')) {
           // Acquire request fails because storage holds it
           return _make_response({
-            body: { acquired: false, machine_id: 'storage_test', lease_token: 99 }
+            body: {
+              acquired: false,
+              machine_id: 'storage_test',
+              lease_token: 99
+            }
           })
         }
         return _make_response({ status: 500, body: { error: 'unexpected' } })

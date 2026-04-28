@@ -32,10 +32,12 @@ import { check_thread_permission } from '#server/middleware/permission/index.mjs
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
 import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import {
-  coemit_acquire_session_lease,
+  acquire_session_lease_strict,
   coemit_renew_session_lease,
   coemit_release_session_lease
 } from '#libs-server/threads/session-lease-coemit.mjs'
+import { LeaseStoreUnreachable } from '#libs-server/threads/lease-client.mjs'
+import { send_lease_unreachable } from '#server/lib/threads/lease-routing.mjs'
 
 const log = debug('api:active-sessions')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -222,8 +224,7 @@ router.get('/', async (req, res) => {
         session_id: metadata.external_session?.session_id || null,
         thread_id,
         job_id: metadata.job_id || null,
-        status:
-          SESSION_STATUS_DISPLAY_MAP[metadata.session_status] || 'active',
+        status: SESSION_STATUS_DISPLAY_MAP[metadata.session_status] || 'active',
         thread_state: metadata.thread_state || null,
         working_directory:
           metadata.external_session?.provider_metadata?.working_directory ||
@@ -458,10 +459,17 @@ router.post('/', require_hook_auth, async (req, res) => {
     }
 
     if (session.thread_id) {
-      await coemit_acquire_session_lease({
-        thread_id: session.thread_id,
-        session_id
-      })
+      try {
+        await acquire_session_lease_strict({
+          thread_id: session.thread_id,
+          session_id
+        })
+      } catch (error) {
+        if (error instanceof LeaseStoreUnreachable) {
+          return send_lease_unreachable(res, error)
+        }
+        throw error
+      }
     }
 
     log_lifecycle(

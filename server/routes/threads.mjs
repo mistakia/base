@@ -52,13 +52,15 @@ import embedded_index_manager from '#libs-server/embedded-database-index/embedde
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { handle_errors } from '#libs-server/utils/api-error.mjs'
 import {
-  coemit_acquire_session_lease,
+  acquire_session_lease_strict,
   coemit_renew_session_lease,
   coemit_release_session_lease
 } from '#libs-server/threads/session-lease-coemit.mjs'
+import { LeaseStoreUnreachable } from '#libs-server/threads/lease-client.mjs'
 import {
   apply_read_lease_routing,
-  check_write_lease_routing
+  check_write_lease_routing,
+  send_lease_unreachable
 } from '#server/lib/threads/lease-routing.mjs'
 
 const router = express.Router()
@@ -580,7 +582,11 @@ router.put(
       // by a legitimate user should redirect to the lease holder, not 403.
       const write_check = await check_write_lease_routing({
         thread_id,
-        patches: { thread_state, archive_reason, archived_at: archive_reason ? Date.now() : undefined },
+        patches: {
+          thread_state,
+          archive_reason,
+          archived_at: archive_reason ? Date.now() : undefined
+        },
         req,
         res
       })
@@ -776,7 +782,10 @@ router.post('/create-session', async (req, res) => {
     // a post-session sync hook to backfill it.
     const create_execution =
       execution_mode === 'container_user'
-        ? build_execution_attribution({ environment: 'controlled_container', username })
+        ? build_execution_attribution({
+            environment: 'controlled_container',
+            username
+          })
         : execution_mode === 'container'
           ? build_execution_attribution({
               environment: 'controlled_container',
@@ -873,9 +882,18 @@ router.put(
 
       // Acquire before the write-lease check so queued/starting writes see a
       // populated lease snapshot; otherwise field-ownership records a
-      // violation per session-owned field.
+      // violation per session-owned field. Use the strict variant so a
+      // transient lease-store outage surfaces as 503 + Retry-After instead
+      // of falling through to a 403 from the write-check (in enforce mode).
       if (session_status === 'queued' || session_status === 'starting') {
-        await coemit_acquire_session_lease({ thread_id, session_id })
+        try {
+          await acquire_session_lease_strict({ thread_id, session_id })
+        } catch (error) {
+          if (error instanceof LeaseStoreUnreachable) {
+            return send_lease_unreachable(res, error)
+          }
+          throw error
+        }
       }
 
       const write_check = await check_write_lease_routing({
