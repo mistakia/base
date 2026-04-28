@@ -172,11 +172,16 @@ const check_and_mark_if_exhausted = async (job_id, account) => {
 /**
  * Update session_status in a thread's metadata.json via shared patch function.
  */
-const update_thread_session_status = async ({ thread_id, session_status }) => {
+const update_thread_session_status = async ({
+  thread_id,
+  session_status,
+  caller_flag = {}
+}) => {
   try {
     await patch_thread_metadata({
       thread_id,
-      patches: { session_status }
+      patches: { session_status },
+      caller_flag
     })
   } catch (error) {
     log(
@@ -597,11 +602,14 @@ const handle_job_completed = async (job, result) => {
 const handle_job_failed = async (job, error) => {
   log(`Job ${job.id}: failed -`, error.message)
 
-  // Update thread session_status to 'failed'
+  // Update thread session_status to 'failed'. Marked terminal_lifecycle so
+  // the field-ownership check exempts it: a job that failed to acquire a
+  // lease cannot hold one, but the failure still needs to be recorded.
   if (job.data.thread_id) {
     await update_thread_session_status({
       thread_id: job.data.thread_id,
-      session_status: 'failed'
+      session_status: 'failed',
+      caller_flag: { terminal_lifecycle: true }
     })
   }
 

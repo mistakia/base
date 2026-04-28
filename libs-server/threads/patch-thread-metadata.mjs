@@ -22,7 +22,11 @@ const log = debug('threads:patch-metadata')
  * @throws {Error} If thread metadata cannot be read or concurrent writers
  *   exhaust retry budget (error.code === 'EMTIME_CONFLICT').
  */
-const patch_thread_metadata = async ({ thread_id, patches }) => {
+const patch_thread_metadata = async ({
+  thread_id,
+  patches,
+  caller_flag = {}
+}) => {
   const user_base_directory = get_user_base_directory()
   const thread_base_directory = get_thread_base_directory({
     user_base_directory
@@ -32,7 +36,8 @@ const patch_thread_metadata = async ({ thread_id, patches }) => {
   check_thread_fields_writable({
     thread_id,
     fields: Object.keys(patches),
-    op: 'patch'
+    op: 'patch',
+    caller_flag
   })
 
   const updated_metadata = await write_thread_metadata({

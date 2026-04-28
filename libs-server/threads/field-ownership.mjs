@@ -166,6 +166,13 @@ export const check_writable = ({
   if (caller_flag.bulk_import === true) {
     return { allowed: true, reason: 'bulk-import-exempt' }
   }
+  // Terminal lifecycle writes (e.g. job-worker marking a failed job's
+  // session_status='failed' after acquire_lease itself failed) cannot
+  // hold a lease by definition. Exempting them is a prerequisite for
+  // enabling field_ownership_enforce.
+  if (caller_flag.terminal_lifecycle === true) {
+    return { allowed: true, reason: 'terminal-lifecycle-exempt' }
+  }
 
   const klass = classify_field(field)
   let allowed = true
