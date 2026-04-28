@@ -14,7 +14,9 @@ import {
 } from '#libs-server/threads/lease-client.mjs'
 import config from '#config'
 
-const _setup_remote_storage = ({ base_url = 'https://storage.test:8443' } = {}) => {
+const _setup_remote_storage = ({
+  base_url = 'https://storage.test:8443'
+} = {}) => {
   const original_registry = config.machine_registry
   config.machine_registry = {
     macbook_test: {
@@ -183,8 +185,7 @@ describe('libs-server/threads/lease-client', function () {
 
     it('release_lease clears the snapshot on success', async () => {
       restore_registry = _setup_remote_storage()
-      global.fetch = async () =>
-        _make_response({ body: { released: true } })
+      global.fetch = async () => _make_response({ body: { released: true } })
       // Seed cache via inspect
       global.fetch = async () =>
         _make_response({
@@ -194,8 +195,7 @@ describe('libs-server/threads/lease-client', function () {
       expect(get_cached_lease_snapshot({ thread_id: 't-rel' })).to.not.equal(
         null
       )
-      global.fetch = async () =>
-        _make_response({ body: { released: true } })
+      global.fetch = async () => _make_response({ body: { released: true } })
       const result = await release_lease({
         thread_id: 't-rel',
         lease_token: 4
@@ -272,8 +272,7 @@ describe('libs-server/threads/lease-client', function () {
           }
         })
       await inspect_lease({ thread_id: 't-renew-fail' })
-      global.fetch = async () =>
-        _make_response({ body: { renewed: false } })
+      global.fetch = async () => _make_response({ body: { renewed: false } })
       await renew_lease({
         thread_id: 't-renew-fail',
         lease_token: 9,
@@ -312,7 +311,7 @@ describe('libs-server/threads/lease-client', function () {
         err = e
       }
       expect(err).to.be.instanceOf(LeaseStoreUnreachable)
-      expect(calls).to.equal(3)
+      expect(calls).to.equal(5)
     })
 
     it('inspect_lease propagates HTTP error without retry', async () => {
@@ -331,6 +330,49 @@ describe('libs-server/threads/lease-client', function () {
       expect(err).to.exist
       expect(err.message).to.match(/500/)
       expect(calls).to.equal(1)
+    })
+
+    it('classifies 5xx HTTP responses as LeaseStoreUnreachable', async () => {
+      restore_registry = _setup_remote_storage()
+      global.fetch = async () =>
+        _make_response({ status: 503, body: { error: 'down' } })
+      let err
+      try {
+        await inspect_lease({ thread_id: 't-503' })
+      } catch (e) {
+        err = e
+      }
+      expect(err).to.be.instanceOf(LeaseStoreUnreachable)
+      expect(err.status).to.equal(503)
+    })
+
+    it('classifies fetch network errors as LeaseStoreUnreachable', async () => {
+      restore_registry = _setup_remote_storage()
+      global.fetch = async () => {
+        throw new TypeError('connect ECONNREFUSED')
+      }
+      let err
+      try {
+        await inspect_lease({ thread_id: 't-net' })
+      } catch (e) {
+        err = e
+      }
+      expect(err).to.be.instanceOf(LeaseStoreUnreachable)
+    })
+
+    it('classifies definitive 4xx as a non-transient Error', async () => {
+      restore_registry = _setup_remote_storage()
+      global.fetch = async () =>
+        _make_response({ status: 403, body: { error: 'forbidden' } })
+      let err
+      try {
+        await inspect_lease({ thread_id: 't-403' })
+      } catch (e) {
+        err = e
+      }
+      expect(err).to.exist
+      expect(err).to.not.be.instanceOf(LeaseStoreUnreachable)
+      expect(err.status).to.equal(403)
     })
   })
 })

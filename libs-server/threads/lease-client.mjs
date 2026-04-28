@@ -88,12 +88,10 @@ const _http_request = async ({ method, path, body }) => {
   const token = get_service_token({ machine_id: current_machine_id })
   const url = `${base_url.replace(/\/+$/, '')}${path}`
   const controller = new AbortController()
-  const timer = setTimeout(
-    () => controller.abort(),
-    DEFAULT_REQUEST_TIMEOUT_MS
-  )
+  const timer = setTimeout(() => controller.abort(), DEFAULT_REQUEST_TIMEOUT_MS)
+  let response
   try {
-    const response = await fetch(url, {
+    response = await fetch(url, {
       method,
       headers: {
         Authorization: `Bearer ${token}`,
@@ -102,29 +100,45 @@ const _http_request = async ({ method, path, body }) => {
       body: body == null ? undefined : JSON.stringify(body),
       signal: controller.signal
     })
-    const text = await response.text()
-    let payload = null
-    if (text) {
-      try {
-        payload = JSON.parse(text)
-      } catch {
-        payload = { raw: text }
-      }
-    }
-    if (!response.ok) {
-      const err = new Error(
-        `lease HTTP ${method} ${path} failed: ${response.status} ${
-          payload?.error || response.statusText
-        }`
-      )
-      err.status = response.status
-      err.payload = payload
-      throw err
-    }
-    return payload
+  } catch (cause) {
+    // Network-level failure (DNS, connect refused, TLS, abort/timeout). The
+    // store may be reachable on retry; surface as transient so callers in
+    // enforce mode can answer 503 instead of 403.
+    throw new LeaseStoreUnreachable(
+      `lease HTTP ${method} ${path} network error: ${cause.message}`,
+      { cause }
+    )
   } finally {
     clearTimeout(timer)
   }
+  const text = await response.text()
+  let payload = null
+  if (text) {
+    try {
+      payload = JSON.parse(text)
+    } catch {
+      payload = { raw: text }
+    }
+  }
+  if (!response.ok) {
+    // 5xx and 408/429 indicate the store is up but momentarily unable to
+    // serve; treat as transient. 4xx (other) is a definitive client/auth
+    // error -- propagate the typed Error so callers can branch on .status.
+    const transient =
+      response.status >= 500 ||
+      response.status === 408 ||
+      response.status === 429
+    const message = `lease HTTP ${method} ${path} failed: ${response.status} ${
+      payload?.error || response.statusText
+    }`
+    const err = transient
+      ? new LeaseStoreUnreachable(message)
+      : new Error(message)
+    err.status = response.status
+    err.payload = payload
+    throw err
+  }
+  return payload
 }
 
 export const acquire_lease = async ({

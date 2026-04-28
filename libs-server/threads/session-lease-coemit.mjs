@@ -1,10 +1,17 @@
-// All helpers are best-effort: errors are swallowed with debug logs so a
+// Most helpers are best-effort: errors are swallowed with debug logs so a
 // transient lease-store outage never fails a hook PUT. Ownership is checked
 // against the lease-client snapshot cache before every operation because
 // inspect_lease and contended acquire_lease both populate the cache with
 // foreign-owned records (`{acquired: false, machine_id: <other>, ...}`),
 // which would otherwise cause us to skip acquisitions or extend leases we
 // do not own.
+//
+// `acquire_session_lease_strict` is the exception: SessionStart-style routes
+// must distinguish a transient lease-store outage (caller should retry) from
+// a definitive contention or success (caller should proceed). It rethrows
+// `LeaseStoreUnreachable` so the route layer can answer 503 + Retry-After in
+// enforce mode; all other errors are still swallowed so a missing service
+// token or unexpected 4xx does not crash a SessionStart.
 
 import debug from 'debug'
 
@@ -16,7 +23,8 @@ import {
   release_lease,
   bind_session_id,
   inspect_lease,
-  get_cached_lease_snapshot
+  get_cached_lease_snapshot,
+  LeaseStoreUnreachable
 } from '#libs-server/threads/lease-client.mjs'
 
 const log = debug('threads:session-lease-coemit')
@@ -40,10 +48,9 @@ const _get_owned_snapshot = ({ thread_id, machine_id }) => {
   return snap
 }
 
-export const coemit_acquire_session_lease = async ({
-  thread_id,
-  session_id = null
-}) => {
+// Internal: the shared acquire body. `strict=true` rethrows
+// LeaseStoreUnreachable; otherwise all errors are swallowed.
+const _acquire_session_lease = async ({ thread_id, session_id, strict }) => {
   if (!thread_id) return
   const machine_id = get_current_machine_id()
   if (!machine_id) {
@@ -62,6 +69,7 @@ export const coemit_acquire_session_lease = async ({
           session_id
         })
       } catch (error) {
+        if (strict && error instanceof LeaseStoreUnreachable) throw error
         log('bind_session_id failed for %s: %s', thread_id, error.message)
       }
     }
@@ -86,9 +94,23 @@ export const coemit_acquire_session_lease = async ({
       )
     }
   } catch (error) {
+    if (strict && error instanceof LeaseStoreUnreachable) throw error
     log('acquire failed for %s: %s', thread_id, error.message)
   }
 }
+
+export const coemit_acquire_session_lease = ({
+  thread_id,
+  session_id = null
+}) => _acquire_session_lease({ thread_id, session_id, strict: false })
+
+// Strict variant for SessionStart-style routes. Rethrows LeaseStoreUnreachable
+// so the caller can answer 503 + Retry-After when field-ownership enforcement
+// is on. All other errors are still swallowed (best-effort).
+export const acquire_session_lease_strict = ({
+  thread_id,
+  session_id = null
+}) => _acquire_session_lease({ thread_id, session_id, strict: true })
 
 export const coemit_renew_session_lease = async ({ thread_id }) => {
   if (!thread_id) return
@@ -98,7 +120,10 @@ export const coemit_renew_session_lease = async ({ thread_id }) => {
     return
   }
   try {
-    let lease_token = _get_owned_snapshot({ thread_id, machine_id })?.lease_token
+    let lease_token = _get_owned_snapshot({
+      thread_id,
+      machine_id
+    })?.lease_token
     let recovered = false
     if (lease_token == null) {
       const lease = await inspect_lease({ thread_id })

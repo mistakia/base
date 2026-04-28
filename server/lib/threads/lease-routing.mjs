@@ -1,11 +1,27 @@
 import debug from 'debug'
 import config from '#config'
-import { inspect_lease } from '#libs-server/threads/lease-client.mjs'
+import {
+  inspect_lease,
+  LeaseStoreUnreachable
+} from '#libs-server/threads/lease-client.mjs'
 import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
-import { classify_field } from '#libs-server/threads/field-ownership.mjs'
-import { check_writable } from '#libs-server/threads/field-ownership.mjs'
+import {
+  classify_field,
+  check_writable
+} from '#libs-server/threads/field-ownership.mjs'
 
 const log = debug('api:threads:lease-routing')
+
+const LEASE_UNREACHABLE_RETRY_AFTER_SECONDS = 5
+
+export const send_lease_unreachable = (res, error) => {
+  res.set('Retry-After', String(LEASE_UNREACHABLE_RETRY_AFTER_SECONDS))
+  res.status(503).json({
+    error: 'lease_store_unreachable',
+    reason: error.message,
+    retry_after_seconds: LEASE_UNREACHABLE_RETRY_AFTER_SECONDS
+  })
+}
 
 const _base_url_for = (machine_id) =>
   config.machine_registry?.[machine_id]?.base_url || null
@@ -52,7 +68,12 @@ export const apply_read_lease_routing = async ({ thread_id, req, res }) => {
 // immediately without performing any writes; partial-success semantics are
 // not defined. The TOCTOU window is intrinsic to the lease/HTTP boundary;
 // strict atomicity would require gating the write at the storage tier.
-export const check_write_lease_routing = async ({ thread_id, patches, req, res }) => {
+export const check_write_lease_routing = async ({
+  thread_id,
+  patches,
+  req,
+  res
+}) => {
   const fields = Object.keys(patches || {})
   if (fields.length === 0) return { block: false }
 
@@ -61,6 +82,13 @@ export const check_write_lease_routing = async ({ thread_id, patches, req, res }
     lease = await inspect_lease({ thread_id })
   } catch (err) {
     log('inspect_lease failed for write check %s: %s', thread_id, err.message)
+    // In enforce mode, a write that we cannot validate against the lease
+    // store would otherwise hard-reject as 403 (no local lease snapshot).
+    // 503 + Retry-After lets the hook caller back off and retry instead.
+    if (err instanceof LeaseStoreUnreachable && _is_enforce_mode()) {
+      send_lease_unreachable(res, err)
+      return { block: true }
+    }
   }
 
   const current = get_current_machine_id()
@@ -85,7 +113,9 @@ export const check_write_lease_routing = async ({ thread_id, patches, req, res }
     if (klass === 'session-owned') {
       log(
         'write blocked: session-owned field=%s thread=%s holder=%s',
-        field, thread_id, holder
+        field,
+        thread_id,
+        holder
       )
       res.status(403).json({
         error: 'lease_violation',
@@ -106,7 +136,9 @@ export const check_write_lease_routing = async ({ thread_id, patches, req, res }
 
     log(
       'write conflict: lifecycle/analyzer field=%s thread=%s holder=%s no base_url',
-      field, thread_id, holder
+      field,
+      thread_id,
+      holder
     )
     res.status(409).json({
       error: 'lease_conflict',
