@@ -118,4 +118,23 @@ describe('get_expected_type_for_path', () => {
     expect(DIRECTORY_TYPE_MAP.workflow).to.equal('workflow')
     expect(DIRECTORY_TYPE_MAP.task).to.equal('task')
   })
+
+  it('maps kebab-case multi-word directories to snake_case schema type_name', () => {
+    expect(
+      get_expected_type_for_path({
+        absolute_path: path.join(test_user_dir.path, 'physical-item', 'x.md')
+      })
+    ).to.equal('physical_item')
+    expect(
+      get_expected_type_for_path({
+        absolute_path: path.join(
+          test_user_dir.path,
+          'physical-location',
+          'home.md'
+        )
+      })
+    ).to.equal('physical_location')
+    expect(DIRECTORY_TYPE_MAP['physical-item']).to.equal('physical_item')
+    expect(DIRECTORY_TYPE_MAP['physical-location']).to.equal('physical_location')
+  })
 })
