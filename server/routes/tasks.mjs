@@ -12,6 +12,7 @@ import {
   read_task_from_filesystem
 } from '#libs-server/task/index.mjs'
 import { write_entity_to_filesystem } from '#libs-server/entity/filesystem/write-entity-to-filesystem.mjs'
+import { load_schema_definitions_from_filesystem } from '#libs-server/repository/filesystem/load-schema-definitions-from-filesystem.mjs'
 import { resolve_base_uri_from_registry } from '#libs-server/base-uri/index.mjs'
 import { TASK_STATUS, TASK_PRIORITY } from '#libs-shared/task-constants.mjs'
 import { process_task_table_request } from '#server/lib/tasks/process-task-table-request.mjs'
@@ -551,8 +552,30 @@ router.patch('/', async (req, res) => {
       return res.status(400).json({ error: 'properties object is required' })
     }
 
-    // Whitelist allowed fields for update
-    const allowed_fields = [
+    // Read existing entity (not task-specific, to preserve non-task types)
+    const entity = await read_task_from_filesystem({ base_uri })
+
+    if (!entity.success) {
+      return res.status(404).json({ error: entity.error || 'Entity not found' })
+    }
+
+    // Check write permission
+    const permission_result = await check_permission({
+      user_public_key,
+      resource_path: base_uri
+    })
+
+    if (!permission_result.write.allowed) {
+      return res.status(403).json({ error: 'Permission denied' })
+    }
+
+    const entity_type = entity.entity_properties.type
+    const is_task = entity_type === 'task'
+
+    // Build allowlist: universal mutable fields + schema-defined frontmatter fields
+    // for the resolved entity type. Identity/timestamp fields are never settable
+    // via PATCH regardless of schema (denied below).
+    const universal_fields = [
       'status',
       'priority',
       'tags',
@@ -567,22 +590,50 @@ router.patch('/', async (req, res) => {
       'started_at',
       'finished_at'
     ]
-    const update_properties = {}
+    const denied_fields = new Set([
+      'entity_id',
+      'type',
+      'base_uri',
+      'created_at',
+      'updated_at',
+      'public_read',
+      'user_public_key'
+    ])
 
-    for (const field of allowed_fields) {
-      if (field in properties) {
+    let schema_field_names = []
+    try {
+      const schemas = await load_schema_definitions_from_filesystem()
+      const schema = schemas[entity_type]
+      if (schema && Array.isArray(schema.properties)) {
+        schema_field_names = schema.properties
+          .map((p) => p && p.name)
+          .filter((name) => typeof name === 'string')
+      }
+    } catch (err) {
+      log('Schema load failed for type %s: %s', entity_type, err.message)
+    }
+
+    const allowed_fields = new Set(
+      [...universal_fields, ...schema_field_names].filter(
+        (name) => !denied_fields.has(name)
+      )
+    )
+
+    const update_properties = {}
+    for (const field of Object.keys(properties)) {
+      if (allowed_fields.has(field)) {
         update_properties[field] = properties[field]
       }
     }
 
     if (Object.keys(update_properties).length === 0) {
       return res.status(400).json({
-        error: `No valid properties to update. Allowed fields: ${allowed_fields.join(', ')}`
+        error: `No valid properties to update for entity type "${entity_type}". Allowed fields: ${[...allowed_fields].sort().join(', ')}`
       })
     }
 
-    // Validate status value
-    if ('status' in update_properties) {
+    // Validate status value (task-specific enum)
+    if (is_task && 'status' in update_properties) {
       const valid_statuses = Object.values(TASK_STATUS)
       if (!valid_statuses.includes(update_properties.status)) {
         return res.status(400).json({
@@ -591,8 +642,8 @@ router.patch('/', async (req, res) => {
       }
     }
 
-    // Validate priority value
-    if ('priority' in update_properties) {
+    // Validate priority value (task-specific enum)
+    if (is_task && 'priority' in update_properties) {
       const valid_priorities = Object.values(TASK_PRIORITY)
       if (!valid_priorities.includes(update_properties.priority)) {
         return res.status(400).json({
@@ -613,26 +664,6 @@ router.patch('/', async (req, res) => {
         })
       }
     }
-
-    // Read existing entity (not task-specific, to preserve non-task types)
-    const entity = await read_task_from_filesystem({ base_uri })
-
-    if (!entity.success) {
-      return res.status(404).json({ error: entity.error || 'Entity not found' })
-    }
-
-    // Check write permission
-    const permission_result = await check_permission({
-      user_public_key,
-      resource_path: base_uri
-    })
-
-    if (!permission_result.write.allowed) {
-      return res.status(403).json({ error: 'Permission denied' })
-    }
-
-    const entity_type = entity.entity_properties.type
-    const is_task = entity_type === 'task'
 
     // Merge properties and write back
     const now = new Date().toISOString()

@@ -409,4 +409,113 @@ describe('API /tasks PATCH', () => {
       expect(entity_result.entity_properties).to.not.have.property('priority')
     })
   })
+
+  describe('schema-driven field updates', () => {
+    let physical_item_base_uri
+
+    beforeEach(async () => {
+      // Seed the physical_item schema so the route's schema-driven allowlist
+      // recognizes amazon_order_id / amazon_asin in this isolated test repo.
+      const schema_dir = path.join(test_directories.system_path, 'system', 'schema')
+      fs.mkdirSync(schema_dir, { recursive: true })
+      const schema_path = path.join(schema_dir, 'physical-item.md')
+      const schema_md = `---
+title: Physical Item Schema
+type: type_definition
+type_name: physical_item
+extends: entity
+properties:
+  - name: amazon_order_id
+    type: string
+    required: false
+  - name: amazon_asin
+    type: string
+    required: false
+base_uri: sys:system/schema/physical-item.md
+entity_id: 0eb4ada8-d30f-40a8-ad31-e60a3110a8d4
+created_at: '2025-08-16T17:56:08.204Z'
+updated_at: '2026-04-28T00:00:00.000Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
+---
+
+Physical Item schema for tests.
+`
+      fs.writeFileSync(schema_path, schema_md)
+
+      physical_item_base_uri = 'user:physical-item/test-amazon-item.md'
+      const absolute_path = resolve_base_uri(physical_item_base_uri)
+      fs.mkdirSync(path.dirname(absolute_path), { recursive: true })
+
+      await write_entity_to_filesystem({
+        absolute_path,
+        entity_properties: {
+          title: 'Test Amazon Item',
+          description: 'A physical item for testing schema-driven PATCH',
+          base_uri: physical_item_base_uri,
+          user_public_key: owner_user.user_public_key,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        },
+        entity_type: 'physical_item',
+        entity_content: ''
+      })
+    })
+
+    it('should update physical_item amazon_order_id and amazon_asin', async () => {
+      const res = await request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: physical_item_base_uri,
+          properties: {
+            amazon_order_id: '123-4567890-1234567',
+            amazon_asin: 'B09XS6RGBN'
+          }
+        })
+
+      expect(res.status).to.equal(200)
+      expect(res.body.updated_properties.amazon_order_id).to.equal(
+        '123-4567890-1234567'
+      )
+      expect(res.body.updated_properties.amazon_asin).to.equal('B09XS6RGBN')
+
+      const absolute_path = resolve_base_uri(physical_item_base_uri)
+      const entity_result = await read_entity_from_filesystem({ absolute_path })
+      expect(entity_result.success).to.be.true
+      expect(entity_result.entity_properties.type).to.equal('physical_item')
+      expect(entity_result.entity_properties.amazon_order_id).to.equal(
+        '123-4567890-1234567'
+      )
+      expect(entity_result.entity_properties.amazon_asin).to.equal('B09XS6RGBN')
+    })
+
+    it('should reject fields not defined by the entity schema', async () => {
+      const res = await request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: physical_item_base_uri,
+          properties: { not_a_real_field: 'value' }
+        })
+
+      expect(res.status).to.equal(400)
+      res.body.error.should.include('No valid properties')
+    })
+
+    it('should never accept identity/timestamp fields via PATCH', async () => {
+      const res = await request(server)
+        .patch('/api/tasks')
+        .set('Authorization', `Bearer ${owner_user.jwt_token}`)
+        .send({
+          base_uri: physical_item_base_uri,
+          properties: {
+            entity_id: 'forged-id',
+            type: 'task',
+            created_at: '2000-01-01T00:00:00Z'
+          }
+        })
+
+      expect(res.status).to.equal(400)
+    })
+  })
 })
