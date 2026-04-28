@@ -44,6 +44,7 @@ import {
 } from '#libs-server/search/embedding-pipeline.mjs'
 import { create_sync_metrics } from '#libs-server/embedded-database-index/sync/sync-metrics.mjs'
 import { run_reconcile_sweep } from '#libs-server/embedded-database-index/sync/reconcile-sweep.mjs'
+import { run_reconcile_thread_sweep } from '#libs-server/embedded-database-index/sync/reconcile-thread-sweep.mjs'
 
 const log = debug('index-sync')
 
@@ -337,27 +338,29 @@ export const start_index_sync_service = async () => {
   const reconcile_config = config.embedded_index?.reconcile || {}
   const reconcile_interval_ms = reconcile_config.interval_ms ?? 180000
   const reconcile_startup_delay_ms = reconcile_config.startup_delay_ms ?? 30000
+  const run_both_sweeps = () => {
+    run_reconcile_sweep({ verbose: false }).catch((error) => {
+      log('Reconcile sweep error: %s', error.message)
+    })
+    run_reconcile_thread_sweep({ verbose: false }).catch((error) => {
+      log('Thread reconcile sweep error: %s', error.message)
+    })
+  }
   if (reconcile_interval_ms > 0) {
     reconcile_startup_timer = setTimeout(() => {
       reconcile_startup_timer = null
-      run_reconcile_sweep({ verbose: false }).catch((error) => {
-        log('Reconcile sweep error: %s', error.message)
-      })
-      reconcile_interval = setInterval(() => {
-        run_reconcile_sweep({ verbose: false }).catch((error) => {
-          log('Reconcile sweep error: %s', error.message)
-        })
-      }, reconcile_interval_ms)
+      run_both_sweeps()
+      reconcile_interval = setInterval(run_both_sweeps, reconcile_interval_ms)
       if (reconcile_interval.unref) reconcile_interval.unref()
     }, reconcile_startup_delay_ms)
     if (reconcile_startup_timer.unref) reconcile_startup_timer.unref()
     log(
-      'Reconcile sweep scheduled: startup_delay=%d ms interval=%d ms',
+      'Reconcile sweeps scheduled: startup_delay=%d ms interval=%d ms',
       reconcile_startup_delay_ms,
       reconcile_interval_ms
     )
   } else {
-    log('Reconcile sweep disabled (interval_ms=0)')
+    log('Reconcile sweeps disabled (interval_ms=0)')
   }
 
   metrics.timing('startup', Date.now() - startup_start)

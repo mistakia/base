@@ -10,6 +10,7 @@ import {
 import { read_timeline_jsonl_from_offset } from '#libs-server/threads/timeline/index.mjs'
 import { create_keyed_debouncer } from '#libs-server/utils/debounce-by-key.mjs'
 import { create_parcel_subscription } from '#libs-server/file-subscriptions/parcel-watcher-adapter.mjs'
+import { run_reconcile_thread_sweep } from '#libs-server/embedded-database-index/sync/reconcile-thread-sweep.mjs'
 import { index_thread_metadata } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
 import { ACTIVE_SESSION_STATUSES } from '#libs-shared/session-status-display.mjs'
@@ -732,6 +733,12 @@ const schedule_reconciliation = (thread_directory) => {
     reconciliation_timer = null
     reconcile_tracked_threads(thread_directory).catch((error) => {
       log('Reconciliation scan failed: %O', error)
+    })
+    // Also trigger a full thread sweep so new thread directories created
+    // during the FSEvents drop window (which last_seen_state has never
+    // observed) are picked up. The sweep has its own single-flight guard.
+    run_reconcile_thread_sweep({ verbose: false }).catch((error) => {
+      log('Thread reconcile sweep failed: %O', error)
     })
   }, RECONCILIATION_DEBOUNCE_MS)
 }
