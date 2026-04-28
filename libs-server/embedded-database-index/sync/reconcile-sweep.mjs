@@ -12,11 +12,13 @@ import {
   filter_entity_files,
   get_submodule_exclusion_prefixes
 } from './index-sync-filters.mjs'
+import {
+  DRIFT_TOLERANCE_MS,
+  SYNC_CONCURRENCY,
+  run_with_concurrency
+} from './sweep-utils.mjs'
 
 const log = debug('embedded-index:sync:reconcile-sweep')
-
-const DRIFT_TOLERANCE_MS = 1000
-const SYNC_CONCURRENCY = 8
 
 let sweep_in_progress = false
 
@@ -132,21 +134,6 @@ async function sync_one({
     return { synced: false, error: 'sync_entity failed' }
   }
   return { synced: true }
-}
-
-async function run_with_concurrency({ items, limit, worker }) {
-  let index = 0
-  const runners = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (true) {
-        const current = index++
-        if (current >= items.length) return
-        await worker(items[current])
-      }
-    }
-  )
-  await Promise.all(runners)
 }
 
 // Single-flight: re-entry while a sweep is active returns {ran: false}.

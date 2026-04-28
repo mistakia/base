@@ -5,13 +5,17 @@ import debug from 'debug'
 import config from '#config'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
 import { execute_sqlite_query } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
+import {
+  DRIFT_TOLERANCE_MS,
+  SYNC_CONCURRENCY,
+  run_with_concurrency
+} from './sweep-utils.mjs'
 
 const log = debug('embedded-index:sync:reconcile-thread-sweep')
 
-const DRIFT_TOLERANCE_MS = 1000
-const SYNC_CONCURRENCY = 8
 const THREAD_DIR_NAME = 'thread'
 const METADATA_FILE_NAME = 'metadata.json'
+const STAT_CONCURRENCY = 32
 
 let sweep_in_progress = false
 
@@ -29,18 +33,26 @@ async function build_file_map({ user_base_directory }) {
     return file_map
   }
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue
-    const metadata_path = path.join(thread_dir, entry.name, METADATA_FILE_NAME)
-    try {
-      const stat = await fs.stat(metadata_path)
-      file_map.set(entry.name, stat.mtimeMs)
-    } catch (error) {
-      if (error.code !== 'ENOENT') {
-        log('Error stat %s: %s', metadata_path, error.message)
+  const dir_entries = entries.filter((entry) => entry.isDirectory())
+  await run_with_concurrency({
+    items: dir_entries,
+    limit: STAT_CONCURRENCY,
+    worker: async (entry) => {
+      const metadata_path = path.join(
+        thread_dir,
+        entry.name,
+        METADATA_FILE_NAME
+      )
+      try {
+        const stat = await fs.stat(metadata_path)
+        file_map.set(entry.name, stat.mtimeMs)
+      } catch (error) {
+        if (error.code !== 'ENOENT') {
+          log('Error stat %s: %s', metadata_path, error.message)
+        }
       }
     }
-  }
+  })
 
   return file_map
 }
@@ -100,21 +112,6 @@ async function sync_one({
   }
 }
 
-async function run_with_concurrency({ items, limit, worker }) {
-  let index = 0
-  const runners = Array.from(
-    { length: Math.min(limit, items.length) },
-    async () => {
-      while (true) {
-        const current = index++
-        if (current >= items.length) return
-        await worker(items[current])
-      }
-    }
-  )
-  await Promise.all(runners)
-}
-
 // Single-flight: re-entry while a sweep is active returns {ran: false}.
 // Independent from the entity sweep flag so a slow thread walk does not
 // block entity reconciliation and vice versa.
@@ -152,7 +149,7 @@ export async function run_reconcile_thread_sweep({
   let missing_count = 0
   let drift_count = 0
   let orphan_count = 0
-  let orphan_logged_count = 0
+  let orphans_detected = 0
   let error_count = 0
   let duration_ms = 0
 
@@ -205,6 +202,7 @@ export async function run_reconcile_thread_sweep({
     for (const thread_id of db_map.keys()) {
       if (!file_map.has(thread_id)) orphan_ids.push(thread_id)
     }
+    orphans_detected = orphan_ids.length
 
     if (orphan_removal_enabled) {
       await run_with_concurrency({
@@ -221,21 +219,24 @@ export async function run_reconcile_thread_sweep({
           }
         }
       })
-    } else {
-      orphan_logged_count = orphan_ids.length
-      if (orphan_logged_count > 0) {
-        log(
-          'Thread orphan removal disabled; %d orphan rows detected (set embedded_index.reconcile.thread_remove_orphans=true to enable)',
-          orphan_logged_count
-        )
-      }
+    } else if (orphans_detected > 0) {
+      // Default-off: thread/ is a git submodule and a transient detached
+      // state could be misread as an orphan. Set
+      // embedded_index.reconcile.thread_remove_orphans=true to enable.
+      log(
+        'Thread orphan removal disabled; %d orphan rows detected',
+        orphans_detected
+      )
     }
 
     if (metrics) {
       metrics.increment('thread_reconcile_missing', missing_count)
       metrics.increment('thread_reconcile_drift', drift_count)
       metrics.increment('thread_reconcile_orphans', orphan_count)
-      metrics.increment('thread_reconcile_orphans_detected', orphan_logged_count)
+      metrics.increment(
+        'thread_reconcile_orphans_detected',
+        orphans_detected - orphan_count
+      )
       metrics.increment('thread_reconcile_errors', error_count)
     }
   } catch (error) {
@@ -252,7 +253,7 @@ export async function run_reconcile_thread_sweep({
       missing_count,
       drift_count,
       orphan_count,
-      orphan_logged_count,
+      orphans_detected,
       error_count
     )
   }
@@ -262,7 +263,7 @@ export async function run_reconcile_thread_sweep({
     missing: missing_count,
     drift: drift_count,
     orphaned: orphan_count,
-    orphans_detected: orphan_logged_count,
+    orphans_detected,
     errors: error_count,
     duration_ms
   }
