@@ -16,6 +16,8 @@ const CONFIG = {
       'title',
       'description',
       'user_public_key',
+      'amazon_order_id',
+      'amazon_asin',
       'home_area',
       'current_location',
       'home_activity'

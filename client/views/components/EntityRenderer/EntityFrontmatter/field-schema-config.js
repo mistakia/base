@@ -46,7 +46,7 @@ export const entity_field_schema = {
     storage_area: { type: 'string' },
     kit_name: { type: 'string' },
     storage_notes: { type: 'text' },
-    amazon_order_id: { type: 'text' },
-    amazon_asin: { type: 'text' }
+    amazon_order_id: { type: 'string' },
+    amazon_asin: { type: 'string' }
   }
 }
