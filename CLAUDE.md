@@ -529,6 +529,20 @@ The `base` CLI is distributed as a compiled Bun binary via `scripts/build.mjs`. 
 - **`existsSync` guards required**: Any filesystem access using code-relative paths (config loading, template files) must use `existsSync` checks since the code directory doesn't exist on disk.
 - **Dynamic imports work normally**: User-base content, extensions, and runtime-loaded modules are not bundled -- they load from disk at runtime as expected.
 
+## CLI Write-Path Routing
+
+`base entity update` and other write-path CLI commands route through HTTP (`api_mutate('/api/tasks', 'PATCH', ...)`) to the running `base-api` PM2 service. They are NOT direct filesystem operations. This means:
+
+- **Code changes to `server/routes/tasks.mjs`** (or any module it imports) do **not** take effect until `pm2 restart base-api`.
+- **The compiled `~/bin/base` binary is not the stale component** in this scenario. `~/bin/base` is a shell wrapper that exec's bun against `cli/base.mjs` and picks up source changes immediately -- no rebuild needed.
+- **The local-filesystem fallback** (`read_entity_from_filesystem` / `write_entity_to_filesystem`) only runs when the API is unreachable. If the API is up but stale, it silently serves stale behavior.
+
+**Debugging checklist when a CLI fix is in source but behavior has not changed:**
+
+1. Run `pm2 list` and compare `base-api` uptime against the relevant commit timestamp.
+2. If `base-api` started before the fix landed, run `pm2 restart base-api`.
+3. Do not suspect a binary build issue until after confirming PM2 is running current source.
+
 ## Git Workflow Rules
 
 **Use feature branches for non-trivial changes (default behavior):**
