@@ -14,12 +14,15 @@ import debug from 'debug'
 import yargs from 'yargs'
 import { hideBin } from 'yargs/helpers'
 
+import path from 'path'
+import fs_sync from 'fs'
 import config from '#config'
 import {
   add_directory_cli_options,
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 import { analyze_thread_relations } from '#libs-server/metadata/analyze-thread-relations.mjs'
+import { register_default_sqlite_path } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('cli:analyze-thread-relations')
 
@@ -71,6 +74,20 @@ const argv = add_directory_cli_options(yargs(hideBin(process.argv)))
 
 const main = async () => {
   handle_cli_directory_registration(argv)
+
+  // Register the default SQLite reader path so continuation detection can use
+  // the index instead of walking the full thread directory. This is needed when
+  // the CLI runs as a subprocess (e.g. spawned by backfill-thread-relations.mjs)
+  // where the embedded index manager is not initialised in-process.
+  const sqlite_path = path.join(
+    config.user_base_directory,
+    'embedded-database-index',
+    'sqlite.db'
+  )
+  if (fs_sync.existsSync(sqlite_path)) {
+    register_default_sqlite_path({ database_path: sqlite_path })
+    log('Registered default SQLite reader: %s', sqlite_path)
+  }
 
   let error
   try {

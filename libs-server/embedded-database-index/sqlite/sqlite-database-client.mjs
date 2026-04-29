@@ -182,6 +182,18 @@ export function is_sqlite_initialized() {
 }
 
 /**
+ * Returns true when a SQLite read can be served — either the write handle is
+ * live or a default reader path has been registered and the file exists on
+ * disk. Use this instead of is_sqlite_initialized() when read-only access is
+ * sufficient (e.g. continuation detection in CLI subprocess context).
+ */
+export function has_sqlite_reader() {
+  if (sqlite_database !== null) return true
+  if (!default_reader_path) return false
+  return fs_sync.existsSync(default_reader_path)
+}
+
+/**
  * Force a WAL checkpoint to persist all changes to the main database file.
  * This ensures data survives ungraceful shutdowns (e.g., SIGKILL from PM2).
  */

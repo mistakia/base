@@ -30,7 +30,8 @@ import {
 } from './continuation-signal.mjs'
 import {
   execute_sqlite_query,
-  is_sqlite_initialized
+  is_sqlite_initialized,
+  has_sqlite_reader
 } from '#libs-server/embedded-database-index/sqlite/sqlite-database-client.mjs'
 
 const log = debug('metadata:analyze-relations')
@@ -196,10 +197,15 @@ export async function detect_continuation_source({
   // stand up a temp user_base_directory, fresh installs before first sync) or
   // when the caller passed an explicit user_base_directory that may differ
   // from the indexed one.
+  //
+  // has_sqlite_reader() returns true when either the write handle is live OR a
+  // default reader path is registered (e.g. via register_default_sqlite_path in
+  // a CLI subprocess). This avoids the expensive filesystem fallback in contexts
+  // where the index manager is not running but the DB file exists on disk.
   const use_index =
     !user_base_directory &&
-    typeof is_sqlite_initialized === 'function' &&
-    is_sqlite_initialized()
+    typeof has_sqlite_reader === 'function' &&
+    has_sqlite_reader()
 
   const window_candidates = []
 
