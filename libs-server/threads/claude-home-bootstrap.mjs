@@ -4,8 +4,6 @@ import {
   copyFile,
   writeFile,
   access,
-  symlink,
-  readlink,
   readdir,
   lstat,
   unlink
@@ -449,12 +447,33 @@ export const provision_skills = async ({
 }
 
 /**
+ * Write settings.json into a claude-home directory.
+ *
+ * Removes a pre-existing symlink at the target before writing. writeFile
+ * follows symlinks, and earlier bootstrap versions created secondary
+ * settings.json as host-absolute symlinks back to the primary file -- those
+ * links resolve on the host but dangle inside the container, so a symlinked
+ * write would silently overwrite the primary file or skip writing entirely
+ * depending on link state.
+ */
+export const write_settings_idempotent = async (dir, settings_content) => {
+  const path = join(dir, 'settings.json')
+  try {
+    if ((await lstat(path)).isSymbolicLink()) await unlink(path)
+  } catch {
+    /* missing -- writeFile will create */
+  }
+  await writeFile(path, settings_content, 'utf-8')
+}
+
+/**
  * Bootstrap a user's claude-home directory
  *
  * Creates directory structure, copies credentials, and generates settings.
  * When multi-account rotation is enabled, bootstraps credential directories
- * for all configured accounts. Settings.json is generated in the primary dir;
- * secondary dirs get a symlink to it.
+ * for all configured accounts. The same settings.json is written into the
+ * primary dir and every secondary account dir so Claude can read it
+ * regardless of which CLAUDE_CONFIG_DIR the rotation selects.
  *
  * Idempotent -- skips credential copy if already present (tokens may have been refreshed).
  *
@@ -502,12 +521,12 @@ export const bootstrap_claude_home = async ({
   })
 
   // Generate and write settings.json in primary dir
-  const settings = generate_user_settings({
-    thread_config,
-    container_user_base_path
-  })
-  const settings_path = join(claude_home, 'settings.json')
-  await writeFile(settings_path, JSON.stringify(settings, null, 2), 'utf-8')
+  const settings_content = JSON.stringify(
+    generate_user_settings({ thread_config, container_user_base_path }),
+    null,
+    2
+  )
+  await write_settings_idempotent(claude_home, settings_content)
   log(`Generated settings.json for ${username}`)
 
   // Bootstrap secondary account directories (if multi-account enabled)
@@ -529,27 +548,8 @@ export const bootstrap_claude_home = async ({
         })
       }
 
-      // Symlink settings.json to primary dir's copy
-      const secondary_settings = join(user_account_dir, 'settings.json')
-      try {
-        const existing_target = await readlink(secondary_settings)
-        if (existing_target === settings_path) return
-      } catch {
-        // Not a symlink or doesn't exist -- create it
-      }
-      try {
-        try {
-          await unlink(secondary_settings)
-        } catch {
-          /* doesn't exist */
-        }
-        await symlink(settings_path, secondary_settings)
-        log(`Symlinked settings.json for ${username} (${account.namespace})`)
-      } catch (error) {
-        log(
-          `Warning: failed to symlink settings.json for ${account.namespace}: ${error.message}`
-        )
-      }
+      await write_settings_idempotent(user_account_dir, settings_content)
+      log(`Wrote settings.json for ${username} (${account.namespace})`)
     })
   )
 
@@ -615,13 +615,28 @@ export const regenerate_settings = async ({
   container_user_base_path
 }) => {
   const claude_home = join(user_data_directory, username, 'claude-home')
-  const settings = generate_user_settings({
-    thread_config,
-    container_user_base_path
-  })
-  const settings_path = join(claude_home, 'settings.json')
-  await writeFile(settings_path, JSON.stringify(settings, null, 2), 'utf-8')
+  const settings_content = JSON.stringify(
+    generate_user_settings({ thread_config, container_user_base_path }),
+    null,
+    2
+  )
+  await write_settings_idempotent(claude_home, settings_content)
   log(`Regenerated settings.json for ${username}`)
+
+  // Fan out to any secondary account dirs that already exist. Bootstrap
+  // creates them when multi-account rotation is enabled; on first run
+  // before bootstrap, they will be missing -- skip silently.
+  for (const { account, user_account_dir } of get_secondary_account_dirs(
+    username
+  )) {
+    try {
+      await access(user_account_dir, constants.F_OK)
+    } catch {
+      continue
+    }
+    await write_settings_idempotent(user_account_dir, settings_content)
+    log(`Regenerated settings.json for ${username} (${account.namespace})`)
+  }
 }
 
 export default {
@@ -631,5 +646,6 @@ export default {
   generate_deny_rules,
   refresh_credentials,
   regenerate_settings,
+  write_settings_idempotent,
   NEVER_MOUNT_DIRS
 }
