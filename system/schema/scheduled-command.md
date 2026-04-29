@@ -1,14 +1,16 @@
 ---
 title: Scheduled Command Schema
 type: type_definition
-type_name: scheduled_command
-extends: entity
 description: Scheduled commands define CLI commands to execute at specified times
 base_uri: sys:system/schema/scheduled-command.md
 created_at: '2026-02-07T18:30:00.000Z'
 entity_id: d814d68f-97ec-4fda-aaf6-929e751a7533
-user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
-updated_at: '2026-02-11T01:38:09.000Z'
+extends: entity
+observations:
+  - >-
+    [decision] type_name normalized from kebab-case to snake_case on 2026-04-29 for consistency with
+    other multi-word type identifiers (physical_item, physical_location, digital_item,
+    database_view, type_definition).
 properties:
   - name: command
     type: string
@@ -73,12 +75,15 @@ properties:
       type: string
     required: false
     description: >-
-      Machine identifiers from the machine_registry config that should execute this schedule.
-      Empty array or omitted means run on all machines.
+      Machine identifiers from the machine_registry config that should execute this schedule. Empty
+      array or omitted means run on all machines.
   - name: job_id
     type: string
     required: false
     description: Job ID for job tracker integration
+type_name: scheduled_command
+updated_at: '2026-04-29T15:20:42.068Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Scheduled Command
