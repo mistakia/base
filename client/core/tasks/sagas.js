@@ -17,6 +17,7 @@ import {
 import { tasks_action_types, tasks_actions } from './actions'
 import { get_tasks_state } from './selectors'
 import { get_app } from '@core/app/selectors'
+import { normalize_q } from '@core/utils/normalize-table-state.js'
 
 export function* load_tasks({ payload }) {
   yield call(get_tasks, payload)
@@ -95,7 +96,7 @@ export function* load_tasks_table_data({ payload }) {
     }
 
     yield call(get_tasks_table, {
-      table_state,
+      table_state: normalize_q(table_state),
       is_append,
       view_id: resolved_view_id
     })
@@ -127,7 +128,7 @@ export function* debounced_table_state_fetch({ payload }) {
     }
 
     yield call(get_tasks_table, {
-      table_state: serialized_state,
+      table_state: normalize_q(serialized_state),
       is_append: false,
       view_id
     })

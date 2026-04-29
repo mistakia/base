@@ -35,7 +35,8 @@ const ThreadsTable = ({ on_view_select }) => {
     saved_table_state = {},
     all_columns = {},
     is_loading = false,
-    table_error = null
+    table_error = null,
+    row_highlights = {}
   } = table_props
 
   const columns_with_tags = useMemo(() => {
@@ -112,6 +113,7 @@ const ThreadsTable = ({ on_view_select }) => {
         is_fetching={table_props.is_fetching}
         is_fetching_more={table_props.is_fetching_more}
         reset_cache={handle_reset_cache}
+        row_highlights={row_highlights}
         disable_rank_aggregation={true}
         disable_splits={true}
         disable_create_view={true}

@@ -33,6 +33,7 @@ import { dialog_actions } from '@core/dialog/actions'
 import { thread_sheet_actions } from '@core/thread-sheet/actions'
 import { get_thread_sheet_active_sheet } from '@core/thread-sheet/selectors'
 import { subscribe_to_thread } from '@core/websocket/service'
+import { normalize_q } from '@core/utils/normalize-table-state.js'
 
 // Window during which THREAD_TIMELINE_ENTRY_ADDED events arriving before the
 // server applies the SUBSCRIBE_THREAD message would be delivered as
@@ -158,7 +159,7 @@ export function* load_threads_table_data({ payload }) {
     }
 
     yield call(get_threads_table, {
-      table_state,
+      table_state: normalize_q(table_state),
       is_append,
       view_id
     })
@@ -189,7 +190,7 @@ export function* debounced_table_state_fetch({ payload }) {
     }
 
     yield call(get_threads_table, {
-      table_state: serialized_state,
+      table_state: normalize_q(serialized_state),
       is_append: false,
       view_id
     })

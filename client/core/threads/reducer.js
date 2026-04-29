@@ -286,12 +286,16 @@ const DEFAULT_TABLE_STATE = create_default_table_state({
   sort: [{ column_id: 'created_at', desc: true }]
 })
 
+const SEARCH_CONFIG = {
+  search: { type: 'server_q', entity_type: 'thread' }
+}
+
 const DEFAULT_THREAD_TABLE_VIEW = create_view({
   entity_prefix: 'thread',
   view_id: 'default',
   view_name: 'All Threads',
   table_state: DEFAULT_TABLE_STATE
-})
+}).merge(SEARCH_CONFIG)
 
 const ACTIVE_THREADS_VIEW = create_view({
   entity_prefix: 'thread',
@@ -308,7 +312,7 @@ const ACTIVE_THREADS_VIEW = create_view({
       }
     ])
   })
-})
+}).merge(SEARCH_CONFIG)
 
 // Note: time-based filter dates are computed at module load time.
 // For long-running sessions, these become stale. A proper fix requires
@@ -328,7 +332,7 @@ const LAST_48_HOURS_VIEW = create_view({
       }
     ])
   })
-})
+}).merge(SEARCH_CONFIG)
 
 const LAST_7_DAYS_VIEW = create_view({
   entity_prefix: 'thread',
@@ -345,7 +349,7 @@ const LAST_7_DAYS_VIEW = create_view({
       }
     ])
   })
-})
+}).merge(SEARCH_CONFIG)
 
 // ============================================================================
 // Initial State
@@ -664,6 +668,11 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         typeof payload.data?.total_row_count === 'number'
           ? payload.data.total_row_count
           : 0
+      const row_highlights =
+        payload.data?.row_highlights &&
+        typeof payload.data.row_highlights === 'object'
+          ? payload.data.row_highlights
+          : {}
 
       return state.updateIn(['thread_table_views', view_id_fulfilled], (view) =>
         on_table_fulfilled({
@@ -671,7 +680,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           entity_prefix: 'thread',
           rows,
           is_append,
-          total_row_count: thread_total_row_count
+          total_row_count: thread_total_row_count,
+          row_highlights
         })
       )
     }

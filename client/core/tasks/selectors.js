@@ -28,7 +28,7 @@ export function get_selected_task_table_view(state) {
     view_id,
     view_name: view_data.get('task_view_name'),
     view_description: view_data.get('task_view_description'),
-    view_search_column_id: view_data.get('view_search_column_id'),
+    search: view_data.get('search') || null,
     view_filters: view_data.get('view_filters')?.toJS() || [],
     table_state: view_data.get('task_table_state')?.toJS() || {},
     saved_table_state: view_data.get('saved_table_state')?.toJS() || null

@@ -6,6 +6,7 @@ import debug from 'debug'
 import { check_permissions_batch } from '#server/middleware/permission/index.mjs'
 import { redact_entity_object } from '#server/middleware/content-redactor.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { resolve_table_search } from '#libs-server/table/search-filter.mjs'
 import { apply_tag_redaction_to_tasks } from './tag-visibility.mjs'
 
 const log = debug('tasks:table')
@@ -141,6 +142,42 @@ async function process_task_table_request_indexed({
   const limit = table_state?.limit || 1000
   const offset = table_state?.offset || 0
 
+  // Resolve quick-search query (table_state.q) into a base_uri IN filter and
+  // per-row highlight map. Sub-3-character or missing queries no-op.
+  const search_result = await resolve_table_search({
+    q: table_state?.q,
+    entity_type: 'task',
+    requesting_user_public_key
+  })
+
+  let row_highlights_response = {}
+  if (search_result) {
+    if (search_result.uri_set_as_row_keys.length === 0) {
+      const processing_time_ms = Date.now() - start_time
+      return {
+        rows: [],
+        total_row_count: 0,
+        row_highlights: {},
+        tag_visibility: {},
+        metadata: {
+          fetched: 0,
+          has_more: false,
+          limit,
+          offset,
+          processing_time_ms,
+          table_state: table_state || {},
+          source: 'sqlite_index'
+        }
+      }
+    }
+    filters.push({
+      column_id: 'base_uri',
+      operator: 'IN',
+      value: search_result.uri_set_as_row_keys
+    })
+    row_highlights_response = Object.fromEntries(search_result.row_highlights)
+  }
+
   // Query tasks via manager (delegates to active backend)
   const tasks = await embedded_index_manager.query_tasks({
     filters,
@@ -203,6 +240,7 @@ async function process_task_table_request_indexed({
     rows: final_tasks,
     total_row_count: total_count,
     tag_visibility,
+    row_highlights: row_highlights_response,
     metadata: {
       fetched: final_tasks.length,
       has_more: offset + final_tasks.length < total_count,

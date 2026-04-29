@@ -35,12 +35,20 @@ export const on_table_fulfilled = ({
   entity_prefix,
   rows,
   is_append,
-  total_row_count
+  total_row_count,
+  row_highlights = null
 }) => {
   const current_results = view.get(`${entity_prefix}_table_results`)
   const next_results = is_append
     ? current_results.concat(List(rows))
     : List(rows)
+
+  // Quick-search highlights are scoped to the most recent non-append fetch.
+  // Append (fetch-more) preserves the prior highlight map so the visible rows
+  // continue to render their badges; replacement fetches reset to the new map.
+  const next_highlights = is_append
+    ? view.get(`${entity_prefix}_row_highlights`) || {}
+    : row_highlights || {}
 
   return view.merge({
     [`${entity_prefix}_table_results`]: next_results,
@@ -49,6 +57,7 @@ export const on_table_fulfilled = ({
     [`${entity_prefix}_total_rows_fetched`]: is_append
       ? view.get(`${entity_prefix}_total_rows_fetched`) + rows.length
       : rows.length,
+    [`${entity_prefix}_row_highlights`]: next_highlights,
     [`${entity_prefix}_is_fetching`]: false,
     [`${entity_prefix}_is_fetching_more`]: false,
     [`${entity_prefix}_table_error`]: null

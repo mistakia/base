@@ -33,7 +33,9 @@ const DEFAULT_PHYSICAL_ITEM_TABLE_STATE = create_default_table_state({
   sort: DEFAULT_SORT
 })
 
-const SEARCH_COLUMN = { view_search_column_id: 'title' }
+const SEARCH_COLUMN = {
+  search: { type: 'where', column_id: 'title' }
+}
 
 const DEFAULT_VIEWS = {
   default: create_view({

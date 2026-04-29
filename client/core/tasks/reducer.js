@@ -26,6 +26,10 @@ const DEFAULT_TASK_TABLE_STATE = create_default_table_state({
   sort: [{ column_id: 'created_at', desc: true }]
 })
 
+const SEARCH_CONFIG = {
+  search: { type: 'server_q', entity_type: 'task' }
+}
+
 // Default views
 const DEFAULT_VIEWS = {
   default: create_view({
@@ -33,7 +37,7 @@ const DEFAULT_VIEWS = {
     view_id: 'default',
     view_name: 'All Tasks',
     table_state: DEFAULT_TASK_TABLE_STATE
-  }),
+  }).merge(SEARCH_CONFIG),
   open: create_view({
     entity_prefix: 'task',
     view_id: 'open',
@@ -64,7 +68,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_CONFIG),
   active: create_view({
     entity_prefix: 'task',
     view_id: 'active',
@@ -95,7 +99,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_CONFIG),
   finished: create_view({
     entity_prefix: 'task',
     view_id: 'finished',
@@ -118,7 +122,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  }),
+  }).merge(SEARCH_CONFIG),
   upcoming: create_view({
     entity_prefix: 'task',
     view_id: 'upcoming',
@@ -142,7 +146,7 @@ const DEFAULT_VIEWS = {
         })
       ])
     })
-  })
+  }).merge(SEARCH_CONFIG)
 }
 
 const TasksState = new Record({
@@ -258,6 +262,11 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
         typeof payload.data?.total_row_count === 'number'
           ? payload.data.total_row_count
           : 0
+      const row_highlights =
+        payload.data?.row_highlights &&
+        typeof payload.data.row_highlights === 'object'
+          ? payload.data.row_highlights
+          : {}
 
       return state.updateIn(['task_table_views', view_id_fulfilled], (view) =>
         on_table_fulfilled({
@@ -265,7 +274,8 @@ export function tasks_reducer(state = new TasksState(), { payload, type }) {
           entity_prefix: 'task',
           rows,
           is_append,
-          total_row_count: task_total_row_count
+          total_row_count: task_total_row_count,
+          row_highlights
         })
       )
     }
