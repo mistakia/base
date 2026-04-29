@@ -153,7 +153,7 @@ const builtin_apps = [
   app('index-sync-service', 'server/services/index-sync-service.mjs', {
     max_memory_restart: '1536M',
     exp_backoff_restart_delay: 1000,
-    env: { DEBUG: 'index-sync' }
+    env: { DEBUG: 'index-sync,embedded-index:sync:stuck-thread-sweep' }
   }),
   app(
     'metadata-queue-processor',
