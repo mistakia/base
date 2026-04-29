@@ -40,7 +40,8 @@ const TasksTable = ({ on_view_select }) => {
     is_fetching_more = false,
     total_row_count = 0,
     total_rows_fetched = 0,
-    table_error = null
+    table_error = null,
+    row_highlights = {}
   } = table_props
 
   // Merge available tags into column definitions
@@ -110,6 +111,7 @@ const TasksTable = ({ on_view_select }) => {
         is_fetching_more={is_fetching_more}
         saved_table_state={saved_table_state}
         reset_cache={handle_reset_cache}
+        row_highlights={row_highlights}
         disable_rank_aggregation={true}
         disable_splits={true}
         disable_create_view={true}

@@ -8,6 +8,7 @@ import { check_thread_permission_for_user } from '#server/middleware/permission/
 import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import { parse_latest_timeline_event_data } from '#libs-server/threads/thread-utils.mjs'
 import embedded_index_manager from '#libs-server/embedded-database-index/embedded-index-manager.mjs'
+import { resolve_table_search } from '#libs-server/table/search-filter.mjs'
 
 import { get_models_from_cache } from '#libs-server/utils/models-cache.mjs'
 import { calculate_thread_cost } from '#libs-server/utils/thread-cost-calculator.mjs'
@@ -199,6 +200,42 @@ async function process_thread_table_request_indexed({
     return acc
   }, [])
 
+  // Resolve quick-search query (table_state.q) into a thread_id IN filter and
+  // per-row highlight map. Below the 3-character minimum the helper returns
+  // null and the table query runs without a search filter.
+  const search_result = await resolve_table_search({
+    q: table_state?.q,
+    entity_type: 'thread',
+    requesting_user_public_key
+  })
+
+  let row_highlights_response = {}
+  if (search_result) {
+    if (search_result.uri_set_as_row_keys.length === 0) {
+      const processing_time_ms = Date.now() - start_time
+      return {
+        rows: [],
+        total_row_count: 0,
+        row_highlights: {},
+        metadata: {
+          fetched: 0,
+          has_more: false,
+          limit,
+          offset,
+          processing_time_ms,
+          table_state: table_state || {},
+          source: 'sqlite_index'
+        }
+      }
+    }
+    filters.push({
+      column_id: 'thread_id',
+      operator: 'IN',
+      value: search_result.uri_set_as_row_keys
+    })
+    row_highlights_response = Object.fromEntries(search_result.row_highlights)
+  }
+
   // Query threads via manager (delegates to active backend)
   const threads = await embedded_index_manager.query_threads({
     filters,
@@ -244,6 +281,7 @@ async function process_thread_table_request_indexed({
   return {
     rows: threads_with_permissions,
     total_row_count: total_count,
+    row_highlights: row_highlights_response,
     metadata: {
       fetched: threads_with_permissions.length,
       has_more: offset + threads_with_permissions.length < total_count,

@@ -24,7 +24,7 @@ export function get_selected_physical_item_table_view(state) {
     view_id,
     view_name: view_data.get('physical_item_view_name'),
     view_description: view_data.get('physical_item_view_description'),
-    view_search_column_id: view_data.get('view_search_column_id'),
+    search: view_data.get('search') || null,
     view_filters: view_data.get('view_filters')?.toJS() || [],
     table_state: view_data.get('physical_item_table_state')?.toJS() || {},
     saved_table_state: view_data.get('saved_table_state')?.toJS() || null

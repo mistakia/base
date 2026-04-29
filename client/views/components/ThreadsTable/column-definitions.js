@@ -7,6 +7,7 @@ import {
   TABLE_DATA_TYPES,
   TABLE_OPERATORS
 } from 'react-table/src/constants.mjs'
+import HighlightedText from 'react-table/src/search/highlighted-text.js'
 import { COLORS } from '@theme/colors.js'
 import { format_cost } from '@core/utils/pricing-calculator'
 import {
@@ -96,9 +97,19 @@ const StateCell = ({ row }) => {
   )
 }
 
-const TitleCell = ({ row }) => {
+import { TITLE_FIELDS } from 'react-table/src/search/title-fields.js'
+
+const TitleCellImpl = ({ row, table }) => {
   const thread = row.original
   const navigate = useNavigate()
+
+  const highlights =
+    table?.options?.meta?.row_highlights?.[thread.thread_id] || null
+  const title_ranges = highlights?.cell_ranges?.title || []
+  const snippet =
+    highlights && !TITLE_FIELDS.has(highlights.matched_field)
+      ? highlights.snippet
+      : null
 
   const handle_click = (event) => {
     const thread_id = thread.thread_id || thread.id
@@ -122,11 +133,27 @@ const TitleCell = ({ row }) => {
         width: '100%'
       }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-        <div style={{ fontWeight: '500' }}>{thread.title}</div>
+        <div style={{ fontWeight: '500' }}>
+          <HighlightedText text={thread.title || ''} ranges={title_ranges} />
+        </div>
+        {snippet && snippet.text && (
+          <div
+            style={{
+              fontSize: '12px',
+              color: COLORS.text_secondary,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis'
+            }}>
+            <HighlightedText text={snippet.text} ranges={snippet.ranges} />
+          </div>
+        )}
       </div>
     </div>
   )
 }
+
+const TitleCell = React.memo(TitleCellImpl)
 
 const WorkingDirectoryCell = ({ row }) => {
   const thread = row.original
@@ -591,8 +618,9 @@ export const thread_columns = {
 }
 
 // PropTypes for remaining cell components
-TitleCell.propTypes = {
-  row: PropTypes.object.isRequired
+TitleCellImpl.propTypes = {
+  row: PropTypes.object.isRequired,
+  table: PropTypes.object
 }
 
 StateCell.propTypes = {

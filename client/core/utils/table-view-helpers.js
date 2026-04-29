@@ -33,10 +33,12 @@ export const build_table_props = ({
       table_error: null,
       has_data: false,
       is_loading: false,
+      row_highlights: {},
       view_id
     }
   }
 
+  const row_highlights_key = `${prefix}_row_highlights`
   const table_results = selected_view.get(results_key)
   const table_state = selected_view.get(table_state_key)
   const saved_state = selected_view.get(saved_table_state_key)
@@ -45,6 +47,7 @@ export const build_table_props = ({
   const is_fetching = selected_view.get(is_fetching_key) || false
   const is_fetching_more = selected_view.get(is_fetching_more_key) || false
   const table_error = selected_view.get(error_key) || null
+  const row_highlights = selected_view.get(row_highlights_key) || {}
 
   const table_state_js = table_state?.toJS
     ? table_state.toJS()
@@ -82,6 +85,7 @@ export const build_table_props = ({
     table_error,
     has_data: transformed_rows.length > 0,
     is_loading: is_fetching && transformed_rows.length === 0,
+    row_highlights,
     view_id
   }
 }

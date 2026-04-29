@@ -5,26 +5,35 @@ import { build_fts_match_expression } from './fts-query.mjs'
 
 const SOURCE_NAME = 'thread_timeline'
 
-export async function search({ query, candidate_limit = 100 }) {
+export async function search({
+  query,
+  candidate_limit = 100,
+  no_limit = false,
+  marker_open = '[',
+  marker_close = ']'
+}) {
   const match_expression = build_fts_match_expression(query)
   if (!match_expression) return []
 
-  const rows = await execute_sqlite_query({
-    query: `
-      SELECT
-        tt.thread_id AS thread_id,
-        tt.turn_index AS turn_index,
-        -bm25(thread_timeline_fts) AS raw_score,
-        snippet(thread_timeline_fts, 0, '[', ']', '...', 24) AS turn_snippet
-      FROM thread_timeline_fts
-      JOIN thread_timeline AS tt
-        ON tt.rowid = thread_timeline_fts.rowid
-      WHERE thread_timeline_fts MATCH ?
-      ORDER BY raw_score DESC
-      LIMIT ?
-    `,
-    parameters: [match_expression, candidate_limit]
-  })
+  const select_sql = `
+    SELECT
+      tt.thread_id AS thread_id,
+      tt.turn_index AS turn_index,
+      -bm25(thread_timeline_fts) AS raw_score,
+      snippet(thread_timeline_fts, 0, ?, ?, '...', 24) AS turn_snippet
+    FROM thread_timeline_fts
+    JOIN thread_timeline AS tt
+      ON tt.rowid = thread_timeline_fts.rowid
+    WHERE thread_timeline_fts MATCH ?
+    ORDER BY raw_score DESC
+  `
+
+  const sql = no_limit ? select_sql : `${select_sql} LIMIT ?`
+  const parameters = no_limit
+    ? [marker_open, marker_close, match_expression]
+    : [marker_open, marker_close, match_expression, candidate_limit]
+
+  const rows = await execute_sqlite_query({ query: sql, parameters })
 
   return rows.map((row) => ({
     entity_uri: `user:thread/${row.thread_id}`,

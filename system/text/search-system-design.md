@@ -44,6 +44,13 @@ dedupe -> attach metadata -> filter -> rank -> paginate -> permission filter -> 
 
 All sources implement the same interface: given `{ query, candidate_limit, ... }`, return an array of hits `{ entity_uri, raw_score, matched_field, snippet, extras, source }`. This keeps the orchestrator agnostic to backend details and makes new sources cheap to add.
 
+The FTS-backed sources (`entity`, `thread_metadata`, `thread_timeline`) additionally accept three options used by Filter Mode (below):
+
+- `no_limit` (boolean, default false) — skip the `LIMIT` clause and return the full match set.
+- `marker_open` / `marker_close` (strings, default `[` / `]`) — replace the snippet markers passed to FTS5 `snippet()`. Filter Mode passes the unicode sentinels `\u0002` / `\u0003` so the response can be parsed deterministically into `{ offset, length }` ranges and the markers stripped.
+
+Defaults preserve the existing `/api/search` behavior unchanged.
+
 Key files:
 
 - Route: `server/routes/search.mjs`
@@ -123,6 +130,54 @@ For each request the orchestrator:
 7. **Permission-filters** the page through the permission system (deny-by-default for `user:`/`sys:` URIs). External-scheme hits pass through.
 
 Pagination happens **before** permission filtering, so a page may return fewer than `limit` results when some are denied. This is a deliberate trade-off: it bounds the permission check to one page worth of URIs and avoids over-fetching for users with broad read access.
+
+## Filter Mode
+
+A second orchestrator entry point at `libs-server/search/filter-mode.mjs` serves the data-view tables (Threads, Tasks). It returns an unranked URI set plus a per-URI highlight map and is intentionally distinct from `orchestrator.search()`:
+
+```
+table endpoint (POST /api/{threads,tasks}/table)
+   |
+   |  table_state.q
+   v
+resolve_table_search           (libs-server/table/search-filter.mjs)
+   |
+   |  enforces 3-character minimum, calls:
+   v
+orchestrator_filter_mode       (libs-server/search/filter-mode.mjs)
+   |-- entity            (no_limit, sentinel markers)
+   |-- thread_metadata   (no_limit, sentinel markers)
+   |-- thread_timeline   (no_limit, sentinel markers)
+   |
+   v
+parse sentinels -> source-priority merge -> permission filter -> { uri_set, highlights_by_uri }
+```
+
+Distinctive properties:
+
+- **No candidate cap.** Sources run with `no_limit: true`; the table endpoint paginates the resulting `IN (...)` query downstream.
+- **No ranker.** The user's chosen sort wins; relevance ordering does not surface in the table.
+- **Source-priority merge.** When a URI matches in multiple sources, highlights are taken from the highest-priority source only: `entity` > `thread_metadata` > `thread_timeline`. The winning source supplies `matched_field`, `cell_ranges`, and `snippet`.
+- **Restricted source set.** `path` and `semantic` are excluded — `path` returns no body match and `semantic` is ranking-oriented and best-effort.
+- **Permission filter applied to the full URI set.** Downstream endpoints trust the list.
+- **3-character minimum query length.** Enforced by `resolve_table_search`; shorter queries return `null` and the table query runs unfiltered.
+
+`resolve_table_search` rekeys URIs to the entity type's natural row key — `thread_id` for threads (extracted from `user:thread/{id}` URIs), pass-through `base_uri` for tasks. Table request processors append a single `{ column_id, operator: 'IN', value }` filter built from `uri_set_as_row_keys`, pass it to BOTH `query_*` and `count_*` so pagination totals reflect the filtered set, and attach `row_highlights` (a plain object keyed by the row key) to the response payload.
+
+## Highlight Transport
+
+Highlights flow as plain text plus `{ offset, length }` ranges — never HTML. The wire shape, the Redux state shape, and the cell-renderer-input shape are identical:
+
+```
+RowHighlights = {
+  matched_field: string,
+  cell_ranges: { [column_id]: Range[] },
+  snippet: { text: string, ranges: Range[] } | null
+}
+Range = { offset: number, length: number }
+```
+
+`cell_ranges` is a plain object keyed by column id (not a `Map`); cell renderers use bracket access (`cell_ranges[column_id]`). Sentinel characters (`\u0002` / `\u0003`) are used only on the server to wrap FTS5 `snippet()` output; the orchestrator parses them into ranges and strips them before constructing the `RowHighlights`. The `<HighlightedText>` component in `react-table/src/search/highlighted-text.js` renders the title cell inline; the title cell renders a one-line muted snippet subtitle when `matched_field` falls outside the visible columns.
 
 ## Ranking
 
@@ -219,3 +274,5 @@ Sub-second response is the target for typical queries. The dominant cost varies 
 
 - Operators `#`, `in:`, and `-term` are documented in the UI but not yet wired through the API.
 - Thread metadata search no longer covers `workflow_base_uri`, `working_directory`, or `git_branch`. If those become important again, add them to `threads_fts` and the sync layer.
+- Operator chips inside the table search input (`type:`, `tag:`, `status:`) are out of scope for Filter Mode; the Command Palette parser is not yet exported as a reusable module. Extracting it is a follow-up task.
+- Filter Mode currently dispatches a fixed source list (`entity`, `thread_metadata`, `thread_timeline`). Making the dispatched source set configurable per table is a follow-up.

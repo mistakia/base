@@ -46,6 +46,7 @@ export function get_selected_thread_table_view(state) {
   return {
     view_id,
     view_name: view.get('thread_view_name'),
+    search: view.get('search') || null,
     table_state: view.get('thread_table_state')?.toJS() || {},
     saved_table_state: view.get('saved_table_state')?.toJS() || {}
   }
