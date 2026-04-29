@@ -171,9 +171,17 @@ const create_truncated_entry = (entry) => {
 // ============================================================================
 
 const BATCH_FLUSH_INTERVAL_MS = 200
+// Hard cap on entries buffered per thread between flushes. Protects against
+// runaway memory if a thread floods faster than the flush interval can drain.
+// When exceeded, the oldest entries are dropped -- the threads-list view will
+// still show the most recent activity.
+const BATCH_MAX_ENTRIES = 50
 
-// Buffer of latest truncated payload per thread for non-subscribed delivery
-// Map<thread_id, { truncated_payload, full_payload_metadata }>
+// Buffer of pending truncated payloads per thread for non-subscribed delivery.
+// Each thread holds an ordered array so bursts of writes (e.g. a tool_call +
+// tool_result + assistant message arriving within the same flush window) are
+// all delivered, instead of last-write-wins collapsing them to one.
+// Map<thread_id, { truncated_payloads: Array<Object> }>
 const batch_buffer = new Map()
 
 // Active flush timers per thread
@@ -182,17 +190,18 @@ const batch_timers = new Map()
 
 /**
  * Flush buffered truncated entries to all non-subscribed clients for a thread.
- * Performs permission checking and redaction per client.
+ * Performs permission checking and redaction once per client, then emits each
+ * buffered entry as a separate WebSocket message in arrival order.
  */
 const flush_batch_for_thread = async (thread_id) => {
   const buffered = batch_buffer.get(thread_id)
   batch_buffer.delete(thread_id)
   batch_timers.delete(thread_id)
 
-  if (!buffered) return
+  if (!buffered || buffered.truncated_payloads.length === 0) return
 
   const event_type = 'THREAD_TIMELINE_ENTRY_ADDED'
-  const { truncated_payload } = buffered
+  const { truncated_payloads } = buffered
   const subscribers = get_thread_subscribers(thread_id)
 
   try {
@@ -202,47 +211,37 @@ const flush_batch_for_thread = async (thread_id) => {
       // Skip subscribed clients - they already received immediate delivery
       if (subscribers.has(client)) continue
 
+      let send_full
       if (!client.user_public_key) {
-        const redacted_payload = redact_event_payload({
-          payload: truncated_payload,
-          event_type
-        })
+        send_full = false
+      } else {
         try {
-          client.send(
-            JSON.stringify({ type: event_type, payload: redacted_payload })
-          )
-        } catch (send_error) {
+          const permission_result = await check_thread_permission_for_user({
+            user_public_key: client.user_public_key,
+            thread_id
+          })
+          send_full = permission_result.allowed
+        } catch (permission_error) {
           log(
-            'Failed to send batched event to unauthenticated client:',
-            send_error
+            `Permission check failed during batch flush for ${client.user_public_key}:`,
+            permission_error
           )
+          continue
         }
-        continue
       }
 
-      try {
-        const permission_result = await check_thread_permission_for_user({
-          user_public_key: client.user_public_key,
-          thread_id
-        })
-
-        let event_to_send
-        if (permission_result.allowed) {
-          event_to_send = { type: event_type, payload: truncated_payload }
-        } else {
-          const redacted_payload = redact_event_payload({
-            payload: truncated_payload,
-            event_type
-          })
-          event_to_send = { type: event_type, payload: redacted_payload }
+      for (const truncated_payload of truncated_payloads) {
+        const payload_to_send = send_full
+          ? truncated_payload
+          : redact_event_payload({ payload: truncated_payload, event_type })
+        try {
+          client.send(
+            JSON.stringify({ type: event_type, payload: payload_to_send })
+          )
+        } catch (send_error) {
+          log('Failed to send batched event:', send_error)
+          break
         }
-
-        client.send(JSON.stringify(event_to_send))
-      } catch (permission_error) {
-        log(
-          `Permission check failed during batch flush for ${client.user_public_key}:`,
-          permission_error
-        )
       }
     }
   } catch (error) {
@@ -252,11 +251,22 @@ const flush_batch_for_thread = async (thread_id) => {
 
 /**
  * Buffer a truncated payload for batched delivery to non-subscribed clients.
- * Only the latest entry per thread is kept. Flushes after BATCH_FLUSH_INTERVAL_MS.
+ * Bursts of entries within the BATCH_FLUSH_INTERVAL_MS window all flush;
+ * BATCH_MAX_ENTRIES caps memory by dropping the oldest beyond the cap.
  */
 const buffer_for_non_subscribed = ({ thread_id, truncated_payload }) => {
-  // Update buffer with latest payload (overwrites previous if exists)
-  batch_buffer.set(thread_id, { truncated_payload })
+  let entry = batch_buffer.get(thread_id)
+  if (!entry) {
+    entry = { truncated_payloads: [] }
+    batch_buffer.set(thread_id, entry)
+  }
+  entry.truncated_payloads.push(truncated_payload)
+  if (entry.truncated_payloads.length > BATCH_MAX_ENTRIES) {
+    entry.truncated_payloads.splice(
+      0,
+      entry.truncated_payloads.length - BATCH_MAX_ENTRIES
+    )
+  }
 
   // Set flush timer if not already pending
   if (!batch_timers.has(thread_id)) {
