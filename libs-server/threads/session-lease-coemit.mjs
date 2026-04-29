@@ -6,6 +6,11 @@
 // which would otherwise cause us to skip acquisitions or extend leases we
 // do not own.
 //
+// `coemit_renew_session_lease` never creates ownership: when neither the
+// snapshot cache nor `inspect_lease` finds a lease on this machine, it is a
+// typed no-op. Only `acquire_session_lease_strict` and the worker pre-spawn
+// acquire create leases.
+//
 // `acquire_session_lease_strict` is the exception: SessionStart-style routes
 // must distinguish a transient lease-store outage (caller should retry) from
 // a definitive contention or success (caller should proceed). It rethrows
@@ -133,9 +138,7 @@ export const coemit_renew_session_lease = async ({ thread_id }) => {
       }
     }
     if (lease_token == null) {
-      // No prior owner on this machine; treat the keepalive trigger as a
-      // best-effort acquire so a base-api restart mid-session can re-anchor.
-      await coemit_acquire_session_lease({ thread_id })
+      log('renew skipped: %s has no lease on this machine', thread_id)
       return
     }
     if (recovered) log('lease-recovered %s token=%s', thread_id, lease_token)

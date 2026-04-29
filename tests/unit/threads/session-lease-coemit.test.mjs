@@ -231,29 +231,20 @@ describe('libs-server/threads/session-lease-coemit', function () {
       expect(calls.map((c) => c.method)).to.deep.equal(['GET', 'POST'])
     })
 
-    it('falls back to acquire when no lease exists', async () => {
+    it('is a no-op when no lease exists', async () => {
       const calls = []
       global.fetch = async (url, init) => {
         calls.push({ url, method: init.method })
         if (url.endsWith('/lease') && init.method === 'GET') {
           return _make_response({ body: null })
         }
-        if (url.endsWith('/lease/acquire')) {
-          return _make_response({
-            body: {
-              acquired: true,
-              machine_id: 'macbook_test',
-              lease_token: 1
-            }
-          })
-        }
         return _make_response({ status: 500, body: { error: 'unexpected' } })
       }
       await coemit_renew_session_lease({ thread_id: 't-fresh' })
-      expect(calls.map((c) => c.url.split('/').pop())).to.deep.equal([
-        'lease',
-        'acquire'
-      ])
+      expect(calls.map((c) => c.url.split('/').pop())).to.deep.equal(['lease'])
+      expect(calls.every((c) => !c.url.endsWith('/lease/acquire'))).to.equal(
+        true
+      )
     })
 
     it('does not extend a foreign-owned lease (skips renew when owner differs)', async () => {
