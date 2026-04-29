@@ -45,6 +45,7 @@ import {
 import { create_sync_metrics } from '#libs-server/embedded-database-index/sync/sync-metrics.mjs'
 import { run_reconcile_sweep } from '#libs-server/embedded-database-index/sync/reconcile-sweep.mjs'
 import { run_reconcile_thread_sweep } from '#libs-server/embedded-database-index/sync/reconcile-thread-sweep.mjs'
+import { run_stuck_thread_sweep } from '#libs-server/embedded-database-index/sync/stuck-thread-sweep.mjs'
 
 const log = debug('index-sync')
 
@@ -344,6 +345,9 @@ export const start_index_sync_service = async () => {
     })
     run_reconcile_thread_sweep({ verbose: false }).catch((error) => {
       log('Thread reconcile sweep error: %s', error.message)
+    })
+    run_stuck_thread_sweep({ verbose: false }).catch((error) => {
+      log('Stuck thread sweep error: %s', error.message)
     })
   }
   if (reconcile_interval_ms > 0) {
