@@ -1,5 +1,13 @@
 import { expect } from 'chai'
-import { mkdtemp, mkdir, writeFile, readFile, access } from 'fs/promises'
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  access,
+  symlink,
+  lstat
+} from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 
@@ -8,6 +16,7 @@ import {
   generate_deny_rules,
   bootstrap_claude_home,
   provision_skills,
+  write_settings_idempotent,
   NEVER_MOUNT_DIRS
 } from '#libs-server/threads/claude-home-bootstrap.mjs'
 
@@ -445,6 +454,53 @@ describe('claude-home-bootstrap', () => {
       } catch (error) {
         expect(error.message).to.include('credentials not found')
       }
+    })
+  })
+
+  describe('write_settings_idempotent', () => {
+    let tmp_dir
+
+    beforeEach(async () => {
+      tmp_dir = await mkdtemp(join(tmpdir(), 'write-settings-test-'))
+    })
+
+    it('should replace a dangling symlink with a regular file', async () => {
+      const target_dir = join(tmp_dir, 'account-dir')
+      await mkdir(target_dir, { recursive: true })
+
+      // Simulate the broken state from earlier bootstrap versions: a
+      // host-absolute symlink whose target does not exist on this machine.
+      const settings_path = join(target_dir, 'settings.json')
+      await symlink('/non/existent/host/path/settings.json', settings_path)
+      expect((await lstat(settings_path)).isSymbolicLink()).to.equal(true)
+
+      await write_settings_idempotent(target_dir, '{"hooks":{}}')
+
+      const stat = await lstat(settings_path)
+      expect(stat.isSymbolicLink()).to.equal(false)
+      expect(stat.isFile()).to.equal(true)
+      expect(await readFile(settings_path, 'utf-8')).to.equal('{"hooks":{}}')
+    })
+
+    it('should overwrite an existing regular file', async () => {
+      const target_dir = join(tmp_dir, 'account-dir')
+      await mkdir(target_dir, { recursive: true })
+      const settings_path = join(target_dir, 'settings.json')
+      await writeFile(settings_path, '{"old":true}', 'utf-8')
+
+      await write_settings_idempotent(target_dir, '{"new":true}')
+
+      expect(await readFile(settings_path, 'utf-8')).to.equal('{"new":true}')
+    })
+
+    it('should create the file when it does not exist', async () => {
+      const target_dir = join(tmp_dir, 'account-dir')
+      await mkdir(target_dir, { recursive: true })
+
+      await write_settings_idempotent(target_dir, '{"fresh":true}')
+
+      const settings_path = join(target_dir, 'settings.json')
+      expect(await readFile(settings_path, 'utf-8')).to.equal('{"fresh":true}')
     })
   })
 

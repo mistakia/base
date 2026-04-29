@@ -24,6 +24,7 @@ import {
   resolve_account_host_path,
   ensure_user_container_running
 } from './user-container-manager.mjs'
+import { get_local_api_endpoint } from '#libs-server/machine/local-api-endpoint.mjs'
 
 const execAsync = promisify(exec)
 const log = debug('threads:claude-cli')
@@ -847,6 +848,7 @@ export const create_session_claude_cli = async ({
       execution_mode === 'container_user'
         ? get_user_container_name({ username })
         : DOCKER_CONTAINER_NAME
+    const { proto: api_proto, port: api_port } = get_local_api_endpoint()
     spawn_command = get_container_runtime_name()
     spawn_args = [
       'exec',
@@ -859,12 +861,10 @@ export const create_session_claude_cli = async ({
       ...(claude_config_dir
         ? ['-e', `CLAUDE_CONFIG_DIR=${claude_config_dir}`]
         : []),
-      ...(process.env.SSL_ENABLED === 'true'
-        ? ['-e', 'BASE_API_PROTO=https']
-        : []),
-      ...(process.env.SERVER_PORT
-        ? ['-e', `BASE_API_PORT=${process.env.SERVER_PORT}`]
-        : []),
+      '-e',
+      `BASE_API_PROTO=${api_proto}`,
+      '-e',
+      `BASE_API_PORT=${api_port}`,
       target_container,
       'claude',
       ...cli_args
