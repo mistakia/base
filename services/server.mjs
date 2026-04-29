@@ -66,6 +66,7 @@ import {
   get_extension_paths
 } from '#libs-server/extension/discover-extensions.mjs'
 import { load_extension_providers } from '#libs-server/extension/load-extension-providers.mjs'
+import { hydrate_owned_lease_snapshots } from '#libs-server/threads/lease-client.mjs'
 
 // Debounce file path cache invalidation so rapid file changes
 // (git operations, builds) consolidate into a single invalidation
@@ -98,6 +99,16 @@ try {
 } catch (error) {
   logger(`Failed to pre-warm git status cache: ${error.message}`)
   logger(error)
+}
+
+// Hydrate lease snapshot cache from the lease store BEFORE accepting
+// connections so build_thread_audit_context sees owned leases on the
+// first hook fire after a base-api restart (closes the restart cache-gap).
+try {
+  const count = await hydrate_owned_lease_snapshots()
+  logger(`hydrate_owned_lease_snapshots: hydrated ${count} entries`)
+} catch (error) {
+  logger(`hydrate_owned_lease_snapshots failed: ${error.message}`)
 }
 
 // Discover extensions and load capability providers before accepting connections.

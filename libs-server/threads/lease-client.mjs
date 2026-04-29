@@ -316,3 +316,19 @@ export const list_active_leases = async ({ filter = 'all' } = {}) => {
     { cause: last_error }
   )
 }
+
+// Populate the in-process snapshot cache from the lease store at base-api
+// startup so the cache is warm before any session hook fires. Closes the
+// restart cache-gap that caused field-ownership shadow violations.
+// Idempotent. Returns the count of hydrated entries.
+export const hydrate_owned_lease_snapshots = async () => {
+  const leases = await list_active_leases({ filter: 'owned-by-me' })
+  let count = 0
+  for (const lease of leases) {
+    if (lease?.thread_id) {
+      _set_snapshot(lease.thread_id, lease)
+      count += 1
+    }
+  }
+  return count
+}

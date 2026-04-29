@@ -7,6 +7,7 @@ import {
   release_lease,
   inspect_lease,
   list_active_leases,
+  hydrate_owned_lease_snapshots,
   get_cached_lease_snapshot,
   LeaseStoreUnreachable,
   LeaseClientConfigError,
@@ -281,6 +282,36 @@ describe('libs-server/threads/lease-client', function () {
       expect(
         get_cached_lease_snapshot({ thread_id: 't-renew-fail' })
       ).to.have.property('expires_at', initial_expires_at)
+    })
+
+    it('hydrate_owned_lease_snapshots populates _snapshot_cache from list_active_leases', async () => {
+      restore_registry = _setup_remote_storage()
+      const seeded = [
+        {
+          thread_id: 't-hydrate-1',
+          machine_id: 'macbook_test',
+          lease_token: 7,
+          mode: 'session',
+          expires_at: '2099-01-01T00:00:00.000Z'
+        },
+        {
+          thread_id: 't-hydrate-2',
+          machine_id: 'macbook_test',
+          lease_token: 8,
+          mode: 'session',
+          expires_at: '2099-01-01T00:00:00.000Z'
+        }
+      ]
+      global.fetch = async () =>
+        _make_response({ body: { leases: seeded } })
+      const count = await hydrate_owned_lease_snapshots()
+      expect(count).to.equal(2)
+      expect(
+        get_cached_lease_snapshot({ thread_id: 't-hydrate-1' })
+      ).to.deep.equal(seeded[0])
+      expect(
+        get_cached_lease_snapshot({ thread_id: 't-hydrate-2' })
+      ).to.deep.equal(seeded[1])
     })
 
     it('list_active_leases passes filter as query param', async () => {
