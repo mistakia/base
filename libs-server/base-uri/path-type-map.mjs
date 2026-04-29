@@ -33,7 +33,7 @@ export const DIRECTORY_TYPE_MAP = Object.freeze({
   'physical-location': 'physical_location',
   identity: 'identity',
   extension: 'extension',
-  'scheduled-command': 'scheduled-command',
+  'scheduled-command': 'scheduled_command',
   repository: 'repository',
   thread: 'thread',
   schema: 'schema'

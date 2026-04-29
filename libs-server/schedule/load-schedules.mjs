@@ -60,7 +60,7 @@ export const load_schedules = async ({ directory }) => {
       const { entity_properties } = result
 
       // Only include scheduled-command entities
-      if (entity_properties.type !== 'scheduled-command') {
+      if (entity_properties.type !== 'scheduled_command') {
         continue
       }
 
