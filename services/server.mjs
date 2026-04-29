@@ -101,15 +101,19 @@ try {
   logger(error)
 }
 
-// Hydrate lease snapshot cache from the lease store BEFORE accepting
-// connections so build_thread_audit_context sees owned leases on the
-// first hook fire after a base-api restart (closes the restart cache-gap).
-try {
-  const count = await hydrate_owned_lease_snapshots()
-  logger(`hydrate_owned_lease_snapshots: hydrated ${count} entries`)
-} catch (error) {
-  logger(`hydrate_owned_lease_snapshots failed: ${error.message}`)
-}
+// Kick off lease snapshot cache hydration without awaiting. On non-storage
+// machines list_active_leases retries 5x with backoff and a 5s per-attempt
+// timeout (worst case ~30s); blocking server.listen on that would defeat
+// the purpose -- the restart cache-gap is itself a degraded-storage
+// scenario. The cache repopulates naturally as hooks fire even if
+// hydration loses a race against the first PUT.
+hydrate_owned_lease_snapshots()
+  .then((count) =>
+    logger(`hydrate_owned_lease_snapshots: hydrated ${count} entries`)
+  )
+  .catch((error) =>
+    logger(`hydrate_owned_lease_snapshots failed: ${error.message}`)
+  )
 
 // Discover extensions and load capability providers before accepting connections.
 // Server routes that consume capabilities import from the registry.

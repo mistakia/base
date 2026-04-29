@@ -91,19 +91,7 @@ const handle_release = async (argv) => {
     if (_is_unreachable(error)) return _exit_unreachable(error)
     throw error
   }
-  if (argv.json) {
-    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
-    return
-  }
-  if (result?.released) {
-    process.stdout.write(
-      `released ${thread_id} (token=${lease.lease_token})\n`
-    )
-  } else {
-    process.stdout.write(
-      `release no-op for ${thread_id} (token=${lease.lease_token})\n`
-    )
-  }
+  process.stdout.write(`${JSON.stringify(result, null, 2)}\n`)
 }
 
 export const register_lease_commands = (yargs) =>
@@ -138,16 +126,10 @@ export const register_lease_commands = (yargs) =>
           'release <thread_id>',
           'Release an active thread lease held by this machine',
           (y) =>
-            y
-              .positional('thread_id', {
-                describe: 'Thread id',
-                type: 'string'
-              })
-              .option('json', {
-                describe: 'Emit release result as JSON',
-                type: 'boolean',
-                default: false
-              }),
+            y.positional('thread_id', {
+              describe: 'Thread id',
+              type: 'string'
+            }),
           handle_release
         )
         .demandCommand(1, 'Specify a lease subcommand: list, inspect, release')

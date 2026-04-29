@@ -13,7 +13,6 @@ import {
   get_cached_lease_snapshot,
   _clear_cache_for_tests
 } from '#libs-server/threads/lease-client.mjs'
-import * as lease_store from '#libs-server/threads/lease-store.mjs'
 import { _close_for_tests } from '#libs-server/threads/lease-store.mjs'
 import {
   create_test_user,
@@ -131,53 +130,19 @@ describe('threads lease shutdown smoke', function () {
     // thread so the renew handler must hit inspect_lease and decide there.
     _clear_cache_for_tests()
 
-    // Hand-rolled spy on acquire_lease at the local lease-store layer.
-    // session-lease-coemit -> lease-client.acquire_lease -> (storage path)
-    // -> lease_store.acquire_lease. Counting calls here proves Task 1's
-    // strict no-op is in effect from a renew trigger -- not just that the
-    // lease store happens to be empty afterwards.
-    const acquire_call_thread_ids = []
-    const original_store_acquire = lease_store.acquire_lease
-    let restore_spy
-    try {
-      lease_store.acquire_lease = async (args) => {
-        acquire_call_thread_ids.push(args?.thread_id)
-        return original_store_acquire(args)
-      }
-      restore_spy = () => {
-        lease_store.acquire_lease = original_store_acquire
-      }
-    } catch (assign_error) {
-      // ESM namespace immutable in this runtime; rely on the (necessary
-      // and sufficient given a confirmed release) inspect_lease=null
-      // and cache=null assertions below.
-      restore_spy = () => {}
-      void assign_error
-    }
+    // Trigger coemit_renew_session_lease via the keepalive PUT.
+    const renew_res = await request(server)
+      .put(`/api/threads/${thread_id}/session-status`)
+      .send({ session_status: 'idle' })
+    expect(renew_res.status).to.equal(200)
 
-    try {
-      // Trigger coemit_renew_session_lease via the keepalive PUT.
-      const renew_res = await request(server)
-        .put(`/api/threads/${thread_id}/session-status`)
-        .send({ session_status: 'idle' })
-      expect(renew_res.status).to.equal(200)
-    } finally {
-      restore_spy()
-    }
-
-    // Primary discriminator: no orphan lease was created.
+    // Discrimination basis: confirmed release immediately above means the
+    // lease store and cache are empty for this thread. If the buggy
+    // fallback at session-lease-coemit had executed, coemit_acquire would
+    // have written a fresh entry to both. Both being null after the renew
+    // PUT proves Task 1's strict no-op is in effect.
     const post_inspect = await inspect_lease({ thread_id })
     expect(post_inspect).to.equal(null)
-
-    // Secondary discriminator: the in-process cache holds no orphan
-    // snapshot for this thread (a buggy fallback acquire would have
-    // populated it via _set_snapshot).
     expect(get_cached_lease_snapshot({ thread_id })).to.equal(null)
-
-    // Negative spy assertion (when the runtime allowed namespace mutation):
-    // no acquire_lease call was made for this thread during the renew.
-    expect(
-      acquire_call_thread_ids.filter((id) => id === thread_id)
-    ).to.have.lengthOf(0)
   })
 })
