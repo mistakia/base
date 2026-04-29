@@ -8,8 +8,8 @@ import { get_thread_base_directory } from '#libs-server/threads/threads-constant
 const log = debug('embedded-index:sync:stuck-thread-sweep')
 
 const METADATA_FILE_NAME = 'metadata.json'
-const DEFAULT_STUCK_THRESHOLD_MS = 5 * 60 * 1000
-const DEFAULT_FRESH_WINDOW_MS = 24 * 60 * 60 * 1000
+const STUCK_THRESHOLD_MS = 5 * 60 * 1000
+const FRESH_WINDOW_MS = 24 * 60 * 60 * 1000
 
 let sweep_in_progress = false
 
@@ -29,9 +29,6 @@ let sweep_in_progress = false
  * to avoid re-scanning historical archive content on every interval.
  */
 export const run_stuck_thread_sweep = async ({
-  verbose = false,
-  stuck_threshold_ms = DEFAULT_STUCK_THRESHOLD_MS,
-  fresh_window_ms = DEFAULT_FRESH_WINDOW_MS,
   user_base_directory = null
 } = {}) => {
   if (sweep_in_progress) return { ran: false, skipped: true }
@@ -55,19 +52,37 @@ export const run_stuck_thread_sweep = async ({
     }
 
     const now_ms = Date.now()
-    const fresh_floor = now_ms - fresh_window_ms
-    const stuck_threshold_at = now_ms - stuck_threshold_ms
+    const fresh_floor = now_ms - FRESH_WINDOW_MS
+    const stuck_threshold_at = now_ms - STUCK_THRESHOLD_MS
 
-    for (const entry of entries) {
-      if (!entry.isDirectory()) continue
-      const metadata_path = path.join(
-        thread_dir,
-        entry.name,
-        METADATA_FILE_NAME
-      )
+    // Stat every directory entry in parallel; mtime filter then prunes
+    // stale entries before the read+parse pass. Serial stat per entry
+    // dominated wall-time on installs with thousands of historical threads.
+    const candidates = await Promise.all(
+      entries
+        .filter((entry) => entry.isDirectory())
+        .map(async (entry) => {
+          const metadata_path = path.join(
+            thread_dir,
+            entry.name,
+            METADATA_FILE_NAME
+          )
+          try {
+            const stat = await fs.stat(metadata_path)
+            if (stat.mtimeMs < fresh_floor) return null
+            return metadata_path
+          } catch (error) {
+            if (error.code !== 'ENOENT') {
+              log('stat %s failed: %s', metadata_path, error.message)
+            }
+            return null
+          }
+        })
+    )
+
+    for (const metadata_path of candidates) {
+      if (!metadata_path) continue
       try {
-        const stat = await fs.stat(metadata_path)
-        if (stat.mtimeMs < fresh_floor) continue
         scanned++
         const raw = await fs.readFile(metadata_path, 'utf-8')
         const meta = JSON.parse(raw)
@@ -89,12 +104,14 @@ export const run_stuck_thread_sweep = async ({
       }
     }
 
+    const duration_ms = Date.now() - started_at
     if (stuck.length > 0) {
       log(
-        'stuck threads detected: count=%d scanned=%d duration_ms=%d',
+        'stuck threads detected: count=%d scanned=%d entries=%d duration_ms=%d',
         stuck.length,
         scanned,
-        Date.now() - started_at
+        entries.length,
+        duration_ms
       )
       for (const t of stuck) {
         log(
@@ -105,8 +122,13 @@ export const run_stuck_thread_sweep = async ({
           Math.floor(t.age_ms / 60000)
         )
       }
-    } else if (verbose) {
-      log('sweep complete: no stuck threads (scanned=%d)', scanned)
+    } else {
+      log(
+        'sweep complete: scanned=%d entries=%d duration_ms=%d',
+        scanned,
+        entries.length,
+        duration_ms
+      )
     }
 
     return { ran: true, stuck, scanned }

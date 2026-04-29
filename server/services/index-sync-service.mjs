@@ -346,7 +346,7 @@ export const start_index_sync_service = async () => {
     run_reconcile_thread_sweep({ verbose: false }).catch((error) => {
       log('Thread reconcile sweep error: %s', error.message)
     })
-    run_stuck_thread_sweep({ verbose: false }).catch((error) => {
+    run_stuck_thread_sweep().catch((error) => {
       log('Stuck thread sweep error: %s', error.message)
     })
   }

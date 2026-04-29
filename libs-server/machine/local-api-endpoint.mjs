@@ -10,6 +10,8 @@ import { get_current_machine_id } from '#libs-server/schedule/machine-identity.m
  * or spawning docker-exec was started by PM2 (which is the only place those
  * env vars are injected).
  *
+ * Port default mirrors pm2.config.mjs: 8081 when SSL is on, 8080 otherwise.
+ *
  * @param {Object} [params]
  * @param {string} [params.machine_id] - Override current machine id (for tests)
  * @returns {{proto: 'http'|'https', port: number}}
@@ -17,8 +19,9 @@ import { get_current_machine_id } from '#libs-server/schedule/machine-identity.m
 export const get_local_api_endpoint = ({ machine_id } = {}) => {
   const id = machine_id || get_current_machine_id()
   const entry = config.machine_registry?.[id]
+  const ssl = Boolean(entry?.ssl_key_path)
   return {
-    proto: entry?.ssl_key_path ? 'https' : 'http',
-    port: Number(entry?.server_port) || 8080
+    proto: ssl ? 'https' : 'http',
+    port: Number(entry?.server_port) || (ssl ? 8081 : 8080)
   }
 }

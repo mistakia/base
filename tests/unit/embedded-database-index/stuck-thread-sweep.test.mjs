@@ -106,10 +106,7 @@ describe('libs-server/embedded-database-index/sync/stuck-thread-sweep', () => {
       mtime_ms: ancient_mtime
     })
 
-    const result = await run_stuck_thread_sweep({
-      user_base_directory,
-      fresh_window_ms: 24 * 60 * 60 * 1000
-    })
+    const result = await run_stuck_thread_sweep({ user_base_directory })
     expect(result.stuck).to.have.lengthOf(0)
     expect(result.scanned).to.equal(0)
   })

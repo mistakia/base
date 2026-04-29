@@ -626,17 +626,19 @@ export const regenerate_settings = async ({
   // Fan out to any secondary account dirs that already exist. Bootstrap
   // creates them when multi-account rotation is enabled; on first run
   // before bootstrap, they will be missing -- skip silently.
-  for (const { account, user_account_dir } of get_secondary_account_dirs(
-    username
-  )) {
-    try {
-      await access(user_account_dir, constants.F_OK)
-    } catch {
-      continue
-    }
-    await write_settings_idempotent(user_account_dir, settings_content)
-    log(`Regenerated settings.json for ${username} (${account.namespace})`)
-  }
+  await Promise.all(
+    get_secondary_account_dirs(username).map(
+      async ({ account, user_account_dir }) => {
+        try {
+          await access(user_account_dir, constants.F_OK)
+        } catch {
+          return
+        }
+        await write_settings_idempotent(user_account_dir, settings_content)
+        log(`Regenerated settings.json for ${username} (${account.namespace})`)
+      }
+    )
+  )
 }
 
 export default {

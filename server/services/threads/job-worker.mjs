@@ -376,9 +376,7 @@ const get_user_container_account_homes = ({ username }) => {
     config.machine_registry?.[machine_id]?.claude_paths?.user_data_dirs?.[
       username
     ]
-  if (user_dirs && Object.keys(user_dirs).length > 0) {
-    return Object.values(user_dirs)
-  }
+  if (user_dirs) return Object.values(user_dirs)
   return [get_user_container_claude_home({ username })]
 }
 

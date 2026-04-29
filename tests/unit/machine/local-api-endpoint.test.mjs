@@ -45,4 +45,16 @@ describe('libs-server/machine/local-api-endpoint', () => {
       get_local_api_endpoint({ machine_id: 'unknown' })
     ).to.deep.equal({ proto: 'http', port: 8080 })
   })
+
+  it('defaults to port 8081 when SSL is enabled but server_port is unset', () => {
+    config.machine_registry = {
+      'test-machine': {
+        hostname: 'test-machine',
+        ssl_key_path: '/etc/letsencrypt/live/example/privkey.pem'
+      }
+    }
+    expect(
+      get_local_api_endpoint({ machine_id: 'test-machine' })
+    ).to.deep.equal({ proto: 'https', port: 8081 })
+  })
 })
