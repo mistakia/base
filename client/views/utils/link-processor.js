@@ -7,13 +7,64 @@ import {
 } from './base-uri-constants.js'
 import { transform_outside_inline_code } from './inline-code-parser.js'
 
-// Process markdown content to transform links before rendering
+// Combined pattern matching wiki links, base-URI markdown links, and bare
+// base URIs. Used to find linkable references inside fenced/inline code
+// blocks where markdown-it's normal link processing does not run.
+const CODE_BLOCK_LINK_PATTERN =
+  /\[\[(sys|user):([^\]|]+)(?:\|([^\]]*))?\]\]|\[([^\]]*)\]\((sys|user):([^)]+)\)|\b(?:user:|sys:)[^\s[\]()]+\.(?:md|json|js|ts|jsx|tsx|py|yaml|yml)(?:#[a-zA-Z0-9_-]+)?\b/g
+
+// Apply a transformation only to lines outside fenced code blocks. Fenced
+// content must reach the renderer untouched so wiki/base URI patterns survive
+// into the rendered <pre><code> where convert_links_in_code_blocks can wrap
+// them in anchors.
+const transform_outside_fenced_code = (content, transform_fn) => {
+  if (!content) return content
+
+  const lines = content.split('\n')
+  const fence_regex = /^ {0,3}```/
+  let in_fence = false
+  let buffer = []
+  const output = []
+
+  const flush = () => {
+    if (buffer.length === 0) return
+    output.push(transform_fn(buffer.join('\n')))
+    buffer = []
+  }
+
+  for (const line of lines) {
+    if (fence_regex.test(line)) {
+      flush()
+      output.push(line)
+      in_fence = !in_fence
+      continue
+    }
+    if (in_fence) {
+      output.push(line)
+    } else {
+      buffer.push(line)
+    }
+  }
+  flush()
+
+  return output.join('\n')
+}
+
+// Process markdown content to transform links before rendering. Fenced code
+// blocks are left untouched here -- their wiki/base URI patterns are wrapped
+// in anchors after rendering by convert_links_in_code_blocks.
 export const process_links_in_markdown = (
   content,
   working_directory = null
 ) => {
   if (!content) return content
 
+  return transform_outside_fenced_code(content, (segment) =>
+    process_links_in_markdown_segment(segment, working_directory)
+  )
+}
+
+const process_links_in_markdown_segment = (content, working_directory) => {
   let processed_content = content
 
   // Transform base URI references wrapped in single backticks BEFORE the regular
@@ -191,6 +242,92 @@ const convert_unrendered_markdown_links = (html) => {
   return temp_div.innerHTML
 }
 
+// Walk text nodes inside <code>/<pre> elements and convert wiki link, base
+// URI markdown link, and bare base URI patterns into anchor elements.
+// Highlighting markup around matches is preserved (we replace text nodes,
+// not their surrounding spans).
+const convert_links_in_code_blocks = (html) => {
+  const temp_div = document.createElement('div')
+  temp_div.innerHTML = html
+
+  const walker = document.createTreeWalker(temp_div, NodeFilter.SHOW_TEXT, null)
+
+  const replacements = []
+  let node
+  while ((node = walker.nextNode())) {
+    let inside_code = false
+    let ancestor = node.parentElement
+    while (ancestor && ancestor !== temp_div) {
+      const tag = ancestor.tagName?.toLowerCase()
+      if (tag === 'a') {
+        inside_code = false
+        break
+      }
+      if (tag === 'code' || tag === 'pre') {
+        inside_code = true
+      }
+      ancestor = ancestor.parentElement
+    }
+    if (!inside_code) continue
+
+    CODE_BLOCK_LINK_PATTERN.lastIndex = 0
+    if (CODE_BLOCK_LINK_PATTERN.test(node.textContent)) {
+      replacements.push(node)
+    }
+  }
+
+  for (const text_node of replacements) {
+    const fragment = document.createDocumentFragment()
+    const text = text_node.textContent
+    let last_index = 0
+    let match
+
+    CODE_BLOCK_LINK_PATTERN.lastIndex = 0
+    while ((match = CODE_BLOCK_LINK_PATTERN.exec(text)) !== null) {
+      if (match.index > last_index) {
+        fragment.appendChild(
+          document.createTextNode(text.slice(last_index, match.index))
+        )
+      }
+
+      const matched = match[0]
+      let href
+      let label
+
+      if (matched.startsWith('[[')) {
+        const scheme = match[1]
+        const path = match[2]
+        const display_text = match[3]
+        href = convert_base_uri_to_path(`${scheme}:${path}`)
+        label = display_text != null && display_text !== '' ? display_text : matched
+      } else if (matched.startsWith('[')) {
+        const scheme = match[5]
+        const path = match[6]
+        href = convert_base_uri_to_path(`${scheme}:${path}`)
+        label = matched
+      } else {
+        href = convert_base_uri_to_path(matched)
+        label = matched
+      }
+
+      const link = document.createElement('a')
+      link.setAttribute('href', href)
+      link.textContent = label
+      fragment.appendChild(link)
+
+      last_index = match.index + matched.length
+    }
+
+    if (last_index < text.length) {
+      fragment.appendChild(document.createTextNode(text.slice(last_index)))
+    }
+
+    text_node.parentNode.replaceChild(fragment, text_node)
+  }
+
+  return temp_div.innerHTML
+}
+
 // Add link attributes to rendered HTML
 export const process_links_in_html = (html) => {
   if (!html) return html
@@ -199,9 +336,14 @@ export const process_links_in_html = (html) => {
   // (e.g. links inside block-level HTML elements like <center>)
   const html_with_converted_links = convert_unrendered_markdown_links(html)
 
+  // Convert base URI / wiki link patterns that survive inside code blocks
+  const html_with_code_links = convert_links_in_code_blocks(
+    html_with_converted_links
+  )
+
   // Create a temporary DOM element to parse HTML
   const temp_div = document.createElement('div')
-  temp_div.innerHTML = html_with_converted_links
+  temp_div.innerHTML = html_with_code_links
 
   // Find all links
   const links = temp_div.querySelectorAll('a[href]')
