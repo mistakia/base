@@ -26,7 +26,7 @@ describe('Schedule Machine Filtering', function () {
 
     const entity_properties = {
       title,
-      type: 'scheduled-command',
+      type: 'scheduled_command',
       entity_id: randomUUID(),
       created_at: '2026-01-01T00:00:00.000Z',
       updated_at: '2026-01-01T00:00:00.000Z',
@@ -47,7 +47,7 @@ describe('Schedule Machine Filtering', function () {
     await write_entity_to_filesystem({
       absolute_path: file_path,
       entity_properties,
-      entity_type: 'scheduled-command',
+      entity_type: 'scheduled_command',
       entity_content: ''
     })
 

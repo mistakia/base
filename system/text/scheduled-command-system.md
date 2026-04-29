@@ -54,7 +54,7 @@ Duration strings for recurring fixed-interval execution.
 
 ## Entity Structure
 
-Scheduled commands are entities of type `scheduled-command` stored in `scheduled-command/` with optional nested folder organization (e.g., `base/`, `league/`, `maintenance/`).
+Scheduled commands are entities of type `scheduled_command` stored in `scheduled-command/` with optional nested folder organization (e.g., `base/`, `league/`, `maintenance/`).
 
 ### Required Fields
 

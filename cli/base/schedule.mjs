@@ -296,7 +296,7 @@ async function handle_add(argv) {
     const now = new Date().toISOString()
     const entity_properties = {
       title: argv.title || argv.cmd,
-      type: 'scheduled-command',
+      type: 'scheduled_command',
       entity_id: uuid(),
       created_at: now,
       updated_at: now,
@@ -324,7 +324,7 @@ async function handle_add(argv) {
     await write_entity_to_filesystem({
       absolute_path: file_path,
       entity_properties,
-      entity_type: 'scheduled-command',
+      entity_type: 'scheduled_command',
       entity_content: ''
     })
 
@@ -356,8 +356,8 @@ async function toggle_schedule({ file_path, enabled }) {
 
   const { entity_properties, entity_content } = result
 
-  if (entity_properties.type !== 'scheduled-command') {
-    throw new Error(`Not a scheduled-command entity`)
+  if (entity_properties.type !== 'scheduled_command') {
+    throw new Error(`Not a scheduled_command entity`)
   }
 
   const now = new Date().toISOString()
@@ -370,7 +370,7 @@ async function toggle_schedule({ file_path, enabled }) {
   await write_entity_to_filesystem({
     absolute_path: file_path,
     entity_properties: updated_properties,
-    entity_type: 'scheduled-command',
+    entity_type: 'scheduled_command',
     entity_content
   })
 
@@ -473,8 +473,8 @@ async function handle_delete(argv) {
       throw new Error(`Schedule not found: ${argv.file}`)
     }
 
-    if (result.entity_properties.type !== 'scheduled-command') {
-      throw new Error(`Not a scheduled-command entity`)
+    if (result.entity_properties.type !== 'scheduled_command') {
+      throw new Error(`Not a scheduled_command entity`)
     }
 
     await fs.unlink(file_path)

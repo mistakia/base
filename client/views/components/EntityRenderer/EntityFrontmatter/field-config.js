@@ -186,7 +186,7 @@ export const entity_field_config = {
       'archived_at'
     ]
   },
-  'scheduled-command': {
+  scheduled_command: {
     always_visible: [
       'command',
       'schedule_type',

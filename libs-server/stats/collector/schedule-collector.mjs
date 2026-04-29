@@ -24,7 +24,7 @@ export async function collect_schedule_metrics({ snapshot_date }) {
         END as enabled,
         COUNT(*) as cnt
       FROM entities
-      WHERE type = 'scheduled-command'
+      WHERE type = 'scheduled_command'
       GROUP BY 1
     `
   })

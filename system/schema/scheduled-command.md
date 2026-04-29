@@ -1,7 +1,7 @@
 ---
 title: Scheduled Command Schema
 type: type_definition
-type_name: scheduled-command
+type_name: scheduled_command
 extends: entity
 description: Scheduled commands define CLI commands to execute at specified times
 base_uri: sys:system/schema/scheduled-command.md
@@ -100,7 +100,7 @@ Scheduled commands define CLI commands to execute at specified times. They integ
 ```yaml
 ---
 title: Run Tests Nightly
-type: scheduled-command
+type: scheduled_command
 command: bun test:all
 schedule_type: expr
 schedule: '0 2 * * *'
@@ -114,7 +114,7 @@ enabled: true
 ```yaml
 ---
 title: Deploy Release
-type: scheduled-command
+type: scheduled_command
 command: bun deploy:production
 schedule_type: at
 schedule: '2026-03-01T14:00:00.000Z'
@@ -127,7 +127,7 @@ enabled: true
 ```yaml
 ---
 title: Sync Players
-type: scheduled-command
+type: scheduled_command
 command: base entity sync players
 schedule_type: every
 schedule: 6h
