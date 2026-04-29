@@ -361,6 +361,28 @@ const process_thread_creation_job = async (job) => {
 }
 
 /**
+ * Resolve all candidate host paths to a user-container's claude-home
+ * directories.  When account rotation is enabled the JSONL written by
+ * Claude lives under whichever account namespace was selected; the
+ * fallback must search every configured account for this user, not just
+ * the primary.
+ *
+ * Falls back to the primary claude-home when no rotation map is present
+ * in the machine registry (single-account deployment).
+ */
+const get_user_container_account_homes = ({ username }) => {
+  const machine_id = get_current_machine_id()
+  const user_dirs =
+    config.machine_registry?.[machine_id]?.claude_paths?.user_data_dirs?.[
+      username
+    ]
+  if (user_dirs && Object.keys(user_dirs).length > 0) {
+    return Object.values(user_dirs)
+  }
+  return [get_user_container_claude_home({ username })]
+}
+
+/**
  * Re-import session JSONL back to thread raw-data as a fallback
  * for when SessionEnd hooks fail (e.g., git lock contention).
  *
@@ -410,12 +432,25 @@ const sync_session_fallback_by_file = async ({
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
-      session_file = join(
-        get_user_container_claude_home({ username }),
-        'projects',
-        projects_dir_name,
-        `${session_id}.jsonl`
+      const candidates = get_user_container_account_homes({ username }).map(
+        (home) =>
+          join(home, 'projects', projects_dir_name, `${session_id}.jsonl`)
       )
+      for (const candidate of candidates) {
+        try {
+          await access(candidate)
+          session_file = candidate
+          break
+        } catch {
+          /* try next account dir */
+        }
+      }
+      if (!session_file) {
+        log(
+          `Job ${job.id}: session ${session_id} not found in any account dir for ${username}`
+        )
+        return
+      }
     } else if (execution_mode === 'container') {
       const container_working_dir =
         translate_to_container_path(working_directory)
@@ -478,39 +513,39 @@ const sync_session_fallback_by_glob = async (job, execution_overrides) => {
   const { working_directory, execution_mode, username } = job.data
 
   try {
-    let projects_dir
+    let projects_dirs
     if (execution_mode === 'container_user' && username) {
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
-      projects_dir = join(
-        get_user_container_claude_home({ username }),
-        'projects',
-        projects_dir_name
+      projects_dirs = get_user_container_account_homes({ username }).map(
+        (home) => join(home, 'projects', projects_dir_name)
       )
     } else if (execution_mode === 'container') {
       const container_working_dir =
         translate_to_container_path(working_directory)
       const projects_dir_name = derive_projects_dir_name(container_working_dir)
-      projects_dir = join(
-        get_container_claude_home(),
-        'projects',
-        projects_dir_name
-      )
+      projects_dirs = [
+        join(get_container_claude_home(), 'projects', projects_dir_name)
+      ]
     } else {
       const projects_dir_name = derive_projects_dir_name(working_directory)
-      projects_dir = join(homedir(), '.claude', 'projects', projects_dir_name)
+      projects_dirs = [join(homedir(), '.claude', 'projects', projects_dir_name)]
     }
 
-    const jsonl_files = await glob(join(projects_dir, '*.jsonl'))
+    const jsonl_files = (
+      await Promise.all(projects_dirs.map((d) => glob(join(d, '*.jsonl'))))
+    ).flat()
 
     if (jsonl_files.length === 0) {
-      log(`Job ${job.id}: no JSONL files found in ${projects_dir}`)
+      log(
+        `Job ${job.id}: no JSONL files found in ${projects_dirs.join(', ')}`
+      )
       return
     }
 
     log(
-      `Job ${job.id}: running post-session sync fallback (glob) - found ${jsonl_files.length} JSONL file(s) in ${projects_dir}`
+      `Job ${job.id}: running post-session sync fallback (glob) - found ${jsonl_files.length} JSONL file(s) across ${projects_dirs.length} dir(s)`
     )
 
     let total_created = 0
@@ -714,4 +749,8 @@ export const stop_worker = async () => {
 }
 
 // Exported for testing
-export { sync_session_fallback_by_file, sync_session_fallback_by_glob }
+export {
+  sync_session_fallback_by_file,
+  sync_session_fallback_by_glob,
+  get_user_container_account_homes
+}

@@ -2,11 +2,51 @@ import { expect } from 'chai'
 
 import {
   sync_session_fallback_by_file,
-  sync_session_fallback_by_glob
+  sync_session_fallback_by_glob,
+  get_user_container_account_homes
 } from '#server/services/threads/job-worker.mjs'
+import config from '#config'
 
 describe('job-worker sync_session_fallback', function () {
   this.timeout(10000)
+
+  describe('get_user_container_account_homes', () => {
+    let original_registry
+
+    beforeEach(() => {
+      original_registry = config.machine_registry
+    })
+
+    afterEach(() => {
+      config.machine_registry = original_registry
+    })
+
+    it('returns every configured account home for the user', () => {
+      // The function reads get_current_machine_id() internally; in test
+      // environments NODE_ENV=test it falls back to os.hostname(). Stamp a
+      // wildcard registry where any current id resolves to the same map.
+      config.machine_registry = new Proxy(
+        {},
+        {
+          get: () => ({
+            claude_paths: {
+              user_data_dirs: {
+                arrin: {
+                  'fee.trace.wrap': '/tmp/test/arrin/claude-home',
+                  'earn.crop.code': '/tmp/test/arrin/claude-earn.crop.code'
+                }
+              }
+            }
+          })
+        }
+      )
+
+      const homes = get_user_container_account_homes({ username: 'arrin' })
+      expect(homes).to.have.lengthOf(2)
+      expect(homes).to.include('/tmp/test/arrin/claude-home')
+      expect(homes).to.include('/tmp/test/arrin/claude-earn.crop.code')
+    })
+  })
 
   describe('sync_session_fallback_by_file', () => {
     it('should be exported as a function', () => {
