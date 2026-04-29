@@ -8,6 +8,7 @@ import { homedir } from 'os'
 
 import { generate_volume_mounts } from './volume-mount-generator.mjs'
 import config from '#config'
+import { get_local_api_endpoint } from '#libs-server/machine/local-api-endpoint.mjs'
 
 const log = debug('threads:user-container-compose')
 
@@ -65,19 +66,12 @@ export const generate_compose_config = async ({
     environment.USER_PUBLIC_KEY = user_public_key
   }
 
-  // Add API connection env vars if available
-  // Derive protocol from SSL_ENABLED when BASE_API_PROTO is not explicit
-  const api_proto =
-    process.env.BASE_API_PROTO ||
-    (process.env.SSL_ENABLED === 'true' ? 'https' : null)
-  if (api_proto) {
-    environment.BASE_API_PROTO = api_proto
-  }
-  if (process.env.BASE_API_PORT || config.server_port) {
-    environment.BASE_API_PORT = String(
-      process.env.BASE_API_PORT || config.server_port
-    )
-  }
+  // Resolve API endpoint from machine_registry so the compose file is
+  // correct regardless of whether the generating process was started by
+  // PM2 (which injects SSL_ENABLED/SERVER_PORT) or invoked directly.
+  const { proto, port } = get_local_api_endpoint()
+  environment.BASE_API_PROTO = proto
+  environment.BASE_API_PORT = String(port)
   if (process.env.BASE_API_HOST) {
     environment.BASE_API_HOST = process.env.BASE_API_HOST
   }
