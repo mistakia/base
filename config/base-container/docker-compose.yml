@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: base-container:latest
     container_name: base-container
     init: true
     restart: unless-stopped
