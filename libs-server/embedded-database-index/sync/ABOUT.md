@@ -5,7 +5,11 @@ description: >-
   Streamers and extractors that populate the embedded SQLite index from filesystem entities and
   thread timelines, including per-turn extraction for the thread_timeline FTS5 index.
 base_uri: sys:libs-server/embedded-database-index/sync/ABOUT.md
+created_at: '2026-05-01T16:13:33.600Z'
+entity_id: 1277a6d6-01ca-406a-860d-dae0c6385092
 public_read: false
+updated_at: '2026-05-01T16:13:33.600Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Embedded Index Sync Pipeline

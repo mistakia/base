@@ -2,13 +2,16 @@
 title: Thread Execution Attribution
 type: text
 description: >-
-  Canonical specification for the thread execution-attribution model -- where and how a session
-  ran -- plus the resume-permission rule built on top of it.
+  Canonical specification for the thread execution-attribution model -- where and how a session ran
+  -- plus the resume-permission rule built on top of it.
 base_uri: sys:system/text/thread-execution-attribution.md
+created_at: '2026-05-01T16:13:36.680Z'
+entity_id: 22d917e1-c990-4e65-8703-9f2eeff0792d
 public_read: true
 relations:
   - relates_to [[sys:system/text/session-lifecycle-reference.md]]
   - relates_to [[user:task/base/formalize-thread-execution-attribution.md]]
+updated_at: '2026-05-01T16:13:36.680Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -42,11 +45,11 @@ than writing `null`.
 
 ## Environment Values
 
-| Value | Meaning |
-|-------|---------|
-| `controlled_host` | Ran directly on a machine we own (no container) |
-| `controlled_container` | Ran inside a container on a machine we own |
-| `provider_hosted` | Ran on third-party infrastructure (ChatGPT API, claude.ai web, etc.) |
+| Value                  | Meaning                                                              |
+| ---------------------- | -------------------------------------------------------------------- |
+| `controlled_host`      | Ran directly on a machine we own (no container)                      |
+| `controlled_container` | Ran inside a container on a machine we own                           |
+| `provider_hosted`      | Ran on third-party infrastructure (ChatGPT API, claude.ai web, etc.) |
 
 ## Invariants
 

@@ -5,7 +5,11 @@ description: >-
   Source-first search module: orchestrator, five source adapters (entity, thread_metadata,
   thread_timeline, path, semantic), filters, ranker, and deny-by-default permission gate.
 base_uri: sys:libs-server/search/ABOUT.md
+created_at: '2026-05-01T16:13:33.634Z'
+entity_id: 71f9dce6-44bc-4f25-b652-8795cda97aef
 public_read: false
+updated_at: '2026-05-01T16:13:33.634Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Search Module

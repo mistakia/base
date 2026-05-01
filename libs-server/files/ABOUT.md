@@ -2,10 +2,14 @@
 title: Files Utilities
 type: text
 description: >-
-  Location-neutral file-path enumeration used by the path search source, the file-path cache,
-  and services that need to enumerate markdown files without depending on the search module.
+  Location-neutral file-path enumeration used by the path search source, the file-path cache, and
+  services that need to enumerate markdown files without depending on the search module.
 base_uri: sys:libs-server/files/ABOUT.md
+created_at: '2026-05-01T16:13:33.649Z'
+entity_id: d582fa7f-c6ef-422c-a19f-bbecf9f0980a
 public_read: false
+updated_at: '2026-05-01T16:13:33.649Z'
+user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
 # Files Utilities

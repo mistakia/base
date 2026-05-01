@@ -2,12 +2,15 @@
 title: libs-server/container
 type: text
 description: >-
-  Container-runtime-agnostic helpers (formerly libs-server/docker). Owns runtime selection,
-  shared path translation, and safe-stop orchestration.
+  Container-runtime-agnostic helpers (formerly libs-server/docker). Owns runtime selection, shared
+  path translation, and safe-stop orchestration.
 base_uri: sys:libs-server/container/ABOUT.md
+created_at: '2026-05-01T16:13:33.643Z'
+entity_id: e985252a-12ce-458f-9dce-444c1810c52a
 public_read: true
 relations:
   - relates_to [[sys:system/text/thread-execution-attribution.md]]
+updated_at: '2026-05-01T16:13:33.643Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
