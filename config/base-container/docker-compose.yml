@@ -4,6 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
     image: base-container:latest
+    pull_policy: never
     container_name: base-container
     init: true
     restart: unless-stopped
