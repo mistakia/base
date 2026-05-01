@@ -12,7 +12,6 @@ public_read: true
 relations:
   - relates_to [[sys:system/text/directory-structure.md]]
   - relates_to [[sys:system/text/knowledge-base-schema.md]]
-  - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/workflow.md]]
   - relates_to [[sys:system/schema/database.md]]
 updated_at: '2026-01-05T19:25:18.031Z'
@@ -119,7 +118,7 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 
 - **Entity**: A markdown file with YAML frontmatter that follows a typed schema. The universal unit of content in the system.
 - **Thread**: The standardized session representation for conversations and agentic loops. See [[sys:system/text/execution-threads.md]].
-- **Tool**: A capability exposed to agents during sessions (e.g., file access, shell, APIs). See [[sys:system/text/tool-information.md]].
+- **Tool**: A capability available to an agent during a session. Tools come from the agent harness (e.g. Read, Edit, Bash), the `base` CLI, user-base scripts, and the host machine's shell.
 - **Relation**: A typed link between two entities (e.g., `blocked_by`, `subtask_of`, `relates_to`). See [[sys:system/text/entity-relations.md]].
 - **Observation**: A structured fact attached to an entity in the format `[category] text`.
 - **Schema**: A `type_definition` entity that defines the properties and constraints for an entity type.
@@ -142,7 +141,6 @@ See [[sys:system/text/background-services.md]] for service details and schedulin
 - [[sys:system/text/session-lifecycle-reference.md]] - WebSocket events and state transitions
 - [[sys:system/text/cross-machine-sessions.md]] - Multi-machine session management
 - [[sys:system/text/workflow.md]] - Workflow definitions and execution
-- [[sys:system/text/tool-information.md]] - Tool capabilities and usage
 
 ### Infrastructure
 

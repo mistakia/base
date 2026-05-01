@@ -9,7 +9,6 @@ public_read: true
 relations:
   - relates_to [[sys:system/text/system-design.md]]
   - relates_to [[sys:system/text/workflow.md]]
-  - relates_to [[sys:system/text/tool-information.md]]
 updated_at: '2026-03-02T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---

@@ -81,11 +81,11 @@ Everything is an entity with a type (task, workflow, guideline, person, etc.). E
 - Relations forming a knowledge graph
 - Multi-storage support (filesystem, git, database)
 
-#### Thread-Workflow-Tool Model
+#### Workflow / Thread / Tool Model
 
-1. **Tools**: Atomic operations (file_read, task_create, etc.) in `/libs-server/tools/`
-2. **Workflows**: Compose tools into agent behaviors in markdown files
-3. **Threads**: Execute workflows with state management and git worktrees
+- **Workflows**: Markdown documents that describe how an agent should accomplish a task. Portable across any harness (Claude Code, Cursor, Codex, Conductor, etc.).
+- **Threads**: Durable records of a workflow execution emitted by whatever harness ran it — timeline of actions, state, git worktree, lease.
+- **Tools**: Whatever the running agent can call. Sources are the harness's built-in tools (Read, Edit, Bash, etc.), the `base` CLI, user-base scripts under `cli/`, and the host machine's shell.
 
 ### Directory Structure
 
@@ -100,7 +100,6 @@ Everything is an entity with a type (task, workflow, guideline, person, etc.). E
 /libs-server/        # Core server libraries
   /entity/           # Entity system (CRUD, validation, storage)
   /threads/          # Thread execution engine
-  /tools/            # Tool implementations
   /workflow/         # Workflow processing
   /integrations/     # External system integrations
 
@@ -147,9 +146,9 @@ Threads execute workflows in isolated git worktrees:
 ### Integration Points
 
 - **GitHub**: Bidirectional sync with issues and projects
-- **External APIs**: Via tool system
+- **External APIs**: Via the `base` CLI and user-base scripts
 - **Webhooks**: Real-time updates from external systems
-- **Model Context Protocol**: For AI model communication
+- **Model Context Protocol**: Third-party MCP servers configurable in `.mcp.json`
 
 ## Development Notes
 

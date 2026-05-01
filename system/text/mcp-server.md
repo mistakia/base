@@ -11,7 +11,6 @@ observations:
   - '[evaluation] Retained as deprecation record with migration guidance for historical references.'
 public_read: true
 relations:
-  - relates_to [[sys:system/text/tool-information.md]]
   - relates_to [[sys:system/text/system-design.md]]
 updated_at: '2026-03-02T06:41:47.455Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
