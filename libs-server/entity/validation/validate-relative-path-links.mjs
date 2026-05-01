@@ -3,76 +3,57 @@
  * in markdown links or image references. Entity content should use base-uri
  * format or wikilinks instead.
  *
- * Only checks markdown links [text](path) and images ![alt](path).
- * Skips content inside code blocks and inline code.
+ * Scans all content (including inside code spans and fenced code blocks) so
+ * real links inside example fences are still validated. Specific findings can
+ * be excused via the `validation_exceptions` frontmatter primitive: each entry
+ * is `{rule, match, reason}` and suppresses any error for the named rule whose
+ * full match text equals `match`. Exceptions that do not match anything are
+ * reported as `unused_exceptions` so they cannot rot silently.
  *
  * @param {Object} params - Parameters
  * @param {string} params.entity_content - Raw markdown content body
- * @param {Array} [params.tokens] - Parsed markdown-it tokens (for code block awareness)
- * @returns {Object} - { errors: string[] }
+ * @param {Array<{rule: string, match: string, reason?: string}>} [params.validation_exceptions]
+ * @returns {{errors: string[], unused_exceptions: Array}}
  */
+const RULE_ID = 'relative-path-link'
+
 export function validate_relative_path_links({
   entity_content,
-  tokens = []
+  validation_exceptions = []
 } = {}) {
-  const errors = []
-
   if (!entity_content) {
-    return { errors }
+    return { errors: [], unused_exceptions: [] }
   }
+
+  const applicable_exceptions = validation_exceptions.filter(
+    (e) => e && e.rule === RULE_ID && typeof e.match === 'string'
+  )
+  const used = new Set()
 
   // Pattern matches markdown links and images with relative paths
   // [text](../path) or ![alt](../../path) or [text](./path)
   const relative_link_regex = /!?\[([^\]]*)\]\((\.\.\/[^)]+|\.\/[^)]+)\)/g
+  const errors = []
 
-  if (tokens.length > 0) {
-    // Token-aware extraction: skip code blocks
-    for (const token of tokens) {
-      if (token.type === 'inline' && token.content) {
-        if (is_in_code_token(token)) {
-          continue
-        }
-
-        const parts = token.content.split('`')
-        for (let i = 0; i < parts.length; i++) {
-          if (i % 2 === 1) continue
-          find_relative_links(parts[i], relative_link_regex, errors)
-        }
-      }
-    }
-  } else {
-    // Simple extraction: strip fenced code blocks, then scan
-    const content_without_code = entity_content.replace(/```[\s\S]*?```/g, '')
-    find_relative_links(content_without_code, relative_link_regex, errors)
-  }
-
-  return { errors }
-}
-
-function find_relative_links(text, regex, errors) {
   let match
-  // Reset regex lastIndex for reuse
-  regex.lastIndex = 0
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = relative_link_regex.exec(entity_content)) !== null) {
     const full_match = match[0]
     const path = match[2]
+
+    const matching_exception = applicable_exceptions.find(
+      (e) => e.match === full_match
+    )
+    if (matching_exception) {
+      used.add(matching_exception)
+      continue
+    }
+
     errors.push(
       `Relative path link found: ${full_match} -- use base-uri format (e.g., user:path/to/file) or wikilinks instead of "${path}"`
     )
   }
-}
 
-function is_in_code_token(token) {
-  if (!token) return false
-  if (
-    token.type === 'code_block' ||
-    token.type === 'fence' ||
-    token.type === 'code_inline'
-  ) {
-    return true
-  }
-  if (token.parent) {
-    return is_in_code_token(token.parent)
-  }
-  return false
+  const unused_exceptions = applicable_exceptions.filter((e) => !used.has(e))
+
+  return { errors, unused_exceptions }
 }

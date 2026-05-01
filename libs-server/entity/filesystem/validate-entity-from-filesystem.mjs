@@ -153,15 +153,26 @@ export async function validate_entity_from_filesystem({
     const constraints_result = validate_constraints(constraint_params)
     const cardinality_result = validate_relation_cardinality(constraint_params)
 
-    // Relative path links are errors (entity content must use base-uri or wikilinks)
+    // Relative path links are errors (entity content must use base-uri or wikilinks).
+    // Exceptions declared in the entity's `validation_exceptions` frontmatter
+    // suppress specific findings; unused exceptions surface as warnings.
     const relative_path_result = validate_relative_path_links({
-      entity_content
+      entity_content,
+      validation_exceptions: entity_properties.validation_exceptions
     })
     all_errors.push(...(relative_path_result.errors || []).map(String))
 
+    const unused_exception_warnings = (
+      relative_path_result.unused_exceptions || []
+    ).map(
+      (e) =>
+        `Unused validation_exception (rule="${e.rule}", match=${JSON.stringify(e.match)}) -- remove it or fix the match string.`
+    )
+
     const all_warnings = [
       ...constraints_result.warnings,
-      ...cardinality_result.warnings
+      ...cardinality_result.warnings,
+      ...unused_exception_warnings
     ]
 
     if (all_errors.length > 0) {
