@@ -202,7 +202,6 @@ export const generate_user_settings = ({
   })
 
   const settings = {
-    apiKeyHelper: '/usr/local/bin/claude-oauth-helper',
     skipDangerousModePermissionPrompt: true,
     cleanupPeriodDays: 36500,
     includeCoAuthoredBy: false,

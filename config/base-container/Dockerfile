@@ -128,7 +128,6 @@ WORKDIR ${CONTAINER_WORKDIR}
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 COPY validate-user-command.sh validate-file-access.sh user-active-session-hook.sh user-sync-session-hook.sh /usr/local/bin/
-COPY --chmod=0755 claude-oauth-helper.sh /usr/local/bin/claude-oauth-helper
 RUN chmod +x /usr/local/bin/entrypoint.sh /usr/local/bin/validate-user-command.sh /usr/local/bin/validate-file-access.sh /usr/local/bin/user-active-session-hook.sh /usr/local/bin/user-sync-session-hook.sh
 
 # Install gosu for dropping privileges in entrypoint
