@@ -1,4 +1,4 @@
 {"type":"session","id":"sess-v3-multi","version":3}
-{"id":"r","parentId":null,"type":"message","role":"user","content":"start","timestamp":"2026-04-02T00:00:00.000Z"}
-{"id":"a","parentId":"r","type":"message","role":"assistant","content":[{"type":"text","text":"plan A"}],"model":"claude","provider":"anthropic","timestamp":"2026-04-02T00:00:01.000Z"}
-{"id":"b","parentId":"r","type":"message","role":"assistant","content":[{"type":"text","text":"plan B"}],"model":"claude","provider":"anthropic","timestamp":"2026-04-02T00:00:02.000Z"}
+{"id":"r","parentId":null,"type":"message","timestamp":"2026-04-02T00:00:00.000Z","message":{"role":"user","content":[{"type":"text","text":"start"}],"timestamp":"2026-04-02T00:00:00.000Z"}}
+{"id":"a","parentId":"r","type":"message","timestamp":"2026-04-02T00:00:01.000Z","message":{"role":"assistant","content":[{"type":"text","text":"plan A"}],"model":"claude","provider":"anthropic","timestamp":"2026-04-02T00:00:01.000Z"}}
+{"id":"b","parentId":"r","type":"message","timestamp":"2026-04-02T00:00:02.000Z","message":{"role":"assistant","content":[{"type":"text","text":"plan B"}],"model":"claude","provider":"anthropic","timestamp":"2026-04-02T00:00:02.000Z"}}

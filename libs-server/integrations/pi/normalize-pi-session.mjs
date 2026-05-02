@@ -168,7 +168,10 @@ export const normalize_pi_session = (raw_session) => {
         })
         continue
       case 'model_change': {
-        const new_model = entry.newModel ?? entry.model ?? null
+        // Pi v3 model_change carries fields at the top level (no `message`
+        // envelope): { type, id, parentId, timestamp, modelId, provider }.
+        const new_model =
+          entry.modelId ?? entry.newModel ?? entry.model ?? null
         const new_provider = entry.newProvider ?? entry.provider ?? null
         const previous_model = running_model
         const previous_provider = running_provider
@@ -266,8 +269,10 @@ export const normalize_pi_session = (raw_session) => {
         continue
     }
 
-    // Role-level dispatch for entries with type='message'
-    const role = entry.role
+    // Role-level dispatch for entries with type='message'.
+    // Pi v3 stores the role at entry.message.role (not entry.role); fall back
+    // to entry.role for older shapes / migrated v1 entries.
+    const role = entry.message?.role ?? entry.role
     switch (role) {
       case 'user': {
         messages.push({
@@ -275,7 +280,7 @@ export const normalize_pi_session = (raw_session) => {
           type: 'message',
           role: 'user',
           content: extract_text_content(
-            entry.content ?? entry.message?.content ?? ''
+            entry.message?.content ?? entry.content ?? ''
           ),
           metadata: {}
         })
@@ -283,10 +288,18 @@ export const normalize_pi_session = (raw_session) => {
       }
       case 'assistant': {
         const blocks = extract_assistant_blocks(entry)
-        const usage = entry.usage ?? entry.message?.usage ?? null
-        const cost = entry.cost ?? entry.message?.cost ?? null
-        const model = entry.model ?? entry.message?.model ?? running_model
-        const provider = entry.provider ?? entry.message?.provider ?? running_provider
+        const usage = entry.message?.usage ?? entry.usage ?? null
+        // Pi v3 nests cost inside usage.cost; older shapes had it at the top
+        // level. Fall through both.
+        const cost =
+          entry.message?.usage?.cost ??
+          entry.usage?.cost ??
+          entry.message?.cost ??
+          entry.cost ??
+          null
+        const model = entry.message?.model ?? entry.model ?? running_model
+        const provider =
+          entry.message?.provider ?? entry.provider ?? running_provider
         if (model) {
           models.add(model)
           running_model = model
@@ -351,15 +364,21 @@ export const normalize_pi_session = (raw_session) => {
         break
       }
       case 'toolResult': {
-        const tool_call_id = entry.toolCallId ?? entry.tool_call_id
+        // Pi v3 stores toolCallId / isError / content under entry.message.
+        const tool_call_id =
+          entry.message?.toolCallId ??
+          entry.toolCallId ??
+          entry.tool_call_id
         if (!tool_call_id) {
           log(
             `normalize_pi_session: toolResult entry ${entry.id} missing toolCallId, skipping`
           )
           break
         }
-        const is_error = !!entry.isError
-        const result_content = entry.content ?? entry.result ?? null
+        const is_error = !!(entry.message?.isError ?? entry.isError)
+        const raw_content =
+          entry.message?.content ?? entry.content ?? entry.result ?? null
+        const result_content = extract_text_content(raw_content) || raw_content
         messages.push({
           ...base,
           type: 'tool_result',
@@ -588,19 +607,30 @@ const extract_assistant_blocks = (entry) => {
   return { text_pieces, thinking_blocks, tool_calls }
 }
 
+// Pi v3 usage shape: { input, output, cacheRead, cacheWrite, totalTokens,
+// cost: { input, output, cacheRead, cacheWrite } }. Older / hand-written
+// shapes used inputTokens/outputTokens with cost at the top level using
+// inputCost/outputCost. Read both.
 const aggregate_assistant_usage_cost = ({ usage, cost }) => {
   const u = usage || {}
   const c = cost || {}
   return {
-    input_tokens: Number(u.inputTokens ?? u.input_tokens ?? 0) || 0,
-    output_tokens: Number(u.outputTokens ?? u.output_tokens ?? 0) || 0,
+    input_tokens:
+      Number(u.input ?? u.inputTokens ?? u.input_tokens ?? 0) || 0,
+    output_tokens:
+      Number(u.output ?? u.outputTokens ?? u.output_tokens ?? 0) || 0,
     cache_read_tokens:
-      Number(u.cacheReadTokens ?? u.cache_read_tokens ?? 0) || 0,
+      Number(u.cacheRead ?? u.cacheReadTokens ?? u.cache_read_tokens ?? 0) ||
+      0,
     cache_write_tokens:
-      Number(u.cacheWriteTokens ?? u.cache_write_tokens ?? 0) || 0,
-    input_cost: Number(c.inputCost ?? c.input_cost ?? 0) || 0,
-    output_cost: Number(c.outputCost ?? c.output_cost ?? 0) || 0,
-    cache_read_cost: Number(c.cacheReadCost ?? c.cache_read_cost ?? 0) || 0,
-    cache_write_cost: Number(c.cacheWriteCost ?? c.cache_write_cost ?? 0) || 0
+      Number(
+        u.cacheWrite ?? u.cacheWriteTokens ?? u.cache_write_tokens ?? 0
+      ) || 0,
+    input_cost: Number(c.input ?? c.inputCost ?? c.input_cost ?? 0) || 0,
+    output_cost: Number(c.output ?? c.outputCost ?? c.output_cost ?? 0) || 0,
+    cache_read_cost:
+      Number(c.cacheRead ?? c.cacheReadCost ?? c.cache_read_cost ?? 0) || 0,
+    cache_write_cost:
+      Number(c.cacheWrite ?? c.cacheWriteCost ?? c.cache_write_cost ?? 0) || 0
   }
 }

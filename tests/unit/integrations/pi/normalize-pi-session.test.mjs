@@ -52,7 +52,7 @@ describe('normalize_pi_session', () => {
     expect(out.messages[0]).to.not.have.property('provenance')
   })
 
-  it('assistant message stamps per-turn token/cost on metadata', () => {
+  it('assistant message stamps per-turn token/cost on metadata (legacy flat shape)', () => {
     const out = normalize_pi_session(
       make_branch_input({
         branch_entries: [
@@ -76,6 +76,159 @@ describe('normalize_pi_session', () => {
     expect(assistant.metadata.output_tokens).to.equal(5)
     expect(assistant.metadata.input_cost).to.equal(0.01)
     expect(assistant.metadata.output_cost).to.equal(0.02)
+  })
+
+  it('Pi v3 envelope: reads role/content/usage/cost from entry.message', () => {
+    const out = normalize_pi_session(
+      make_branch_input({
+        branch_entries: [
+          {
+            id: 'e1',
+            parentId: null,
+            type: 'message',
+            timestamp: '2026-04-01T00:00:00.000Z',
+            message: {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'real answer' }],
+              model: 'opus-distilled',
+              provider: 'omlx',
+              usage: {
+                input: 100,
+                output: 25,
+                cacheRead: 5,
+                cacheWrite: 7,
+                totalTokens: 137,
+                cost: { input: 0.5, output: 0.25, cacheRead: 0.01, cacheWrite: 0.02 }
+              }
+            }
+          }
+        ]
+      })
+    )
+    const assistant = out.messages.find((m) => m.role === 'assistant')
+    expect(assistant, 'assistant entry must exist (v3 envelope role lookup)').to.exist
+    expect(assistant.content).to.equal('real answer')
+    expect(assistant.metadata.model).to.equal('opus-distilled')
+    expect(assistant.metadata.provider).to.equal('omlx')
+    expect(assistant.metadata.input_tokens).to.equal(100)
+    expect(assistant.metadata.output_tokens).to.equal(25)
+    expect(assistant.metadata.cache_read_tokens).to.equal(5)
+    expect(assistant.metadata.cache_write_tokens).to.equal(7)
+    expect(assistant.metadata.input_cost).to.equal(0.5)
+    expect(assistant.metadata.output_cost).to.equal(0.25)
+    expect(assistant.metadata.cache_read_cost).to.equal(0.01)
+    expect(assistant.metadata.cache_write_cost).to.equal(0.02)
+    expect(out.metadata.aggregate_input_tokens).to.equal(100)
+    expect(out.metadata.aggregate_output_cost).to.equal(0.25)
+    expect(out.metadata.models).to.deep.equal(['opus-distilled'])
+    expect(out.metadata.inference_providers).to.deep.equal(['omlx'])
+  })
+
+  it('Pi v3 envelope: user message extracts text from message.content array', () => {
+    const out = normalize_pi_session(
+      make_branch_input({
+        branch_entries: [
+          {
+            id: 'e1',
+            parentId: null,
+            type: 'message',
+            timestamp: '2026-04-01T00:00:00.000Z',
+            message: {
+              role: 'user',
+              content: [{ type: 'text', text: 'hello there' }]
+            }
+          }
+        ]
+      })
+    )
+    const user = out.messages.find((m) => m.role === 'user')
+    expect(user).to.exist
+    expect(user.content).to.equal('hello there')
+  })
+
+  it('Pi v3 envelope: toolResult reads toolCallId and content from message', () => {
+    const out = normalize_pi_session(
+      make_branch_input({
+        branch_entries: [
+          {
+            id: 'e1',
+            parentId: null,
+            type: 'message',
+            timestamp: '2026-04-01T00:00:00.000Z',
+            message: {
+              role: 'toolResult',
+              toolCallId: 'call_abc',
+              toolName: 'bash',
+              isError: false,
+              content: [{ type: 'text', text: 'output line\n' }]
+            }
+          }
+        ]
+      })
+    )
+    const tr = out.messages.find((m) => m.type === 'tool_result')
+    expect(tr).to.exist
+    expect(tr.content.tool_call_id).to.equal('call_abc')
+    expect(tr.content.result).to.equal('output line\n')
+    expect(tr.content.error).to.be.null
+  })
+
+  it('Pi v3 envelope: toolResult with isError sets error and clears result', () => {
+    const out = normalize_pi_session(
+      make_branch_input({
+        branch_entries: [
+          {
+            id: 'e1',
+            parentId: null,
+            type: 'message',
+            timestamp: '2026-04-01T00:00:00.000Z',
+            message: {
+              role: 'toolResult',
+              toolCallId: 'call_err',
+              isError: true,
+              content: [{ type: 'text', text: 'permission denied' }]
+            }
+          }
+        ]
+      })
+    )
+    const tr = out.messages.find((m) => m.type === 'tool_result')
+    expect(tr.content.error).to.equal('permission denied')
+    expect(tr.content.result).to.be.null
+  })
+
+  it('model_change reads modelId (Pi v3) and tracks running model/provider', () => {
+    const out = normalize_pi_session(
+      make_branch_input({
+        branch_entries: [
+          {
+            id: 'mc1',
+            parentId: null,
+            type: 'model_change',
+            modelId: 'opus-distilled-35b',
+            provider: 'omlx',
+            timestamp: '2026-04-01T00:00:00.000Z'
+          },
+          {
+            id: 'a1',
+            parentId: 'mc1',
+            type: 'message',
+            timestamp: '2026-04-01T00:00:01.000Z',
+            message: {
+              role: 'assistant',
+              content: [{ type: 'text', text: 'ok' }]
+            }
+          }
+        ]
+      })
+    )
+    const sys = out.messages.find((m) => m.system_type === 'configuration')
+    expect(sys.metadata.new_model).to.equal('opus-distilled-35b')
+    expect(sys.metadata.new_provider).to.equal('omlx')
+    const assistant = out.messages.find((m) => m.role === 'assistant')
+    expect(assistant.metadata.model).to.equal('opus-distilled-35b')
+    expect(assistant.metadata.provider).to.equal('omlx')
+    expect(out.metadata.models).to.include('opus-distilled-35b')
   })
 
   it('bashExecution emits deterministic tool_call+tool_result pair', () => {
