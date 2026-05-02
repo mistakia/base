@@ -46,6 +46,11 @@ const heartbeat_interval = setInterval(() => {
   })
 }, HEARTBEAT_INTERVAL_MS)
 
+// Don't block process exit on this timer alone. The base-api service stays
+// alive via the HTTP/WebSocket server handles; CLI flows that transitively
+// import this module (via thread creation) must be free to exit.
+heartbeat_interval.unref?.()
+
 wss.on('close', () => {
   clearInterval(heartbeat_interval)
 })
