@@ -1,0 +1,3 @@
+{"type":"session","id":"sess-v3-single","version":3}
+{"id":"e1","parentId":null,"type":"message","role":"user","content":"hi","timestamp":"2026-04-01T00:00:00.000Z"}
+{"id":"e2","parentId":"e1","type":"message","role":"assistant","content":[{"type":"text","text":"hello"}],"model":"claude-sonnet-4","provider":"anthropic","usage":{"inputTokens":5,"outputTokens":3},"cost":{"inputCost":0.001,"outputCost":0.002},"timestamp":"2026-04-01T00:00:01.000Z"}

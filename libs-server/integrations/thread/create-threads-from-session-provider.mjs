@@ -604,7 +604,7 @@ const create_new_session_thread = async ({
     user_base_directory,
     inference_provider: session_provider.get_inference_provider(),
     models,
-    raw_session_data: raw_session,
+    raw_session_data: session_provider.supports_raw_data ? raw_session : null,
     execution_overrides
   })
 
@@ -616,7 +616,7 @@ const create_new_session_thread = async ({
 
   await verify_thread_directory_integrity({
     thread_dir: thread_result.thread_dir,
-    expect_raw_data: !!raw_session
+    expect_raw_data: !!raw_session && session_provider.supports_raw_data
   })
 
   // Timeline write succeeded -- safe to advance the provider's parse cursor.
@@ -671,7 +671,7 @@ const update_existing_session_thread = async ({
   const update_result = await update_existing_thread(normalized_session, {
     thread_id,
     thread_dir,
-    raw_session_data: raw_session,
+    raw_session_data: session_provider.supports_raw_data ? raw_session : null,
     execution_overrides,
     bulk_import
   })

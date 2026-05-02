@@ -36,6 +36,15 @@ export class SessionProviderBase {
   }
 
   /**
+   * Whether this provider produces raw session data that should be persisted
+   * to the thread's raw-data/ directory. Override to false for providers
+   * (like Pi) that have no raw-data persister yet.
+   */
+  get supports_raw_data() {
+    return true
+  }
+
+  /**
    * Find sessions from provider-specific source
    * Must be implemented by subclasses
    *

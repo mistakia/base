@@ -1,0 +1,3 @@
+{"type":"session","id":"sess-v1","version":1}
+{"type":"user","content":"hi","timestamp":1717200000000}
+{"type":"assistant","content":"hello","timestamp":1717200001000}
