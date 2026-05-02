@@ -23,9 +23,6 @@ export const send_lease_unreachable = (res, error) => {
   })
 }
 
-const _base_url_for = (machine_id) =>
-  config.machine_registry?.[machine_id]?.base_url || null
-
 const _is_enforce_mode = () =>
   config.thread_config?.field_ownership_enforce === true
 
@@ -47,14 +44,6 @@ export const apply_read_lease_routing = async ({ thread_id, req, res }) => {
   if (!holder || holder === current) {
     res.set('X-Thread-Source', 'local')
     return { redirect: false }
-  }
-
-  const base_url = _base_url_for(holder)
-  if (base_url) {
-    const location = `${base_url.replace(/\/+$/, '')}${req.originalUrl}`
-    log('read redirect %s → %s', thread_id, location)
-    res.redirect(307, location)
-    return { redirect: true }
   }
 
   res.set('X-Thread-Source', 'local-mirror')
@@ -126,16 +115,8 @@ export const check_write_lease_routing = async ({
       return { block: true }
     }
 
-    const base_url = holder ? _base_url_for(holder) : null
-    if (base_url) {
-      const location = `${base_url.replace(/\/+$/, '')}${req.originalUrl}`
-      log('write redirect %s field=%s → %s', thread_id, field, location)
-      res.redirect(307, location)
-      return { block: true }
-    }
-
     log(
-      'write conflict: lifecycle/analyzer field=%s thread=%s holder=%s no base_url',
+      'write conflict: lifecycle/analyzer field=%s thread=%s holder=%s',
       field,
       thread_id,
       holder

@@ -119,16 +119,15 @@ describe('API /api/threads/:id lease-aware routing', function () {
       expect(res.headers['x-thread-source']).to.equal('local')
     })
 
-    it('lease held by remote machine with base_url → 307 with correct Location', async () => {
+    it('lease held by remote machine with base_url → local-mirror, no redirect', async () => {
       const thread_id = _track(_new_thread_id())
       await _acquire(thread_id, 'remote_with_url')
 
       const res = await request(server)
         .get(`/api/threads/${thread_id}`)
         .redirects(0)
-      expect(res.status).to.equal(307)
-      expect(res.headers['location']).to.include('https://remote.example.com')
-      expect(res.headers['location']).to.include(thread_id)
+      expect(res.status).to.not.equal(307)
+      expect(res.headers['x-thread-source']).to.equal('local-mirror')
       expect(res.headers['x-thread-owner']).to.equal('remote_with_url')
     })
 
@@ -184,22 +183,18 @@ describe('API /api/threads/:id lease-aware routing', function () {
       expect(res.body.field).to.equal('session_status')
     })
 
-    it('lifecycle field write with authenticated user + remote lease + base_url → 307', async () => {
+    it('lifecycle field write with authenticated user + remote lease + base_url → 409', async () => {
       const thread_id = _track(_new_thread_id())
       await _acquire(thread_id, 'remote_with_url')
 
-      // User makes a state-update request; permission check passes (user is owner),
-      // then lease check redirects to lease holder
       const res = await authenticate_request(
         request(server)
           .put(`/api/threads/${thread_id}/state`)
           .send({ thread_state: 'active' }),
         test_user
       ).redirects(0)
-      // The route checks user permission first (which allows the user),
-      // then the lease write check should 307 redirect
-      expect(res.status).to.equal(307)
-      expect(res.headers['location']).to.include('https://remote.example.com')
+      expect(res.status).to.equal(409)
+      expect(res.body.error).to.equal('lease_conflict')
     })
 
     it('lifecycle field write with authenticated user + remote lease + no base_url → 409', async () => {

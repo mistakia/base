@@ -578,8 +578,10 @@ router.put(
         return res.status(400).json({ error: 'thread_state is required' })
       }
 
-      // Lease check runs before the write_allowed gate: a cross-machine write
-      // by a legitimate user should redirect to the lease holder, not 403.
+      // Lease check runs before the write_allowed gate so cross-machine
+      // lifecycle/analyzer writes return 409 lease_conflict (session-owned
+      // violations still 403) instead of leaking through as 403 from the
+      // user-permission gate.
       const write_check = await check_write_lease_routing({
         thread_id,
         patches: {
