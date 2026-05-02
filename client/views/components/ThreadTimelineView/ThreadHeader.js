@@ -18,7 +18,6 @@ import { use_copy_to_clipboard } from '@views/hooks/use-copy-to-clipboard.js'
 import '@styles/chip.styl'
 import { get_thread_cost_display } from '@core/threads/selectors'
 import { get_app, get_user_token } from '@core/app/selectors'
-import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import {
   MetadataContainer,
   MetadataRow,
@@ -38,7 +37,7 @@ import {
   Code as CodeIcon
 } from '@mui/icons-material'
 import { format_relative_time } from '@views/utils/date-formatting.js'
-import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
+import ThreadLifecycleIndicator from '@components/ThreadLifecycleIndicator/ThreadLifecycleIndicator.js'
 import { EditableTagsField } from '@views/components/InlineSelect'
 import {
   extract_message_counts,
@@ -53,7 +52,6 @@ import {
   extract_context_token_state
 } from '@views/utils/thread-metadata-extractor.js'
 import { parse_relations_for_display } from '#libs-shared/relation-parser.mjs'
-import { SESSION_STATUS_DISPLAY_MAP } from '#libs-shared/session-status-display.mjs'
 
 const SPACING = {
   TITLE_MARGIN: '8px',
@@ -1163,35 +1161,8 @@ const ThreadHeader = ({
     get_thread_cost_display(state, thread_id)
   )
 
-  // Get active session for this thread
-  const ws_active_session = useSelector((state) =>
-    get_active_session_for_thread(state, thread_id)
-  )
-
-  // Fallback path: ACTIVE_SESSION_* events may not have arrived on direct
-  // navigation, so derive the Live Session display from persisted
-  // thread.session_status when the ephemeral store is empty.
   const thread_session_status = metadata?.get?.('session_status') || null
-  const thread_updated_at = metadata?.get?.('updated_at') || null
-  const thread_created_at = metadata?.get?.('created_at') || null
-  const synthetic_active_session = useMemo(() => {
-    if (ws_active_session) return null
-    const mapped = SESSION_STATUS_DISPLAY_MAP[thread_session_status]
-    if (!mapped) return null
-    return {
-      session_id: null,
-      status: mapped,
-      started_at: thread_created_at,
-      last_activity_at: thread_updated_at,
-      total_tokens: null
-    }
-  }, [
-    ws_active_session,
-    thread_session_status,
-    thread_created_at,
-    thread_updated_at
-  ])
-  const active_session = ws_active_session || synthetic_active_session
+  const thread_user_message_count = metadata?.get?.('user_message_count') || 0
 
   // Check if current user owns this thread
   const user_owns_thread =
@@ -1256,13 +1227,18 @@ const ThreadHeader = ({
       </Box>
 
       {/* Always-visible: Live Session + Thread State */}
-      {(active_session || thread_state) && (
+      {(thread_session_status || thread_state) && (
         <Box>
-          {active_session && (
+          {thread_session_status && (
             <MetadataRow
               label='Live Session'
               value={
-                <SessionActivityBar active_session={active_session} compact />
+                <ThreadLifecycleIndicator
+                  status={thread_session_status}
+                  thread_id={thread_id}
+                  user_message_count={thread_user_message_count}
+                  variant='inline'
+                />
               }
               is_first
             />
@@ -1272,7 +1248,7 @@ const ThreadHeader = ({
               thread_state={thread_state}
               thread_id={thread_id}
               user_owns_thread={user_owns_thread}
-              is_first={!active_session}
+              is_first={!thread_session_status}
             />
           )}
         </Box>

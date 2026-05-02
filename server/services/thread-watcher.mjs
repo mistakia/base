@@ -13,7 +13,8 @@ import { create_parcel_subscription } from '#libs-server/file-subscriptions/parc
 import { run_reconcile_thread_sweep } from '#libs-server/embedded-database-index/sync/reconcile-thread-sweep.mjs'
 import { index_thread_metadata } from '#libs-server/active-sessions/session-thread-matcher.mjs'
 import { resolve_queue_path } from '#libs-server/queue/resolve-queue-path.mjs'
-import { ACTIVE_SESSION_STATUSES } from '#libs-shared/session-status-display.mjs'
+import { LIVE_STATUSES } from '#libs-shared/thread-lifecycle.mjs'
+import { should_emit_thread_updated } from '#libs-server/threads/should-emit-thread-updated.mjs'
 
 const log = debug('threads:watcher')
 const log_lifecycle = debug('base:session-lifecycle')
@@ -58,7 +59,7 @@ const latest_timeline_entry_cache = new Map()
 // Map<thread_id, Object>
 const metadata_cache = new Map()
 
-// Secondary index: thread_ids whose session_status is in ACTIVE_SESSION_STATUSES.
+// Secondary index: thread_ids whose session_status is in LIVE_STATUSES.
 // Kept in sync with metadata_cache so GET /api/active-sessions is O(active)
 // instead of O(all threads ever observed).
 const active_session_thread_ids = new Set()
@@ -70,7 +71,7 @@ const active_session_thread_ids = new Set()
 // before the metadata.json 'create' event lands.
 const emitted_created_thread_ids = new Set()
 
-const ACTIVE_STATUS_SET = new Set(ACTIVE_SESSION_STATUSES)
+const ACTIVE_STATUS_SET = new Set(LIVE_STATUSES)
 const update_active_session_index = (thread_id, metadata) => {
   if (ACTIVE_STATUS_SET.has(metadata?.session_status)) {
     active_session_thread_ids.add(thread_id)
@@ -486,8 +487,12 @@ const handle_metadata_added = async (file_path) => {
 
   if (already_emitted_created) {
     log_lifecycle('WATCHER metadata_added_as_update thread_id=%s', thread_id)
-    log(`Emitting THREAD_UPDATED for existing thread: ${thread_id}`)
-    emit_thread_updated(metadata)
+    if (should_emit_thread_updated({ thread_id, payload: metadata })) {
+      log(`Emitting THREAD_UPDATED for existing thread: ${thread_id}`)
+      emit_thread_updated(metadata)
+    } else {
+      log(`Suppressed duplicate THREAD_UPDATED for thread: ${thread_id}`)
+    }
     if (metadata.thread_id) {
       schedule_thread_index_sync(metadata.thread_id, metadata)
     }
@@ -547,7 +552,14 @@ const handle_metadata_changed = async (file_path) => {
     index_thread_metadata(metadata.thread_id, metadata)
   }
 
-  emit_thread_updated(metadata)
+  if (
+    should_emit_thread_updated({
+      thread_id: metadata.thread_id,
+      payload: metadata
+    })
+  ) {
+    emit_thread_updated(metadata)
+  }
 
   // Queue for AI title generation if no AI-generated title exists
   if (

@@ -31,6 +31,7 @@ import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { generate_default_thread_title_from_prompt } from '#libs-server/integrations/thread/session-count-utilities.mjs'
 import { emit_thread_updated } from '#server/services/threads/event-emitter.mjs'
+import { should_emit_thread_updated } from '#libs-server/threads/should-emit-thread-updated.mjs'
 import require_hook_auth from '#server/middleware/hook-auth.mjs'
 import patch_thread_metadata from '#libs-server/threads/patch-thread-metadata.mjs'
 import { add_cli_job } from '#server/services/cli-queue/queue.mjs'
@@ -958,7 +959,14 @@ router.put(
       }
 
       // Emit directly for immediate client feedback (bypass 2s watcher debounce)
-      emit_thread_updated(metadata)
+      if (
+        should_emit_thread_updated({
+          thread_id: metadata.thread_id,
+          payload: metadata
+        })
+      ) {
+        emit_thread_updated(metadata)
+      }
 
       // Co-emit lease lifecycle: hook PUTs are the keepalive trigger.
       // active/idle renew; terminal statuses release. All best-effort.
