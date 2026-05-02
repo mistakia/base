@@ -19,6 +19,40 @@ user_public_key: 10ba842b1307fd60475b887df61ccc7e697970a2d222e7cbf011e51f5de3349
 
 Importer for [Pi coding-agent](https://github.com/badlogic/pi-mono) JSONL sessions. Targets the consolidated 5-type timeline schema and creates one thread per branch from Pi's tree-structured sessions.
 
+## Reference
+
+- Canonical session-format spec: <https://raw.githubusercontent.com/badlogic/pi-mono/refs/heads/main/packages/coding-agent/docs/session-format.md> (rendered: <https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/session-format.md>)
+- Pi repo: <https://github.com/badlogic/pi-mono>
+
+## Pi v3 Envelope (read this before editing the normalizer)
+
+Pi v3 message entries wrap their payload under `entry.message`:
+
+```json
+{
+  "type": "message",
+  "id": "...",
+  "parentId": "...",
+  "timestamp": "...",
+  "message": {
+    "role": "user|assistant|toolResult|bashExecution|custom|branchSummary|compactionSummary",
+    "content": "string | TextContent[] | ImageContent[] | ThinkingContent[] | ToolCall[]",
+    "model": "...",
+    "provider": "...",
+    "toolCallId": "...",
+    "isError": false,
+    "usage": {
+      "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "totalTokens": 0,
+      "cost": { "input": 0, "output": 0, "cacheRead": 0, "cacheWrite": 0, "total": 0 }
+    }
+  }
+}
+```
+
+Non-message entries (`model_change`, `thinking_level_change`, `compaction`, `branch_summary`, `custom`, `custom_message`, `label`, `session_info`) carry their fields at the top level. `model_change` uses `modelId` and `provider`.
+
+Reading these fields directly off `entry` (e.g. `entry.role`, `entry.content`, `entry.usage.inputTokens`) silently drops every message; the normalizer always reads `entry.message?.X ?? entry.X` and uses the spec's exact key names (`input` / `output` / `cacheRead` / `cacheWrite`).
+
 ## Module Split
 
 | Module                     | Responsibility                                                                                                                                          |

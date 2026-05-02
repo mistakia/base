@@ -691,8 +691,13 @@ To add a new harness, implement a `SessionProviderBase` subclass in `libs-server
 
 ### Pi Provider
 
-Pi (the badlogic/pi-mono coding agent) deviates from the per-session contract because its `.jsonl` files encode multiple branches via `id`/`parentId` references. The provider yields one raw session per branch from `find_sessions` / `stream_sessions`, so the unified thread-creation layer creates one thread per branch without structural changes. Specifics:
+Pi (the badlogic/pi-mono coding agent) deviates from the per-session contract because its `.jsonl` files encode multiple branches via `id`/`parentId` references. The provider yields one raw session per branch from `find_sessions` / `stream_sessions`, so the unified thread-creation layer creates one thread per branch without structural changes.
 
+**Reference**: canonical session-format spec is at <https://raw.githubusercontent.com/badlogic/pi-mono/refs/heads/main/packages/coding-agent/docs/session-format.md> (rendered: <https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/session-format.md>). The provider implementation lives at `libs-server/integrations/pi/` (see `ABOUT.md` there for the v3 envelope shape).
+
+Specifics:
+
+- **Pi v3 envelope**: message entries wrap the payload under `entry.message` (`role`, `content`, `model`, `provider`, `toolCallId`, `isError`, and `usage` with `input`/`output`/`cacheRead`/`cacheWrite` and a nested `cost` block using the same key names). Non-message entries (`model_change`, `thinking_level_change`, `compaction`, `branch_summary`, `custom`, `custom_message`, `label`, `session_info`) carry fields at the top level. `model_change` uses `modelId`. The normalizer reads `entry.message?.X ?? entry.X` everywhere.
 - **Branch fan-out**: `extract_all_pi_branches` walks every leaf to root; branch index 0 is the most recent leaf and acts as the primary branch. Per-branch `session_id` is `<header.id>-branch-<index>`.
 - **Cross-thread linker (post-processing)**: `pi-branch-linker.mjs` runs after `create_threads_from_session_provider` returns. It groups created/updated threads by `original_session_id`, adds `branched_from` relations between siblings, and backfills `metadata.branch_thread_id` on `branch_point` timeline entries.
 - **Header version gating**: `validate_pi_header` rejects any session whose `header.version` is not 1, 2, or 3. v1 (linear) and v2 (`hookMessage` role) auto-migrate to v3 shape on read.
@@ -700,3 +705,4 @@ Pi (the badlogic/pi-mono coding agent) deviates from the per-session contract be
 - **Raw-data persistence**: skipped. `PiSessionProvider.supports_raw_data === false` makes the dispatcher pass `null` for `raw_session_data` and the post-write integrity check ignores the `raw-data/` directory.
 - **Unsupported tracking**: entry-level `custom` (extension state, not in LLM context) is recorded once via the unsupported tracker so importers see what was dropped.
 - **Label preservation**: Pi `label` entries become `system` / `system_type=status` with `metadata.extension_type='pi_label'` and the label text on both `content` and `metadata.label_text`.
+- **Test fixtures must mirror real Pi shape**: when adding fixtures under `tests/fixtures/pi/`, derive them from a real Pi `.jsonl` (or the spec linked above), not from prose. The original Pi work shipped flat-shape fixtures that matched the broken normalizer, hiding the v3 envelope bug from the test suite until a real session was imported.

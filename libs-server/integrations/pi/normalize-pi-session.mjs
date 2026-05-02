@@ -7,6 +7,17 @@
  * thinking/system) is the target format; Pi's richer entry-level types map
  * onto `system` with `system_type` discriminators.
  *
+ * Pi session spec (canonical reference for field shapes used below):
+ *   https://raw.githubusercontent.com/badlogic/pi-mono/refs/heads/main/packages/coding-agent/docs/session-format.md
+ *
+ * Pi v3 wraps message fields under entry.message:
+ *   { type: 'message', id, parentId, timestamp,
+ *     message: { role, content, model?, provider?, toolCallId?, isError?,
+ *                usage?: { input, output, cacheRead, cacheWrite, totalTokens,
+ *                          cost: { input, output, cacheRead, cacheWrite, total } } } }
+ * Non-message entry types (model_change, thinking_level_change, compaction,
+ * etc.) carry their fields at the top level (no `message` envelope).
+ *
  * Build-timeline-entries.mjs handles entry serialization, schema_version
  * stamping, and provenance assertion -- this normalizer only emits the
  * provider-neutral message objects.
