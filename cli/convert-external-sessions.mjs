@@ -50,6 +50,15 @@ import {
   clear_unsupported_tracking as clear_chatgpt_unsupported
 } from '#libs-server/integrations/chatgpt/normalize-session.mjs'
 
+// Pi integration
+import {
+  list_pi_sessions,
+  import_pi_sessions,
+  link_pi_branches,
+  get_pi_unsupported,
+  clear_pi_unsupported
+} from '#libs-server/integrations/pi/index.mjs'
+
 const log = debug('convert-external-sessions')
 
 function parse_json_arg(value, arg_name) {
@@ -74,6 +83,7 @@ function setup_debug_logging({ verbose, debug_flag }) {
     'integrations:claude',
     'integrations:cursor',
     'integrations:chatgpt',
+    'integrations:pi',
     'integrations:thread',
     'integrations:thread:create-from-session-provider',
     'integrations:thread:create-from-session'
@@ -227,6 +237,12 @@ function output_session_list(sessions, argv) {
         }
         console.log(`   Code blocks: ${session.has_code_blocks ? 'Yes' : 'No'}`)
         console.log(`   Model: ${session.model_used}`)
+      } else if (argv.provider === 'pi') {
+        console.log(`   Project: ${session.project_path}`)
+        console.log(`   File: ${session.file_path}`)
+        console.log(`   Version: ${session.version}`)
+        console.log(`   Branches: ${session.branch_count}`)
+        console.log(`   Entries: ${session.entry_count}`)
       } else if (argv.provider === 'chatgpt') {
         console.log(`   Title: ${session.title}`)
         console.log(
@@ -273,6 +289,14 @@ function output_verbose(result, argv) {
     }
     if (result.warm_agents_excluded !== undefined) {
       console.log(`Warm agents excluded: ${result.warm_agents_excluded}`)
+    }
+  } else if (argv.provider === 'pi') {
+    console.log(`Sessions found: ${result.sessions_found}`)
+    console.log(`Branches found: ${result.branches_found ?? result.valid_sessions}`)
+    console.log(`Valid sessions: ${result.valid_sessions}`)
+    console.log(`Invalid sessions: ${result.invalid_sessions}`)
+    if (result.linker_summary) {
+      console.log(`Linker: ${result.linker_summary.relations_added} relations, ${result.linker_summary.branch_points_resolved} branch_point entries resolved`)
     }
   } else if (argv.provider === 'cursor') {
     console.log(`Conversations found: ${result.conversations_found}`)
@@ -337,6 +361,8 @@ function output_verbose(result, argv) {
     unsupported = get_cursor_unsupported()
   } else if (argv.provider === 'chatgpt') {
     unsupported = get_chatgpt_unsupported()
+  } else if (argv.provider === 'pi') {
+    unsupported = get_pi_unsupported()
   }
 
   if (unsupported && Object.keys(unsupported).length > 0) {
@@ -383,6 +409,8 @@ export async function list_sessions(options = {}) {
       return await list_cursor_conversations(options)
     } else if (provider === 'chatgpt') {
       return await list_chatgpt_conversations(options)
+    } else if (provider === 'pi') {
+      return await list_pi_sessions(options)
     } else {
       throw new Error(`Unsupported provider: ${provider}`)
     }
@@ -432,6 +460,17 @@ export async function import_sessions(options = {}) {
         ...options,
         filter_conversations
       })
+    } else if (provider === 'pi') {
+      const result = await import_pi_sessions(options)
+      if (!options.dry_run && !options.skip_branch_linking) {
+        const created = result.results?.created || []
+        const updated = result.results?.updated || []
+        const linker_summary = await link_pi_branches({
+          thread_results: created.concat(updated)
+        })
+        result.linker_summary = linker_summary
+      }
+      return result
     } else {
       throw new Error(`Unsupported provider: ${provider}`)
     }
@@ -498,6 +537,14 @@ const main = async () => {
               describe: 'ChatGPT device ID',
               type: 'string'
             })
+            .option('pi-sessions-dir', {
+              describe: 'Pi sessions directory (defaults to ~/.pi/agent/sessions)',
+              type: 'string'
+            })
+            .option('pi-sessions-dirs', {
+              describe: 'Multiple Pi sessions directories (comma-separated)',
+              type: 'string'
+            })
             .option('verbose', {
               alias: 'v',
               describe: 'Verbose output',
@@ -517,6 +564,7 @@ const main = async () => {
           clear_claude_unsupported()
           clear_cursor_unsupported()
           clear_chatgpt_unsupported()
+          clear_pi_unsupported()
 
           // Build ChatGPT auth object if provider is ChatGPT
           let chatgpt_auth = {}
@@ -546,6 +594,8 @@ const main = async () => {
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             chatgpt_auth,
+            pi_sessions_dir: argv.piSessionsDir,
+            pi_sessions_dirs: argv.piSessionsDirs,
             verbose: argv.verbose
           })
 
@@ -646,6 +696,12 @@ const main = async () => {
               describe:
                 'Pre-created thread ID to update instead of creating a new thread (thread-first flow)',
               type: 'string'
+            })
+            .option('skip-branch-linking', {
+              describe:
+                'Pi only: skip post-import cross-thread branch linking (debug-only). Leaves threads in a permanently inconsistent state until linking is re-run; prefer --dry-run for safe exploration.',
+              type: 'boolean',
+              default: false
             })
             .option('verbose', {
               alias: 'v',
@@ -773,6 +829,7 @@ const main = async () => {
           clear_claude_unsupported()
           clear_cursor_unsupported()
           clear_chatgpt_unsupported()
+          clear_pi_unsupported()
 
           // Build ChatGPT auth object if provider is ChatGPT
           let chatgpt_auth = {}
@@ -816,6 +873,9 @@ const main = async () => {
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             chatgpt_auth,
+            pi_sessions_dir: argv.piSessionsDir,
+            pi_sessions_dirs: argv.piSessionsDirs,
+            skip_branch_linking: argv.skipBranchLinking,
             user_base_directory: argv.userBaseDir,
             session_id: argv.sessionId,
             session_file: argv.sessionFile,
@@ -882,6 +942,14 @@ const main = async () => {
               describe: 'ChatGPT device ID',
               type: 'string'
             })
+            .option('pi-sessions-dir', {
+              describe: 'Pi sessions directory (defaults to ~/.pi/agent/sessions)',
+              type: 'string'
+            })
+            .option('pi-sessions-dirs', {
+              describe: 'Multiple Pi sessions directories (comma-separated)',
+              type: 'string'
+            })
             .option('verbose', {
               alias: 'v',
               describe: 'Verbose output',
@@ -927,6 +995,8 @@ const main = async () => {
             claude_projects_directory: argv.claudeProjectsDir,
             cursor_db_path: argv.cursorDbPath,
             chatgpt_auth,
+            pi_sessions_dir: argv.piSessionsDir,
+            pi_sessions_dirs: argv.piSessionsDirs,
             verbose: argv.verbose
           })
 
@@ -999,6 +1069,27 @@ const main = async () => {
               (result.normalization_errors?.length || 0)
             if (total_errors > 0) {
               console.log(`\nValidation completed with ${total_errors} errors`)
+              process.exit(1)
+            }
+          } else if (argv.provider === 'pi') {
+            console.log(`Sessions found: ${result.sessions_found}`)
+            console.log(
+              `Branches found: ${result.branches_found ?? result.valid_sessions}`
+            )
+            console.log(`Valid sessions: ${result.valid_sessions}`)
+            console.log(`Invalid sessions: ${result.invalid_sessions}`)
+            const validation_rate =
+              result.sessions_found > 0
+                ? (
+                    (result.valid_sessions / result.sessions_found) *
+                    100
+                  ).toFixed(1)
+                : 0
+            console.log(`Validation rate: ${validation_rate}%`)
+            if (result.invalid_sessions > 0) {
+              console.log(
+                `\nValidation completed with ${result.invalid_sessions} invalid sessions`
+              )
               process.exit(1)
             }
           }

@@ -671,3 +671,15 @@ To add a new harness, implement a `SessionProviderBase` subclass in `libs-server
 - `validate_session()` -- validate session data integrity
 - `get_inference_provider()` -- return the inference provider name
 - `get_models_from_session()` -- extract model identifiers from session data
+
+### Pi Provider
+
+Pi (the badlogic/pi-mono coding agent) deviates from the per-session contract because its `.jsonl` files encode multiple branches via `id`/`parentId` references. The provider yields one raw session per branch from `find_sessions` / `stream_sessions`, so the unified thread-creation layer creates one thread per branch without structural changes. Specifics:
+
+- **Branch fan-out**: `extract_all_pi_branches` walks every leaf to root; branch index 0 is the most recent leaf and acts as the primary branch. Per-branch `session_id` is `<header.id>-branch-<index>`.
+- **Cross-thread linker (post-processing)**: `pi-branch-linker.mjs` runs after `create_threads_from_session_provider` returns. It groups created/updated threads by `original_session_id`, adds `branched_from` relations between siblings, and backfills `metadata.branch_thread_id` on `branch_point` timeline entries.
+- **Header version gating**: `validate_pi_header` rejects any session whose `header.version` is not 1, 2, or 3. v1 (linear) and v2 (`hookMessage` role) auto-migrate to v3 shape on read.
+- **Migration safety**: `migrate_pi_entries` lands every chat message with outer `type: 'message'` (role carries user/assistant). This avoids `is_warm_session` Patterns 1 and 2 false-skipping Pi sessions.
+- **Raw-data persistence**: skipped. `PiSessionProvider.supports_raw_data === false` makes the dispatcher pass `null` for `raw_session_data` and the post-write integrity check ignores the `raw-data/` directory.
+- **Unsupported tracking**: entry-level `custom` (extension state, not in LLM context) is recorded once via the unsupported tracker so importers see what was dropped.
+- **Label preservation**: Pi `label` entries become `system` / `system_type=status` with `metadata.extension_type='pi_label'` and the label text on both `content` and `metadata.label_text`.

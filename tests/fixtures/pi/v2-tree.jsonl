@@ -1,0 +1,4 @@
+{"type":"session","id":"sess-v2","version":2}
+{"id":"a","parentId":null,"type":"message","role":"user","content":"q","timestamp":"2026-04-03T00:00:00.000Z"}
+{"id":"b","parentId":"a","type":"message","role":"hookMessage","content":"hook context","timestamp":"2026-04-03T00:00:01.000Z"}
+{"id":"c","parentId":"b","type":"message","role":"assistant","content":"answer","timestamp":"2026-04-03T00:00:02.000Z"}

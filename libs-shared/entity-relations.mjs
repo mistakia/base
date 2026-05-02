@@ -60,6 +60,10 @@ export const RELATION_CREATED_BY = 'created_by'
 export const RELATION_CONTINUED_FROM = 'continued_from'
 export const RELATION_CONTINUED_BY = 'continued_by'
 
+// Branching relations (thread-thread divergence -- distinct from continuation)
+export const RELATION_BRANCHED_FROM = 'branched_from'
+export const RELATION_BRANCHED_BY = 'branched_by'
+
 /**
  * Common relation types used across the system
  */
@@ -93,7 +97,9 @@ export const common_relation_types = [
   RELATION_MODIFIED_BY,
   RELATION_CREATED_BY,
   RELATION_CONTINUED_FROM,
-  RELATION_CONTINUED_BY
+  RELATION_CONTINUED_BY,
+  RELATION_BRANCHED_FROM,
+  RELATION_BRANCHED_BY
 ]
 
 /**
@@ -121,6 +127,7 @@ export const relation_type_categories = {
   membership: [RELATION_MEMBER_OF, RELATION_HAS_MEMBER],
   resource: [RELATION_NEEDS_ITEM, RELATION_USES_ITEM],
   involvement: [RELATION_INVOLVES],
+  branching: [RELATION_BRANCHED_FROM, RELATION_BRANCHED_BY],
   thread_entity: [
     RELATION_ACCESSES,
     RELATION_MODIFIES,
@@ -176,7 +183,11 @@ export const RELATION_PAIRS = {
 
   // Thread-thread continuation relations
   [RELATION_CONTINUED_FROM]: RELATION_CONTINUED_BY,
-  [RELATION_CONTINUED_BY]: RELATION_CONTINUED_FROM
+  [RELATION_CONTINUED_BY]: RELATION_CONTINUED_FROM,
+
+  // Branching relations
+  [RELATION_BRANCHED_FROM]: RELATION_BRANCHED_BY,
+  [RELATION_BRANCHED_BY]: RELATION_BRANCHED_FROM
 }
 
 /**

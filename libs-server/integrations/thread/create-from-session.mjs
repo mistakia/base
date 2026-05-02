@@ -268,6 +268,12 @@ export const save_raw_session_data = async ({
         raw_data: raw_session_data
       })
       break
+    case 'pi':
+      // Pi provider has no raw-data persister yet. Defense-in-depth no-op:
+      // the dispatcher passes null raw_session_data when supports_raw_data
+      // is false, so this arm should never be reached unless a future code
+      // path forgets to consult that flag.
+      break
     default: {
       throw new Error(
         `Unknown or unsupported session_provider: '${session_provider}'`
