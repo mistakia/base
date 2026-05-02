@@ -199,8 +199,11 @@ const SingleThreadSheet = ({ thread_id }) => {
         <ResumeStatusIndicator pending_resume={pending_resume} />
       )}
 
-      {/* Canonical bottom-of-thread lifecycle indicator (above composer) */}
-      {thread_data && thread_data.get('session_status') && (
+      {/* Canonical bottom-of-thread lifecycle indicator (above composer).
+          Suppressed while a pending_resume is showing -- the resume indicator
+          covers the same queued/starting/failed states and adds the error
+          message; rendering both stacks two "Failed" rows. */}
+      {!pending_resume && thread_data && thread_data.get('session_status') && (
         <ThreadLifecycleIndicator
           status={thread_data.get('session_status')}
           thread_id={thread_id}
