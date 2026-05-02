@@ -7,7 +7,6 @@ import CollapsibleToolGroup from './CollapsibleToolGroup'
 import { TaskToolGroup } from './ToolComponents/ManagementTools/TaskTool'
 import SkillInvocationEvent from './SkillInvocationEvent'
 import { group_tool_entries } from './utils/group-tool-entries'
-import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
 import './Timeline.styl'
 
 // Auto-scroll configuration
@@ -392,10 +391,9 @@ const TimelineList = ({
       {/* Render timeline events */}
       {render_content()}
 
-      {/* Activity bar - only show for top-level timeline with active session */}
-      {!include_sidechain && active_session && (
-        <SessionActivityBar active_session={active_session} />
-      )}
+      {/* Lifecycle indicator now lives at the bottom-of-thread footer
+          (rendered by ThreadSheet above the composer); intentionally
+          not rendered in-list to avoid stacking two indicators. */}
 
       {/* Floating scroll to bottom button - only show for top-level timeline */}
       {show_scroll_button && !include_sidechain && (

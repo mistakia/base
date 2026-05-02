@@ -15,6 +15,7 @@ import {
   subscribe_to_thread,
   unsubscribe_from_thread
 } from '@core/websocket/service'
+import { LIVE_STATUSES } from '#libs-shared/thread-lifecycle.mjs'
 
 //= ====================================
 //  ACTIVE SESSIONS LOADING SAGAS
@@ -28,12 +29,7 @@ export function* load_active_sessions() {
 //  THREAD AUTO-SUBSCRIBE
 //= ====================================
 
-const ACTIVE_SESSION_STATUSES = new Set([
-  'queued',
-  'starting',
-  'active',
-  'idle'
-])
+const ACTIVE_SESSION_STATUSES = new Set(LIVE_STATUSES)
 
 // Server emits THREAD_UPDATED with terminal status (completed/failed)
 // before flushing the final timeline writes -- in observed runs the

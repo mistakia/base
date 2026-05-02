@@ -140,7 +140,7 @@ const FloatingSessionsPanel = () => {
             <>
               {active_count > 0 && (
                 <span className='floating-sessions-panel__label-group'>
-                  <span className='floating-sessions-panel__label-dot floating-sessions-panel__label-dot--active' />
+                  <span className='floating-sessions-panel__label-dot' style={{ backgroundColor: 'var(--color-success)' }} />
                   <span className='floating-sessions-panel__label-text'>
                     Active
                   </span>
@@ -164,7 +164,12 @@ const FloatingSessionsPanel = () => {
           ) : (
             <>
               <span
-                className={`floating-sessions-panel__indicator ${has_active ? 'floating-sessions-panel__indicator--active' : ''}`}
+                className='floating-sessions-panel__indicator'
+                style={
+                  has_active
+                    ? { backgroundColor: 'var(--color-success)' }
+                    : undefined
+                }
               />
               <span className='floating-sessions-panel__count'>
                 {total_count} thread{total_count !== 1 ? 's' : ''}

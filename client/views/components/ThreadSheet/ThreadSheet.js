@@ -26,7 +26,7 @@ import {
 import ThreadHeader from '@components/ThreadTimelineView/ThreadHeader'
 import TimelineList from '@components/ThreadTimelineView/TimelineList'
 import UserMessage from '@components/ThreadTimelineView/UserMessage'
-import SessionActivityBar from '@components/SessionActivityBar/SessionActivityBar.js'
+import ThreadLifecycleIndicator from '@components/ThreadLifecycleIndicator/ThreadLifecycleIndicator.js'
 import ThreadInputTrigger from '@components/ThreadInputTrigger/ThreadInputTrigger.js'
 
 import './ThreadSheet.styl'
@@ -196,21 +196,17 @@ const SingleThreadSheet = ({ thread_id }) => {
 
       {/* Pending resume status indicator */}
       {pending_resume && (
-        <>
-          <ResumeStatusIndicator pending_resume={pending_resume} />
-          {['queued', 'starting'].includes(pending_resume.get('status')) && (
-            <SessionActivityBar
-              active_session={{
-                session_id: thread_id,
-                status:
-                  pending_resume.get('status') === 'starting'
-                    ? 'active'
-                    : 'pending',
-                created_at: pending_resume.get('submitted_at')
-              }}
-            />
-          )}
-        </>
+        <ResumeStatusIndicator pending_resume={pending_resume} />
+      )}
+
+      {/* Canonical bottom-of-thread lifecycle indicator (above composer) */}
+      {thread_data && thread_data.get('session_status') && (
+        <ThreadLifecycleIndicator
+          status={thread_data.get('session_status')}
+          thread_id={thread_id}
+          user_message_count={thread_data.get('user_message_count') || 0}
+          variant='footer'
+        />
       )}
 
       {/* Trigger to open the full-featured global input */}
@@ -283,15 +279,10 @@ const SessionSheetPanel = ({ sheet_key }) => {
             />
           )}
           {status !== 'ended' && (
-            <SessionActivityBar
-              active_session={{
-                session_id,
-                status: status === 'active' ? 'active' : 'pending',
-                started_at: session?.started_at || session?.created_at,
-                created_at: session?.created_at,
-                last_activity_at: session?.last_activity_at,
-                total_tokens: session?.total_tokens
-              }}
+            <ThreadLifecycleIndicator
+              status={status}
+              thread_id={session_thread_id || session_id}
+              variant='inline'
             />
           )}
         </div>

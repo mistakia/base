@@ -43,9 +43,6 @@
   overflow: visible
   max-width: 100%
 
-  &--running
-    animation: border-pulse 1.5s ease-in-out infinite
-
   &--clickable
     cursor: pointer
 
@@ -63,12 +60,6 @@
   &--other-user
     opacity: 0.6
     border-left: 2px solid $color_text_tertiary
-
-@keyframes border-pulse
-  0%, 100%
-    border-color: rgba(40, 167, 69, 0.3)
-  50%
-    border-color: rgba(40, 167, 69, 0.7)
 
 // Main Row - Title and time
 .session-card__main-row

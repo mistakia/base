@@ -23,10 +23,7 @@ import {
   get_metadata_cache,
   get_active_session_thread_ids
 } from '#server/services/thread-watcher.mjs'
-import {
-  ACTIVE_SESSION_STATUSES,
-  SESSION_STATUS_DISPLAY_MAP
-} from '#libs-shared/session-status-display.mjs'
+import { LIVE_STATUSES } from '#libs-shared/thread-lifecycle.mjs'
 import { invalidate_thread_cache } from '#server/routes/threads.mjs'
 import { check_thread_permission } from '#server/middleware/permission/index.mjs'
 import { redact_session_data } from '#server/middleware/content-redactor.mjs'
@@ -201,7 +198,7 @@ router.get('/', async (req, res) => {
     // inline so a failed metadata disk read downstream cannot leak them.
     const metadata_cache = get_metadata_cache()
     const virtual_sessions = []
-    const active_status_set = new Set(ACTIVE_SESSION_STATUSES)
+    const active_status_set = new Set(LIVE_STATUSES)
     const redis_thread_ids = new Set(
       sessions.map((s) => s.thread_id).filter(Boolean)
     )
@@ -209,9 +206,8 @@ router.get('/', async (req, res) => {
       if (redis_thread_ids.has(thread_id)) continue
       const metadata = metadata_cache.get(thread_id)
       if (!metadata) continue
-      // Defense in depth: the watcher's index already filters by
-      // ACTIVE_SESSION_STATUSES, but if a stale entry slips through, do not
-      // mask it by defaulting to 'active' below.
+      // Defense in depth: the watcher's index already filters by LIVE_STATUSES,
+      // but if a stale entry slips through, drop rather than default.
       if (!active_status_set.has(metadata.session_status)) continue
       if (
         user_public_key &&
@@ -224,7 +220,7 @@ router.get('/', async (req, res) => {
         session_id: metadata.external_session?.session_id || null,
         thread_id,
         job_id: metadata.job_id || null,
-        status: SESSION_STATUS_DISPLAY_MAP[metadata.session_status] || 'active',
+        status: metadata.session_status,
         thread_state: metadata.thread_state || null,
         working_directory:
           metadata.external_session?.provider_metadata?.working_directory ||

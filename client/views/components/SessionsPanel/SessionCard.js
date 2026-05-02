@@ -7,28 +7,23 @@ import {
   format_shorthand_number
 } from '@views/utils/date-formatting.js'
 import CompactTimelineEvent from './CompactTimelineEvent.js'
-import SessionActivityBar from '@views/components/SessionActivityBar/SessionActivityBar.js'
+import ThreadLifecycleIndicator from '@views/components/ThreadLifecycleIndicator/ThreadLifecycleIndicator.js'
+import { LIVE_STATUSES } from '#libs-shared/thread-lifecycle.mjs'
 import { thread_prompt_actions } from '@core/thread-prompt/index.js'
 import { threads_actions } from '@core/threads/actions.js'
 import { thread_sheet_actions } from '@core/thread-sheet/index.js'
 import { use_discard_confirm } from '@views/hooks/use-discard-confirm.js'
+
+const LIVE_STATUS_SET = new Set(LIVE_STATUSES)
 
 /**
  * Unified card component for displaying both active sessions and threads.
  * Renders identical UI for visual consistency across homepage sections.
  *
  * @param {Object} props
- * @param {Object} props.item - Normalized session/thread data
- * @param {string} props.item.id - Thread ID for navigation
- * @param {string} props.item.title - Display title
- * @param {string} props.item.status - Status: 'running' | 'idle' | 'review' | 'archived'
- * @param {string} props.item.updated_at - ISO timestamp for last activity
- * @param {string} [props.item.working_directory] - Working directory path
- * @param {number} [props.item.message_count] - Number of messages
- * @param {number} [props.item.duration_minutes] - Duration in minutes
- * @param {number} [props.item.total_tokens] - Total token count
- * @param {Object} [props.item.latest_timeline_event] - Latest timeline event
- * @param {boolean} [props.item.show_actions] - Whether to show action buttons
+ * @param {Object} props.item - Normalized session/thread data with
+ *   `session_status` and `thread_state` set directly from the canonical
+ *   lifecycle model.
  */
 const SessionCard = ({ item }) => {
   const dispatch = useDispatch()
@@ -49,7 +44,6 @@ const SessionCard = ({ item }) => {
 
   const handle_click = (event) => {
     if (item.id) {
-      // Cmd+click (Mac) or Ctrl+click (Windows/Linux) opens in new tab
       if (event.metaKey || event.ctrlKey) {
         window.open(`/thread/${item.id}`, '_blank')
       } else {
@@ -109,42 +103,30 @@ const SessionCard = ({ item }) => {
     ? `${parseFloat(item.duration_minutes.toFixed(1))}m`
     : null
 
+  const session_status = item.session_status || null
+  const is_live = session_status && LIVE_STATUS_SET.has(session_status)
+
   const card_classes = [
     'session-card',
-    item.status === 'running' ? 'session-card--running' : '',
-    item.status === 'queued' || item.status === 'starting'
-      ? 'session-card--queued'
-      : '',
-    item.status === 'failed' ? 'session-card--failed' : '',
     item.id || item.session_id ? 'session-card--clickable' : '',
     item.is_other_user ? 'session-card--other-user' : ''
   ]
     .filter(Boolean)
     .join(' ')
 
-  // Check if we have any details to show
   const has_details =
     working_directory ||
     item.message_count != null ||
     duration ||
     item.total_tokens != null
 
-  // Show footer row if we have details or actions
-  const show_footer = has_details || item.show_actions
+  const show_footer = has_details || item.show_actions || is_live
 
   return (
     <div
       className={card_classes}
       onClick={item.id || item.session_id ? handle_click : undefined}>
       <div className='session-card__main-row'>
-        {(item.status === 'queued' ||
-          item.status === 'starting' ||
-          item.status === 'failed') && (
-          <span
-            className={`session-card__status-badge session-card__status-badge--${item.status}`}>
-            {item.status}
-          </span>
-        )}
         <span className='session-card__title'>{item.title || 'Untitled'}</span>
         <span className='session-card__time'>
           {created_time && created_time !== updated_time ? (
@@ -163,29 +145,23 @@ const SessionCard = ({ item }) => {
         </span>
       </div>
 
-      {item.latest_timeline_event &&
-        item.status !== 'running' &&
-        item.status !== 'idle' && (
-          <CompactTimelineEvent
-            timeline_event={item.latest_timeline_event}
-            thread_id={item.id}
-          />
-        )}
+      {item.latest_timeline_event && !is_live && (
+        <CompactTimelineEvent
+          timeline_event={item.latest_timeline_event}
+          thread_id={item.id}
+        />
+      )}
 
-      {(show_footer || item.status === 'running' || item.status === 'idle') && (
+      {show_footer && (
         <div className='session-card__footer'>
           <div className='session-card__details'>
-            {(item.status === 'running' || item.status === 'idle') && (
+            {session_status && (
               <>
-                <SessionActivityBar
-                  active_session={{
-                    session_id: item.session_id,
-                    status: item.status === 'running' ? 'active' : 'idle',
-                    started_at: item.created_at,
-                    last_activity_at: item.updated_at,
-                    total_tokens: item.total_tokens
-                  }}
-                  compact
+                <ThreadLifecycleIndicator
+                  status={session_status}
+                  thread_id={item.id || ''}
+                  user_message_count={item.user_message_count || 0}
+                  variant='inline'
                 />
                 {has_details && (
                   <span className='session-card__separator'>•</span>
@@ -272,16 +248,9 @@ SessionCard.propTypes = {
     id: PropTypes.string,
     session_id: PropTypes.string,
     title: PropTypes.string,
-    status: PropTypes.oneOf([
-      'running',
-      'idle',
-      'review',
-      'archived',
-      'ended',
-      'queued',
-      'starting',
-      'failed'
-    ]),
+    session_status: PropTypes.string,
+    thread_state: PropTypes.string,
+    user_message_count: PropTypes.number,
     created_at: PropTypes.string,
     updated_at: PropTypes.string,
     working_directory: PropTypes.string,

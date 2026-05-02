@@ -545,7 +545,24 @@ thread_id (client has this from create-session response)
 
 The thread-first architecture simplifies client state. The active-sessions reducer is a thin ephemeral store keyed by `session_id` holding only transient fields: `{ thread_id, latest_timeline_event, context_percentage, last_activity_at }`. No more `pending_sessions`, `ended_sessions`, or `prompt_snippets` maps. The panel renders threads directly, enriched with ephemeral data where available.
 
-The canonical `session_status -> UI display-status` mapping (plus the `ACTIVE_SESSION_STATUSES` set used for active-sessions routing and reverse indexing) lives in `libs-shared/session-status-display.mjs`. Server (active-sessions route, thread-watcher) and client (ThreadHeader and related views) import from this single source so display rules cannot drift.
+The canonical lifecycle SSOT lives in `libs-shared/thread-lifecycle.mjs`. It exports the full six-state set (`queued | starting | active | idle | completed | failed`), the `LIVE_STATUSES` and `TERMINAL_STATUSES` partitions used for active-sessions routing and reverse indexing, the `STATUS_LABEL` / `STATUS_GLYPH` / `STATUS_COLOR_TOKEN` / `STATUS_SHOWS_SPINNER` lookup tables, the `ACTIVE_VERBS` pool, and the `pick_active_verb({ thread_id, turn_count })` helper. Server (active-sessions route, thread-watcher), web client (ThreadLifecycleIndicator), and iOS (`BaseApp/Shared/Utils/ThreadLifecycle.swift` mirror) all import from this canonical model so display rules cannot drift. The legacy four-state `libs-shared/session-status-display.mjs` is removed.
+
+### Display Contract
+
+Both clients render lifecycle status via a single component (`ThreadLifecycleIndicator` on web, `ThreadLifecycleIndicatorView` on iOS) consuming the canonical module. The component has two variants: `footer` (full text, Braille spinner on `active`, used at the bottom of an open thread) and `inline` (compact, no spinner, used in headers, panel rows, and thread cards).
+
+| Status      | Label             | Inline glyph | Caret | Footer spinner | Color token       |
+| ----------- | ----------------- | ------------ | ----- | -------------- | ----------------- |
+| `queued`    | Queued            | `\u2022`     | none  | false          | `info`            |
+| `starting`  | Starting          | `\u2022`     | none  | false          | `info`            |
+| `active`    | (verb) + `...`    | `\u2022`     | `\u203A` | true        | `success`         |
+| `idle`      | Awaiting input    | `\u2022`     | none  | false          | `warning`         |
+| `completed` | Completed         | `\u2713`     | none  | false          | `text_secondary`  |
+| `failed`    | Failed            | `\u2715`     | none  | false          | `error`           |
+
+For `active`, the verb is selected deterministically as `ACTIVE_VERBS[(djb2_hash(thread_id) + thread.user_message_count) mod ACTIVE_VERBS.length]`. The `user_message_count` key advances exactly once per agent turn (at UserPromptSubmit) and is stable for the duration of the turn, so the verb does not change mid-turn and survives reload. The Braille spinner cycles through ten frames at 120ms per frame (1200ms full cycle) and is the only animation rendered by either client.
+
+THREAD_UPDATED emits are gated through `libs-server/threads/should-emit-thread-updated.mjs`, which suppresses redundant emits when no client-rendered field has changed.
 
 Session state is driven by the `session_status` field on the thread metadata:
 
