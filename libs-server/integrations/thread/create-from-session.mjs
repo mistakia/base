@@ -217,7 +217,6 @@ export const create_thread_from_session = async ({
     return {
       thread_id: thread_result.thread_id,
       thread_dir: thread_result.context_dir,
-      memory_dir: path.join(thread_result.context_dir, 'memory'),
       raw_data_dir: thread_result.raw_data_dir,
       metadata_path: path.join(thread_result.context_dir, 'metadata.json'),
       metadata: thread_result

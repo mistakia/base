@@ -126,8 +126,7 @@ This unified structure enables:
 user:thread/{thread_id}/
   metadata.json     # Thread configuration and state
   timeline.jsonl    # Chronological event log (JSON Lines format)
-  memory/          # Working memory directory (git repository)
-  raw-data/        # Original provider data (external sessions only)
+  raw-data/         # Original provider data (external sessions only)
 ```
 
 ### Timeline Format (JSONL)

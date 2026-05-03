@@ -31,8 +31,7 @@ Thread execution uses isolated git worktrees to prevent concurrent work from int
 1. Create branch `thread/{thread_id}` in both system and user repositories (without checkout)
 2. Create worktree for system repo in `/tmp/git-worktrees/thread-{id}-{timestamp}-{rand}`
 3. Create matching worktree for user repo on same branch name
-4. Initialize memory repository (local git repo for transient state)
-5. Return paths: `{ system, user }`
+4. Return paths: `{ system, user }`
 
 ### Execution
 

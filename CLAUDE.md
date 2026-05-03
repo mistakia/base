@@ -140,7 +140,6 @@ Threads execute workflows in isolated git worktrees:
 
 - Each thread gets its own branch
 - Timeline tracks all actions immutably
-- Memory system: transient, persistent, long-term
 - Supports concurrent execution
 
 ### Integration Points
