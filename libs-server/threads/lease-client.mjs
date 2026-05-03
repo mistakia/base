@@ -317,6 +317,17 @@ export const list_active_leases = async ({ filter = 'all' } = {}) => {
   )
 }
 
+// Close the local lease-store Redis connection if one was opened on this
+// process. No-op when the local store was never loaded (e.g. macbook, where
+// the HTTP path is used). Short-lived processes that touch lease ops on
+// storage must call this in a finally block; otherwise the open Redis
+// socket prevents Node from exiting.
+export const disconnect = async () => {
+  if (!_local_store_promise) return
+  const store = await _local_store_promise
+  if (store?.disconnect) await store.disconnect()
+}
+
 // Populate the in-process snapshot cache from the lease store at base-api
 // startup so the cache is warm before any session hook fires. Closes the
 // restart cache-gap that caused field-ownership shadow violations.

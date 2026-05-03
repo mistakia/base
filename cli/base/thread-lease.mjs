@@ -4,6 +4,7 @@ import {
   list_active_leases,
   inspect_lease,
   release_lease,
+  disconnect,
   LeaseStoreUnreachable,
   LeaseClientConfigError
 } from '#libs-server/threads/lease-client.mjs'
@@ -23,6 +24,16 @@ const _is_unreachable = (error) =>
 
 const _thread_dir = (thread_id) =>
   path.join(get_thread_base_directory({}), thread_id)
+
+// On storage, lease ops open a Redis client whose socket keeps the event
+// loop alive. Wrap each handler so the process exits cleanly after work.
+const _with_lease_cleanup = (fn) => async (argv) => {
+  try {
+    return await fn(argv)
+  } finally {
+    await disconnect()
+  }
+}
 
 const handle_list = async (argv) => {
   const filter = argv.filter
@@ -110,7 +121,7 @@ export const register_lease_commands = (yargs) =>
               choices: ['owned-by-me', 'owned-by-remote', 'all'],
               default: 'all'
             }),
-          handle_list
+          _with_lease_cleanup(handle_list)
         )
         .command(
           'inspect <thread_id>',
@@ -120,7 +131,7 @@ export const register_lease_commands = (yargs) =>
               describe: 'Thread id',
               type: 'string'
             }),
-          handle_inspect
+          _with_lease_cleanup(handle_inspect)
         )
         .command(
           'release <thread_id>',
@@ -130,7 +141,7 @@ export const register_lease_commands = (yargs) =>
               describe: 'Thread id',
               type: 'string'
             }),
-          handle_release
+          _with_lease_cleanup(handle_release)
         )
         .demandCommand(1, 'Specify a lease subcommand: list, inspect, release')
   )

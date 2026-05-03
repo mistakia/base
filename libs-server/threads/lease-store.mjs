@@ -279,9 +279,16 @@ export const list_active_leases = async ({ machine_id = null } = {}) => {
   return leases
 }
 
-export const _close_for_tests = async () => {
+// Close the Redis connection if one is open. Safe to call multiple times.
+// Required from short-lived processes (CLI handlers, scripts) so the open
+// socket does not keep the Node event loop alive after work completes.
+// Long-running services (base-api) should not call this during normal
+// operation; the persistent connection is intentional there.
+export const disconnect = async () => {
   if (_redis) {
     await _redis.quit()
     _redis = null
   }
 }
+
+export const _close_for_tests = disconnect
