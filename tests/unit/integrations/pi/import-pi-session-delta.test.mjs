@@ -14,7 +14,10 @@ import {
 } from '#libs-server/integrations/pi/pi-sync-state.mjs'
 import { read_timeline_jsonl_or_default } from '#libs-server/threads/timeline/timeline-jsonl.mjs'
 import { TIMELINE_SCHEMA_VERSION } from '#libs-shared/timeline-schema-version.mjs'
-import { create_temp_test_repo } from '#tests/utils/index.mjs'
+import {
+  create_temp_test_repo,
+  seed_pi_thread
+} from '#tests/utils/index.mjs'
 
 const FIXTURE_MULTI = path.join(
   process.cwd(),
@@ -23,41 +26,6 @@ const FIXTURE_MULTI = path.join(
   'pi',
   'v3-multi-leaf.jsonl'
 )
-
-const create_minimal_metadata = ({ thread_id, session_id }) => ({
-  thread_id,
-  thread_state: 'active',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  message_count: 0,
-  tool_call_count: 0,
-  user_message_count: 0,
-  assistant_message_count: 0,
-  context_input_tokens: 0,
-  context_cache_creation_input_tokens: 0,
-  context_cache_read_input_tokens: 0,
-  cumulative_input_tokens: 0,
-  cumulative_output_tokens: 0,
-  cumulative_cache_creation_input_tokens: 0,
-  cumulative_cache_read_input_tokens: 0,
-  source: {
-    provider: 'pi',
-    session_id,
-    imported_at: new Date().toISOString(),
-    raw_data_saved: false,
-    provider_metadata: {}
-  }
-})
-
-const seed_thread = async ({ user_base_directory, thread_id, session_id }) => {
-  const thread_dir = path.join(user_base_directory, 'thread', thread_id)
-  await fs.mkdir(thread_dir, { recursive: true })
-  await fs.writeFile(
-    path.join(thread_dir, 'metadata.json'),
-    JSON.stringify(create_minimal_metadata({ thread_id, session_id }), null, 2)
-  )
-  return thread_dir
-}
 
 const copy_fixture = async (src, dest) => {
   const content = await fs.readFile(src, 'utf-8')
@@ -110,7 +78,6 @@ describe('import_pi_session_delta', function () {
       session_file,
       state: {
         byte_offset: stat.size,
-        last_entry_id: 'b',
         leaf_id: 'b',
         branch_thread_id: 'thread-x',
         schema_version: TIMELINE_SCHEMA_VERSION
@@ -132,7 +99,6 @@ describe('import_pi_session_delta', function () {
       session_file,
       state: {
         byte_offset: stat.size - 1,
-        last_entry_id: 'b',
         leaf_id: 'b',
         branch_thread_id: 'thread-x',
         schema_version: TIMELINE_SCHEMA_VERSION - 99
@@ -152,7 +118,7 @@ describe('import_pi_session_delta', function () {
 
   it('full path persists sync state, then second tick takes delta and appends new entry', async () => {
     const thread_id = crypto.randomUUID()
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id,
       session_id: session_id_from_fixture
@@ -170,7 +136,7 @@ describe('import_pi_session_delta', function () {
     expect(first.threads_updated + first.threads_created).to.be.greaterThan(0)
     const state_after_full = await load_pi_sync_state({ session_file })
     expect(state_after_full).to.not.equal(null)
-    expect(state_after_full.last_entry_id).to.equal('b')
+    expect(state_after_full.leaf_id).to.equal('b')
     expect(state_after_full.schema_version).to.equal(TIMELINE_SCHEMA_VERSION)
 
     // Capture timeline length pre-append
@@ -214,12 +180,12 @@ describe('import_pi_session_delta', function () {
 
     // Sync state advanced
     const state_after_delta = await load_pi_sync_state({ session_file })
-    expect(state_after_delta.last_entry_id).to.equal('c')
+    expect(state_after_delta.leaf_id).to.equal('c')
   })
 
   it('idempotent: a second delta tick with no file change is no-op', async () => {
     const thread_id = crypto.randomUUID()
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id,
       session_id: session_id_from_fixture
@@ -270,7 +236,7 @@ describe('import_pi_session_delta', function () {
 
   it('branch switch falls through and clears sync state', async () => {
     const thread_id = crypto.randomUUID()
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id,
       session_id: session_id_from_fixture
@@ -286,7 +252,7 @@ describe('import_pi_session_delta', function () {
       single_leaf_only: true
     })
     const state = await load_pi_sync_state({ session_file })
-    expect(state.last_entry_id).to.equal('b')
+    expect(state.leaf_id).to.equal('b')
 
     // Append a newer descendant of 'a' so the active leaf shifts to a sibling
     // branch ('a' subtree), making 'b' no longer present in the new active branch.
@@ -317,12 +283,12 @@ describe('import_pi_session_delta', function () {
   it('aggregates after delta match aggregates from a fresh full import', async () => {
     const thread_id_a = crypto.randomUUID()
     const thread_id_b = crypto.randomUUID()
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id: thread_id_a,
       session_id: session_id_from_fixture
     })
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id: thread_id_b,
       session_id: session_id_from_fixture

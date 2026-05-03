@@ -119,14 +119,10 @@ export const import_pi_session_delta = async ({
     (m) => !existing_session_ids.has(m.id)
   )
 
-  // Metadata-only refresh (aggregates, counts, models, timestamps).
-  // bulk_import: true bypasses session-owned field ownership checks.
-  await update_thread_metadata(
-    thread_dir,
-    { ...normalized, parse_mode: 'delta' },
-    { bulk_import: true, thread_id: known_thread_id }
-  )
-
+  // Write order per the documented crash-safety contract:
+  //   timeline append -> thread metadata -> sync-state commit.
+  // If the process dies before metadata, the next tick re-dedups, finds
+  // nothing new to append, and re-writes metadata + sync-state.
   let timeline_modified = false
   if (new_messages.length > 0) {
     const delta_session = {
@@ -141,11 +137,18 @@ export const import_pi_session_delta = async ({
     timeline_modified = timeline_result.timeline_modified
   }
 
+  // Aggregate refresh from the full normalized message set.
+  // bulk_import: true bypasses session-owned field ownership checks.
+  await update_thread_metadata(
+    thread_dir,
+    { ...normalized, parse_mode: 'delta' },
+    { bulk_import: true, thread_id: known_thread_id }
+  )
+
   await save_pi_sync_state({
     session_file,
     state: {
       byte_offset: stat.size,
-      last_entry_id: active.leaf_entry.id,
       leaf_id: active.leaf_entry.id,
       branch_thread_id: known_thread_id,
       schema_version: TIMELINE_SCHEMA_VERSION

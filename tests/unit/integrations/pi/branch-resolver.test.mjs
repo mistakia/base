@@ -47,7 +47,11 @@ describe('branch-resolver', () => {
     expect(out.branch_index).to.equal(0)
   })
 
-  it('leaf change between calls produces a different session_id', () => {
+  it('always pins to branch-0 (most-recent leaf) to match importer single_leaf_only', () => {
+    // The session has two leaves; ctx.getLeafId() pointing at the older one
+    // does not change the resolved session_id -- the importer always picks
+    // the most-recent leaf when single_leaf_only is set, so the extension
+    // must report the same coordinates.
     const entries = [
       { id: 'sess-3', type: 'session' },
       { id: 'r', parentId: null, type: 'message', timestamp: 1 },
@@ -55,11 +59,11 @@ describe('branch-resolver', () => {
       { id: 'b', parentId: 'r', type: 'message', timestamp: 3 }
     ]
     const first = resolve_active_branch(make_ctx({ entries, leaf_id: 'b' }))
-    // Same entries, but the older leaf is now the active one -> branch_index 1
     const second = resolve_active_branch(make_ctx({ entries, leaf_id: 'a' }))
     expect(first.session_id).to.equal('sess-3-branch-0')
-    expect(second.session_id).to.equal('sess-3-branch-1')
-    expect(second.leaf_id).to.equal('a')
+    expect(first.leaf_id).to.equal('b')
+    expect(second.session_id).to.equal('sess-3-branch-0')
+    expect(second.leaf_id).to.equal('b')
   })
 
   it('throws when no session header is present', () => {

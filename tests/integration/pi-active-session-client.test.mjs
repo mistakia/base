@@ -34,7 +34,8 @@ const start_recording_server = () =>
         res.end('{}')
       })
     })
-    server.listen(0, '127.0.0.1', () => {
+    // Dual-stack bind so IPv4 (127.0.0.1) and IPv6 (::1) both reach it.
+    server.listen(0, '::', () => {
       const { port } = server.address()
       resolve({ server, port, captured })
     })
@@ -163,6 +164,26 @@ describe('pi-extension active-session-client', function () {
       (l) => l.level === 'warn' && l.msg.includes('JOB_API_KEY')
     )
     expect(warnings).to.have.lengthOf(1)
+  })
+
+  it('IPv6 loopback (::1) is treated as localhost (no auth)', async () => {
+    const { log } = collect_logs()
+    process.env.JOB_API_KEY = 'should-not-appear'
+    const cfg = {
+      base_api_urls: [`http://[::1]:${recorder.port}`],
+      job_api_key_env: 'JOB_API_KEY'
+    }
+    await register_session(
+      cfg,
+      {
+        session_id: 'sess-ipv6-branch-0',
+        working_directory: '/tmp/wd',
+        transcript_path: '/tmp/sess.jsonl'
+      },
+      log
+    )
+    expect(recorder.captured).to.have.lengthOf(1)
+    expect(recorder.captured[0].headers).to.not.have.property('authorization')
   })
 
   it('DELETE round-trips with localhost branch unauthenticated', async () => {

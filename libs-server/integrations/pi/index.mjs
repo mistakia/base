@@ -171,7 +171,6 @@ export const import_pi_sessions = async (options = {}) => {
           session_file: options.session_file,
           state: {
             byte_offset: stat.size,
-            last_entry_id: active.leaf_entry.id,
             leaf_id: active.leaf_entry.id,
             branch_thread_id: options.known_thread_id,
             schema_version: TIMELINE_SCHEMA_VERSION

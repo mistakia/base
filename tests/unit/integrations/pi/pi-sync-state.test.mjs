@@ -35,7 +35,6 @@ describe('pi-sync-state', () => {
   it('round-trip read/write preserves all fields', async () => {
     const state = {
       byte_offset: 1234,
-      last_entry_id: 'entry-7',
       leaf_id: 'leaf-3',
       branch_thread_id: 'thread-uuid',
       schema_version: 5

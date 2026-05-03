@@ -7,7 +7,10 @@ import crypto from 'crypto'
 
 import { import_pi_sessions } from '#libs-server/integrations/pi/index.mjs'
 import { clear_pi_sync_state } from '#libs-server/integrations/pi/pi-sync-state.mjs'
-import { create_temp_test_repo } from '#tests/utils/index.mjs'
+import {
+  create_temp_test_repo,
+  seed_pi_thread
+} from '#tests/utils/index.mjs'
 
 const FIXTURE = path.join(
   process.cwd(),
@@ -16,40 +19,6 @@ const FIXTURE = path.join(
   'pi',
   'v3-multi-leaf.jsonl'
 )
-
-const create_minimal_metadata = ({ thread_id, session_id }) => ({
-  thread_id,
-  thread_state: 'active',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
-  message_count: 0,
-  tool_call_count: 0,
-  user_message_count: 0,
-  assistant_message_count: 0,
-  context_input_tokens: 0,
-  context_cache_creation_input_tokens: 0,
-  context_cache_read_input_tokens: 0,
-  cumulative_input_tokens: 0,
-  cumulative_output_tokens: 0,
-  cumulative_cache_creation_input_tokens: 0,
-  cumulative_cache_read_input_tokens: 0,
-  source: {
-    provider: 'pi',
-    session_id,
-    imported_at: new Date().toISOString(),
-    raw_data_saved: false,
-    provider_metadata: {}
-  }
-})
-
-const seed_thread = async ({ user_base_directory, thread_id, session_id }) => {
-  const thread_dir = path.join(user_base_directory, 'thread', thread_id)
-  await fs.mkdir(thread_dir, { recursive: true })
-  await fs.writeFile(
-    path.join(thread_dir, 'metadata.json'),
-    JSON.stringify(create_minimal_metadata({ thread_id, session_id }), null, 2)
-  )
-}
 
 const append_line = async (file_path, obj) => {
   await fs.appendFile(file_path, JSON.stringify(obj) + '\n')
@@ -98,7 +67,7 @@ describe('pi live sync performance', function () {
 
   it('1000-tick append-and-sync: ticks 2..1000 take the delta path with p95 under 200ms', async () => {
     const thread_id = crypto.randomUUID()
-    await seed_thread({
+    await seed_pi_thread({
       user_base_directory,
       thread_id,
       session_id: 'sess-v3-multi-branch-0'

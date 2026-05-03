@@ -7,11 +7,11 @@
  * leaf shifts, so we key on it (not on a session_id) -- a deliberate
  * divergence from Claude's sync-state.mjs precedent.
  *
- * State shape carries leaf_id and branch_thread_id in addition to the
- * Claude-style { byte_offset, last_entry_id, schema_version } so
- * tree-aware fork detection can short-circuit the delta path. State
- * files live in os.tmpdir() and are ephemeral; loss degrades to a
- * full re-parse on next sync.
+ * State shape: { byte_offset, leaf_id, branch_thread_id, schema_version }.
+ * Carries leaf_id and branch_thread_id in addition to the Claude-style
+ * { byte_offset, schema_version } so tree-aware fork detection can
+ * short-circuit the delta path. State files live in os.tmpdir() and are
+ * ephemeral; loss degrades to a full re-parse on next sync.
  */
 
 import fs from 'fs/promises'

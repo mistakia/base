@@ -9,6 +9,7 @@ import create_test_task from './create-test-task.mjs'
 import create_test_tag from './create-test-tag.mjs'
 import create_test_entity from './create-test-entity.mjs'
 import { seed_thread_metadata } from './seed-thread-metadata.mjs'
+import { seed_pi_thread, create_pi_thread_metadata } from './seed-pi-thread.mjs'
 import setup_test_directories, {
   register_test_directories,
   setup_api_test_registry,
@@ -25,6 +26,8 @@ export {
   create_test_tag,
   create_test_entity,
   seed_thread_metadata,
+  seed_pi_thread,
+  create_pi_thread_metadata,
   setup_test_directories,
   register_test_directories,
   setup_api_test_registry,
