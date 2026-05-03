@@ -301,18 +301,62 @@ describe('libs-server/threads/session-lease-coemit', function () {
       expect(get_cached_lease_snapshot({ thread_id: 't-rel' })).to.equal(null)
     })
 
-    it('skips when no owned snapshot is cached (no recovery round-trip)', async () => {
-      let called = false
-      global.fetch = async () => {
-        called = true
+    it('recovers via inspect_lease when cache is cold and we own the lease', async () => {
+      const calls = []
+      global.fetch = async (url, init) => {
+        calls.push({ url, method: init?.method || 'GET' })
+        if (url.endsWith('/lease') && (!init || init.method === 'GET')) {
+          return _make_response({
+            body: { machine_id: 'macbook_test', lease_token: 9 }
+          })
+        }
+        if (url.endsWith('/lease/release')) {
+          return _make_response({ body: { released: true } })
+        }
         return _make_response({ body: {} })
       }
-      await coemit_release_session_lease({ thread_id: 't-empty' })
-      expect(called).to.equal(false)
+      await coemit_release_session_lease({ thread_id: 't-cold-owned' })
+      const release_calls = calls.filter((c) => c.url.endsWith('/lease/release'))
+      expect(release_calls).to.have.lengthOf(1)
+      const inspect_calls = calls.filter(
+        (c) => c.url.endsWith('/lease') && c.method === 'GET'
+      )
+      expect(inspect_calls).to.have.lengthOf(1)
+    })
+
+    it('skips release when cache cold and lease store has no record', async () => {
+      const calls = []
+      global.fetch = async (url, init) => {
+        calls.push({ url, method: init?.method || 'GET' })
+        if (url.endsWith('/lease') && (!init || init.method === 'GET')) {
+          return _make_response({ body: null })
+        }
+        return _make_response({ body: {} })
+      }
+      await coemit_release_session_lease({ thread_id: 't-cold-absent' })
+      const release_calls = calls.filter((c) => c.url.endsWith('/lease/release'))
+      expect(release_calls).to.have.lengthOf(0)
+    })
+
+    it('skips release when cache cold and lease in store is foreign-owned', async () => {
+      const calls = []
+      global.fetch = async (url, init) => {
+        calls.push({ url, method: init?.method || 'GET' })
+        if (url.endsWith('/lease') && (!init || init.method === 'GET')) {
+          return _make_response({
+            body: { machine_id: 'storage_test', lease_token: 11 }
+          })
+        }
+        return _make_response({ body: {} })
+      }
+      await coemit_release_session_lease({ thread_id: 't-cold-foreign' })
+      const release_calls = calls.filter((c) => c.url.endsWith('/lease/release'))
+      expect(release_calls).to.have.lengthOf(0)
     })
 
     it('does not release a foreign-owned cached lease', async () => {
-      // Seed cache with a contended acquire owned by another machine
+      // Seed cache with a contended acquire owned by another machine. The
+      // recovery fall-back must still respect machine_id and not release.
       global.fetch = async () =>
         _make_response({
           body: { acquired: false, machine_id: 'storage_test', lease_token: 7 }
@@ -320,8 +364,13 @@ describe('libs-server/threads/session-lease-coemit', function () {
       await coemit_acquire_session_lease({ thread_id: 't-foreign' })
 
       let release_called = false
-      global.fetch = async (url) => {
+      global.fetch = async (url, init) => {
         if (url.endsWith('/lease/release')) release_called = true
+        if (url.endsWith('/lease') && (!init || init.method === 'GET')) {
+          return _make_response({
+            body: { machine_id: 'storage_test', lease_token: 7 }
+          })
+        }
         return _make_response({ body: { released: true } })
       }
       await coemit_release_session_lease({ thread_id: 't-foreign' })

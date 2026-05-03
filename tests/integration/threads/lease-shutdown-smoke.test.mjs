@@ -145,4 +145,56 @@ describe('threads lease shutdown smoke', function () {
     expect(post_inspect).to.equal(null)
     expect(get_cached_lease_snapshot({ thread_id })).to.equal(null)
   })
+
+  it('cold-cache release recovers via inspect_lease and removes the orphan', async () => {
+    const test_repo = await create_temp_test_repo({
+      prefix: 'lease-cold-release-smoke-',
+      register_directories: true
+    })
+    test_directories = {
+      system_path: test_repo.system_path,
+      user_path: test_repo.user_path,
+      cleanup: test_repo.cleanup
+    }
+    const thread = await create_test_thread({
+      user_public_key: test_user.user_public_key,
+      test_directories
+    })
+    const thread_id = thread.thread_id
+    created_thread_ids.push(thread_id)
+
+    // Plant a lease owned by this machine (the test config makes this host
+    // the storage machine, so coemit_release will treat lease.machine_id ===
+    // storage_test as ours).
+    const session_id = `sess-${crypto.randomBytes(4).toString('hex')}`
+    const acquire_res = await request(server)
+      .post(`/api/threads/${thread_id}/lease/acquire`)
+      .set('Authorization', _auth())
+      .send({
+        machine_id: STORAGE_MACHINE_ID,
+        session_id,
+        ttl_ms: 60000,
+        mode: 'session'
+      })
+    expect(acquire_res.status).to.equal(200)
+    expect(acquire_res.body.acquired).to.equal(true)
+
+    // Simulate the cold-cache state that produces the orphan: process restart
+    // before SessionEnd, contended-acquire overwrite, etc. The lease record
+    // remains in Redis but the in-process snapshot is gone.
+    _clear_cache_for_tests()
+    expect(get_cached_lease_snapshot({ thread_id })).to.equal(null)
+
+    // Fire SessionEnd's release path: PUT session-status=completed routes to
+    // coemit_release_session_lease.
+    const release_res = await request(server)
+      .put(`/api/threads/${thread_id}/session-status`)
+      .send({ session_status: 'completed' })
+    expect(release_res.status).to.equal(200)
+
+    // Lease must be gone from Redis. Pre-fix this would still be present
+    // because coemit_release_session_lease silently no-op'd on cold cache.
+    const post_inspect = await inspect_lease({ thread_id })
+    expect(post_inspect).to.equal(null)
+  })
 })

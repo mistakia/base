@@ -11,6 +11,15 @@
 // typed no-op. Only `acquire_session_lease_strict` and the worker pre-spawn
 // acquire create leases.
 //
+// `coemit_release_session_lease` is symmetric with renew: cache-first, with
+// an `inspect_lease` fall-back when the cache is cold. The fall-back exists
+// because the snapshot can be missing for benign reasons (process restart
+// before hydration completes, contended-acquire writing acquired:false over
+// the snapshot, fresh inspect of an absent lease deleting the entry); a
+// silent no-op in those cases would orphan the lease in Redis until TTL.
+// Foreign-owned protection is preserved by re-checking `lease.machine_id`
+// against the current machine before issuing the release.
+//
 // `acquire_session_lease_strict` is the exception: SessionStart-style routes
 // must distinguish a transient lease-store outage (caller should retry) from
 // a definitive contention or success (caller should proceed). It rethrows
@@ -157,11 +166,32 @@ export const coemit_release_session_lease = async ({ thread_id }) => {
   if (!thread_id) return
   const machine_id = get_current_machine_id()
   if (!machine_id) return
-  const snapshot = _get_owned_snapshot({ thread_id, machine_id })
+  let snapshot = _get_owned_snapshot({ thread_id, machine_id })
+  let recovered = false
+  if (!snapshot) {
+    try {
+      const lease = await inspect_lease({ thread_id })
+      if (
+        lease &&
+        lease.machine_id === machine_id &&
+        lease.lease_token != null
+      ) {
+        snapshot = lease
+        recovered = true
+      }
+    } catch (error) {
+      log('release inspect failed for %s: %s', thread_id, error.message)
+      return
+    }
+  }
   if (!snapshot) return
   try {
     await release_lease({ thread_id, lease_token: snapshot.lease_token })
-    log('released %s token=%s', thread_id, snapshot.lease_token)
+    if (recovered) {
+      log('lease-recovered release %s token=%s', thread_id, snapshot.lease_token)
+    } else {
+      log('released %s token=%s', thread_id, snapshot.lease_token)
+    }
   } catch (error) {
     log('release failed for %s: %s', thread_id, error.message)
   }
