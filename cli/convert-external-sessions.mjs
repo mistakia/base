@@ -703,6 +703,12 @@ const main = async () => {
               type: 'boolean',
               default: false
             })
+            .option('single-leaf-only', {
+              describe:
+                'Pi only: yield only the active-leaf branch from --session-file (live-sync ticks). Default false to preserve bulk-import behavior.',
+              type: 'boolean',
+              default: false
+            })
             .option('verbose', {
               alias: 'v',
               describe: 'Verbose output',
@@ -876,6 +882,7 @@ const main = async () => {
             pi_sessions_dir: argv.piSessionsDir,
             pi_sessions_dirs: argv.piSessionsDirs,
             skip_branch_linking: argv.skipBranchLinking,
+            single_leaf_only: argv.singleLeafOnly,
             user_base_directory: argv.userBaseDir,
             session_id: argv.sessionId,
             session_file: argv.sessionFile,

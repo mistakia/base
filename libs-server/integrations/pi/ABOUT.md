@@ -79,3 +79,9 @@ Per-branch `session_id` is `<header.id>-branch-<index>`. Branch index 0 is the m
 
 - Multi-sibling backfill (3+ branches per session) is reported as `branch_points_skipped_multi_sibling` rather than resolved -- single-sibling resolution is the dominant Pi flow today.
 - Forked-session linkage (`header.parentSession`) requires reading the parent `.jsonl` to recover its `header.id` and is reported as `parent_session_links_deferred`.
+
+## Live-Sync Counterpart
+
+The batch importer has a live counterpart shipped as a Pi extension at `user:.pi/sync-extension/`. The extension subscribes to Pi lifecycle events (`session_start`, `turn_end`, `agent_end`, `session_shutdown`) and routes each tick into this module's CLI surface (`cli/convert-external-sessions.mjs import --provider pi --session-file <path> --known-thread-id <id> --single-leaf-only`).
+
+The append-only delta path lives in `import-pi-session-delta.mjs` and is auto-detected from the `pi-sync-state.mjs` cache (per-host `os.tmpdir()` byte cursor + leaf id keyed off the absolute session-file path). Drift signals (schema mismatch, branch switch) clear the cache and route the tick through the full path. Aggregates are recomputed from the full normalized message set every tick, so the delta and full paths produce identical thread metadata. The per-entry primitive `normalize_pi_entry` (in `normalize-pi-session.mjs`) is the single normalization site shared by both paths.

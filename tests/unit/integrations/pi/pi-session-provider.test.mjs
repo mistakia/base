@@ -50,6 +50,48 @@ describe('PiSessionProvider', () => {
     }
   })
 
+  it('find_sessions({ session_file }) returns only branches from that file', async () => {
+    const p = new PiSessionProvider()
+    const sessions = await p.find_sessions({
+      session_file: path.join(FIXTURES, 'v3-multi-leaf.jsonl')
+    })
+    expect(sessions.length).to.equal(2)
+    for (const s of sessions) {
+      expect(s.header.id).to.equal('sess-v3-multi')
+      expect(s.file_path).to.equal(
+        path.join(FIXTURES, 'v3-multi-leaf.jsonl')
+      )
+    }
+  })
+
+  it('find_sessions({ session_file }) ignores from_date / to_date', async () => {
+    const p = new PiSessionProvider()
+    const sessions = await p.find_sessions({
+      session_file: path.join(FIXTURES, 'v3-multi-leaf.jsonl'),
+      from_date: '2099-01-01',
+      to_date: '2099-12-31'
+    })
+    expect(sessions.length).to.equal(2)
+  })
+
+  it('single_leaf_only: true yields only the active-leaf branch', async () => {
+    const p = new PiSessionProvider()
+    const sessions = await p.find_sessions({
+      session_file: path.join(FIXTURES, 'v3-multi-leaf.jsonl'),
+      single_leaf_only: true
+    })
+    expect(sessions.length).to.equal(1)
+    expect(sessions[0].branch_index).to.equal(0)
+  })
+
+  it('single_leaf_only default (false) yields all branches', async () => {
+    const p = new PiSessionProvider()
+    const sessions = await p.find_sessions({
+      session_file: path.join(FIXTURES, 'v3-multi-leaf.jsonl')
+    })
+    expect(sessions.length).to.equal(2)
+  })
+
   it('rejects v0/unknown header versions via validate_session', () => {
     const p = new PiSessionProvider()
     const fake = {

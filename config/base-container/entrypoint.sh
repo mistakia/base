@@ -10,6 +10,14 @@ fi
 BASE_SUBMODULE="$USER_BASE_DIRECTORY/repository/active/base"
 CONTAINER_MODE="${CONTAINER_MODE:-admin}"
 
+# Wire the Pi sync extension. Idempotent: -f replaces a stale symlink, -n
+# treats an existing symlink as a file. Guarded so containers without the
+# user-base extension directory still start cleanly.
+if [ -d "$USER_BASE_DIRECTORY/.pi/sync-extension" ]; then
+    mkdir -p "$HOME/.pi/agent/extensions"
+    ln -sfn "$USER_BASE_DIRECTORY/.pi/sync-extension" "$HOME/.pi/agent/extensions/base-sync"
+fi
+
 # Helper to run commands as node user if we're root
 run_as_node() {
     if [ "$(id -u)" = "0" ]; then

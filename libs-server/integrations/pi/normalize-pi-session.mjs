@@ -81,6 +81,423 @@ export const compose_pi_branch_session_id = ({ header_id, branch_index }) =>
  *     session_id          // composed branched id
  *   }
  */
+/**
+ * Normalize a single Pi entry into zero or more 5-type timeline messages.
+ *
+ * Pure: depends only on its inputs. Returns the new messages plus the
+ * running model/provider after this entry, the timestamp_ms (or null),
+ * and an optional session_title_candidate that the session-level fold
+ * may capture if it is the first one seen.
+ *
+ * The session-level fold (`normalize_pi_session`) sequences calls to
+ * this primitive and derives session aggregates via
+ * `compute_pi_session_aggregates(messages)`. The delta importer reuses
+ * the same primitive for newly appended Pi entries.
+ */
+export const normalize_pi_entry = ({
+  entry,
+  index,
+  branch_index,
+  thread_id,
+  running_model = null,
+  running_provider = null
+}) => {
+  const ts = derive_entry_timestamp(entry)
+  const provider_data = {
+    pi_entry_id: entry.id,
+    pi_parent_id: entry.parentId ?? null,
+    branch_index,
+    sequence_index: index
+  }
+
+  // build-timeline-entries.mjs:base_entry stamps schema_version and
+  // PROVENANCE.SESSION_IMPORT on the emitted entry. Anything outside the
+  // known_message_keys whitelist there is logged as unsupported metadata,
+  // so we keep this object lean.
+  const base = {
+    id: `pi-${thread_id}-${entry.id}-${index}`,
+    timestamp: ts,
+    provider_data,
+    ordering: {
+      sequence: index,
+      source_uuid: String(entry.id ?? ''),
+      parent_id: entry.parentId ?? null
+    }
+  }
+
+  const messages = []
+  let next_running_model = running_model
+  let next_running_provider = running_provider
+  let session_title_candidate = null
+
+  // Top-level entry-type dispatch FIRST. The plan requires that an
+  // entry-level `branch_summary` type takes precedence over a
+  // role-level `branchSummary` -- both produce the same system entry, but
+  // the precedence is documented to avoid silent duplication.
+  switch (entry.type) {
+    case 'compaction':
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'compaction',
+        content: extract_summary_text(entry),
+        metadata: {
+          tokens_before: entry.tokensBefore ?? null,
+          first_kept_entry_id: entry.firstKeptEntryId ?? null
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    case 'branch_summary':
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'branch_point',
+        content: extract_summary_text(entry),
+        metadata: {
+          source_entry_id: entry.sourceEntryId ?? entry.parentId ?? null
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    case 'model_change': {
+      const new_model = entry.modelId ?? entry.newModel ?? entry.model ?? null
+      const new_provider = entry.newProvider ?? entry.provider ?? null
+      const previous_model = next_running_model
+      const previous_provider = next_running_provider
+      if (new_model) next_running_model = new_model
+      if (new_provider) next_running_provider = new_provider
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'configuration',
+        content: `Model changed to ${new_model ?? 'unknown'}`,
+        metadata: {
+          new_model,
+          previous_model,
+          new_provider,
+          previous_provider
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    }
+    case 'thinking_level_change':
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'configuration',
+        content: `Thinking level changed to ${entry.thinkingLevel ?? 'unknown'}`,
+        metadata: {
+          thinking_level: entry.thinkingLevel ?? null
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    case 'custom':
+      // Extension state, not in LLM context. Skip but record once.
+      log_unsupported({
+        category: 'entry_types',
+        value: 'custom',
+        context: 'extension state, not emitted'
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    case 'custom_message': {
+      messages.push({
+        ...base,
+        type: 'message',
+        role: 'system',
+        content: extract_text_content(entry.content ?? entry.message?.content ?? ''),
+        metadata: {
+          extension_type: entry.extensionType ?? null,
+          display: entry.display ?? null
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    }
+    case 'label': {
+      const label_text = entry.label ?? entry.text ?? ''
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'status',
+        content: label_text || 'label',
+        metadata: {
+          extension_type: 'pi_label',
+          label_text
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    }
+    case 'session_info':
+      if (typeof entry.title === 'string') session_title_candidate = entry.title
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+    case 'message':
+      // Fall through to role-level dispatch below.
+      break
+    default:
+      if (entry.type) {
+        log_unsupported({ category: 'entry_types', value: entry.type })
+      }
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'status',
+        content: `Unsupported Pi entry type: ${entry.type}`,
+        metadata: {
+          original_type: entry.type,
+          unsupported_entry: true
+        }
+      })
+      return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+  }
+
+  // Role-level dispatch for entries with type='message'.
+  const role = entry.message?.role ?? entry.role
+  switch (role) {
+    case 'user': {
+      messages.push({
+        ...base,
+        type: 'message',
+        role: 'user',
+        content: extract_text_content(
+          entry.message?.content ?? entry.content ?? ''
+        ),
+        metadata: {}
+      })
+      break
+    }
+    case 'assistant': {
+      const blocks = extract_assistant_blocks(entry)
+      const usage = entry.message?.usage ?? entry.usage ?? null
+      const cost =
+        entry.message?.usage?.cost ??
+        entry.usage?.cost ??
+        entry.message?.cost ??
+        entry.cost ??
+        null
+      const model = entry.message?.model ?? entry.model ?? next_running_model
+      const provider =
+        entry.message?.provider ?? entry.provider ?? next_running_provider
+      if (model) next_running_model = model
+      if (provider) next_running_provider = provider
+
+      const per_turn = aggregate_assistant_usage_cost({ usage, cost })
+      const text_content = blocks.text_pieces.join('').trim()
+      if (text_content || blocks.thinking_blocks.length === 0) {
+        messages.push({
+          ...base,
+          type: 'message',
+          role: 'assistant',
+          content: text_content || '',
+          metadata: {
+            model,
+            provider,
+            ...per_turn
+          }
+        })
+      }
+
+      for (let bi = 0; bi < blocks.thinking_blocks.length; bi++) {
+        const block = blocks.thinking_blocks[bi]
+        messages.push({
+          ...base,
+          id: `${base.id}-thinking-${bi}`,
+          type: 'thinking',
+          thinking_type: 'reasoning',
+          content: block.content,
+          metadata: {}
+        })
+      }
+
+      for (let ti = 0; ti < blocks.tool_calls.length; ti++) {
+        const tc = blocks.tool_calls[ti]
+        messages.push({
+          ...base,
+          id: `${base.id}-tool-call-${ti}`,
+          type: 'tool_call',
+          content: {
+            tool_name: tc.tool_name,
+            tool_parameters: tc.tool_parameters || {},
+            tool_call_id: tc.tool_call_id,
+            execution_status: 'pending'
+          },
+          metadata: {}
+        })
+      }
+      break
+    }
+    case 'toolResult': {
+      const tool_call_id =
+        entry.message?.toolCallId ??
+        entry.toolCallId ??
+        entry.tool_call_id
+      if (!tool_call_id) {
+        log(
+          `normalize_pi_entry: toolResult entry ${entry.id} missing toolCallId, skipping`
+        )
+        break
+      }
+      const is_error = !!(entry.message?.isError ?? entry.isError)
+      const raw_content =
+        entry.message?.content ?? entry.content ?? entry.result ?? null
+      const result_content = extract_text_content(raw_content) || raw_content
+      messages.push({
+        ...base,
+        type: 'tool_result',
+        content: {
+          tool_call_id,
+          result: is_error ? null : result_content,
+          error: is_error ? result_content : null
+        },
+        metadata: {}
+      })
+      break
+    }
+    case 'bashExecution': {
+      const command =
+        entry.command ?? entry.content?.command ?? entry.message?.command ?? ''
+      const tool_call_id = `pi-bash-${entry.id}`
+      messages.push({
+        ...base,
+        id: `${base.id}-bash-call`,
+        type: 'tool_call',
+        content: {
+          tool_name: 'bash',
+          tool_parameters: { command },
+          tool_call_id,
+          execution_status: 'pending'
+        },
+        metadata: {}
+      })
+      messages.push({
+        ...base,
+        id: `${base.id}-bash-result`,
+        type: 'tool_result',
+        content: {
+          tool_call_id,
+          result: entry.output ?? entry.stdout ?? null,
+          error: entry.error ?? entry.stderr ?? null
+        },
+        provider_data: {
+          ...provider_data,
+          exit_code: entry.exitCode ?? null,
+          cancelled: entry.cancelled ?? false,
+          truncated: entry.truncated ?? false,
+          full_output_path: entry.fullOutputPath ?? null
+        },
+        metadata: {}
+      })
+      break
+    }
+    case 'custom': {
+      messages.push({
+        ...base,
+        type: 'message',
+        role: 'system',
+        content: extract_text_content(
+          entry.content ?? entry.message?.content ?? ''
+        ),
+        metadata: {
+          extension_type: entry.extensionType ?? null
+        }
+      })
+      break
+    }
+    case 'branchSummary': {
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'branch_point',
+        content: extract_summary_text(entry),
+        metadata: {
+          source_entry_id: entry.sourceEntryId ?? entry.parentId ?? null
+        }
+      })
+      break
+    }
+    case 'compactionSummary': {
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'compaction',
+        content: extract_summary_text(entry),
+        metadata: {}
+      })
+      break
+    }
+    default:
+      if (role) log_unsupported({ category: 'message_roles', value: role })
+      messages.push({
+        ...base,
+        type: 'system',
+        system_type: 'status',
+        content: `Unsupported Pi message role: ${role}`,
+        metadata: {
+          unsupported_role: role
+        }
+      })
+  }
+
+  return finalize(messages, ts, next_running_model, next_running_provider, session_title_candidate)
+}
+
+const finalize = (messages, ts, next_running_model, next_running_provider, session_title_candidate) => ({
+  messages,
+  next_running_model,
+  next_running_provider,
+  session_title_candidate,
+  timestamp_ms: ts ? ts.getTime() : null
+})
+
+/**
+ * Aggregate session-level totals as a pure function of the message set.
+ * Both the batch path (full normalization) and the delta path (post-merge
+ * normalized message set) call this; identity of inputs guarantees identity
+ * of outputs, which is what makes fall-through-on-error safe.
+ */
+export const compute_pi_session_aggregates = (messages) => {
+  let aggregate_input_tokens = 0
+  let aggregate_output_tokens = 0
+  let aggregate_cache_read_tokens = 0
+  let aggregate_cache_write_tokens = 0
+  let aggregate_input_cost = 0
+  let aggregate_output_cost = 0
+  let aggregate_cache_read_cost = 0
+  let aggregate_cache_write_cost = 0
+  const models = new Set()
+  const inference_providers = new Set()
+
+  for (const m of messages) {
+    if (m.type === 'message' && m.role === 'assistant') {
+      const md = m.metadata || {}
+      aggregate_input_tokens += Number(md.input_tokens || 0)
+      aggregate_output_tokens += Number(md.output_tokens || 0)
+      aggregate_cache_read_tokens += Number(md.cache_read_tokens || 0)
+      aggregate_cache_write_tokens += Number(md.cache_write_tokens || 0)
+      aggregate_input_cost += Number(md.input_cost || 0)
+      aggregate_output_cost += Number(md.output_cost || 0)
+      aggregate_cache_read_cost += Number(md.cache_read_cost || 0)
+      aggregate_cache_write_cost += Number(md.cache_write_cost || 0)
+      if (md.model) models.add(md.model)
+      if (md.provider) inference_providers.add(md.provider)
+    } else if (m.type === 'system' && m.system_type === 'configuration') {
+      const md = m.metadata || {}
+      if (md.new_model) models.add(md.new_model)
+      if (md.new_provider) inference_providers.add(md.new_provider)
+    }
+  }
+
+  return {
+    aggregate_input_tokens,
+    aggregate_output_tokens,
+    aggregate_cache_read_tokens,
+    aggregate_cache_write_tokens,
+    aggregate_input_cost,
+    aggregate_output_cost,
+    aggregate_cache_read_cost,
+    aggregate_cache_write_cost,
+    models: Array.from(models),
+    inference_providers: Array.from(inference_providers)
+  }
+}
+
 export const normalize_pi_session = (raw_session) => {
   const {
     header,
@@ -105,391 +522,30 @@ export const normalize_pi_session = (raw_session) => {
   })
 
   const messages = []
-  const inference_providers = new Set()
-  const models = new Set()
-
   let running_model = null
   let running_provider = null
-
-  // Aggregates
-  let aggregate_input_tokens = 0
-  let aggregate_output_tokens = 0
-  let aggregate_cache_read_tokens = 0
-  let aggregate_cache_write_tokens = 0
-  let aggregate_input_cost = 0
-  let aggregate_output_cost = 0
-  let aggregate_cache_read_cost = 0
-  let aggregate_cache_write_cost = 0
   let session_title = null
   const timestamps_ms = []
 
   for (let index = 0; index < branch_entries.length; index++) {
-    const entry = branch_entries[index]
-    const ts = derive_entry_timestamp(entry)
-    if (ts) timestamps_ms.push(ts.getTime())
-
-    const provider_data = {
-      pi_entry_id: entry.id,
-      pi_parent_id: entry.parentId ?? null,
+    const result = normalize_pi_entry({
+      entry: branch_entries[index],
+      index,
       branch_index,
-      sequence_index: index
+      thread_id,
+      running_model,
+      running_provider
+    })
+    for (const m of result.messages) messages.push(m)
+    running_model = result.next_running_model
+    running_provider = result.next_running_provider
+    if (!session_title && result.session_title_candidate) {
+      session_title = result.session_title_candidate
     }
-
-    // build-timeline-entries.mjs:base_entry stamps schema_version and
-    // PROVENANCE.SESSION_IMPORT on the emitted entry. Anything outside the
-    // known_message_keys whitelist there is logged as unsupported metadata,
-    // so we keep this object lean.
-    const base = {
-      id: `pi-${thread_id}-${entry.id}-${index}`,
-      timestamp: ts,
-      provider_data,
-      ordering: {
-        sequence: index,
-        source_uuid: String(entry.id ?? ''),
-        parent_id: entry.parentId ?? null
-      }
-    }
-
-    // Top-level entry-type dispatch FIRST. The plan requires that an
-    // entry-level `branch_summary` type takes precedence over a
-    // role-level `branchSummary` -- both produce the same system entry, but
-    // the precedence is documented to avoid silent duplication.
-    switch (entry.type) {
-      case 'compaction':
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'compaction',
-          content: extract_summary_text(entry),
-          metadata: {
-            tokens_before: entry.tokensBefore ?? null,
-            first_kept_entry_id: entry.firstKeptEntryId ?? null
-          }
-        })
-        continue
-      case 'branch_summary':
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'branch_point',
-          content: extract_summary_text(entry),
-          metadata: {
-            source_entry_id: entry.sourceEntryId ?? entry.parentId ?? null
-          }
-        })
-        continue
-      case 'model_change': {
-        // Pi v3 model_change carries fields at the top level (no `message`
-        // envelope): { type, id, parentId, timestamp, modelId, provider }.
-        const new_model =
-          entry.modelId ?? entry.newModel ?? entry.model ?? null
-        const new_provider = entry.newProvider ?? entry.provider ?? null
-        const previous_model = running_model
-        const previous_provider = running_provider
-        if (new_model) {
-          models.add(new_model)
-          running_model = new_model
-        }
-        if (new_provider) {
-          inference_providers.add(new_provider)
-          running_provider = new_provider
-        }
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'configuration',
-          content: `Model changed to ${new_model ?? 'unknown'}`,
-          metadata: {
-            new_model,
-            previous_model,
-            new_provider,
-            previous_provider
-          }
-        })
-        continue
-      }
-      case 'thinking_level_change':
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'configuration',
-          content: `Thinking level changed to ${entry.thinkingLevel ?? 'unknown'}`,
-          metadata: {
-            thinking_level: entry.thinkingLevel ?? null
-          }
-        })
-        continue
-      case 'custom':
-        // Extension state, not in LLM context. Skip but record once.
-        log_unsupported({
-          category: 'entry_types',
-          value: 'custom',
-          context: 'extension state, not emitted'
-        })
-        continue
-      case 'custom_message': {
-        messages.push({
-          ...base,
-          type: 'message',
-          role: 'system',
-          content: extract_text_content(entry.content ?? entry.message?.content ?? ''),
-          metadata: {
-            extension_type: entry.extensionType ?? null,
-            display: entry.display ?? null
-          }
-        })
-        continue
-      }
-      case 'label': {
-        const label_text = entry.label ?? entry.text ?? ''
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'status',
-          content: label_text || 'label',
-          metadata: {
-            extension_type: 'pi_label',
-            label_text
-          }
-        })
-        continue
-      }
-      case 'session_info':
-        if (!session_title && typeof entry.title === 'string') {
-          session_title = entry.title
-        }
-        continue
-      case 'message':
-        // Fall through to role-level dispatch below.
-        break
-      default:
-        if (entry.type) {
-          log_unsupported({ category: 'entry_types', value: entry.type })
-        }
-        // Unknown entry type -- emit as system/status so it is preserved.
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'status',
-          content: `Unsupported Pi entry type: ${entry.type}`,
-          metadata: {
-            original_type: entry.type,
-            unsupported_entry: true
-          }
-        })
-        continue
-    }
-
-    // Role-level dispatch for entries with type='message'.
-    // Pi v3 stores the role at entry.message.role (not entry.role); fall back
-    // to entry.role for older shapes / migrated v1 entries.
-    const role = entry.message?.role ?? entry.role
-    switch (role) {
-      case 'user': {
-        messages.push({
-          ...base,
-          type: 'message',
-          role: 'user',
-          content: extract_text_content(
-            entry.message?.content ?? entry.content ?? ''
-          ),
-          metadata: {}
-        })
-        break
-      }
-      case 'assistant': {
-        const blocks = extract_assistant_blocks(entry)
-        const usage = entry.message?.usage ?? entry.usage ?? null
-        // Pi v3 nests cost inside usage.cost; older shapes had it at the top
-        // level. Fall through both.
-        const cost =
-          entry.message?.usage?.cost ??
-          entry.usage?.cost ??
-          entry.message?.cost ??
-          entry.cost ??
-          null
-        const model = entry.message?.model ?? entry.model ?? running_model
-        const provider =
-          entry.message?.provider ?? entry.provider ?? running_provider
-        if (model) {
-          models.add(model)
-          running_model = model
-        }
-        if (provider) {
-          inference_providers.add(provider)
-          running_provider = provider
-        }
-
-        const per_turn = aggregate_assistant_usage_cost({ usage, cost })
-        aggregate_input_tokens += per_turn.input_tokens
-        aggregate_output_tokens += per_turn.output_tokens
-        aggregate_cache_read_tokens += per_turn.cache_read_tokens
-        aggregate_cache_write_tokens += per_turn.cache_write_tokens
-        aggregate_input_cost += per_turn.input_cost
-        aggregate_output_cost += per_turn.output_cost
-        aggregate_cache_read_cost += per_turn.cache_read_cost
-        aggregate_cache_write_cost += per_turn.cache_write_cost
-
-        const text_content = blocks.text_pieces.join('').trim()
-        if (text_content || blocks.thinking_blocks.length === 0) {
-          messages.push({
-            ...base,
-            type: 'message',
-            role: 'assistant',
-            content: text_content || '',
-            metadata: {
-              model,
-              provider,
-              ...per_turn
-            }
-          })
-        }
-
-        for (let bi = 0; bi < blocks.thinking_blocks.length; bi++) {
-          const block = blocks.thinking_blocks[bi]
-          messages.push({
-            ...base,
-            id: `${base.id}-thinking-${bi}`,
-            type: 'thinking',
-            thinking_type: 'reasoning',
-            content: block.content,
-            metadata: {}
-          })
-        }
-
-        for (let ti = 0; ti < blocks.tool_calls.length; ti++) {
-          const tc = blocks.tool_calls[ti]
-          messages.push({
-            ...base,
-            id: `${base.id}-tool-call-${ti}`,
-            type: 'tool_call',
-            content: {
-              tool_name: tc.tool_name,
-              tool_parameters: tc.tool_parameters || {},
-              tool_call_id: tc.tool_call_id,
-              execution_status: 'pending'
-            },
-            metadata: {}
-          })
-        }
-        break
-      }
-      case 'toolResult': {
-        // Pi v3 stores toolCallId / isError / content under entry.message.
-        const tool_call_id =
-          entry.message?.toolCallId ??
-          entry.toolCallId ??
-          entry.tool_call_id
-        if (!tool_call_id) {
-          log(
-            `normalize_pi_session: toolResult entry ${entry.id} missing toolCallId, skipping`
-          )
-          break
-        }
-        const is_error = !!(entry.message?.isError ?? entry.isError)
-        const raw_content =
-          entry.message?.content ?? entry.content ?? entry.result ?? null
-        const result_content = extract_text_content(raw_content) || raw_content
-        messages.push({
-          ...base,
-          type: 'tool_result',
-          content: {
-            tool_call_id,
-            result: is_error ? null : result_content,
-            error: is_error ? result_content : null
-          },
-          metadata: {}
-        })
-        break
-      }
-      case 'bashExecution': {
-        const command =
-          entry.command ?? entry.content?.command ?? entry.message?.command ?? ''
-        const tool_call_id = `pi-bash-${entry.id}`
-        messages.push({
-          ...base,
-          id: `${base.id}-bash-call`,
-          type: 'tool_call',
-          content: {
-            tool_name: 'bash',
-            tool_parameters: { command },
-            tool_call_id,
-            execution_status: 'pending'
-          },
-          metadata: {}
-        })
-        messages.push({
-          ...base,
-          id: `${base.id}-bash-result`,
-          type: 'tool_result',
-          content: {
-            tool_call_id,
-            result: entry.output ?? entry.stdout ?? null,
-            error: entry.error ?? entry.stderr ?? null
-          },
-          provider_data: {
-            ...provider_data,
-            exit_code: entry.exitCode ?? null,
-            cancelled: entry.cancelled ?? false,
-            truncated: entry.truncated ?? false,
-            full_output_path: entry.fullOutputPath ?? null
-          },
-          metadata: {}
-        })
-        break
-      }
-      case 'custom': {
-        // Role-level custom (extension-injected user-visible context). Distinct
-        // from entry-level `custom` (extension state) handled above.
-        messages.push({
-          ...base,
-          type: 'message',
-          role: 'system',
-          content: extract_text_content(
-            entry.content ?? entry.message?.content ?? ''
-          ),
-          metadata: {
-            extension_type: entry.extensionType ?? null
-          }
-        })
-        break
-      }
-      case 'branchSummary': {
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'branch_point',
-          content: extract_summary_text(entry),
-          metadata: {
-            source_entry_id: entry.sourceEntryId ?? entry.parentId ?? null
-          }
-        })
-        break
-      }
-      case 'compactionSummary': {
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'compaction',
-          content: extract_summary_text(entry),
-          metadata: {}
-        })
-        break
-      }
-      default:
-        if (role) log_unsupported({ category: 'message_roles', value: role })
-        messages.push({
-          ...base,
-          type: 'system',
-          system_type: 'status',
-          content: `Unsupported Pi message role: ${role}`,
-          metadata: {
-            unsupported_role: role
-          }
-        })
-    }
-
+    if (result.timestamp_ms != null) timestamps_ms.push(result.timestamp_ms)
   }
+
+  const aggregates = compute_pi_session_aggregates(messages)
 
   const start_time =
     timestamps_ms.length > 0 ? new Date(Math.min(...timestamps_ms)) : null
@@ -505,19 +561,19 @@ export const normalize_pi_session = (raw_session) => {
     original_session_id: header.id,
     parent_session_path,
     project_path,
-    inference_providers: Array.from(inference_providers),
-    models: Array.from(models),
+    inference_providers: aggregates.inference_providers,
+    models: aggregates.models,
     title: session_title,
     start_time,
     end_time,
-    aggregate_input_tokens,
-    aggregate_output_tokens,
-    aggregate_cache_read_tokens,
-    aggregate_cache_write_tokens,
-    aggregate_input_cost,
-    aggregate_output_cost,
-    aggregate_cache_read_cost,
-    aggregate_cache_write_cost,
+    aggregate_input_tokens: aggregates.aggregate_input_tokens,
+    aggregate_output_tokens: aggregates.aggregate_output_tokens,
+    aggregate_cache_read_tokens: aggregates.aggregate_cache_read_tokens,
+    aggregate_cache_write_tokens: aggregates.aggregate_cache_write_tokens,
+    aggregate_input_cost: aggregates.aggregate_input_cost,
+    aggregate_output_cost: aggregates.aggregate_output_cost,
+    aggregate_cache_read_cost: aggregates.aggregate_cache_read_cost,
+    aggregate_cache_write_cost: aggregates.aggregate_cache_write_cost,
     pi_header_version: header.version
   }
 

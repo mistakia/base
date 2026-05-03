@@ -706,3 +706,36 @@ Specifics:
 - **Unsupported tracking**: entry-level `custom` (extension state, not in LLM context) is recorded once via the unsupported tracker so importers see what was dropped.
 - **Label preservation**: Pi `label` entries become `system` / `system_type=status` with `metadata.extension_type='pi_label'` and the label text on both `content` and `metadata.label_text`.
 - **Test fixtures must mirror real Pi shape**: when adding fixtures under `tests/fixtures/pi/`, derive them from a real Pi `.jsonl` (or the spec linked above), not from prose. The original Pi work shipped flat-shape fixtures that matched the broken normalizer, hiding the v3 envelope bug from the test suite until a real session was imported.
+
+#### Live sync
+
+The Pi batch importer has a live counterpart that mirrors session lifecycle events into the same active-session API + thread-sync pipeline used by Claude. It is shipped as a Pi extension (TypeScript, jiti-loaded by Pi at runtime) at `user:.pi/sync-extension/`.
+
+**Install model.** Symlink-driven and idempotent. Host: `mkdir -p ~/.pi/agent/extensions && ln -sfn "$USER_BASE_DIRECTORY/.pi/sync-extension" ~/.pi/agent/extensions/base-sync`. Container: the same two-line block, env-var-guarded, runs from `repository/active/base/config/base-container/entrypoint.sh` so containers without user-base mounted still start cleanly. Per-host config and the append-only log live as siblings of the symlink in `~/.pi/agent/extensions/` and are ignored by Pi's `*.ts` discovery glob.
+
+**Event mapping.** Four Pi events are wired in v1; `before_agent_start` is reserved for v2 entity-context injection.
+
+| Pi event           | Active-session API                                | Importer            |
+| ------------------ | ------------------------------------------------- | ------------------- |
+| `session_start`    | POST (startup/new), PUT active (resume/reload), DELETE+POST (fork) | tail-import on resume/fork |
+| `turn_end`         | PUT status=active (or DELETE+POST on leaf shift) | tail-import         |
+| `agent_end`        | PUT status=idle                                   | tail-import         |
+| `session_shutdown` | DELETE (after final tail flush)                   | final tail-import + relation analysis (`bun cli/analyze-thread-relations.mjs --thread-id <id> --force`) + `bash cli/auto-commit-threads.sh` |
+
+**Auth.** The active-session client mirrors `~/.claude/hooks/active-session-hook.sh`: localhost URLs are unauthenticated; non-localhost URLs send `Authorization: Bearer $JOB_API_KEY`. Missing key for a non-localhost URL produces a one-time warning per URL and that URL is skipped for the lifetime of the extension instance.
+
+**Importer coalescing.** Per-`session_file` queue with a hard cap of one pending tick (drop-old wins). Caps in-flight work at 2 per file (1 running + 1 pending) regardless of how rapidly events fire; latest event eventually runs. 30-second timeout per spawn (SIGTERM + 2s grace + SIGKILL).
+
+**Delta vs full routing.** The importer (`import_pi_sessions`) auto-detects when to take the append-only delta path:
+
+| Sync state                                   | Path                                                              |
+| -------------------------------------------- | ----------------------------------------------------------------- |
+| Miss                                         | Full path; persist sync state from result so the next tick can take delta |
+| Hit, `stat.size === byte_offset`             | Short-circuit: no parse, no write, return `no_change: true`       |
+| Hit, leaf_id unchanged, schema_version match | Delta path: parse whole file, dedup by `source_entry_id`, append new entries via `build_timeline_from_session(parse_mode='delta')`, recompute aggregates, metadata-only write |
+| Hit, branch switch (existing on-disk SESSION_IMPORT entry not in new normalize) | Clear sync state, fall through to full path |
+| Hit, schema_version mismatch                 | Clear sync state, fall through to full path                       |
+
+Sync-state cache: `os.tmpdir()` + sha256(absolute `session_file` path) prefix. Per-host transient. The state shape carries `byte_offset, last_entry_id, leaf_id, branch_thread_id, schema_version`; the cache key on the file path (rather than per-branch session id) reflects that Pi files host multiple branches that share one transcript. Crash safety: append timeline -> write metadata -> commit sync state. Re-running any tick is idempotent because dedup is by `source_entry_id`.
+
+**Single source of truth.** `normalize_pi_session` is folded over a pure `normalize_pi_entry` primitive that the delta path also consumes; schema evolution updates one site. Aggregates are derived via `compute_pi_session_aggregates(messages)` from the full normalized message set every tick, so delta and full paths produce identical thread metadata.

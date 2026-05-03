@@ -10,6 +10,7 @@
  */
 
 import debug from 'debug'
+import path from 'path'
 
 import { SessionProviderBase } from '#libs-server/integrations/thread/session-provider-base.mjs'
 import {
@@ -49,11 +50,25 @@ export class PiSessionProvider extends SessionProviderBase {
    * Discover Pi session files and return one raw session per branch.
    */
   async find_sessions({
+    session_file,
     pi_sessions_dir,
     pi_sessions_dirs,
     from_date,
-    to_date
+    to_date,
+    single_leaf_only = false
   } = {}) {
+    if (session_file) {
+      try {
+        return await load_branches_from_file({
+          file_path: session_file,
+          project_path: project_path_from_file(session_file),
+          single_leaf_only
+        })
+      } catch (error) {
+        log(`Failed to load Pi session ${session_file}: ${error.message}`)
+        return []
+      }
+    }
     const sessions_dirs = resolve_sessions_dirs({
       pi_sessions_dir,
       pi_sessions_dirs
@@ -69,7 +84,8 @@ export class PiSessionProvider extends SessionProviderBase {
       try {
         const branches = await load_branches_from_file({
           file_path,
-          project_path
+          project_path,
+          single_leaf_only
         })
         raw_sessions.push(...branches)
       } catch (error) {
@@ -80,11 +96,26 @@ export class PiSessionProvider extends SessionProviderBase {
   }
 
   async *stream_sessions({
+    session_file,
     pi_sessions_dir,
     pi_sessions_dirs,
     from_date,
-    to_date
+    to_date,
+    single_leaf_only = false
   } = {}) {
+    if (session_file) {
+      try {
+        const branches = await load_branches_from_file({
+          file_path: session_file,
+          project_path: project_path_from_file(session_file),
+          single_leaf_only
+        })
+        for (const branch of branches) yield branch
+      } catch (error) {
+        log(`Failed to load Pi session ${session_file}: ${error.message}`)
+      }
+      return
+    }
     const sessions_dirs = resolve_sessions_dirs({
       pi_sessions_dir,
       pi_sessions_dirs
@@ -98,7 +129,8 @@ export class PiSessionProvider extends SessionProviderBase {
       try {
         const branches = await load_branches_from_file({
           file_path,
-          project_path
+          project_path,
+          single_leaf_only
         })
         for (const branch of branches) yield branch
       } catch (error) {
@@ -171,22 +203,37 @@ const resolve_sessions_dirs = ({ pi_sessions_dir, pi_sessions_dirs }) => {
   return [PI_DEFAULT_SESSIONS_DIR]
 }
 
-const load_branches_from_file = async ({ file_path, project_path }) => {
+const project_path_from_file = (file_path) => {
+  const parent = path.basename(path.dirname(file_path))
+  let decoded = parent.replace(/--/g, '/')
+  if (!decoded.startsWith('/')) decoded = '/' + decoded
+  return decoded.replace(/\/+$/, '')
+}
+
+const load_branches_from_file = async ({
+  file_path,
+  project_path,
+  single_leaf_only = false
+}) => {
   const { header, entries } = await parse_pi_jsonl({ file_path })
   const header_check = validate_pi_header({ header })
   if (!header_check.valid) {
     throw new Error(`invalid Pi header: ${header_check.reason}`)
   }
   const migrated = migrate_pi_entries({ header, entries })
-  const branches = extract_all_pi_branches({ entries: migrated })
+  const all_branches = extract_all_pi_branches({ entries: migrated })
   const branch_points = identify_pi_branch_points({ entries: migrated })
 
-  const all_branch_session_ids = branches.map((b) =>
+  const all_branch_session_ids = all_branches.map((b) =>
     compose_pi_branch_session_id({
       header_id: header.id,
       branch_index: b.branch_index
     })
   )
+
+  const branches = single_leaf_only
+    ? all_branches.filter((b) => b.branch_index === 0)
+    : all_branches
 
   return branches.map((b) => {
     const session_id = compose_pi_branch_session_id({
