@@ -16,11 +16,14 @@ const decide_permission = ({ is_owner, has_read_permission }) => {
   return { allowed: false }
 }
 
-// Mirrors the resume route's local routing-variable derivation.
+// Mirrors the resume route's local routing-variable derivation. Per the
+// canonical attribution spec, container_name is non-null iff
+// environment === 'controlled_container', so the routing variable derives
+// from container_name alone.
 const derive_execution_mode = (thread) => {
   const container_name = thread.execution?.container_name
   if (is_per_user_container(container_name)) return 'container_user'
-  if (thread.execution?.mode === 'container') return 'container'
+  if (container_name) return 'container'
   return 'host'
 }
 
@@ -57,7 +60,7 @@ describe('Thread Resume Ownership and Dispatch', function () {
     it('routes per-user container threads via container_name prefix', () => {
       const thread = {
         execution: {
-          mode: 'container',
+          environment: 'controlled_container',
           machine_id: 'storage',
           container_runtime: 'docker',
           container_name: 'base-user-arrin'
@@ -66,10 +69,10 @@ describe('Thread Resume Ownership and Dispatch', function () {
       expect(derive_execution_mode(thread)).to.equal('container_user')
     })
 
-    it('routes shared container threads via execution.mode', () => {
+    it('routes shared container threads via container_name', () => {
       const thread = {
         execution: {
-          mode: 'container',
+          environment: 'controlled_container',
           machine_id: 'storage',
           container_runtime: 'docker',
           container_name: 'base-container'
@@ -81,7 +84,7 @@ describe('Thread Resume Ownership and Dispatch', function () {
     it('routes host threads to host', () => {
       const thread = {
         execution: {
-          mode: 'host',
+          environment: 'controlled_host',
           machine_id: 'macbook',
           container_runtime: null,
           container_name: null
@@ -106,7 +109,7 @@ describe('Thread Resume Ownership and Dispatch', function () {
       const thread = {
         owner_public_key: 'user-key-arrin',
         execution: {
-          mode: 'container',
+          environment: 'controlled_container',
           container_name: 'base-user-arrin'
         }
       }
@@ -122,7 +125,10 @@ describe('Thread Resume Ownership and Dispatch', function () {
     it('non-owner container user attempting another user-isolated thread: denied unless read permission grants it', () => {
       const thread = {
         owner_public_key: 'user-key-zoe',
-        execution: { mode: 'container', container_name: 'base-user-zoe' }
+        execution: {
+          environment: 'controlled_container',
+          container_name: 'base-user-zoe'
+        }
       }
       const requester = 'user-key-arrin'
       const permission = decide_permission({
@@ -136,7 +142,7 @@ describe('Thread Resume Ownership and Dispatch', function () {
       const thread = {
         owner_public_key: 'user-key-greg',
         execution: {
-          mode: 'host',
+          environment: 'controlled_host',
           machine_id: 'macbook',
           container_runtime: null,
           container_name: null

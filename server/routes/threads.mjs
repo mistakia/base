@@ -1044,7 +1044,7 @@ router.post('/:thread_id/resume', async (req, res) => {
     const thread_container_name = thread.execution?.container_name
     const execution_mode = is_per_user_container(thread_container_name)
       ? 'container_user'
-      : thread.execution?.mode === 'container'
+      : thread_container_name
         ? 'container'
         : 'host'
 

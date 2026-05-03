@@ -1023,17 +1023,19 @@ const ThreadStats = ({
         />
       )}
 
-      {execution && execution.mode && (
+      {execution && execution.environment && (
         <MetadataRow
           label='Execution'
           value={
             <span style={{ fontFamily: 'monospace' }}>
-              {execution.mode}
+              {execution.environment}
               {execution.machine_id ? ` · ${execution.machine_id}` : ''}
-              {execution.mode === 'container' && execution.container_name
+              {execution.environment === 'controlled_container' &&
+              execution.container_name
                 ? ` · ${execution.container_name}`
                 : ''}
-              {execution.mode === 'container' && execution.container_runtime
+              {execution.environment === 'controlled_container' &&
+              execution.container_runtime
                 ? ` (${execution.container_runtime})`
                 : ''}
             </span>
