@@ -31,46 +31,22 @@ import ThreadInputTrigger from '@components/ThreadInputTrigger/ThreadInputTrigge
 
 import './ThreadSheet.styl'
 
-// Resume status indicator
-const ResumeStatusIndicator = ({ pending_resume }) => {
-  const status = pending_resume.get('status')
-  const queue_position = pending_resume.get('queue_position')
-  const error_message = pending_resume.get('error_message')
-
-  let badge_label
-  switch (status) {
-    case 'submitted':
-      badge_label = 'submitted'
-      break
-    case 'queued':
-      badge_label = queue_position ? `queued #${queue_position}` : 'queued'
-      break
-    case 'starting':
-      badge_label = 'starting'
-      break
-    case 'failed':
-      badge_label = 'failed'
-      break
-    default:
-      badge_label = 'resuming'
+// Map a pending_resume.status string to a canonical lifecycle status so the
+// same ThreadLifecycleIndicator can render the resume-in-flight phase. The
+// resume status set is a strict subset of LIFECYCLE_STATUSES plus
+// 'submitted', which collapses onto 'queued' for display purposes. Returning
+// null skips the resume projection and lets thread.session_status drive the
+// indicator.
+const project_resume_status_to_lifecycle = (resume_status) => {
+  if (resume_status === 'submitted') return 'queued'
+  if (
+    resume_status === 'queued' ||
+    resume_status === 'starting' ||
+    resume_status === 'failed'
+  ) {
+    return resume_status
   }
-
-  return (
-    <div
-      className={`thread-sheet__resume-status thread-sheet__resume-status--${status}`}>
-      <div className='thread-sheet__resume-status-header'>
-        <span className='thread-sheet__resume-status-badge'>{badge_label}</span>
-      </div>
-      {status === 'failed' && (
-        <span className='thread-sheet__resume-status-error'>
-          {error_message || 'Unknown error'}
-        </span>
-      )}
-    </div>
-  )
-}
-ResumeStatusIndicator.propTypes = {
-  pending_resume: PropTypes.object
+  return null
 }
 
 const close_button_svg = (
@@ -194,23 +170,44 @@ const SingleThreadSheet = ({ thread_id }) => {
         )}
       </div>
 
-      {/* Pending resume status indicator */}
-      {pending_resume && (
-        <ResumeStatusIndicator pending_resume={pending_resume} />
-      )}
-
-      {/* Canonical bottom-of-thread lifecycle indicator (above composer).
-          Suppressed while a pending_resume is showing -- the resume indicator
-          covers the same queued/starting/failed states and adds the error
-          message; rendering both stacks two "Failed" rows. */}
-      {!pending_resume && thread_data && thread_data.get('session_status') && (
-        <ThreadLifecycleIndicator
-          status={thread_data.get('session_status')}
-          thread_id={thread_id}
-          user_message_count={thread_data.get('user_message_count') || 0}
-          variant='footer'
-        />
-      )}
+      {/* Unified bottom-of-thread lifecycle indicator (above composer). One
+          DOM element handles both the resume-in-flight phase and the live
+          session phase: while pending_resume is set we project its status
+          onto the indicator so the resume->lifecycle handoff is a prop
+          change, not an unmount/mount of two differently-styled components.
+          That swap was the visible flicker between 'queued' and 'active'.
+          Resume errors render the message inline below the indicator. */}
+      {(() => {
+        const resume_status = pending_resume
+          ? project_resume_status_to_lifecycle(pending_resume.get('status'))
+          : null
+        const session_status = thread_data
+          ? thread_data.get('session_status')
+          : null
+        const effective_status = resume_status || session_status
+        if (!effective_status) return null
+        const error_message =
+          pending_resume && pending_resume.get('status') === 'failed'
+            ? pending_resume.get('error_message') || 'Unknown error'
+            : null
+        return (
+          <div className='thread-sheet__lifecycle-footer'>
+            <ThreadLifecycleIndicator
+              status={effective_status}
+              thread_id={thread_id}
+              user_message_count={
+                thread_data ? thread_data.get('user_message_count') || 0 : 0
+              }
+              variant='footer'
+            />
+            {error_message && (
+              <span className='thread-sheet__resume-status-error'>
+                {error_message}
+              </span>
+            )}
+          </div>
+        )
+      })()}
 
       {/* Trigger to open the full-featured global input */}
       <div className='thread-sheet__input-trigger'>

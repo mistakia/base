@@ -156,46 +156,20 @@ body.thread-sheet-open
   z-index: 2
 
 // ============================================================================
-// Resume status indicator
+// Bottom-of-thread lifecycle footer (above composer)
 // ============================================================================
 
-.thread-sheet__resume-status
+.thread-sheet__lifecycle-footer
   flex-shrink: 0
   display: flex
   flex-direction: column
   gap: 4px
   padding: $space_sm $space_base
   font-size: $font_size_xs
-  color: $color_text_secondary
   border-top: 1px solid $color_border_light
 
-  &--failed
-    color: $color_error
-
-.thread-sheet__resume-status-header
-  display: flex
-  align-items: center
-  gap: 6px
-
-.thread-sheet__resume-status-badge
-  font-size: 10px
-  font-weight: $font_weight_semibold
-  text-transform: uppercase
-  letter-spacing: 0.04em
-  color: $color_text_tertiary
-
-  .thread-sheet__resume-status--failed &
-    color: $color_error
-
-.thread-sheet__resume-status-prompt
-  color: $color_text
-  line-height: 1.4
-  overflow: hidden
-  display: -webkit-box
-  -webkit-line-clamp: 3
-  -webkit-box-orient: vertical
-
 .thread-sheet__resume-status-error
+  color: $color_error
   line-height: 1.4
 
 // ============================================================================
