@@ -457,7 +457,50 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
         }
       }
 
-    case 'system':
+    case 'system': {
+      // Claude Code emits one `subtype:"api_error"` entry per retry attempt
+      // (up to 10) when the API is unreachable. Raw entries carry no `content`
+      // field, so the generic fall-through below would render them as blank
+      // "Error" rows. The trailing synthetic assistant message
+      // ("API Error: Unable to connect...") already records the final outcome,
+      // so we keep only the first retry as an informative breadcrumb and drop
+      // subsequent attempts.
+      if (entry.subtype === 'api_error') {
+        const retry_attempt = entry.retryAttempt ?? 1
+        if (retry_attempt > 1) {
+          return null
+        }
+        const cause_code = entry.cause?.code || entry.error?.cause?.code || null
+        const max_retries = entry.maxRetries ?? null
+        const humanized_cause = cause_code
+          ? cause_code.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase()
+          : null
+        const retry_label = max_retries
+          ? ` — retrying up to ${max_retries} times`
+          : ' — retrying'
+        const content = humanized_cause
+          ? `API error: ${humanized_cause}${retry_label}`
+          : `API error${retry_label}`
+        return {
+          ...base_normalized,
+          type: 'system',
+          content,
+          system_type: 'status',
+          metadata: {
+            is_meta: entry.isMeta || false,
+            is_api_error_message: true,
+            git_branch: entry.gitBranch || null,
+            is_compact_summary: entry.isCompactSummary || false,
+            level: entry.level || 'error',
+            subtype: 'api_error',
+            cause_code,
+            retry_attempt,
+            max_retries,
+            retry_in_ms: entry.retryInMs ?? null,
+            url: entry.cause?.path || entry.error?.cause?.path || null
+          }
+        }
+      }
       return {
         ...base_normalized,
         type: 'system',
@@ -472,6 +515,7 @@ const normalize_claude_entry = ({ entry, index, thread_id }) => {
           ...entry.metadata
         }
       }
+    }
 
     case 'queue-operation': {
       // enqueue carries the queued prompt text in `content`; dequeue/remove/

@@ -62,7 +62,10 @@ const SystemMessage = ({ message, working_directory = null }) => {
   }`
 
   const render_icon = () => {
-    const icon_props = { className: 'system-message__icon', fontSize: 'small' }
+    const icon_props = {
+      className: 'system-message__icon',
+      sx: { fontSize: 14 }
+    }
 
     switch (severity) {
       case 'error':
