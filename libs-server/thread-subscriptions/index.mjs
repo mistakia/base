@@ -7,6 +7,7 @@
 
 export {
   subscribe_to_thread,
+  subscribe_user_connections_to_thread,
   unsubscribe_from_thread,
   get_thread_subscribers,
   is_subscribed_to_thread,

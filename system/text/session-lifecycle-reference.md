@@ -14,7 +14,7 @@ relations:
   - relates_to [[sys:system/text/execution-threads.md]]
   - relates_to [[sys:system/text/background-services.md]]
   - relates_to [[sys:system/text/thread-execution-attribution.md]]
-updated_at: '2026-04-23T00:00:00.000Z'
+updated_at: '2026-05-03T00:00:00.000Z'
 user_public_key: '0000000000000000000000000000000000000000000000000000000000000000'
 ---
 
@@ -418,7 +418,7 @@ Same payload structure as THREAD_CREATED, plus `session_status` and `prompt_snip
 ```
 
 **Emitted**: When the thread watcher detects new entries appended to `timeline.jsonl`.
-**Tiered delivery**: Clients subscribed to the thread (via WebSocket subscription) receive the full entry object. Non-subscribed clients receive a truncated entry (80-char content max, minimal tool input fields), batched at 200ms flush intervals.
+**Tiered delivery**: Clients subscribed to the thread (via WebSocket subscription) receive the full entry object. Non-subscribed clients receive a truncated entry (80-char content max, minimal tool input fields), batched at 200ms flush intervals. The `POST /api/threads` (create-session) and `POST /api/threads/:id/resume` HTTP handlers pre-subscribe every WebSocket connection authenticated as the requesting user before enqueuing the job, so the originating user always receives full entries on those flows -- no race window between the client's `SUBSCRIBE_THREAD` message and the harness's first emitted entry.
 **Client use**: This is the primary event for showing live session progress. Each entry represents a message, tool call, or tool result in the session timeline.
 
 ### THREAD_JOB_FAILED

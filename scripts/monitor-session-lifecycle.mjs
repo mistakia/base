@@ -65,6 +65,9 @@ const ws = new WebSocket(ws_url)
 
 let watched_thread_id = watch_thread_id || resume_thread_id || null
 
+let truncated_entry_count = 0
+let full_entry_count = 0
+
 const summarize_event = (msg) => {
   const p = msg.payload || {}
   const thread = p.thread || {}
@@ -161,6 +164,14 @@ ws.on('message', (data) => {
   ) {
     return
   }
+  if (
+    msg.type === 'THREAD_TIMELINE_ENTRY_ADDED' &&
+    (!watched_thread_id ||
+      msg.payload?.thread_id === watched_thread_id)
+  ) {
+    if (msg.payload?.entry?.truncated) truncated_entry_count += 1
+    else full_entry_count += 1
+  }
   log('EVT', msg.type, summarize_event(msg))
 })
 
@@ -174,6 +185,10 @@ ws.on('error', (err) => {
 
 setTimeout(() => {
   log('WS', `closing after ${duration_s}s`)
+  log(
+    'SUMMARY',
+    `THREAD_TIMELINE_ENTRY_ADDED for ${watched_thread_id || '<any>'}: full=${full_entry_count} truncated=${truncated_entry_count}`
+  )
   ws.close()
   setTimeout(() => process.exit(0), 500)
 }, duration_s * 1000)

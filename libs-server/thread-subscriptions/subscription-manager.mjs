@@ -73,6 +73,44 @@ export async function subscribe_to_thread({
 }
 
 /**
+ * Subscribe every WebSocket connection authenticated as the given user
+ * to the given thread. Used by HTTP handlers (resume, create-session) to
+ * eliminate the race between the client's SUBSCRIBE_THREAD message and
+ * harness-emitted timeline events.
+ * @param {Object} params
+ * @param {Object} params.wss - The WebSocket server (with .clients iterable)
+ * @param {string} params.user_public_key - User's public key
+ * @param {string} params.thread_id - The thread ID to subscribe to
+ * @returns {Promise<void>} Resolves when all matching subscriptions have settled
+ */
+export async function subscribe_user_connections_to_thread({
+  wss,
+  user_public_key,
+  thread_id
+}) {
+  if (!wss || !user_public_key || !thread_id) return
+
+  const matching_connections = []
+  for (const ws of wss.clients) {
+    if (ws.user_public_key === user_public_key) {
+      matching_connections.push(ws)
+    }
+  }
+
+  // Swallow individual failures: pre-subscribing is best-effort. The client's
+  // own SUBSCRIBE_THREAD message remains as the fallback, and a transient
+  // permission-service error must not abort the HTTP route mid-flight (which
+  // would orphan the freshly created thread record on create-session).
+  await Promise.all(
+    matching_connections.map((ws) =>
+      subscribe_to_thread({ ws, thread_id, user_public_key }).catch((err) => {
+        log('Pre-subscribe failed for thread %s: %s', thread_id, err.message)
+      })
+    )
+  )
+}
+
+/**
  * Unsubscribe a WebSocket connection from thread updates
  * @param {Object} params
  * @param {WebSocket} params.ws - The WebSocket connection
