@@ -3,10 +3,17 @@ import config from '#config'
 import { list_files_recursive } from '#libs-server/repository/filesystem/list-files-recursive.mjs'
 import { read_entity_from_filesystem } from '#libs-server/entity/filesystem/read-entity-from-filesystem.mjs'
 import { parse_schedule } from './parse-schedule.mjs'
-import { read_schedule_state } from './schedule-state.mjs'
+import {
+  read_schedule_state,
+  write_schedule_deferred
+} from './schedule-state.mjs'
 import { get_current_machine_id } from './machine-identity.mjs'
+import { meets_requirements } from './capability.mjs'
+import { submit_deferred_report } from '#libs-server/jobs/submit-report.mjs'
 
 const log = debug('schedule:load')
+
+const run_on_machines_alias_warned = new Set()
 
 /**
  * Load all scheduled-command entities from a directory recursively
@@ -111,25 +118,43 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
   const schedules = await load_schedules({ directory })
   const current_time = now.toISOString()
   const current_machine = get_current_machine_id()
+  const registry = config.machine_registry || {}
 
-  const due_schedules = schedules.filter((schedule) => {
-    if (!schedule.enabled) {
-      return false
+  // Compile run_on_machines: [X] -> requires: [host:X] alias on schedules with
+  // empty `requires`. Only compiles single-element arrays: multi-element legacy
+  // run_on_machines uses any-of semantics ("current machine is in the list"),
+  // which has no clean equivalent in requires' set-subset (all-of) semantics.
+  // Multi-element legacy schedules continue to be gated by the synchronous
+  // run_on_machines check below.
+  for (const schedule of schedules) {
+    const has_requires =
+      Array.isArray(schedule.requires) && schedule.requires.length > 0
+    const legacy = schedule.run_on_machines
+    if (!has_requires && Array.isArray(legacy) && legacy.length === 1) {
+      schedule.requires = [`host:${legacy[0]}`]
+      if (
+        schedule.entity_id &&
+        !run_on_machines_alias_warned.has(schedule.entity_id)
+      ) {
+        run_on_machines_alias_warned.add(schedule.entity_id)
+        log(
+          'Schedule %s uses deprecated run_on_machines -- compiled to requires=[%s]',
+          schedule.title || schedule.file_path,
+          schedule.requires.join(', ')
+        )
+      }
     }
+  }
 
-    if (!schedule.next_trigger_at) {
-      return false
-    }
+  // Evaluate ordering: enabled -> due -> run_on_machines (cheap sync) ->
+  // meets_requirements (last; only async/network probe).
+  const evaluate = async (schedule) => {
+    if (!schedule.enabled) return false
+    if (!schedule.next_trigger_at) return false
+    if (schedule.next_trigger_at > current_time) return false
 
-    if (schedule.next_trigger_at > current_time) {
-      return false
-    }
-
-    // Machine filtering
     const { run_on_machines } = schedule
     if (Array.isArray(run_on_machines) && run_on_machines.length > 0) {
-      // Warn for undefined machines in run_on_machines
-      const registry = config.machine_registry || {}
       for (const machine of run_on_machines) {
         if (!registry[machine]) {
           log(
@@ -139,7 +164,6 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
           )
         }
       }
-
       if (!current_machine) {
         log(
           'Skipping schedule %s: requires machines %s but current machine is unknown',
@@ -148,7 +172,6 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
         )
         return false
       }
-
       if (!run_on_machines.includes(current_machine)) {
         log(
           'Skipping schedule %s: targets machines %s, current is %s',
@@ -160,8 +183,49 @@ export const load_due_schedules = async ({ directory, now = new Date() }) => {
       }
     }
 
+    if (Array.isArray(schedule.requires) && schedule.requires.length > 0) {
+      const cap = await meets_requirements({ requires: schedule.requires })
+      if (!cap.ok) {
+        log(
+          '[capability-deferred] %s missing=[%s]',
+          schedule.title || schedule.file_path,
+          cap.missing.join(', ')
+        )
+        try {
+          await write_schedule_deferred({
+            directory,
+            entity_id: schedule.entity_id,
+            deferred: { at: current_time, missing: cap.missing }
+          })
+        } catch (err) {
+          log(`schedule-state defer write failed: ${err.message}`)
+        }
+        if (schedule.entity_id) {
+          try {
+            await submit_deferred_report({
+              entity_id: schedule.entity_id,
+              title: schedule.title,
+              schedule: schedule.schedule,
+              schedule_type: schedule.schedule_type,
+              base_uri: schedule.base_uri,
+              freshness_window_ms: schedule.freshness_window_ms,
+              missing: cap.missing
+            })
+          } catch (err) {
+            log(`submit_deferred_report failed: ${err.message}`)
+          }
+        }
+        return false
+      }
+    }
+
     return true
-  })
+  }
+
+  const evaluated = await Promise.all(
+    schedules.map(async (s) => ({ s, keep: await evaluate(s) }))
+  )
+  const due_schedules = evaluated.filter((e) => e.keep).map((e) => e.s)
 
   log(
     `Found ${due_schedules.length} due schedules out of ${schedules.length} total (machine: ${current_machine || 'unknown'})`

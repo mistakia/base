@@ -5,6 +5,7 @@ import {
   stop_cli_queue_worker
 } from './cli-queue/worker.mjs'
 import { close_cli_queue } from './cli-queue/queue.mjs'
+import { write_probe_config } from '#libs-server/schedule/capability.mjs'
 
 const log = debug('cli-queue:service')
 
@@ -24,8 +25,16 @@ let is_shutting_down = false
 /**
  * Initialize and start the worker
  */
-const start = () => {
+const start = async () => {
   log('Starting CLI queue worker service')
+  try {
+    const result = await write_probe_config()
+    log(
+      `Wrote probe config to ${result.directory} (machine_id=${result.machine_id || 'unknown'})`
+    )
+  } catch (error) {
+    log(`Probe config write failed: ${error.message}`)
+  }
   start_cli_queue_worker()
   log('CLI queue worker service started')
 }

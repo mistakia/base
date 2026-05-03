@@ -121,7 +121,11 @@ export const add_cli_job = async ({
   working_directory,
   timeout_ms = QUEUE_CONFIG.default_timeout_ms,
   execution_mode,
-  metadata = {}
+  metadata = {},
+  job_id,
+  requires = [],
+  mid_flight_check = false,
+  freshness_window_ms = null
 }) => {
   // Default working_directory for host-mode jobs to the caller's cwd.
   // For container/container_user modes, leave undefined so execute_command
@@ -145,19 +149,26 @@ export const add_cli_job = async ({
   try {
     const queue = get_cli_queue()
 
+    const merged_metadata =
+      freshness_window_ms != null
+        ? { ...metadata, freshness_window_ms }
+        : metadata
+
     const job_data = {
       command,
       tags,
       working_directory,
       timeout_ms,
       execution_mode,
-      metadata,
+      metadata: merged_metadata,
+      requires: Array.isArray(requires) ? requires : [],
+      mid_flight_check: Boolean(mid_flight_check),
       queued_at: new Date().toISOString()
     }
 
     const job = await queue.add('cli-command', job_data, {
       priority,
-      jobId: `cli-${randomUUID()}`
+      jobId: job_id || `cli-${randomUUID()}`
     })
 
     log(`Added CLI job ${job.id}: ${command.substring(0, 50)}...`)

@@ -9,11 +9,13 @@ import {
 } from '#libs-server/container/execution-mode.mjs'
 import { validate_queued_command } from '#libs-server/utils/validate-shell-command.mjs'
 import { get_container_runtime_name } from '#libs-server/container/runtime-config.mjs'
+import { meets_requirements } from '#libs-server/schedule/capability.mjs'
 
 const log = debug('cli-queue:executor')
 
 const DEFAULT_TIMEOUT_MS = 300000 // 5 minutes
 const KILL_TIMEOUT_MS = 5000 // Time between SIGTERM and SIGKILL
+const MID_FLIGHT_PROBE_INTERVAL_MS = 60_000
 
 /**
  * Execute a CLI command with timeout handling
@@ -28,7 +30,9 @@ export const execute_command = async ({
   command,
   working_directory,
   timeout_ms = DEFAULT_TIMEOUT_MS,
-  execution_mode = 'host'
+  execution_mode = 'host',
+  requires = [],
+  mid_flight_check = false
 }) => {
   // Default working directory based on execution mode:
   // - container: use CONTAINER_USER_BASE_PATH (host cwd may not exist in container,
@@ -66,6 +70,9 @@ export const execute_command = async ({
     let killed = false
     let timeout_handle = null
     let kill_timeout_handle = null
+    let mid_flight_handle = null
+    let capability_loss = null
+    let settled = false
 
     // Build spawn arguments based on execution mode
     let child
@@ -112,10 +119,13 @@ export const execute_command = async ({
     }
 
     const cleanup = () => {
+      settled = true
       clearTimeout(timeout_handle)
       clearTimeout(kill_timeout_handle)
+      if (mid_flight_handle) clearInterval(mid_flight_handle)
       timeout_handle = null
       kill_timeout_handle = null
+      mid_flight_handle = null
     }
 
     const kill_process = () => {
@@ -147,6 +157,28 @@ export const execute_command = async ({
 
     // Set timeout
     timeout_handle = setTimeout(kill_process, timeout_ms)
+
+    // Mid-flight capability probe (opt-in). On capability loss, record the
+    // missing caps and kill the subprocess so child.on('close') resolves with
+    // the deferred sentinel. Errors inside the interval are swallowed --
+    // throwing here would become an unhandled rejection.
+    if (mid_flight_check && Array.isArray(requires) && requires.length > 0) {
+      mid_flight_handle = setInterval(async () => {
+        try {
+          const r = await meets_requirements({ requires })
+          if (settled || capability_loss || r.ok) return
+          capability_loss = r.missing
+          log(
+            `Mid-flight capability loss: missing=[${r.missing.join(', ')}], killing subprocess`
+          )
+          clearInterval(mid_flight_handle)
+          mid_flight_handle = null
+          kill_process()
+        } catch (err) {
+          log(`Mid-flight probe error: ${err.message}`)
+        }
+      }, MID_FLIGHT_PROBE_INTERVAL_MS)
+    }
 
     child.stdout.on('data', (data) => {
       stdout += data.toString()
@@ -181,6 +213,20 @@ export const execute_command = async ({
       log(
         `Command completed: exit_code=${exit_code}, signal=${signal}, duration=${duration_ms}ms`
       )
+
+      if (capability_loss) {
+        resolve({
+          success: false,
+          deferred: true,
+          deferred_missing: capability_loss,
+          exit_code: exit_code ?? -1,
+          stdout,
+          stderr,
+          duration_ms,
+          signal
+        })
+        return
+      }
 
       resolve({
         success: exit_code === 0 && !timed_out,

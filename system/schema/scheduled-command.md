@@ -75,8 +75,34 @@ properties:
       type: string
     required: false
     description: >-
-      Machine identifiers from the machine_registry config that should execute this schedule. Empty
-      array or omitted means run on all machines.
+      Deprecated alias for `requires`. Machine identifiers from the machine_registry config that
+      should execute this schedule. Compiled to `requires: [host:X, ...]` at load time when
+      `requires` is empty. Use `requires` for new schedules. See
+      `[[user:text/base/capability-scheduling.md]]`.
+  - name: requires
+    type: array
+    items:
+      type: string
+    required: false
+    description: >-
+      Capability declarations the host must satisfy before this schedule may run. Each entry is a
+      `<prefix>:<target>` string. Day-one prefixes: `host` (machine identity), `reach` (TCP probe
+      to a registry hostname), `lan` (default-route IP within a CIDR). Empty/omitted means no
+      capability gate. See `[[user:text/base/capability-scheduling.md]]`.
+  - name: mid_flight_check
+    type: boolean
+    required: false
+    description: >-
+      Opt-in mid-flight capability re-check. When true, the executor re-runs `requires` probes
+      every 60s during the command's lifetime; on capability loss the subprocess is killed and
+      the job is moved back to delayed without consuming a retry attempt. Default false.
+  - name: freshness_window_ms
+    type: number
+    required: false
+    description: >-
+      Maximum acceptable age of the most recent defer before `check-missed-jobs` rolls the job
+      into a "deferred too long" alert. Defaults to 2x the schedule interval for `expr`/`every`,
+      and 3600000 (1h) for `at`.
   - name: job_id
     type: string
     required: false

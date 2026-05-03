@@ -39,6 +39,7 @@ router.post('/report', async (req, res) => {
   const {
     job_id,
     success,
+    status,
     reason,
     duration_ms,
     exit_code,
@@ -48,14 +49,20 @@ router.post('/report', async (req, res) => {
     source,
     schedule,
     schedule_type,
+    schedule_entity_id,
     schedule_entity_uri,
-    command
+    command,
+    deferred_missing,
+    freshness_window_ms
   } = req.body
 
-  if (!job_id || typeof success !== 'boolean') {
+  // Accept either explicit `status` (success | failed | deferred) or the
+  // legacy `success: bool` field. At least one must be present.
+  const valid_statuses = new Set(['success', 'failed', 'deferred'])
+  if (!job_id || (typeof success !== 'boolean' && !valid_statuses.has(status))) {
     return res
       .status(400)
-      .json({ error: 'Missing required fields: job_id, success' })
+      .json({ error: 'Missing required fields: job_id and (success or status)' })
   }
 
   try {
@@ -64,6 +71,7 @@ router.post('/report', async (req, res) => {
       name,
       source: source || 'external',
       success,
+      status,
       reason,
       duration_ms,
       exit_code,
@@ -71,8 +79,11 @@ router.post('/report', async (req, res) => {
       server,
       schedule,
       schedule_type,
+      schedule_entity_id,
       schedule_entity_uri,
-      command
+      command,
+      deferred_missing,
+      freshness_window_ms
     })
 
     const is_new = job.stats.total_runs === 1

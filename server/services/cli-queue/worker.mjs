@@ -12,10 +12,27 @@ import {
 } from '#libs-server/cli-queue/tag-limiter.mjs'
 import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 import { http_report_job } from '#libs-server/jobs/http-report-job.mjs'
+import { drain_buffer } from '#libs-server/jobs/job-report-buffer.mjs'
 import {
-  buffer_report,
-  drain_buffer
-} from '#libs-server/jobs/job-report-buffer.mjs'
+  submit_job_report,
+  submit_deferred_report
+} from '#libs-server/jobs/submit-report.mjs'
+import { meets_requirements } from '#libs-server/schedule/capability.mjs'
+
+const DEFER_DELAY_MS = 60_000
+
+const deferred_report_args = (job, missing) => {
+  const m = job.data?.metadata || {}
+  return {
+    entity_id: m.schedule_entity_id,
+    title: m.schedule_title,
+    schedule: m.schedule_expression,
+    schedule_type: m.schedule_type,
+    base_uri: m.schedule_entity_uri,
+    freshness_window_ms: m.freshness_window_ms ?? null,
+    missing
+  }
+}
 
 const log = debug('cli-queue:worker')
 
@@ -36,16 +53,37 @@ const get_tag_limits = () => {
 /**
  * Process a CLI command job
  */
-const process_cli_job = async (job) => {
+const process_cli_job = async (job, token) => {
   const {
     command,
     tags = [],
     working_directory,
     timeout_ms,
-    execution_mode
+    execution_mode,
+    requires = [],
+    mid_flight_check = false
   } = job.data
   const redis = get_redis_connection()
   const tag_limits = get_tag_limits()
+
+  // Pre-flight capability re-check (correctness layer; dispatcher gate is the
+  // optimization layer). On miss, defer via moveToDelayed + DelayedError so no
+  // attempt is consumed.
+  if (Array.isArray(requires) && requires.length > 0) {
+    const cap = await meets_requirements({ requires })
+    if (!cap.ok) {
+      log(
+        `Job ${job.id}: capability mismatch [${cap.missing.join(', ')}], deferring`
+      )
+      try {
+        await submit_deferred_report(deferred_report_args(job, cap.missing))
+      } catch (report_error) {
+        log(`Job ${job.id}: deferred report failed - ${report_error.message}`)
+      }
+      await job.moveToDelayed(Date.now() + DEFER_DELAY_MS, token)
+      throw new DelayedError()
+    }
+  }
 
   log(`Job ${job.id}: attempting to acquire tags [${tags.join(', ')}]`)
 
@@ -62,7 +100,7 @@ const process_cli_job = async (job) => {
     log(
       `Job ${job.id}: blocked by tags [${blocking_tags.join(', ')}], delaying`
     )
-    await job.moveToDelayed(Date.now() + TAG_CHECK_DELAY_MS)
+    await job.moveToDelayed(Date.now() + TAG_CHECK_DELAY_MS, token)
     // Throw DelayedError to signal BullMQ this is intentional delay, not failure
     throw new DelayedError()
   }
@@ -74,8 +112,27 @@ const process_cli_job = async (job) => {
       command,
       working_directory,
       timeout_ms,
-      execution_mode
+      execution_mode,
+      requires,
+      mid_flight_check
     })
+
+    if (result.deferred === true) {
+      log(
+        `Job ${job.id}: mid-flight capability loss [${(result.deferred_missing || []).join(', ')}], deferring`
+      )
+      try {
+        await submit_deferred_report(
+          deferred_report_args(job, result.deferred_missing || [])
+        )
+      } catch (report_error) {
+        log(
+          `Job ${job.id}: deferred report (mid-flight) failed - ${report_error.message}`
+        )
+      }
+      await job.moveToDelayed(Date.now() + DEFER_DELAY_MS, token)
+      throw new DelayedError()
+    }
 
     log(
       `Job ${job.id}: completed (exit_code=${result.exit_code}, duration=${result.duration_ms}ms)`
@@ -122,29 +179,6 @@ const build_failure_reason = ({ result, error }) => {
 }
 
 /**
- * Send a report payload via HTTP API, buffering on failure
- */
-const send_http_report = async (payload) => {
-  const api_url = config.job_tracker?.api_url
-  const api_key = config.job_tracker?.api_key
-  if (!api_url || !api_key) {
-    log('HTTP report skipped: missing api_url or api_key in config')
-    return
-  }
-
-  const http_result = await http_report_job({ api_url, api_key, payload })
-  if (http_result.success) {
-    // Opportunistically drain any previously buffered reports
-    drain_buffer({
-      report_fn: (p) => http_report_job({ api_url, api_key, payload: p })
-    }).catch((err) => log('Buffer drain error: %s', err.message))
-  } else {
-    log('HTTP report failed, buffering: %s', http_result.error)
-    await buffer_report({ payload })
-  }
-}
-
-/**
  * Report internal scheduled-command execution to job tracker
  */
 const report_to_job_tracker = async ({ job, success, result, error }) => {
@@ -174,16 +208,13 @@ const report_to_job_tracker = async ({ job, success, result, error }) => {
       server: os.hostname(),
       schedule: metadata.schedule_expression,
       schedule_type: metadata.schedule_type,
+      schedule_entity_id: metadata.schedule_entity_id,
       schedule_entity_uri: metadata.schedule_entity_uri || null,
-      command: metadata.command || null
+      command: metadata.command || null,
+      freshness_window_ms: metadata.freshness_window_ms ?? null
     }
 
-    if (get_current_machine_id() === 'storage') {
-      const { report_job } = await import('#libs-server/jobs/report-job.mjs')
-      await report_job(payload)
-    } else {
-      await send_http_report(payload)
-    }
+    await submit_job_report({ payload })
   } catch (report_error) {
     log(`Job ${job.id}: job tracker report failed - ${report_error.message}`)
   }

@@ -53,6 +53,7 @@ import * as seed_command from './base/seed.mjs'
 import * as review_command from './base/review.mjs'
 import * as index_command from './base/index.mjs'
 import * as machine_command from './base/machine.mjs'
+import * as capability_command from './base/capability.mjs'
 import * as extension_command from './base/extension.mjs'
 import * as skill_command from './base/skill.mjs'
 import * as workflow_command from './base/workflow.mjs'
@@ -154,6 +155,7 @@ const main = async () => {
     .command(review_command)
     .command(index_command)
     .command(machine_command)
+    .command(capability_command)
     .command(extension_command)
     .command(skill_command)
     .command(workflow_command)

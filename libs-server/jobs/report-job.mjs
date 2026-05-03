@@ -227,6 +227,7 @@ export const report_job = async ({
   name,
   source,
   success,
+  status,
   reason,
   duration_ms,
   exit_code,
@@ -237,9 +238,12 @@ export const report_job = async ({
   schedule_entity_id,
   schedule_entity_uri,
   command,
-  cleanup_alerts_on_success
+  cleanup_alerts_on_success,
+  deferred_missing,
+  freshness_window_ms
 }) => {
   const now = new Date().toISOString()
+  const is_deferred = status === 'deferred'
 
   let job = await load_job({ job_id })
   const is_new = !job
@@ -265,6 +269,31 @@ export const report_job = async ({
   if (server) job.server = server
   if (cleanup_alerts_on_success != null) {
     job.cleanup_alerts_on_success = cleanup_alerts_on_success
+  }
+
+  // Persist freshness window cache when provided so check-missed-jobs can read
+  // it without loading schedule entities.
+  if (typeof freshness_window_ms === 'number') {
+    job.freshness_window_ms = freshness_window_ms
+  }
+
+  // Deferred status is fully separate from success/failure accounting --
+  // record the defer and short-circuit before touching last_execution, stats,
+  // failure_history, or the alert paths.
+  if (is_deferred) {
+    job.last_deferred_at = now
+    job.deferred_missing = Array.isArray(deferred_missing)
+      ? deferred_missing
+      : []
+    job.updated_at = now
+    await save_job({ job_id, data: job })
+    log(
+      'Reported job %s: deferred missing=%s is_new=%s',
+      job_id,
+      job.deferred_missing.join(','),
+      is_new
+    )
+    return job
   }
 
   // Update last execution
