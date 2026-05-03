@@ -55,6 +55,7 @@ The codebase currently uses the following testing structure and tools:
    - Use fixtures for complex test data
    - Generate random test data when uniqueness is required
    - Keep test data minimal and focused on the test case
+   - For code that parses or normalizes an external format, derive fixtures from real captured external data, never from the implementation's own output. Implementation-derived fixtures will pass even when the parser is wrong about the format.
 
 5. **Assertions**
    - Use specific assertions rather than generic ones (`.equal` instead of `.ok`)
