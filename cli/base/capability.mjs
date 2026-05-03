@@ -7,11 +7,14 @@
  * cli-queue worker.
  */
 
+import os from 'node:os'
+
 import config from '#config'
 import {
   current_capabilities,
   write_probe_config
 } from '#libs-server/schedule/capability.mjs'
+import { get_current_machine_id } from '#libs-server/schedule/machine-identity.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
 export const command = 'capability <command>'
@@ -62,6 +65,26 @@ async function handle_write_probe_config() {
         'Error: config.machine_registry is empty. Check USER_BASE_DIRECTORY ' +
           'and CONFIG_ENCRYPTION_KEY are set in this environment (cron does ' +
           'not inherit interactive-shell exports).'
+      )
+      flush_and_exit(2)
+      return
+    }
+    const hostname = os.hostname()
+    const hostname_match = Object.entries(registry).find(
+      ([, entry]) => entry && entry.hostname === hostname
+    )
+    if (!hostname_match) {
+      const fallback_id = get_current_machine_id() || '(unresolved)'
+      const known = Object.entries(registry)
+        .map(([id, entry]) => `${id}=${entry?.hostname ?? '(no hostname)'}`)
+        .join(', ')
+      console.error(
+        `Error: no machine_registry entry matches hostname '${hostname}'. ` +
+          `Platform-fallback would resolve machine_id to '${fallback_id}', ` +
+          `which would write the wrong machine-id and silently mis-route ` +
+          `host:/reach: capability checks. Add a registry entry for this ` +
+          `host (or correct its hostname) before re-running.\n` +
+          `  Registry hostnames: ${known}`
       )
       flush_and_exit(2)
       return
