@@ -352,5 +352,39 @@ Use the utility classes from `utilities.styl`:
 - **Typography**: SF Mono (system monospaced) as the platform equivalent of IBM Plex Mono
 - **Navigation**: Floating bottom navigation bar (text-only, collapsible) instead of standard TabView
 - **Auth**: Inline AuthStatusBarView at top of every page, no auth gate, public read by default
-- **Design tokens**: Same tokens apply -- square corners on interactive elements, 8px grid, monospace throughout
+- **Design tokens**: Same 8px grid and monospace-everywhere convention apply
 - **Colors**: Same palette; `breadcrumb_dark` as primary accent, blue for links only
+
+#### iOS Exceptions to Web Anti-Patterns
+
+The iOS client deliberately diverges from a few web rules above. These are
+platform-aware adjustments, not drift -- they should track here when changed.
+
+- **Container radius up to 12pt allowed** (`Theme.radiusLG`). The web rule
+  "never use border-radius > 4px" is for the chrome-dense web layout. On iOS,
+  card containers (thread/entity headers, expandable assistant message bubbles,
+  filter pills, glass surfaces) use 8-12pt radius to match Liquid Glass and
+  iOS 26 system aesthetics. Interactive elements (buttons, list rows) still
+  default to `radiusNone` / `radiusSmall`. See `Theme.radiusLG` (12),
+  `Theme.radiusSM` (8), `Theme.radiusMD` (6), `Theme.radiusBase` (4).
+- **Soft shadow allowed for card elevation**, in addition to borders. The web
+  rule "never use box-shadow for elevation" is preserved for the web client.
+  On iOS the thread header card combines a 1px `borderLight` hairline with a
+  very low-opacity shadow (`Theme.textPrimary.opacity(0.04), radius: 6, y: 2`)
+  to read correctly on the Liquid Glass background. Borders alone read flat
+  on iOS's translucent surfaces; the shadow is the minimum needed to seat the
+  card and is never used decoratively.
+- **Warm-shifted neutral palette.** The iOS `Theme` neutrals are warmer than
+  the web tokens to harmonize with the breadcrumb/user-message browns:
+  `textPrimary #23211d` (vs web `#212529`), `textSecondary #6b6661`,
+  `border #d6cfc3`, `borderLight #ece7dd`, `terminalBG #1f1d1a`. Hue stays
+  consistent (warm browns), only the temperature is shifted. Web stays cooler
+  to match its denser, more utilitarian layout.
+- **15pt body convention.** The web base scale is 14-15px; iOS markdown body
+  text (`Theme.bodyFont`) is fixed at 15pt monospaced for paragraphs, list
+  items, and blockquotes. Labels, metadata, and chips remain 10-12pt as on
+  web. Use `Theme.fontSizeXXS` (10), `XS` (11), `SM` (12), `MD` (14),
+  `Base` (15), `XL` (18), `XXL` (20).
+- **Letter-spacing tokens.** Use `Theme.trackingLabel` (0.5) on uppercase
+  mono labels (matches the web "0.5px letter-spacing" convention) and
+  `Theme.trackingTight` (0.3) for nav tabs and dense inline text.
