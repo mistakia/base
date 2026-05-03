@@ -28,6 +28,8 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import crypto from 'crypto'
 import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
+import wss from '#server/websocket.mjs'
+import { subscribe_user_connections_to_thread } from '#libs-server/thread-subscriptions/index.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
 import { generate_default_thread_title_from_prompt } from '#libs-server/integrations/thread/session-count-utilities.mjs'
 import { emit_thread_updated } from '#server/services/threads/event-emitter.mjs'
@@ -814,6 +816,14 @@ router.post('/create-session', async (req, res) => {
       }
     })
 
+    // Pre-subscribe the user's WebSocket connections so harness-emitted timeline
+    // events cannot race the client's SUBSCRIBE_THREAD message.
+    await subscribe_user_connections_to_thread({
+      wss,
+      user_public_key,
+      thread_id
+    })
+
     // Add job to queue with pre-generated IDs
     const job = await add_thread_creation_job({
       prompt,
@@ -1130,6 +1140,12 @@ router.post('/:thread_id/resume', async (req, res) => {
     log(
       `Queuing Claude CLI session resume for thread ${thread_id} (Claude session: ${claude_session_id}) by user ${user_public_key} with prompt length ${prompt.length}`
     )
+
+    await subscribe_user_connections_to_thread({
+      wss,
+      user_public_key,
+      thread_id
+    })
 
     // Add job to queue - thread will be updated by hook after session completes
     const job = await add_thread_creation_job({

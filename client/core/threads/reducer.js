@@ -461,6 +461,9 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       const thread_id =
         payload.opts?.thread_id || payload.opts?.params?.thread_id
       if (!thread_id) return state
+      // Background refetches must not blank a cached thread the user is
+      // already viewing. Only flip is_loading on cold loads.
+      if (state.hasIn(['thread_cache', thread_id])) return state
       return state.setIn(
         ['thread_loading', thread_id],
         Map({ is_loading: true, error: null })
