@@ -812,6 +812,24 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         payload.thread
       )
 
+      // Atomically hand off from the resume indicator to the lifecycle
+      // indicator: clear pending_resume in the same dispatch that sets
+      // session_status on the thread cache. If we cleared on
+      // ACTIVE_SESSION_STARTED instead, there is a brief window where
+      // pending_resume is gone but session_status has not yet caught up to
+      // 'active' / 'idle', causing the indicator to flicker through a stale
+      // intermediate state. Only hand off on terminally-live statuses
+      // ('active' / 'idle'); 'queued' / 'starting' duplicate what the resume
+      // indicator already shows.
+      const next_status = updated_thread.get('session_status')
+      if (
+        thread_id &&
+        (next_status === 'active' || next_status === 'idle') &&
+        new_state.hasIn(['thread_pending_resumes', thread_id])
+      ) {
+        new_state = new_state.deleteIn(['thread_pending_resumes', thread_id])
+      }
+
       return new_state
     }
 
@@ -989,21 +1007,14 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
     }
 
     case active_sessions_action_types.ACTIVE_SESSION_STARTED: {
-      const { session } = payload
-      // Clear pending resume when the real session starts
-      const thread_id = session?.thread_id
-      if (thread_id && state.hasIn(['thread_pending_resumes', thread_id])) {
-        return state.deleteIn(['thread_pending_resumes', thread_id])
-      }
-      // Fallback: match by job_id
-      if (session?.job_id) {
-        const match = state
-          .get('thread_pending_resumes')
-          .findEntry((entry) => entry.get('job_id') === session.job_id)
-        if (match) {
-          return state.deleteIn(['thread_pending_resumes', match[0]])
-        }
-      }
+      // Intentionally do not clear pending_resume here. The handoff to the
+      // lifecycle indicator happens in THREAD_UPDATED when session_status
+      // becomes 'active' / 'idle', so the cached thread.session_status and
+      // the deletion of pending_resume happen in the same reducer dispatch.
+      // Clearing on ACTIVE_SESSION_STARTED races THREAD_UPDATED and produces
+      // a visible flicker between 'starting' and the active verb. Failed and
+      // resume-side errors are still cleared via THREAD_JOB_FAILED and
+      // RESUME_THREAD_SESSION_FAILED respectively.
       return state
     }
 
