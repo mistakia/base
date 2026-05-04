@@ -183,63 +183,27 @@ const process_links_in_markdown_segment = (content, working_directory) => {
 }
 
 // Convert markdown link syntax left unrendered inside HTML block elements.
-// markdown-it treats content inside block-level HTML tags (e.g. <center>) as
-// raw HTML per CommonMark, so [text](url) passes through as literal text.
+// markdown-it treats content inside block-level HTML tags (e.g. <center>,
+// <small>) as raw HTML per CommonMark, so [text](url) passes through as
+// literal text. We rewrite the rendered HTML *string* directly: a DOM-walk
+// approach is unreliable because the browser's HTML parser restructures
+// deprecated elements like <center> when reparsing innerHTML, so text nodes
+// no longer sit where the renderer placed them.
+const HTML_BLOCK_LINK_TAG_REGEX = /<(center|small)\b([^>]*)>([\s\S]*?)<\/\1>/gi
+const MARKDOWN_LINK_REGEX = /\[([^\]]+)\]\(([^)]+)\)/g
+
 const convert_unrendered_markdown_links = (html) => {
-  const temp_div = document.createElement('div')
-  temp_div.innerHTML = html
-
-  const markdown_link_regex = /\[([^\]]+)\]\(([^)]+)\)/g
-
-  const walker = document.createTreeWalker(temp_div, NodeFilter.SHOW_TEXT, null)
-
-  const replacements = []
-  let node
-  while ((node = walker.nextNode())) {
-    // Skip text inside <a>, <code>, <pre> elements
-    const parent_tag = node.parentElement?.tagName?.toLowerCase()
-    if (parent_tag === 'a' || parent_tag === 'code' || parent_tag === 'pre') {
-      continue
+  return html.replace(
+    HTML_BLOCK_LINK_TAG_REGEX,
+    function process(match, tag, attrs, inner) {
+      const recursed = inner.replace(HTML_BLOCK_LINK_TAG_REGEX, process)
+      const linked = recursed.replace(
+        MARKDOWN_LINK_REGEX,
+        (m, label, url) => `<a href="${url}">${label}</a>`
+      )
+      return `<${tag}${attrs}>${linked}</${tag}>`
     }
-
-    if (markdown_link_regex.test(node.textContent)) {
-      replacements.push(node)
-    }
-    markdown_link_regex.lastIndex = 0
-  }
-
-  for (const text_node of replacements) {
-    const fragment = document.createDocumentFragment()
-    const text = text_node.textContent
-    let last_index = 0
-    let match
-
-    markdown_link_regex.lastIndex = 0
-    while ((match = markdown_link_regex.exec(text)) !== null) {
-      // Add text before the match
-      if (match.index > last_index) {
-        fragment.appendChild(
-          document.createTextNode(text.slice(last_index, match.index))
-        )
-      }
-
-      const link = document.createElement('a')
-      link.href = match[2]
-      link.textContent = match[1]
-      fragment.appendChild(link)
-
-      last_index = match.index + match[0].length
-    }
-
-    // Add remaining text after last match
-    if (last_index < text.length) {
-      fragment.appendChild(document.createTextNode(text.slice(last_index)))
-    }
-
-    text_node.parentNode.replaceChild(fragment, text_node)
-  }
-
-  return temp_div.innerHTML
+  )
 }
 
 // Walk text nodes inside <code>/<pre> elements and convert wiki link, base
