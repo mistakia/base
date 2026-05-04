@@ -240,7 +240,8 @@ const convert_message_to_timeline_entry = ({
     'parent_id',
     'ordering',
     'thinking_type',
-    'system_type'
+    'system_type',
+    'prompt_correlation_id'
   ]
   Object.keys(message).forEach((key) => {
     if (!known_message_keys.includes(key)) {
@@ -308,7 +309,14 @@ const convert_message_to_timeline_entry = ({
         content: format_message_content(message.content),
         metadata: {
           ...message.metadata
-        }
+        },
+        // Carry the live-submit correlation tag through to the persisted entry
+        // and the WS event payload so the client reducer's tier-1 swap can
+        // pair the optimistic entry with its persisted counterpart. Cold
+        // imports never set this field, so JSONL determinism is preserved.
+        ...(message.prompt_correlation_id && {
+          prompt_correlation_id: message.prompt_correlation_id
+        })
       }
 
     case 'tool_call':
