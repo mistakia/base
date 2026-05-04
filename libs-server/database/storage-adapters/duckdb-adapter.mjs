@@ -524,10 +524,17 @@ export function create_duckdb_adapter(database_entity) {
     },
 
     /**
-     * Close adapter and release resources
+     * Close adapter and release resources. Issues CHECKPOINT before close so
+     * the on-disk file is consistent for external readers (e.g. rsync mirroring
+     * to a replica machine -- see replica-wrapper.mjs).
      */
     async close() {
       if (dedicated_connection) {
+        try {
+          await dedicated_connection.run({ query: 'CHECKPOINT' })
+        } catch (err) {
+          log('CHECKPOINT before close failed: %s', err.message)
+        }
         await dedicated_connection.close()
         dedicated_connection = null
         connection_promise = null

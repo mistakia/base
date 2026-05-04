@@ -76,6 +76,14 @@ properties:
       host:
         type: string
         description: SSH config host alias where database file resides (for remote access)
+      replica_path:
+        type: string
+        description: >-
+          Optional path (relative to user-base) for a local read-only replica of a remote database.
+          When set, agents transparently read from the local file (kept in sync via
+          cli/sync-replica-databases.sh) and writes are routed to the remote canonical file via
+          the SSH adapter, with the local replica deleted to force a refresh on next read.
+          Only meaningful when host is also set; ignored on the writer machine.
       schema_name:
         type: string
         default: public

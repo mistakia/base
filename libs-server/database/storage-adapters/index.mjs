@@ -10,10 +10,94 @@
  */
 
 import debug from 'debug'
+import fs from 'fs'
+import path from 'path'
 
+import {
+  get_user_base_directory
+} from '#libs-server/base-uri/index.mjs'
 import { is_local_host } from '#libs-server/database/is-local-host.mjs'
 
 const log = debug('database:storage-adapters')
+
+/**
+ * Try to build a read-through replica adapter for entities that declare
+ * storage_config.replica_path. Returns null if the entity does not opt in,
+ * the host is local, the replica file is missing, or the backend is one
+ * that does not support local-file replication (postgres, markdown).
+ */
+async function try_create_replica_adapter({
+  database_entity,
+  storage_config,
+  host,
+  is_local,
+  backend
+}) {
+  if (!storage_config.replica_path) return null
+  if (is_local) return null
+  if (backend !== 'duckdb' && backend !== 'sqlite') return null
+
+  const replica_full_path = path.resolve(
+    get_user_base_directory(),
+    storage_config.replica_path
+  )
+
+  try {
+    await fs.promises.access(replica_full_path, fs.constants.R_OK)
+  } catch {
+    log(
+      'replica path declared but file missing, falling through to remote adapter: %s',
+      replica_full_path
+    )
+    return null
+  }
+
+  // Synthesise a local entity that points the local adapter at the replica
+  // (overrides host + database, leaves everything else intact).
+  const local_entity = {
+    ...database_entity,
+    storage_config: {
+      ...storage_config,
+      host: undefined,
+      database: storage_config.replica_path
+    }
+  }
+
+  let local_adapter
+  let remote_adapter
+  if (backend === 'duckdb') {
+    const { create_duckdb_adapter } = await import('./duckdb-adapter.mjs')
+    const { create_duckdb_remote_adapter } = await import('./duckdb-remote.mjs')
+    local_adapter = create_duckdb_adapter(local_entity)
+    remote_adapter = create_duckdb_remote_adapter({
+      host,
+      database_path: storage_config.database,
+      database_entity
+    })
+  } else {
+    const { create_sqlite_adapter } = await import('./sqlite-adapter.mjs')
+    const { create_sqlite_remote_adapter } = await import('./sqlite-remote.mjs')
+    local_adapter = create_sqlite_adapter(local_entity)
+    remote_adapter = create_sqlite_remote_adapter({
+      host,
+      database_path: storage_config.database,
+      database_entity
+    })
+  }
+
+  const { create_replica_adapter } = await import('./replica-wrapper.mjs')
+  log(
+    'using replica adapter for backend=%s host=%s replica=%s',
+    backend,
+    host,
+    replica_full_path
+  )
+  return create_replica_adapter({
+    local_adapter,
+    remote_adapter,
+    replica_full_path
+  })
+}
 
 /**
  * Storage Adapter Interface
@@ -48,6 +132,15 @@ export async function get_storage_adapter(database_entity) {
     host || 'none',
     is_local
   )
+
+  const replica_adapter = await try_create_replica_adapter({
+    database_entity,
+    storage_config,
+    host,
+    is_local,
+    backend
+  })
+  if (replica_adapter) return replica_adapter
 
   switch (backend) {
     case 'duckdb': {
