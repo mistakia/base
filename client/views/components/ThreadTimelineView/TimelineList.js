@@ -292,7 +292,14 @@ const TimelineList = ({
   // Helper function to render a single timeline event
   const render_timeline_event = React.useCallback(
     (entry, index) => {
-      const entry_key = `${entry.type}-${entry.index || index}`
+      // Prefer correlation id so the row identity survives the
+      // optimistic-to-persisted swap (optimistic id is transient). Fall back to
+      // entry id, then to the legacy type+index for entries with no id.
+      const entry_key =
+        entry._prompt_correlation_id ||
+        entry.prompt_correlation_id ||
+        entry.id ||
+        `${entry.type}-${index}`
 
       if (entry.type === 'skill_invocation') {
         return (
