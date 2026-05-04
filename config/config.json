@@ -70,14 +70,47 @@
     "lease_acquire_timeout_ms": 5000,
     "field_ownership_enforce": false
   },
-  "opencode": {
-    "default_model": "",
-    "timeout_ms": 120000,
-    "max_retries": 2,
-    "models": {
-      "production": "",
-      "high_quality": "",
-      "fast": ""
+  "model_roles": {
+    "default_timeout_ms": 300000,
+    "inference_providers": {
+      "ollama": { "endpoint": "http://127.0.0.1:11434" },
+      "vllm-mlx": { "endpoint": "http://127.0.0.1:8103" },
+      "anthropic-api": { "api_key_ref": "anthropic.api_key" }
+    },
+    "harness_providers": {
+      "opencode-cli": { "binary_path": "opencode" }
+    },
+    "roles": {
+      "tag_classifier": {
+        "provider_kind": "inference",
+        "provider": "vllm-mlx",
+        "model": "qwen3.6-35b-a3b-4bit"
+      },
+      "title_generator": {
+        "provider_kind": "inference",
+        "provider": "ollama",
+        "model": "gemma4:26b"
+      },
+      "commit_message_writer": {
+        "provider_kind": "inference",
+        "provider": "ollama",
+        "model": "gemma4:26b"
+      },
+      "content_classifier": {
+        "provider_kind": "inference",
+        "provider": "ollama",
+        "model": "gemma4:26b"
+      },
+      "metadata_judge": {
+        "provider_kind": "inference",
+        "provider": "anthropic-api",
+        "model": "claude-sonnet-4-6"
+      },
+      "content_review": {
+        "provider_kind": "inference",
+        "provider": "vllm-mlx",
+        "model": "qwen3.6-35b-a3b-4bit"
+      }
     }
   },
   "file_watchers": {

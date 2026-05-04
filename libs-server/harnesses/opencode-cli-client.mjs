@@ -2,11 +2,13 @@ import { spawn } from 'child_process'
 import debug from 'debug'
 import config from '#config'
 
-const log = debug('metadata:opencode-cli')
+const log = debug('harness:opencode-cli')
 
-const DEFAULT_TIMEOUT_MS = config.opencode?.timeout_ms || 120000
+const DEFAULT_TIMEOUT_MS = config.model_roles?.default_timeout_ms || 300000
 const BINARY_PATH =
-  process.env.OPENCODE_BINARY_PATH || config.opencode?.binary_path || 'opencode'
+  process.env.MODEL_ROLES_OPENCODE_CLI_BINARY_PATH ||
+  config.model_roles?.harness_providers?.['opencode-cli']?.binary_path ||
+  'opencode'
 
 /**
  * Spawn the OpenCode CLI binary and capture its output.

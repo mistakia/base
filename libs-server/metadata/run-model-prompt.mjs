@@ -1,10 +1,9 @@
-import config from '#config'
 import { call_ollama } from '#libs-server/llm/ollama-client.mjs'
-import { run_opencode_cli } from './opencode-cli-client.mjs'
+import { run_opencode_cli } from '#libs-server/harnesses/opencode-cli-client.mjs'
 
-const DEFAULT_MODEL = config.opencode?.default_model || 'ollama/qwen2.5:72b'
-const DEFAULT_TIMEOUT_MS = config.opencode?.timeout_ms || 120000
-const USE_DIRECT_OLLAMA = config.opencode?.use_direct !== false
+// Transitional defaults — replaced by role-driven dispatch in the follow-up dispatcher task.
+const DEFAULT_MODEL = 'ollama/gemma4:26b'
+const DEFAULT_TIMEOUT_MS = 300000
 
 /**
  * Send a prompt to a model and return its output.
@@ -13,9 +12,9 @@ const USE_DIRECT_OLLAMA = config.opencode?.use_direct !== false
  * model directly (single completion, no tool use); OpenCode runs an agentic
  * CLI session. This dispatcher hides that distinction behind a single
  * prompt-in/output-out surface because every current call site only needs
- * a text completion. When USE_DIRECT_OLLAMA is enabled and the model ID
- * has the `ollama/` prefix, the call goes straight to the Ollama HTTP API
- * (the common, fast path); otherwise it is routed through the OpenCode CLI.
+ * a text completion. When the model ID has the `ollama/` prefix, the call
+ * goes straight to the Ollama HTTP API (the common, fast path); otherwise
+ * it is routed through the OpenCode CLI.
  *
  * @param {Object} params
  * @param {string} params.prompt
@@ -36,7 +35,7 @@ export const run_model_prompt = async ({
     throw new Error('prompt is required')
   }
 
-  if (USE_DIRECT_OLLAMA && model.startsWith('ollama/')) {
+  if (model.startsWith('ollama/')) {
     return call_ollama({ prompt, model, timeout_ms, format })
   }
 
@@ -46,4 +45,4 @@ export const run_model_prompt = async ({
 export {
   extract_model_response,
   strip_ansi_codes
-} from './opencode-cli-client.mjs'
+} from '#libs-server/harnesses/opencode-cli-client.mjs'
