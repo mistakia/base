@@ -130,9 +130,16 @@ function upsert_thread_in_basic_list(state, thread_id, updated_data) {
  * Builds the shape used for an optimistic user message, before the real
  * timeline entry arrives via THREAD_TIMELINE_ENTRY_ADDED.
  */
-function build_optimistic_user_entry({ thread_id, prompt, timestamp }) {
-  return {
-    id: `optimistic-${thread_id}-${Date.now()}`,
+function build_optimistic_user_entry({
+  thread_id,
+  prompt,
+  timestamp,
+  prompt_correlation_id = undefined
+}) {
+  const entry = {
+    id: prompt_correlation_id
+      ? `optimistic-${prompt_correlation_id}`
+      : `optimistic-${thread_id}-${Date.now()}`,
     type: 'message',
     role: 'user',
     content: prompt,
@@ -140,6 +147,10 @@ function build_optimistic_user_entry({ thread_id, prompt, timestamp }) {
     created_at: timestamp,
     _optimistic: true
   }
+  if (prompt_correlation_id) {
+    entry._prompt_correlation_id = prompt_correlation_id
+  }
+  return entry
 }
 
 function append_to_timeline_array(timeline, entry) {
@@ -194,69 +205,35 @@ function preserve_optimistic_entries(existing_timeline, fresh_timeline) {
   }
   const base = Array.isArray(fresh_timeline) ? fresh_timeline : []
   const base_ids = new Set(base.map((e) => e?.id).filter(Boolean))
+  const fresh_correlation_ids = new Set(
+    base.map((e) => e?.prompt_correlation_id).filter(Boolean)
+  )
 
   // Preserve real (non-optimistic) entries that landed in cache via
   // THREAD_TIMELINE_ENTRY_ADDED while this fetch was in flight. The server
   // snapshot reflects timeline state at request time and can omit entries
-  // written between request and response; without this merge those entries
-  // are silently overwritten and only reappear on manual refresh.
+  // written between request and response.
   const real_kept = existing_timeline.filter(
     (e) => e && !e._optimistic && e.id && !base_ids.has(e.id)
   )
 
-  // Drop optimistic entries whose real counterpart is already present. User
-  // messages carry distinct ids but arrive with role=user+type=message, so
-  // match by (role, type, content) within a small time window.
-  const optimistic = existing_timeline.filter((e) => e._optimistic)
-  const optimistic_kept = optimistic.filter((opt) => {
-    return !base.some(
-      (e) =>
-        !e._optimistic &&
-        e.type === opt.type &&
-        e.role === opt.role &&
-        (e.content === opt.content ||
-          e.content?.parts?.[0]?.text === opt.content)
-    )
-  })
+  // Drop optimistic entries whose persisted counterpart is already present
+  // (paired by prompt_correlation_id). No content/role/type heuristics; no
+  // time windows. Optimistic entries without a correlation id (legacy
+  // submits) are also kept until their persisted counterpart arrives via
+  // THREAD_TIMELINE_ENTRY_ADDED's legacy fallback path.
+  const optimistic_kept = existing_timeline.filter(
+    (e) =>
+      e &&
+      e._optimistic &&
+      !(
+        e._prompt_correlation_id &&
+        fresh_correlation_ids.has(e._prompt_correlation_id)
+      )
+  )
 
   if (real_kept.length === 0 && optimistic_kept.length === 0) return base
   return [...base, ...real_kept, ...optimistic_kept]
-}
-
-/**
- * After loading thread data into cache, re-inject optimistic entry if a pending
- * resume exists and the loaded timeline does not already contain a user message
- * timestamped after the pending resume's submitted_at.
- */
-function reinject_optimistic_entry_if_needed(state, thread_id) {
-  const pending_resume = state.getIn(['thread_pending_resumes', thread_id])
-  if (!pending_resume || !pending_resume.get('prompt')) return state
-
-  const submitted_at = pending_resume.get('submitted_at')
-  const timeline = state.getIn(['thread_cache', thread_id, 'timeline'])
-  if (!timeline || !Array.isArray(timeline)) return state
-
-  // Timeline entries from the server use `timestamp`, not `created_at`
-  const has_recent_user_message = timeline.some(
-    (e) =>
-      e.type === 'message' &&
-      e.role === 'user' &&
-      !e._optimistic &&
-      (e.timestamp || e.created_at) >= submitted_at
-  )
-  if (has_recent_user_message) return state
-
-  if (timeline.some((e) => e._optimistic)) return state
-
-  return append_timeline_entry(
-    state,
-    thread_id,
-    build_optimistic_user_entry({
-      thread_id,
-      prompt: pending_resume.get('prompt'),
-      timestamp: submitted_at
-    })
-  )
 }
 
 // ============================================================================
@@ -501,9 +478,6 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           Map({ is_loading: false, error: null })
         )
 
-      // Re-inject optimistic entry if a pending resume exists
-      new_state = reinject_optimistic_entry_if_needed(new_state, thread_id)
-
       // Also update the thread in the basic threads list if it exists
       new_state = update_thread_in_basic_list(new_state, thread_id, thread_data)
 
@@ -736,7 +710,7 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
 
     case threads_action_types.CREATE_THREAD_SESSION_FULFILLED: {
       // Optimistically add thread to views with session_status: 'queued'
-      const { thread_id, job_id } = payload.data
+      const { thread_id, job_id, prompt_correlation_id } = payload.data
       const prompt = payload.opts?.prompt || ''
 
       // The THREAD_CREATED WebSocket event can race the HTTP fulfilled
@@ -774,7 +748,12 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         new_state = append_or_seed_timeline_entry(
           new_state,
           thread_id,
-          build_optimistic_user_entry({ thread_id, prompt, timestamp: now }),
+          build_optimistic_user_entry({
+            thread_id,
+            prompt,
+            timestamp: now,
+            prompt_correlation_id
+          }),
           { session_status: 'queued', job_id, thread_state: 'active' }
         )
       }
@@ -862,44 +841,106 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
       // entries when the GET response lands.
       let new_state = state
       if (!entry.truncated) {
-        // If this is a user message, check for and replace any optimistic entry
-        if (entry.type === 'message' && entry.role === 'user') {
+        // Three-tier reconciliation, evaluated in order:
+        //   1. Tagged path: entry carries prompt_correlation_id matching a
+        //      cached _prompt_correlation_id -> swap in place.
+        //   2. Legacy fallback: untagged user-message entry replaces an
+        //      untagged optimistic entry (covers legacy clients and
+        //      fast-claude races where the optimistic entry was never
+        //      tagged). The `!_prompt_correlation_id` predicate is critical:
+        //      without it, an untagged incoming entry would stomp a tagged
+        //      optimistic entry, the real tagged entry would later arrive
+        //      and find nothing to swap, and the timeline would carry a
+        //      duplicate user message.
+        //   3. Default upsert: id-keyed in-place replace, otherwise append.
+        const try_replace_in_place = (timeline, predicate) => {
+          if (!timeline || !Array.isArray(timeline)) return null
+          const idx = timeline.findIndex(predicate)
+          if (idx === -1) return null
+          const updated = [...timeline]
+          updated[idx] = entry
+          return updated
+        }
+
+        let handled = false
+
+        // Tier 1: correlation-keyed swap
+        if (entry.prompt_correlation_id) {
           new_state = update_thread_cache_entry(
             new_state,
             thread_id,
             (thread_data) =>
               thread_data.update('timeline', (timeline) => {
-                if (!timeline || !Array.isArray(timeline)) return timeline
-                const optimistic_index = timeline.findIndex(
-                  (e) => e._optimistic && e.role === 'user'
+                const replaced = try_replace_in_place(
+                  timeline,
+                  (e) =>
+                    e._prompt_correlation_id === entry.prompt_correlation_id
                 )
-                if (optimistic_index !== -1) {
-                  const updated = [...timeline]
-                  updated[optimistic_index] = entry
-                  return updated
+                if (replaced) {
+                  handled = true
+                  return replaced
                 }
                 return timeline
               })
           )
-          // If we replaced an optimistic entry, don't append again
-          const current_timeline = new_state.getIn([
-            'thread_cache',
+        }
+
+        // Tier 2: legacy fallback (untagged user message replacing untagged optimistic)
+        if (
+          !handled &&
+          !entry.prompt_correlation_id &&
+          entry.type === 'message' &&
+          entry.role === 'user'
+        ) {
+          new_state = update_thread_cache_entry(
+            new_state,
             thread_id,
-            'timeline'
-          ])
-          const already_has_entry =
-            current_timeline &&
-            Array.isArray(current_timeline) &&
-            current_timeline.some((e) => e.id === entry.id)
-          if (!already_has_entry) {
+            (thread_data) =>
+              thread_data.update('timeline', (timeline) => {
+                const replaced = try_replace_in_place(
+                  timeline,
+                  (e) =>
+                    e._optimistic &&
+                    e.role === 'user' &&
+                    !e._prompt_correlation_id
+                )
+                if (replaced) {
+                  handled = true
+                  return replaced
+                }
+                return timeline
+              })
+          )
+        }
+
+        // Tier 3: default id-keyed upsert
+        if (!handled) {
+          let id_replaced = false
+          if (entry.id) {
+            new_state = update_thread_cache_entry(
+              new_state,
+              thread_id,
+              (thread_data) =>
+                thread_data.update('timeline', (timeline) => {
+                  const replaced = try_replace_in_place(
+                    timeline,
+                    (e) => e.id === entry.id
+                  )
+                  if (replaced) {
+                    id_replaced = true
+                    return replaced
+                  }
+                  return timeline
+                })
+            )
+          }
+          if (!id_replaced) {
             new_state = append_or_seed_timeline_entry(
               new_state,
               thread_id,
               entry
             )
           }
-        } else {
-          new_state = append_or_seed_timeline_entry(new_state, thread_id, entry)
         }
       }
 
@@ -935,9 +976,9 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
         })
       )
 
-      // Injected on PENDING (not FULFILLED) so the UI updates on submit;
-      // reinject_optimistic_entry_if_needed restores it after a later fetch
-      // populates the cache.
+      // Injected on PENDING (not FULFILLED) so the UI updates on submit. The
+      // entry persists in cache via preserve_optimistic_entries until its
+      // persisted counterpart arrives carrying the same prompt_correlation_id.
       if (opts.prompt) {
         new_state = append_timeline_entry(
           new_state,
@@ -945,7 +986,8 @@ export function threads_reducer(state = new ThreadsState(), { payload, type }) {
           build_optimistic_user_entry({
             thread_id,
             prompt: opts.prompt,
-            timestamp: submitted_at
+            timestamp: submitted_at,
+            prompt_correlation_id: opts.prompt_correlation_id
           })
         )
       }

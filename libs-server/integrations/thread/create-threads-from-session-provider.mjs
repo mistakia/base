@@ -19,6 +19,10 @@ import {
   verify_thread_directory_integrity
 } from '#libs-server/integrations/thread/create-from-session.mjs'
 import { build_timeline_from_session } from '#libs-server/integrations/thread/build-timeline-entries.mjs'
+import {
+  read_submit_correlation,
+  clear_submit_correlation
+} from '#libs-server/threads/submit-correlation-store.mjs'
 import { queue_relation_analysis } from '#libs-server/metadata/analyze-thread-relations.mjs'
 import { ClaudeSessionProvider } from '#libs-server/integrations/claude/claude-session-provider.mjs'
 import { CursorSessionProvider } from '#libs-server/integrations/cursor/cursor-session-provider.mjs'
@@ -30,6 +34,46 @@ import {
   is_warm_session
 } from '#libs-server/integrations/claude/claude-session-helpers.mjs'
 import { merge_and_sequence_agent_sessions } from '#libs-server/integrations/claude/merge-agent-sessions.mjs'
+
+// Watermark grace covers wall-clock skew when base-api and the Claude container
+// run on the same host (intra-host process drift) or on separate NTP-synced LAN
+// hosts (e.g., macbook + storage running their own PM2 stacks). Sub-100ms LAN
+// skew plus brief NTP slew fits comfortably under 5 seconds. If the topology
+// ever expands to WAN-separated machines, this constant must be reconsidered.
+const WATERMARK_GRACE_MS = 5000
+
+export const apply_prompt_correlation_tag = async ({
+  thread_id,
+  normalized_session
+}) => {
+  const handle = await read_submit_correlation({ thread_id })
+  if (!handle) return { normalized_session, applied: false }
+
+  const submitted_at_ms = new Date(handle.submitted_at).getTime()
+  if (Number.isNaN(submitted_at_ms)) {
+    return { normalized_session, applied: false }
+  }
+  const watermark_ms = submitted_at_ms - WATERMARK_GRACE_MS
+
+  const messages = normalized_session?.messages
+  if (!Array.isArray(messages)) {
+    return { normalized_session, applied: false }
+  }
+
+  for (const entry of messages) {
+    if (!entry || entry.type !== 'message' || entry.role !== 'user') continue
+    const ts = entry.timestamp
+    if (ts === null || ts === undefined) continue
+    const entry_ms = new Date(ts).getTime()
+    if (Number.isNaN(entry_ms)) continue
+    if (entry_ms < watermark_ms) continue
+
+    entry.prompt_correlation_id = handle.prompt_correlation_id
+    return { normalized_session, applied: true }
+  }
+
+  return { normalized_session, applied: false }
+}
 
 const log = debug('integrations:thread:create-from-session-provider')
 const log_debug = debug(
@@ -148,6 +192,11 @@ const find_precreated_thread_by_prompt = async ({
   // This is deferred until we know candidates exist to avoid unnecessary work.
   const { extract_initial_user_prompt_from_messages } =
     await import('#libs-server/integrations/thread/session-count-utilities.mjs')
+  // Intentionally NOT wrapped with apply_prompt_correlation_tag: this helper
+  // discards `normalized` after extracting prompt-snippet metadata, and
+  // tagging here would race the real persistence-bound normalize call below
+  // (a premature DEL would strip the handle before the persisted entry
+  // received the tag). TTL is the safety backstop.
   const normalized = session_provider.normalize_session(raw_session)
   const initial_prompt = extract_initial_user_prompt_from_messages({
     messages: normalized.messages
@@ -591,6 +640,11 @@ const create_new_session_thread = async ({
   execution_overrides = null
 }) => {
   // Normalize session just-in-time
+  // Intentionally NOT wrapped with apply_prompt_correlation_tag: thread_id is
+  // not in scope here (it only exists after create_thread_from_session
+  // returns), and the live-submit flow never reaches this branch -- the
+  // create-session route pre-creates the thread and the worker resolves to
+  // update_existing_session_thread via known_thread_id.
   let normalized_session = session_provider.normalize_session(raw_session)
 
   // Extract models before releasing raw session reference
@@ -664,8 +718,19 @@ const update_existing_session_thread = async ({
   execution_overrides = null,
   bulk_import = false
 }) => {
-  // Normalize session just-in-time
+  // normalize_session is synchronous on all current providers (claude, cursor,
+  // pi); do NOT add `await` here. The `let` is required so the next line can
+  // reassign.
   let normalized_session = session_provider.normalize_session(raw_session)
+
+  // Sequential-consumer assumption: update_existing_thread and (downstream)
+  // build_timeline_from_session both observe the same normalized_session
+  // reference, so the in-place tag set here flows through to timeline
+  // serialization. A future refactor that clones the session between consumers
+  // would break tagging.
+  const { normalized_session: tagged_session, applied: tag_applied } =
+    await apply_prompt_correlation_tag({ thread_id, normalized_session })
+  normalized_session = tagged_session
 
   // Update existing thread
   const update_result = await update_existing_thread(normalized_session, {
@@ -679,6 +744,13 @@ const update_existing_session_thread = async ({
   // Timeline write + integrity check succeeded inside update_existing_thread --
   // safe to advance the provider's parse cursor.
   await commit_pending_sync_state(raw_session)
+
+  // Clear the Redis handle ONLY after BOTH update_existing_thread and
+  // commit_pending_sync_state succeed. If either threw, control unwinds before
+  // this point and the key remains for the next sync cycle to retry tagging.
+  if (tag_applied) {
+    await clear_submit_correlation({ thread_id })
+  }
 
   // Release large objects to help GC
   normalized_session = null

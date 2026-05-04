@@ -25,7 +25,7 @@ import {
   active_sessions_action_types,
   active_sessions_actions
 } from '@core/active-sessions/actions'
-import { get_threads_state } from './selectors'
+import { get_threads_state, get_thread_pending_resume } from './selectors'
 import { get_app } from '@core/app/selectors'
 import { get_active_session_for_thread } from '@core/active-sessions/selectors'
 import { show_error_notification } from '@core/notification/sagas'
@@ -258,18 +258,37 @@ export function* set_thread_archive_state_saga({ payload }) {
 
 export function* create_thread_session_saga({ payload }) {
   const { prompt, working_directory } = payload
-  yield call(create_thread_session, { prompt, working_directory })
+  // Double-submit protection: the watcher uses takeLatest, which cancels any
+  // in-flight create-session saga if a second submit fires. thread_id is not
+  // known until the response returns, so a state-readable guard is not viable.
+  const prompt_correlation_id = crypto.randomUUID()
+  yield call(create_thread_session, {
+    prompt,
+    working_directory,
+    prompt_correlation_id
+  })
 }
 
 export function* resume_thread_session_saga({ payload }) {
   const { thread_id, prompt, working_directory } = payload
 
-  // Ensure we are subscribed before the harness emits timeline entries.
-  // Callers may submit resume from any page; without this, entries arrive
-  // truncated and the reducer drops them, forcing the user to refresh.
-  if (thread_id) subscribe_to_thread(thread_id)
+  if (thread_id) {
+    const pending_resume = yield select(get_thread_pending_resume, thread_id)
+    if (pending_resume) return
 
-  yield call(resume_thread_session, { thread_id, prompt, working_directory })
+    // Ensure we are subscribed before the harness emits timeline entries.
+    // Callers may submit resume from any page; without this, entries arrive
+    // truncated and the reducer drops them, forcing the user to refresh.
+    subscribe_to_thread(thread_id)
+  }
+
+  const prompt_correlation_id = crypto.randomUUID()
+  yield call(resume_thread_session, {
+    thread_id,
+    prompt,
+    working_directory,
+    prompt_correlation_id
+  })
 }
 
 //= ====================================

@@ -527,6 +527,22 @@ thread_id (client has this from create-session response)
 
 **Legacy flow**: For sessions started manually (not via the web client), the thread is created by the sync hook on SessionStart. These sessions use the original `find_thread_for_session` correlation path, now backed by an O(1) reverse index from the thread watcher metadata cache.
 
+### prompt_correlation_id (optimistic-to-persisted reconciliation)
+
+`prompt_correlation_id` is a client-minted uuid v4 that lets the timeline reducer pair an optimistic user-message entry with its persisted counterpart without content-match heuristics. It is **server-internal coordination**, not durable thread state, so it does not appear on `metadata.json` and the field-ownership classifier in `libs-server/threads/field-ownership.mjs` is not affected.
+
+**Lifecycle**:
+
+1. The client mints `prompt_correlation_id = crypto.randomUUID()` immediately before dispatching the resume / create-session action and includes it on the `POST /api/threads/:id/resume` or `POST /api/threads/create-session` body. The optimistic user entry is stamped with `_prompt_correlation_id` so the reducer's tier-1 swap can find it.
+2. The route validates uuid v4 format. When present, after `subscribe_user_connections_to_thread` and before enqueuing the job, the route writes `{ prompt_correlation_id, submitted_at }` to Redis under `submit:correlation:${thread_id}` with a 30-minute TTL via `libs-server/threads/submit-correlation-store.mjs`. Test runs prefix the key with `test:` so parallel tests cannot collide with concurrent production traffic on a shared local Redis. The create-session route also echoes `prompt_correlation_id` in its JSON response so the client reducer's `CREATE_THREAD_SESSION_FULFILLED` case (which reads `payload.data`) can stamp the optimistic entry on the create path.
+3. After `session_provider.normalize_session(...)` runs inside `update_existing_session_thread` in `libs-server/integrations/thread/create-threads-from-session-provider.mjs`, a post-normalization tagging pass (`apply_prompt_correlation_tag`) reads the Redis handle and locates the first entry matching `type === 'message' && role === 'user'` (post-normalization shape; `normalize_user_entry` produces this) whose timestamp is at or after `submitted_at - WATERMARK_GRACE_MS` (5 seconds, covers same-host and NTP-synced LAN clock skew). The provider-layer normalizer's signature is unchanged: tagging happens above the provider boundary so `claude_session_provider.normalize_session(raw_session)` stays a pure single-arg function and cold imports via `convert-external-sessions` are byte-identical to live submits.
+4. The Redis key is `DEL`ed only after **both** `update_existing_thread` and `commit_pending_sync_state` succeed. If either persistence call throws, control unwinds before the clear and the key remains so the next sync cycle can retry tagging. TTL is the long-tail backstop for never-consumed handles.
+5. The client reducer's `THREAD_TIMELINE_ENTRY_ADDED` handler runs three tiers in order: (1) tagged path -- when an incoming entry's `prompt_correlation_id` matches a cached `_prompt_correlation_id`, swap in place; (2) legacy fallback -- untagged user message replaces an untagged optimistic entry (covers legacy clients and fast-claude races); (3) default id-keyed upsert.
+
+**Persisted entry id is unchanged**: the entry's `id` remains the JSONL `entry.uuid`, so cold re-imports via `convert-external-sessions` produce byte-identical timelines. `prompt_correlation_id` is an additional metadata annotation on the first matching live-submit entry; cold imports never see a Redis key and never apply the tag.
+
+**Coverage**: only Claude needs this plumbing. The `/api/threads` create-session and `/api/threads/:id/resume` routes are Claude-specific, and Cursor/Pi sessions enter via batch import paths (`convert-external-sessions`, `import-pi-session-delta.mjs`) that have no client-side optimistic entry to reconcile.
+
 ## Timing Characteristics
 
 | Event                                      | Typical Delay After Previous                                                         |

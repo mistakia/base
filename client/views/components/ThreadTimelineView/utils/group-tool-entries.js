@@ -156,28 +156,13 @@ export const group_tool_entries = (timeline_events) => {
     'AgentOutputTool'
   ])
 
-  const sorted = grouped_entries.sort((a, b) => {
-    const event_a = a.timeline_event || a.tool_call_event
-    const event_b = b.timeline_event || b.tool_call_event
-
-    const time_a = event_a?.timestamp
-      ? new Date(event_a.timestamp).getTime()
-      : 0
-    const time_b = event_b?.timestamp
-      ? new Date(event_b.timestamp).getTime()
-      : 0
-
-    // Handle invalid dates (NaN) by treating them as timestamp 0
-    const safe_time_a = isNaN(time_a) ? 0 : time_a
-    const safe_time_b = isNaN(time_b) ? 0 : time_b
-
-    if (safe_time_a !== safe_time_b) {
-      return safe_time_a - safe_time_b
-    }
-
-    // Fallback to original index for same-timestamp entries
-    return a.index - b.index
-  })
+  // Server emission is the ordering source. The tool-pair synthesis above
+  // pushes paired entries at the tool_result's encounter time rather than the
+  // tool_call's original position, so a stable re-sort by the preserved
+  // original `index` is required to restore submission order. Timestamp
+  // comparison is no longer needed now that the reducer pipeline preserves
+  // server-authoritative order end-to-end.
+  const sorted = grouped_entries.sort((a, b) => a.index - b.index)
 
   const merged = []
   let current_task_group = null

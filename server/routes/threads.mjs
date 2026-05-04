@@ -28,6 +28,7 @@ import { redact_thread_data } from '#server/middleware/content-redactor.mjs'
 import validate_working_directory from '#libs-server/threads/validate-working-directory.mjs'
 import crypto from 'crypto'
 import { add_thread_creation_job } from '#server/services/threads/job-queue.mjs'
+import { write_submit_correlation } from '#libs-server/threads/submit-correlation-store.mjs'
 import wss from '#server/websocket.mjs'
 import { subscribe_user_connections_to_thread } from '#libs-server/thread-subscriptions/index.mjs'
 import create_thread from '#libs-server/threads/create-thread.mjs'
@@ -68,6 +69,11 @@ import {
 
 const router = express.Router()
 const log = debug('api:threads')
+
+const UUID_V4_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const is_valid_uuid_v4 = (value) =>
+  typeof value === 'string' && UUID_V4_REGEX.test(value)
 
 // Translate patch_thread_metadata / readFile errors to HTTP responses.
 // Distinguishes ENOENT (404), schema violations (422), lease/field-ownership
@@ -690,7 +696,18 @@ router.post('/table', async (req, res) => {
 // Create new thread with Claude CLI session
 router.post('/create-session', async (req, res) => {
   try {
-    const { prompt, working_directory } = req.body
+    const { prompt, working_directory, prompt_correlation_id } = req.body
+    if (
+      prompt_correlation_id !== undefined &&
+      !is_valid_uuid_v4(prompt_correlation_id)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid prompt_correlation_id',
+        message: safe_error_message(
+          new Error('prompt_correlation_id must be a uuid v4')
+        )
+      })
+    }
     let execution_mode =
       req.body.execution_mode ||
       config.threads?.cli?.default_execution_mode ||
@@ -824,6 +841,14 @@ router.post('/create-session', async (req, res) => {
       thread_id
     })
 
+    if (prompt_correlation_id) {
+      await write_submit_correlation({
+        thread_id,
+        prompt_correlation_id,
+        submitted_at: new Date().toISOString()
+      })
+    }
+
     // Add job to queue with pre-generated IDs
     const job = await add_thread_creation_job({
       prompt,
@@ -845,7 +870,11 @@ router.post('/create-session', async (req, res) => {
       job_id: job.id,
       queue_position: job.queue_position,
       status: 'queued',
-      message: 'Thread created and Claude CLI session queued.'
+      message: 'Thread created and Claude CLI session queued.',
+      // Echoed so the client reducer (CREATE_THREAD_SESSION_FULFILLED reads
+      // payload.data) can stamp _prompt_correlation_id on the optimistic
+      // entry; without this the create-path tier-1 swap never fires.
+      prompt_correlation_id: prompt_correlation_id || null
     })
   } catch (error) {
     log(`Error creating thread session: ${error.message}`)
@@ -1002,7 +1031,18 @@ router.put(
 router.post('/:thread_id/resume', async (req, res) => {
   try {
     const { thread_id } = req.params
-    const { prompt } = req.body
+    const { prompt, prompt_correlation_id } = req.body
+    if (
+      prompt_correlation_id !== undefined &&
+      !is_valid_uuid_v4(prompt_correlation_id)
+    ) {
+      return res.status(400).json({
+        error: 'Invalid prompt_correlation_id',
+        message: safe_error_message(
+          new Error('prompt_correlation_id must be a uuid v4')
+        )
+      })
+    }
     const user_public_key = req.user?.user_public_key || null
 
     // Require authentication
@@ -1146,6 +1186,14 @@ router.post('/:thread_id/resume', async (req, res) => {
       user_public_key,
       thread_id
     })
+
+    if (prompt_correlation_id) {
+      await write_submit_correlation({
+        thread_id,
+        prompt_correlation_id,
+        submitted_at: new Date().toISOString()
+      })
+    }
 
     // Add job to queue - thread will be updated by hook after session completes
     const job = await add_thread_creation_job({
