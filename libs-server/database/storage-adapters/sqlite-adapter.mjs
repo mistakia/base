@@ -202,7 +202,11 @@ export function create_sqlite_adapter(database_entity, { read_only = false } = {
   function ensure_connection() {
     if (!db) {
       if (read_only) {
-        db = new Database(database_path, { readonly: true })
+        // immutable=1 lets SQLite open a WAL-mode .db file without creating
+        // -wal/-shm sidecars. The replica sync ships only the .db (after a
+        // wal_checkpoint(TRUNCATE) on the writer), so the local file is
+        // self-contained at the last-checkpointed state.
+        db = new Database(`file:${database_path}?immutable=1`, { readonly: true })
       } else {
         db = new Database(database_path)
         db.exec('PRAGMA journal_mode=WAL')
