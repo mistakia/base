@@ -9,8 +9,19 @@ extends: entity
 properties:
   - name: auth_public_key
     type: string
-    required: true
-    description: Hex-encoded public key for authentication
+    required: false
+    description: >-
+      Hex-encoded public key for signed-request authentication. Optional: identities
+      authenticating exclusively via Discord OAuth may omit this field. The signed-request
+      endpoint rejects at use-time when absent.
+  - name: discord_user_id
+    type: string
+    required: false
+    description: >-
+      Discord user snowflake ID for OAuth-based authentication. When set, the identity can
+      be looked up by `load_identity_by_discord_user_id` after a successful Discord OAuth
+      flow. Field name is qualified with `_user_id` to disambiguate against guild, channel,
+      and message IDs (e.g. `123456789012345678`).
   - name: username
     type: string
     required: true
