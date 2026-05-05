@@ -68,7 +68,7 @@ async function try_create_replica_adapter({
   if (backend === 'duckdb') {
     const { create_duckdb_adapter } = await import('./duckdb-adapter.mjs')
     const { create_duckdb_remote_adapter } = await import('./duckdb-remote.mjs')
-    local_adapter = create_duckdb_adapter(local_entity)
+    local_adapter = create_duckdb_adapter(local_entity, { read_only: true })
     remote_adapter = create_duckdb_remote_adapter({
       host,
       database_path: storage_config.database,
@@ -77,7 +77,7 @@ async function try_create_replica_adapter({
   } else {
     const { create_sqlite_adapter } = await import('./sqlite-adapter.mjs')
     const { create_sqlite_remote_adapter } = await import('./sqlite-remote.mjs')
-    local_adapter = create_sqlite_adapter(local_entity)
+    local_adapter = create_sqlite_adapter(local_entity, { read_only: true })
     remote_adapter = create_sqlite_remote_adapter({
       host,
       database_path: storage_config.database,

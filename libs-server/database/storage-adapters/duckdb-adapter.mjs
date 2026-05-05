@@ -31,7 +31,7 @@ const log = debug('database:adapter:duckdb')
  * @param {string} database_path - Path to .duckdb file
  * @returns {Object} Connection wrapper with query/run methods
  */
-async function create_dedicated_connection(database_path) {
+async function create_dedicated_connection(database_path, { read_only = false } = {}) {
   let duckdb
   try {
     duckdb = await import('duckdb')
@@ -44,7 +44,10 @@ async function create_dedicated_connection(database_path) {
   }
 
   return new Promise((resolve, reject) => {
-    const db = new duckdb.default.Database(database_path, (err) => {
+    const open_args = read_only
+      ? [database_path, { access_mode: 'READ_ONLY' }]
+      : [database_path]
+    const db = new duckdb.default.Database(...open_args, (err) => {
       if (err) {
         log(
           'Error opening DuckDB database at %s: %s',
@@ -290,7 +293,7 @@ function get_database_path(database_entity) {
  * Opens a dedicated connection to a standalone .db file.
  * Path is either from storage_config.database or auto-derived from base_uri.
  */
-export function create_duckdb_adapter(database_entity) {
+export function create_duckdb_adapter(database_entity, { read_only = false } = {}) {
   const table_name = get_table_name(database_entity)
   const pk_field = get_primary_key_field(database_entity)
   const database_path = get_database_path(database_entity)
@@ -300,9 +303,10 @@ export function create_duckdb_adapter(database_entity) {
   let connection_promise = null // Mutex for connection creation
 
   log(
-    'Creating DuckDB adapter for table: %s (path: %s)',
+    'Creating DuckDB adapter for table: %s (path: %s, read_only: %s)',
     table_name,
-    database_path
+    database_path,
+    read_only
   )
 
   // Helper functions to abstract connection access
@@ -311,7 +315,7 @@ export function create_duckdb_adapter(database_entity) {
       return dedicated_connection
     }
     if (!connection_promise) {
-      connection_promise = create_dedicated_connection(database_path)
+      connection_promise = create_dedicated_connection(database_path, { read_only })
         .then((conn) => {
           dedicated_connection = conn
           return conn
@@ -530,10 +534,12 @@ export function create_duckdb_adapter(database_entity) {
      */
     async close() {
       if (dedicated_connection) {
-        try {
-          await dedicated_connection.run({ query: 'CHECKPOINT' })
-        } catch (err) {
-          log('CHECKPOINT before close failed: %s', err.message)
+        if (!read_only) {
+          try {
+            await dedicated_connection.run({ query: 'CHECKPOINT' })
+          } catch (err) {
+            log('CHECKPOINT before close failed: %s', err.message)
+          }
         }
         await dedicated_connection.close()
         dedicated_connection = null

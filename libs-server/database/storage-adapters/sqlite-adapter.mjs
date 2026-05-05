@@ -185,7 +185,7 @@ function get_database_path(database_entity) {
  *
  * Opens a bun:sqlite connection to a standalone .sqlite file.
  */
-export function create_sqlite_adapter(database_entity) {
+export function create_sqlite_adapter(database_entity, { read_only = false } = {}) {
   const table_name = get_table_name(database_entity)
   const pk_field = get_primary_key_field(database_entity)
   const database_path = get_database_path(database_entity)
@@ -193,18 +193,27 @@ export function create_sqlite_adapter(database_entity) {
   let db = null
 
   log(
-    'Creating SQLite adapter for table: %s (path: %s)',
+    'Creating SQLite adapter for table: %s (path: %s, read_only: %s)',
     table_name,
-    database_path
+    database_path,
+    read_only
   )
 
   function ensure_connection() {
     if (!db) {
-      db = new Database(database_path)
-      db.exec('PRAGMA journal_mode=WAL')
-      db.exec('PRAGMA synchronous=NORMAL')
-      db.exec('PRAGMA busy_timeout=5000')
-      log('Opened SQLite connection to %s', database_path)
+      if (read_only) {
+        db = new Database(database_path, { readonly: true })
+      } else {
+        db = new Database(database_path)
+        db.exec('PRAGMA journal_mode=WAL')
+        db.exec('PRAGMA synchronous=NORMAL')
+        db.exec('PRAGMA busy_timeout=5000')
+      }
+      log(
+        'Opened SQLite connection to %s (read_only: %s)',
+        database_path,
+        read_only
+      )
     }
     return db
   }
