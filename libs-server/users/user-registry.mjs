@@ -3,6 +3,7 @@ import debug from 'debug'
 import {
   load_identity_by_public_key,
   load_identity_by_username,
+  load_identity_by_discord_user_id,
   load_all_identities,
   clear_identity_cache
 } from '#libs-server/users/identity-loader.mjs'
@@ -99,6 +100,38 @@ class UserRegistry {
       }
     } catch (error) {
       log(`Error loading identity by username: ${error.message}`)
+    }
+
+    return null
+  }
+
+  /**
+   * Find user by Discord user ID using identity entities
+   *
+   * @param {string} discord_user_id - Discord user snowflake ID
+   * @returns {Promise<Object|null>} User object with user_public_key or null
+   */
+  async find_by_discord_user_id(discord_user_id) {
+    if (!discord_user_id) {
+      return null
+    }
+
+    try {
+      const identity = await load_identity_by_discord_user_id({
+        discord_user_id
+      })
+      if (identity) {
+        log(`Found identity entity for discord_user_id: ${discord_user_id}`)
+        const user = await convert_identity_to_user({ identity })
+        if (user) {
+          return {
+            user_public_key: identity.auth_public_key,
+            ...user
+          }
+        }
+      }
+    } catch (error) {
+      log(`Error loading identity by discord_user_id: ${error.message}`)
     }
 
     return null

@@ -10,11 +10,13 @@ import path from 'path'
 
 import {
   load_all_identities,
-  load_identity_by_username
+  load_identity_by_username,
+  clear_identity_cache
 } from '#libs-server/users/identity-loader.mjs'
 import { parse_relation_entry } from '#libs-server/entity/format/extractors/relation-extractor.mjs'
 import { resolve_user_rules } from '#libs-server/users/permission-resolver.mjs'
 import create_user from '#libs-server/users/create-user.mjs'
+import ed25519 from '#libs-server/crypto/ed25519-blake2b.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
 import { flush_and_exit } from './lib/format.mjs'
 
@@ -76,7 +78,24 @@ export const builder = (yargs) =>
           }),
       handle_create
     )
-    .demandCommand(1, 'Specify a subcommand: list, get, or create')
+    .command(
+      'create-keypair',
+      'Generate Ed25519 keypair and attach auth_public_key to an existing identity',
+      (yargs) =>
+        yargs
+          .option('for', {
+            describe: 'Username of the existing identity to retrofit',
+            type: 'string',
+            demandOption: true
+          })
+          .option('dry-run', {
+            describe: 'Preview without writing',
+            type: 'boolean',
+            default: false
+          }),
+      handle_create_keypair
+    )
+    .demandCommand(1, 'Specify a subcommand: list, get, create, or create-keypair')
 
 export const handler = () => {}
 
@@ -287,6 +306,96 @@ async function handle_create(argv) {
         console.log(`  Role:        ${argv.role}`)
       }
       console.log(`  File:        ${file_path}`)
+    }
+  } catch (error) {
+    console.error(`Error: ${error.message}`)
+    exit_code = 1
+  }
+  flush_and_exit(exit_code)
+}
+
+async function handle_create_keypair(argv) {
+  let exit_code = 0
+  try {
+    const username = argv.for
+    const identity = await load_identity_by_username({ username })
+    if (!identity) {
+      console.error(`Identity not found: ${username}`)
+      flush_and_exit(1)
+      return
+    }
+    if (identity.auth_public_key) {
+      console.error(
+        `Identity ${username} already has auth_public_key. Refusing to overwrite.`
+      )
+      flush_and_exit(1)
+      return
+    }
+
+    const user_private_key = crypto.randomBytes(32)
+    const user_public_key = ed25519.publicKey(user_private_key).toString('hex')
+
+    if (argv['dry-run']) {
+      console.log(`Dry run - would write auth_public_key to identity/${username}.md`)
+      console.log(`  Public Key:  ${user_public_key}`)
+      flush_and_exit(0)
+      return
+    }
+
+    const user_base_dir = get_user_base_directory()
+    const file_path = path.join(user_base_dir, 'identity', `${username}.md`)
+    const original = await fs.readFile(file_path, 'utf8')
+
+    const fm_match = original.match(/^---\n([\s\S]*?)\n---\n/)
+    if (!fm_match) {
+      console.error(`Could not parse frontmatter in ${file_path}`)
+      flush_and_exit(1)
+      return
+    }
+    const fm_body = fm_match[1]
+    const after_fm = original.slice(fm_match[0].length)
+    const updated_at = new Date().toISOString()
+
+    let new_fm = fm_body
+    if (/^auth_public_key:/m.test(new_fm)) {
+      new_fm = new_fm.replace(
+        /^auth_public_key:.*$/m,
+        `auth_public_key: ${user_public_key}`
+      )
+    } else {
+      new_fm = `auth_public_key: ${user_public_key}\n${new_fm}`
+    }
+    if (/^updated_at:/m.test(new_fm)) {
+      new_fm = new_fm.replace(/^updated_at:.*$/m, `updated_at: '${updated_at}'`)
+    } else {
+      new_fm = `${new_fm}\nupdated_at: '${updated_at}'`
+    }
+
+    await fs.writeFile(file_path, `---\n${new_fm}\n---\n${after_fm}`)
+    clear_identity_cache()
+
+    if (argv.json) {
+      console.log(
+        JSON.stringify(
+          {
+            username,
+            public_key: user_public_key,
+            private_key: user_private_key.toString('hex'),
+            file: `identity/${username}.md`
+          },
+          null,
+          2
+        )
+      )
+    } else {
+      console.log(`Keypair issued for ${username}:`)
+      console.log(`  Public Key:  ${user_public_key}`)
+      console.log(`  Private Key: ${user_private_key.toString('hex')}`)
+      console.log(`  File:        identity/${username}.md`)
+      console.log('')
+      console.log(
+        'Private key is shown ONCE. Server retains only the public key.'
+      )
     }
   } catch (error) {
     console.error(`Error: ${error.message}`)

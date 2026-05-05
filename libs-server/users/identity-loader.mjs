@@ -15,6 +15,7 @@ const log = debug('identity-loader')
 const identity_cache = {
   by_public_key: new Map(),
   by_username: new Map(),
+  by_discord_user_id: new Map(),
   all_identities: null,
   mtimes: new Map()
 }
@@ -68,11 +69,6 @@ async function load_identity_from_file(absolute_path) {
   // Validate required identity fields
   if (entity_properties.type !== 'identity') {
     log(`File ${absolute_path} is not an identity entity`)
-    return null
-  }
-
-  if (!entity_properties.auth_public_key) {
-    log(`Identity at ${absolute_path} missing required auth_public_key`)
     return null
   }
 
@@ -146,6 +142,7 @@ async function scan_all_identities() {
         identity_cache.all_identities = []
         identity_cache.by_public_key.clear()
         identity_cache.by_username.clear()
+        identity_cache.by_discord_user_id.clear()
         identity_cache.mtimes.clear()
         return []
       }
@@ -161,11 +158,26 @@ async function scan_all_identities() {
       identity_cache.all_identities = identities
       identity_cache.by_public_key.clear()
       identity_cache.by_username.clear()
+      identity_cache.by_discord_user_id.clear()
       identity_cache.mtimes.clear()
 
       for (const identity of identities) {
-        identity_cache.by_public_key.set(identity.auth_public_key, identity)
+        if (identity.auth_public_key) {
+          identity_cache.by_public_key.set(identity.auth_public_key, identity)
+        }
         identity_cache.by_username.set(identity.username, identity)
+        if (identity.discord_user_id) {
+          if (identity_cache.by_discord_user_id.has(identity.discord_user_id)) {
+            log(
+              `Discord user ID collision for ${identity.discord_user_id}; skipping ${identity.username}`
+            )
+          } else {
+            identity_cache.by_discord_user_id.set(
+              identity.discord_user_id,
+              identity
+            )
+          }
+        }
         if (identity._mtime) {
           identity_cache.mtimes.set(identity.absolute_path, identity._mtime)
         }
@@ -242,6 +254,32 @@ export async function load_identity_by_username({ username }) {
 }
 
 /**
+ * Load identity by Discord user ID
+ * @param {Object} params - Parameters
+ * @param {string} params.discord_user_id - Discord user snowflake ID
+ * @returns {Promise<Object|null>} Identity entity or null
+ */
+export async function load_identity_by_discord_user_id({ discord_user_id }) {
+  if (!discord_user_id) {
+    return null
+  }
+
+  const cached = identity_cache.by_discord_user_id.get(discord_user_id)
+  if (cached) {
+    const is_valid = await is_cache_entry_valid(cached.absolute_path)
+    if (is_valid) {
+      log(`Cache hit for identity with discord_user_id: ${discord_user_id}`)
+      return cached
+    }
+    log(`Cache invalidated for identity with discord_user_id: ${discord_user_id}`)
+  }
+
+  await scan_all_identities()
+
+  return identity_cache.by_discord_user_id.get(discord_user_id) || null
+}
+
+/**
  * Load all identity entities
  * @returns {Promise<Array>} Array of all identity entities
  */
@@ -260,6 +298,7 @@ export async function load_all_identities() {
 export function clear_identity_cache() {
   identity_cache.by_public_key.clear()
   identity_cache.by_username.clear()
+  identity_cache.by_discord_user_id.clear()
   identity_cache.mtimes.clear()
   identity_cache.all_identities = null
   scan_in_progress = null
@@ -269,6 +308,7 @@ export function clear_identity_cache() {
 export default {
   load_identity_by_public_key,
   load_identity_by_username,
+  load_identity_by_discord_user_id,
   load_all_identities,
   clear_identity_cache
 }
