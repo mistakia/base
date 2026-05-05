@@ -4,7 +4,11 @@ import path from 'path'
 import debug from 'debug'
 import frontMatter from 'front-matter'
 
-import { call_tier_classifier } from './tier-classifier-client.mjs'
+import { dispatch_role } from '#libs-server/model-roles/dispatch-role.mjs'
+import {
+  dispatch_model,
+  parse_model_id
+} from '#libs-server/model-roles/dispatch-model.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { read_guideline_from_filesystem } from '#libs-server/guideline/filesystem/read-guideline-from-filesystem.mjs'
 import { scan_file_content } from './pattern-scanner.mjs'
@@ -18,6 +22,24 @@ import { classify_text } from './privacy-filter-client.mjs'
 const log = debug('content-review:analyze')
 
 let cached_guideline_text = null
+
+const dispatch_review = async ({ prompt, system, model, timeout_ms, format }) => {
+  if (model) {
+    return dispatch_model({
+      ...parse_model_id(model),
+      prompt,
+      system,
+      format,
+      timeout_ms
+    })
+  }
+  return dispatch_role({
+    role: 'content_review',
+    prompt,
+    system,
+    format
+  })
+}
 
 // JSON schema for Ollama structured output
 const CONTENT_REVIEW_SCHEMA = {
@@ -275,7 +297,7 @@ async function analyze_single_chunk({
     metadata
   })
 
-  const { output, duration_ms } = await call_tier_classifier({
+  const { output, duration_ms } = await dispatch_review({
     prompt: user,
     system,
     model,
@@ -343,10 +365,8 @@ export async function analyze_content({
   privacy_filter_override
 } = {}) {
   const review_config = await load_review_config()
-  if (!model) model = review_config.default_model
   if (max_content_size == null)
     max_content_size = review_config.max_content_size
-  if (timeout_ms == null) timeout_ms = review_config.timeout_ms
 
   const content = await readFile(file_path, 'utf8')
 
@@ -465,7 +485,7 @@ export async function analyze_content({
           metadata
         })
 
-        const { output, duration_ms: chunk_duration } = await call_tier_classifier({
+        const { output, duration_ms: chunk_duration } = await dispatch_review({
           prompt: user,
           system,
           model,
@@ -582,7 +602,6 @@ export async function analyze_thread({
   privacy_filter_override
 } = {}) {
   const review_config = await load_review_config()
-  if (!model) model = review_config.default_model
   if (max_content_size == null)
     max_content_size = review_config.max_content_size
 

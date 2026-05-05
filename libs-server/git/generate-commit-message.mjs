@@ -1,6 +1,6 @@
 import debug from 'debug'
 
-import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
+import { dispatch_role } from '#libs-server/model-roles/dispatch-role.mjs'
 import { extract_json_from_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { execute_git_command } from '#libs-server/git/execute-git-command.mjs'
 
@@ -58,8 +58,11 @@ ${diff_content}
 
 Respond ONLY with a JSON object: {"message": "your commit message here"}`
 
-  log('Calling Ollama for commit message generation')
-  const { output } = await run_model_prompt({ prompt })
+  log('Calling commit_message_writer role for commit message generation')
+  const { output } = await dispatch_role({
+    role: 'commit_message_writer',
+    prompt
+  })
 
   const parsed = extract_json_from_response(output)
   if (!parsed?.message) {

@@ -9,10 +9,10 @@ const original_model_roles = config.model_roles
 
 const make_config = () => ({
   default_timeout_ms: 300000,
+  default_temperature: 0,
   inference_providers: {
     ollama: { endpoint: 'http://127.0.0.1:11434' },
-    'vllm-mlx': { endpoint: 'http://127.0.0.1:8103' },
-    'anthropic-api': { api_key_ref: 'anthropic.api_key' }
+    'vllm-mlx': { endpoint: 'http://127.0.0.1:8103' }
   },
   harness_providers: {
     'opencode-cli': { binary_path: 'opencode' }
@@ -38,15 +38,11 @@ const make_config = () => ({
       provider: 'ollama',
       model: 'gemma4:26b'
     },
-    metadata_judge: {
-      provider_kind: 'inference',
-      provider: 'anthropic-api',
-      model: 'claude-sonnet-4-6'
-    },
     content_review: {
       provider_kind: 'inference',
       provider: 'vllm-mlx',
-      model: 'qwen3.6-35b-a3b-4bit'
+      model: 'qwen3.6-35b-a3b-4bit',
+      max_tokens: 4096
     },
     custom_overrides: {
       provider_kind: 'inference',
@@ -54,6 +50,12 @@ const make_config = () => ({
       model: 'gemma4:26b',
       endpoint: 'http://override:11434',
       timeout_ms: 60000
+    },
+    role_with_temperature_override: {
+      provider_kind: 'inference',
+      provider: 'ollama',
+      model: 'gemma4:26b',
+      temperature: 0.7
     },
     harness_role: {
       provider_kind: 'harness',
@@ -87,8 +89,10 @@ describe('resolve_role', () => {
       provider: 'vllm-mlx',
       model: 'qwen3.6-35b-a3b-4bit',
       endpoint: 'http://127.0.0.1:8103',
-      timeout_ms: 300000
+      timeout_ms: 300000,
+      temperature: 0
     })
+    expect(result).to.not.have.property('max_tokens')
   })
 
   it('resolves title_generator to ollama inference', () => {
@@ -96,30 +100,54 @@ describe('resolve_role', () => {
     expect(result.provider).to.equal('ollama')
     expect(result.model).to.equal('gemma4:26b')
     expect(result.endpoint).to.equal('http://127.0.0.1:11434')
+    expect(result.temperature).to.equal(0)
+    expect(result).to.not.have.property('max_tokens')
   })
 
   it('resolves commit_message_writer to ollama inference', () => {
     const result = resolve_role({ role: 'commit_message_writer' })
     expect(result.provider_kind).to.equal('inference')
     expect(result.provider).to.equal('ollama')
+    expect(result.temperature).to.equal(0)
+    expect(result).to.not.have.property('max_tokens')
   })
 
   it('resolves content_classifier to ollama inference', () => {
     const result = resolve_role({ role: 'content_classifier' })
     expect(result.provider).to.equal('ollama')
+    expect(result.temperature).to.equal(0)
+    expect(result).to.not.have.property('max_tokens')
   })
 
-  it('resolves metadata_judge to anthropic-api inference', () => {
-    const result = resolve_role({ role: 'metadata_judge' })
-    expect(result.provider).to.equal('anthropic-api')
-    expect(result.model).to.equal('claude-sonnet-4-6')
-    expect(result.endpoint).to.be.undefined
-  })
-
-  it('resolves content_review to vllm-mlx inference', () => {
+  it('resolves content_review to vllm-mlx inference with max_tokens', () => {
     const result = resolve_role({ role: 'content_review' })
     expect(result.provider).to.equal('vllm-mlx')
     expect(result.endpoint).to.equal('http://127.0.0.1:8103')
+    expect(result.max_tokens).to.equal(4096)
+    expect(result.temperature).to.equal(0)
+  })
+
+  it('omits max_tokens key when role does not declare it', () => {
+    const result = resolve_role({ role: 'tag_classifier' })
+    expect(result).to.not.have.property('max_tokens')
+  })
+
+  it('returns role-level temperature override over default_temperature', () => {
+    config.model_roles.default_temperature = 0.2
+    const result = resolve_role({ role: 'role_with_temperature_override' })
+    expect(result.temperature).to.equal(0.7)
+  })
+
+  it('falls back to default_temperature when role has no temperature', () => {
+    config.model_roles.default_temperature = 0.4
+    const result = resolve_role({ role: 'tag_classifier' })
+    expect(result.temperature).to.equal(0.4)
+  })
+
+  it('falls back to 0 when both role temperature and default_temperature are absent', () => {
+    delete config.model_roles.default_temperature
+    const result = resolve_role({ role: 'tag_classifier' })
+    expect(result.temperature).to.equal(0)
   })
 
   it('throws on unknown role', () => {

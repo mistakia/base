@@ -25,9 +25,9 @@ import path from 'path'
 import debug from 'debug'
 
 import {
-  run_model_prompt,
-  extract_model_response
-} from '#libs-server/metadata/run-model-prompt.mjs'
+  dispatch_model,
+  parse_model_id
+} from '#libs-server/model-roles/dispatch-model.mjs'
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
@@ -162,14 +162,14 @@ async function run_experiment() {
     }
 
     try {
-      const model_result = await run_model_prompt({
-        prompt,
-        model
+      const model_result = await dispatch_model({
+        ...parse_model_id(model),
+        prompt
       })
 
       result.duration_ms = model_result.duration_ms
 
-      const response_text = extract_model_response(model_result.output)
+      const response_text = model_result.output
       result.raw_response = response_text
 
       const parse_result = parse_tag_analysis_response(
@@ -306,12 +306,12 @@ async function run_benchmark() {
     // Run each model on this case
     for (const model of models) {
       try {
-        const model_result = await run_model_prompt({
+        const model_result = await dispatch_model({
+          ...parse_model_id(model),
           prompt,
-          model,
           format: TAG_OUTPUT_SCHEMA
         })
-        const response_text = extract_model_response(model_result.output)
+        const response_text = model_result.output
         const parse_result = parse_tag_analysis_response(
           response_text,
           available_tags

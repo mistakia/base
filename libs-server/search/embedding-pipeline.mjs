@@ -10,7 +10,7 @@ import fs from 'fs/promises'
 import debug from 'debug'
 import frontMatter from 'front-matter'
 
-import { embed_texts } from '#libs-server/llm/ollama-client.mjs'
+import { embed_texts } from '#libs-server/llm/embedding-client.mjs'
 import {
   upsert_embeddings,
   delete_entity_embeddings,

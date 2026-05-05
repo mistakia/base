@@ -1,10 +1,11 @@
 import path from 'path'
 import debug from 'debug'
 
+import { dispatch_role } from '#libs-server/model-roles/dispatch-role.mjs'
 import {
-  run_model_prompt,
-  extract_model_response
-} from './run-model-prompt.mjs'
+  dispatch_model,
+  parse_model_id
+} from '#libs-server/model-roles/dispatch-model.mjs'
 import {
   load_tags_with_content,
   generate_tag_analysis_prompt,
@@ -161,11 +162,19 @@ export const analyze_thread_for_tags = async ({
   // Run analysis
   let model_result
   try {
-    model_result = await run_model_prompt({
-      prompt,
-      model,
-      format: TAG_OUTPUT_SCHEMA
-    })
+    if (model) {
+      model_result = await dispatch_model({
+        ...parse_model_id(model),
+        prompt,
+        format: TAG_OUTPUT_SCHEMA
+      })
+    } else {
+      model_result = await dispatch_role({
+        role: 'tag_classifier',
+        prompt,
+        format: TAG_OUTPUT_SCHEMA
+      })
+    }
   } catch (error) {
     log(`Analysis failed for thread ${thread_id}: ${error.message}`)
     return {
@@ -175,8 +184,7 @@ export const analyze_thread_for_tags = async ({
     }
   }
 
-  // Extract and parse response
-  const response_text = extract_model_response(model_result.output)
+  const response_text = model_result.output
   const parse_result = parse_tag_analysis_response(
     response_text,
     available_tags

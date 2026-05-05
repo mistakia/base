@@ -1,3 +1,5 @@
+import { dispatch_role } from '#libs-server/model-roles/dispatch-role.mjs'
+
 const CLASSIFICATION_SCHEMA = {
   type: 'object',
   properties: {
@@ -13,29 +15,19 @@ const CLASSIFICATION_SCHEMA = {
 }
 
 /**
- * Classify a single item via Ollama with tag validation and hierarchy expansion.
+ * Classify a single item with tag validation and hierarchy expansion.
  *
  * @param {object} options
  * @param {string} options.prompt - Pre-built classification prompt
- * @param {string} options.model - Ollama model identifier
  * @param {object} options.taxonomy - Resolved taxonomy from load_taxonomy
- * @param {Function} options.call_ollama - Ollama client function
- * @param {number} options.timeout_ms - Request timeout in milliseconds
  * @returns {Promise<{tags: string[], confidence: number}>}
  */
-export async function classify_item({
-  prompt,
-  model,
-  taxonomy,
-  call_ollama,
-  timeout_ms
-}) {
+export async function classify_item({ prompt, taxonomy }) {
   const valid_tags = new Set(taxonomy.domains.map((d) => d.tag))
 
-  const { output } = await call_ollama({
+  const { output } = await dispatch_role({
+    role: 'content_classifier',
     prompt,
-    model,
-    timeout_ms,
     format: CLASSIFICATION_SCHEMA
   })
 
@@ -43,7 +35,10 @@ export async function classify_item({
   try {
     result = JSON.parse(output)
   } catch {
-    console.error('Failed to parse Ollama response:', output.substring(0, 200))
+    console.error(
+      'Failed to parse classifier response:',
+      output.substring(0, 200)
+    )
     return { tags: [], confidence: 0 }
   }
 

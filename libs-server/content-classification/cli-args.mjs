@@ -1,9 +1,7 @@
-const DEFAULT_MODEL = 'ollama/devstral-small-2:24b'
-
 /**
  * Parse classification CLI arguments with standard flags and optional extras.
  *
- * Standard flags: --limit, --dry-run/-n, --reclassify, --model, --help/-h
+ * Standard flags: --limit, --dry-run/-n, --reclassify, --help/-h
  *
  * @param {object} options
  * @param {string} options.usage - Usage line for --help output
@@ -36,7 +34,6 @@ Options:
   --limit N        Process at most N items (default: all unclassified)
   --dry-run, -n    Preview classification without writing to database
   --reclassify     Re-process all items regardless of classified_at
-  --model MODEL    Override default Ollama model (default: ${DEFAULT_MODEL})
 ${extra_help ? extra_help + '\n' : ''}  --help, -h       Show this help message
 `)
     process.exit(0)
@@ -47,8 +44,7 @@ ${extra_help ? extra_help + '\n' : ''}  --help, -h       Show this help message
   const result = {
     limit: limit_raw ? parseInt(limit_raw, 10) : null,
     dry_run: get_arg(['--dry-run', '-n'], false),
-    reclassify: get_arg(['--reclassify'], false),
-    model: get_arg(['--model'], DEFAULT_MODEL)
+    reclassify: get_arg(['--reclassify'], false)
   }
 
   // Parse extra args
