@@ -19,7 +19,10 @@ import {
   handle_cli_directory_registration
 } from '#libs-server/base-uri/index.mjs'
 import { get_user_base_directory } from '#libs-server/base-uri/base-directory-registry.mjs'
-import { run_model_prompt } from '#libs-server/metadata/run-model-prompt.mjs'
+import {
+  dispatch_model,
+  parse_model_id
+} from '#libs-server/model-roles/dispatch-model.mjs'
 import { parse_metadata_response } from '#libs-server/metadata/parse-analysis-output.mjs'
 import { generate_title_prompt } from '#libs-server/metadata/generate-title-prompt.mjs'
 
@@ -87,9 +90,9 @@ async function score_with_judge({
   })
 
   try {
-    const result = await run_model_prompt({
+    const result = await dispatch_model({
+      ...parse_model_id(judge_model),
       prompt,
-      model: judge_model,
       timeout_ms: 60000
     })
 
@@ -142,9 +145,9 @@ async function evaluate_model({ model, cases, judge_model, verbose }) {
 
     try {
       const start = Date.now()
-      const model_result = await run_model_prompt({
+      const model_result = await dispatch_model({
+        ...parse_model_id(model),
         prompt,
-        model,
         timeout_ms: 120000
       })
       const latency = Date.now() - start

@@ -5,8 +5,7 @@ import {
   ensure_classification_columns,
   load_unclassified_items
 } from './database.mjs'
-
-const OLLAMA_TIMEOUT_MS = 120000
+import { resolve_role } from '#libs-server/model-roles/resolve-role.mjs'
 
 /**
  * Run the full classification pipeline for a content source.
@@ -39,8 +38,8 @@ export async function run_classification({
     `Loaded taxonomy: ${taxonomy.domains.length} domains (${taxonomy.domains.map((d) => d.tag).join(', ')})`
   )
 
-  // Dynamic imports from base repo
-  const { call_ollama } = await import('#libs-server/llm/ollama-client.mjs')
+  const resolved_model = resolve_role({ role: 'content_classifier' }).model
+
   const { get_database_entity } =
     await import('#libs-server/database/get-database-entity.mjs')
   const { get_storage_adapter } =
@@ -104,10 +103,7 @@ export async function run_classification({
         const prompt = build_prompt(taxonomy, item)
         classification = await classify_item({
           prompt,
-          model: argv.model,
-          taxonomy,
-          call_ollama,
-          timeout_ms: OLLAMA_TIMEOUT_MS
+          taxonomy
         })
       } catch (error) {
         console.error(
@@ -138,7 +134,7 @@ export async function run_classification({
         ...item,
         domain_tags: JSON.stringify(classification.tags),
         classification_confidence: classification.confidence,
-        classification_model: argv.model,
+        classification_model: resolved_model,
         classified_at: now,
         github_links: links.github_links,
         blog_links: links.blog_links,
@@ -161,7 +157,7 @@ export async function run_classification({
   if (total_errors > 0) {
     console.log(`  Errors: ${total_errors}`)
   }
-  console.log(`  Model: ${argv.model}`)
+  console.log(`  Role: content_classifier (${resolved_model})`)
   if (argv.dry_run) {
     console.log('  Mode: DRY RUN (no database changes)')
   }

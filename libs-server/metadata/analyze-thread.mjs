@@ -1,16 +1,12 @@
 import path from 'path'
 import debug from 'debug'
 
-import {
-  run_model_prompt,
-  extract_model_response
-} from './run-model-prompt.mjs'
+import { dispatch_role } from '#libs-server/model-roles/dispatch-role.mjs'
 import { parse_metadata_response } from './parse-analysis-output.mjs'
 import {
   generate_title_prompt,
   TITLE_PROMPT_VERSION,
-  TITLE_OUTPUT_SCHEMA,
-  TITLE_GENERATION_MODEL
+  TITLE_OUTPUT_SCHEMA
 } from './generate-title-prompt.mjs'
 import get_thread from '#libs-server/threads/get-thread.mjs'
 import { update_thread_metadata } from '#libs-server/threads/update-thread.mjs'
@@ -177,13 +173,11 @@ const read_thread_timeline = async (thread_dir) => {
  *
  * @param {Object} params
  * @param {string} params.thread_id - UUID of the thread to analyze
- * @param {string} [params.model] - Model to use for analysis
  * @param {boolean} [params.dry_run=false] - If true, don't update the thread
  * @returns {Promise<Object>} Analysis result
  */
 export const analyze_thread_for_metadata = async ({
   thread_id,
-  model,
   dry_run = false
 }) => {
   if (!thread_id) {
@@ -248,13 +242,13 @@ export const analyze_thread_for_metadata = async ({
   // code path.
   let model_result
   try {
-    model_result = await run_model_prompt({
+    model_result = await dispatch_role({
+      role: 'title_generator',
       prompt,
-      model: model || TITLE_GENERATION_MODEL,
       format: TITLE_OUTPUT_SCHEMA
     })
   } catch (error) {
-    log(`OpenCode failed for thread ${thread_id}: ${error.message}`)
+    log(`Title generation failed for thread ${thread_id}: ${error.message}`)
     return {
       thread_id,
       status: 'failed',
@@ -262,8 +256,7 @@ export const analyze_thread_for_metadata = async ({
     }
   }
 
-  // Extract model response
-  const response_text = extract_model_response(model_result.output)
+  const response_text = model_result.output
 
   // Parse metadata from response
   const metadata = parse_metadata_response(response_text)

@@ -4,8 +4,12 @@ import config from '#config'
  * Resolve a role name to an explicit dispatch descriptor.
  *
  * Returns one of two mutually-exclusive shapes keyed on `provider_kind`:
- *   inference: { role, provider_kind: 'inference', provider, model, endpoint,    timeout_ms }
+ *   inference: { role, provider_kind: 'inference', provider, model, endpoint,    timeout_ms, temperature, max_tokens? }
  *   harness:   { role, provider_kind: 'harness',   harness,  model, binary_path, timeout_ms, mode }
+ *
+ * `max_tokens` is omitted from the result when not declared on the role (the key
+ * will be absent rather than present-as-undefined). `temperature` is always
+ * present on inference results (role override -> default_temperature -> 0).
  *
  * Callers MUST switch on `provider_kind` before reading `endpoint` vs `binary_path`.
  *
@@ -42,14 +46,21 @@ export const resolve_role = ({ role }) => {
     }
     const provider_config = model_roles.inference_providers?.[provider]
     const endpoint = role_config.endpoint ?? provider_config?.endpoint
-    return {
+    const temperature =
+      role_config.temperature ?? model_roles.default_temperature ?? 0
+    const result = {
       role,
       provider_kind,
       provider,
       model,
       endpoint,
-      timeout_ms
+      timeout_ms,
+      temperature
     }
+    if (role_config.max_tokens !== undefined) {
+      result.max_tokens = role_config.max_tokens
+    }
+    return result
   }
 
   if (provider_kind === 'harness') {
